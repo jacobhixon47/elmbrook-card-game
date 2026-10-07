@@ -4,7 +4,6 @@ import { markReady } from '../debug/hook';
 import { titleBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { noAnim } from '../debug/params';
-import { createCard } from '../view/card';
 import { pixelText } from '../view/text';
 
 export class Title extends Phaser.Scene {
@@ -21,20 +20,10 @@ export class Title extends Phaser.Scene {
       if (!noAnim) this.tweens.add({ targets: glow, alpha: 0.32, scale: l.scale * 0.92, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
 
-    pixelText(this, 320, 52, 'ELMBROOK', { size: 32, font: 'display', color: 'y', stroke: 'k', align: 'center' }).setOrigin(0.5);
-    pixelText(this, 320, 84, '~ Night Market ~', { size: 16, color: 'm', stroke: 'k', align: 'center' }).setOrigin(0.5);
-
-    // A fan of cards over the moonlit water, clear of the firefly jar.
-    const FAN_X = 420;
-    const FAN_Y = 238;
-    const fan = ['nightshade', 'emberbloom', 'elmroot', 'creekwater', 'thistledown'];
-    fan.forEach((id, i) => {
-      const card = createCard(this, FAN_X + (i - 2) * 40, FAN_Y + Math.abs(i - 2) * 6, id);
-      card.setAngle((i - 2) * 9);
-      if (!noAnim) {
-        this.tweens.add({ targets: card, y: card.y - 3, duration: 1400, yoyo: true, repeat: -1, delay: i * 180, ease: 'Sine.easeInOut' });
-      }
-    });
+    // Title block centred in the right half, over the sky and water, clear of the jar.
+    const TX = 480;
+    pixelText(this, TX, 158, 'ELMBROOK', { size: 32, font: 'display', color: 'y', stroke: 'k', align: 'center' }).setOrigin(0.5);
+    pixelText(this, TX, 190, '~ Night Market ~', { size: 16, color: 'm', stroke: 'k', align: 'center' }).setOrigin(0.5);
 
     // Fireflies drifting up out of the jar's glow.
     const source = bg.lights[0];
@@ -58,7 +47,7 @@ export class Title extends Phaser.Scene {
       });
     }
 
-    const prompt = pixelText(this, FAN_X, 334, 'press any key', { size: 8, color: 'v', align: 'center' }).setOrigin(0.5);
+    const prompt = pixelText(this, TX, 226, 'press any key', { size: 8, color: 'v', align: 'center' }).setOrigin(0.5);
     if (!noAnim) this.tweens.add({ targets: prompt, alpha: 0.2, duration: 700, yoyo: true, repeat: -1 });
 
     const go = () => this.scene.start('Hand', {});

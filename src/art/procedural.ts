@@ -54,7 +54,7 @@ export function essencePip(essence: keyof typeof ESSENCE_COLOR): Pixmap {
  * the upper left, with a warm lamplight rim on the right and the brew's colour
  * reflected under the lip.
  */
-export function cauldron(brew: PaletteKey = 'G', brewLight: PaletteKey = 'l'): Pixmap {
+export function cauldron(brew: PaletteKey = 'P', brewLight: PaletteKey = 'c'): Pixmap {
   const w = 72;
   const h = 58;
   const p = new Pixmap(w, h);
@@ -144,7 +144,7 @@ export function nightBackdrop(seed = 'elmbrook'): Pixmap {
 
 export function bubble(): Pixmap {
   const p = new Pixmap(5, 5);
-  p.fillEllipse(2.5, 2.5, 2.5, 2.5, 'l');
+  p.fillEllipse(2.5, 2.5, 2.5, 2.5, 'v');
   p.set(1, 1, 'W');
   return p;
 }

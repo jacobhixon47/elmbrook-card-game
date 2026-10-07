@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { hex } from '../art/palette';
 import { skyTime, type RunState, type Season, type SkyTime } from '../core';
 import { markReady } from '../debug/hook';
 import { noAnim, params, type Fixture } from '../debug/params';
@@ -52,7 +53,7 @@ export class Hand extends Phaser.Scene {
 
     // Cauldron on the counter, centred under the window.
     this.add.image(320, COUNTER_TOP - 27, 'prop/cauldron');
-    const steam = this.add.image(320, COUNTER_TOP - 45, 'fx/glow').setTint(0x7fbf5f).setBlendMode(Phaser.BlendModes.ADD).setScale(0.6).setAlpha(0.35);
+    const steam = this.add.image(320, COUNTER_TOP - 45, 'fx/glow').setTint(hex('v')).setBlendMode(Phaser.BlendModes.ADD).setScale(0.6).setAlpha(0.35);
     if (!noAnim) this.tweens.add({ targets: steam, alpha: 0.2, duration: 1200, yoyo: true, repeat: -1 });
 
     // Draw pile: a small stack of card backs at the left end of the counter.
