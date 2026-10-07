@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
+import { pixelCamera } from '../view/camera';
 import { noAnim } from '../debug/params';
 import { createCard } from '../view/card';
 import { pixelText } from '../view/text';
@@ -11,6 +12,7 @@ export class Title extends Phaser.Scene {
   }
 
   create() {
+    pixelCamera(this);
     this.add.image(0, 0, 'bg/night').setOrigin(0);
 
     pixelText(this, 320, 52, 'ELMBROOK', { size: 32, font: 'display', color: 'y', stroke: 'k', align: 'center' }).setOrigin(0.5);

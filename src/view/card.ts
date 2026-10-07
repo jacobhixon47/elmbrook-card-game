@@ -4,8 +4,9 @@ import { rasterize } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { placeholder } from '../art/procedural';
 import { codex, cardKind } from '../codex';
-import { drawCrispText } from './crispText';
+import { PALETTE, type PaletteKey } from '../art/palette';
 import { FONT_BODY, FONT_DISPLAY } from './text';
+import { ZOOM } from './zoom';
 
 const spriteById = new Map(SPRITES.map((s) => [s.id, s]));
 
@@ -31,26 +32,69 @@ export function bakeCardFace(scene: Phaser.Scene, cardId: string): string {
     ing.essences.forEach((e, i) => face.blit(essencePip(e), CARD_W - 12 - i * 8, CARD_H - 11));
   }
 
-  const tex = scene.textures.createCanvas(key, CARD_W, CARD_H)!;
+  // Bake at screen resolution: art is scaled up whole-pixel, text is drawn sharp on top.
+  const Z = ZOOM;
+  const tex = scene.textures.createCanvas(key, CARD_W * Z, CARD_H * Z)!;
   const ctx = tex.getContext();
-  ctx.putImageData(new ImageData(new Uint8ClampedArray(face.data), CARD_W, CARD_H), 0, 0);
+  ctx.putImageData(scaleUp(face.data, CARD_W, CARD_H, Z), 0, 0);
+
+  const text = (str: string, x: number, y: number, size: number, color: PaletteKey, font: string, maxWidth?: number) => {
+    ctx.font = `${size * Z}px ${font}`;
+    ctx.fillStyle = PALETTE[color];
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const lines = wrapLines(ctx, str, maxWidth ? maxWidth * Z : undefined);
+    lines.forEach((line, i) => ctx.fillText(line, x * Z, (y + i * (size + 1)) * Z));
+  };
 
   if (kind === 'ingredient') {
     const ing = codex.ingredients.get(cardId)!;
-    drawCrispText(ctx, ing.name, CARD_W / 2, 45, { font: FONT_BODY, size: 8, color: 'k', align: 'center', maxWidth: 50, lineHeight: 8 });
-    drawCrispText(ctx, String(ing.potency), 5, CARD_H - 13, { font: FONT_DISPLAY, size: 8, color: 'r' });
+    text(ing.name, CARD_W / 2, 44, 7, 'k', FONT_BODY, 52);
+    ctx.textAlign = 'left';
+    ctx.font = `${8 * Z}px ${FONT_DISPLAY}`;
+    ctx.fillStyle = PALETTE.r;
+    ctx.fillText(String(ing.potency), 5 * Z, (CARD_H - 13) * Z);
   } else {
     const t = codex.tinctures.get(cardId)!;
-    drawCrispText(ctx, t.name, CARD_W / 2, 45, { font: FONT_BODY, size: 8, color: 'k', align: 'center', maxWidth: 50 });
-    drawCrispText(ctx, 'TINCTURE', CARD_W / 2, CARD_H - 13, { font: FONT_DISPLAY, size: 8, color: 'P', align: 'center' });
+    text(t.name, CARD_W / 2, 44, 7, 'k', FONT_BODY, 52);
+    text('TINCTURE', CARD_W / 2, CARD_H - 12, 6, 'P', FONT_DISPLAY);
   }
   tex.refresh();
   return key;
 }
 
+function scaleUp(data: Uint8ClampedArray, w: number, h: number, z: number): ImageData {
+  const out = new ImageData(w * z, h * z);
+  for (let y = 0; y < h * z; y++) {
+    for (let x = 0; x < w * z; x++) {
+      const si = (Math.floor(y / z) * w + Math.floor(x / z)) * 4;
+      const di = (y * w * z + x) * 4;
+      for (let k = 0; k < 4; k++) out.data[di + k] = data[si + k] ?? 0;
+    }
+  }
+  return out;
+}
+
+function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth?: number): string[] {
+  if (!maxWidth) return [text];
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 /** A card in the world. A container so later milestones can add glows, badges and hover states. */
 export function createCard(scene: Phaser.Scene, x: number, y: number, cardId: string): Phaser.GameObjects.Container {
-  const c = scene.add.container(x, y, [scene.add.image(0, 0, bakeCardFace(scene, cardId))]);
+  const c = scene.add.container(x, y, [scene.add.image(0, 0, bakeCardFace(scene, cardId)).setScale(1 / ZOOM)]);
   c.setSize(CARD_W, CARD_H);
   return c;
 }

@@ -15,7 +15,8 @@
     "snap": "tsx scripts/snap.ts",
     "snap:all": "tsx scripts/snap.ts --all",
     "art:sheet": "tsx scripts/art-sheet.ts",
-    "art:check": "tsx scripts/art-check.ts"
+    "art:check": "tsx scripts/art-check.ts",
+    "render-texture": "tsx scripts/render-texture.ts"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
@@ -30,6 +31,7 @@
     "eslint": "^10.12.0",
     "playwright": "^1.63.0",
     "pngjs": "^7.0.0",
+    "sharp": "^0.35.5",
     "tsx": "^4.23.15",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.71.1",

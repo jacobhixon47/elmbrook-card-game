@@ -12,6 +12,21 @@ function addTexture(scene: Phaser.Scene, key: string, px: { width: number; heigh
   tex.refresh();
 }
 
+/** Soft warm light for lanterns and candles, drawn additively. Light, not pixels, so it is smooth. */
+function addGlow(scene: Phaser.Scene) {
+  const size = 128;
+  const tex = scene.textures.createCanvas('fx/glow', size, size)!;
+  const ctx = tex.getContext();
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, 'rgba(255, 233, 163, 0.9)');
+  g.addColorStop(0.25, 'rgba(247, 207, 90, 0.45)');
+  g.addColorStop(0.6, 'rgba(232, 135, 58, 0.12)');
+  g.addColorStop(1, 'rgba(232, 135, 58, 0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  tex.refresh();
+}
+
 /** Builds every texture from code (sprite grids + procedural art), then routes to the first scene. */
 export class Boot extends Phaser.Scene {
   constructor() {
@@ -22,6 +37,8 @@ export class Boot extends Phaser.Scene {
     for (const def of SPRITES) addTexture(this, def.id, rasterize(def));
     const procedural: Record<string, Pixmap> = proceduralTextures();
     for (const [key, pm] of Object.entries(procedural)) addTexture(this, key, pm);
+
+    addGlow(this);
 
     const fixture = loadFixture();
     this.scene.start(fixture?.scene ?? 'Title', { fixture });

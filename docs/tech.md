@@ -73,10 +73,10 @@ Built in M0 and kept working forever.
 
 ## Rendering
 
-- Base resolution **640×360**, integer zoom to the window (pixel-perfect, `pixelArt: true`, `roundPixels`). 1280×720 and 1920×1080 are exact 2× and 3×.
+- Base resolution **640×360** in world units. The canvas is 640×360 × the largest whole-number zoom that fits the window, and every scene's camera zooms by that factor (`pixelCamera`). Pixel art stays crisp (`pixelArt`, `roundPixels`) while text renders at screen resolution. A window resize that changes the zoom reloads the page.
 - One pixel font with an open licence for UI text, rendered at integer sizes.
 - "Juice" comes from code, not art: tweens for card hover/lift/wobble, squash-and-stretch on brew, number pops, particles for bubbles and sparkles, screen shake on big scores. This keeps the art list small and code-authorable (static sprites only for v1; see art-pipeline.md).
-- Card faces are baked at boot into one texture per card id: procedural frame + 16×16 icon at 2× + essence pips + crisp text. Only the icon is unique art per card. Cards are 56×76.
+- Card faces are baked at boot into one texture per card id at screen resolution: procedural frame + 16×16 icon at 2× + essence pips + sharp text. Only the icon is unique art per card. Cards are 56×76.
 - WebGL `maxTextures` is set to 1. Phaser 4.2's multi-texture batching corrupted rotated sprites under software WebGL (SwiftShader, which CI and snaps use). Revisit once textures are packed into an atlas (`?maxtex=-1` to compare).
 
 ## Persistence

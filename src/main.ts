@@ -7,13 +7,8 @@ import { ArtSheet } from './scenes/ArtSheet';
 import { Boot } from './scenes/Boot';
 import { Hand } from './scenes/Hand';
 import { Title } from './scenes/Title';
+import { BASE_H, BASE_W, ZOOM, integerZoom } from './view/zoom';
 
-export const BASE_W = 640;
-export const BASE_H = 360;
-
-function integerZoom(): number {
-  return Math.max(1, Math.floor(Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H)));
-}
 
 async function start() {
   // Text measures wrong if Phaser draws before the web fonts arrive.
@@ -22,8 +17,8 @@ async function start() {
   const game = new Phaser.Game({
     type: params.get('renderer') === 'canvas' ? Phaser.CANVAS : Phaser.AUTO,
     parent: 'game',
-    width: BASE_W,
-    height: BASE_H,
+    width: BASE_W * ZOOM,
+    height: BASE_H * ZOOM,
     backgroundColor: '#1a1423',
     pixelArt: true,
     antialias: false,
@@ -32,10 +27,13 @@ async function start() {
     // Try ?maxtex=-1 to compare once textures are packed into atlases.
     render: { maxTextures: params.get('maxtex') ? Number(params.get('maxtex')) : 1 },
     roundPixels: true,
-    scale: { mode: Phaser.Scale.NONE, zoom: integerZoom() },
+    scale: { mode: Phaser.Scale.NONE },
     scene: [Boot, Title, Hand, ArtSheet],
   });
-  window.addEventListener('resize', () => game.scale.setZoom(integerZoom()));
+  // Textures and text are rendered for one zoom level; a different one needs a fresh boot.
+  window.addEventListener('resize', () => {
+    if (integerZoom() !== ZOOM) location.reload();
+  });
   installHook(game);
 }
 

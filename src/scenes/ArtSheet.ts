@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { proceduralTextures } from '../art/procedural';
 import { SPRITES } from '../art/sprites';
 import { markReady } from '../debug/hook';
+import { pixelCamera } from '../view/camera';
 import { pixelText } from '../view/text';
 
 /** In-game contact sheet of every sprite at 2x, for reviewing art in one look. */
@@ -11,7 +12,8 @@ export class ArtSheet extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#4a4a55');
+    pixelCamera(this);
+    this.cameras.main.setBackgroundColor('#3a3850');
     pixelText(this, 8, 4, 'Sprites (2x)', { size: 8, color: 'w' });
     SPRITES.forEach((def, i) => {
       const x = 24 + (i % 14) * 44;

@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { PALETTE, type PaletteKey } from '../art/palette';
+import { ZOOM } from './zoom';
 
 export const FONT_BODY = '"Pixelify Sans"';
 export const FONT_DISPLAY = 'Silkscreen';
@@ -11,6 +12,7 @@ type TextOpts = {
   align?: 'left' | 'center' | 'right';
   wrap?: number;
   stroke?: PaletteKey;
+  shadow?: boolean;
 };
 
 /** All game text goes through here so fonts, sizes and colours stay on-palette. */
@@ -22,8 +24,10 @@ export function pixelText(scene: Phaser.Scene, x: number, y: number, str: string
     align: opts.align ?? 'left',
     wordWrap: opts.wrap ? { width: opts.wrap } : undefined,
     stroke: opts.stroke ? PALETTE[opts.stroke] : undefined,
-    strokeThickness: opts.stroke ? 2 : 0,
+    strokeThickness: opts.stroke ? 3 : 0,
   });
-  t.setResolution(1);
+  // Rendered at screen resolution: the camera zooms the world, the text stays sharp.
+  t.setResolution(ZOOM);
+  if (opts.shadow) t.setShadow(1, 1, PALETTE.K, 0, true, true);
   return t;
 }

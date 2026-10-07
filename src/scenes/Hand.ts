@@ -1,18 +1,23 @@
 import Phaser from 'phaser';
+import { COUNTER_TOP, SHOP_LANTERNS } from '../art/scenes/shop';
 import type { RunState } from '../core';
 import { markReady } from '../debug/hook';
 import { noAnim, params, type Fixture } from '../debug/params';
 import { store } from '../store';
+import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
 import { pixelText } from '../view/text';
 
-/** M0 proof that core → view works: start a seeded run and lay out the opening hand. */
+const HAND_Y = 304;
+
+/** M0 proof that core → view works: a seeded run's opening hand, laid out on the shop counter. */
 export class Hand extends Phaser.Scene {
   constructor() {
     super('Hand');
   }
 
   create(data: { fixture?: Fixture | null }) {
+    pixelCamera(this);
     const fixture = data.fixture;
     if (fixture?.state) {
       store.load(fixture.state as RunState);
@@ -23,27 +28,37 @@ export class Hand extends Phaser.Scene {
     }
     const state = store.getState()!;
 
-    this.add.image(0, 0, 'bg/night').setOrigin(0).setAlpha(0.55);
-    this.add.rectangle(320, 300, 640, 120, 0x1a1423, 0.85);
+    this.add.image(0, 0, 'bg/shop').setOrigin(0);
+    for (const l of SHOP_LANTERNS) {
+      const glow = this.add.image(l.x, l.y - 2, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(1.3).setAlpha(0.55);
+      if (!noAnim) this.tweens.add({ targets: glow, alpha: 0.42, scale: 1.24, duration: 900 + l.x, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
 
-    pixelText(this, 8, 6, `Week ${state.week} · Day ${state.day}`, { size: 16, color: 'm', stroke: 'k' });
-    pixelText(this, 632, 6, `${state.gold} gold`, { size: 16, color: 'y', stroke: 'k', align: 'right' }).setOrigin(1, 0);
-    pixelText(this, 8, 26, `seed ${state.seed}`, { size: 8, color: 'v' });
+    // HUD on the dark heartwood corners.
+    pixelText(this, 10, 8, `Week ${state.week} · Day ${state.day}`, { size: 12, color: 'a', shadow: true });
+    pixelText(this, 10, 24, `seed ${state.seed}`, { size: 7, color: 'h', shadow: true });
+    pixelText(this, 630, 8, `${state.gold} gold`, { size: 12, color: 'y', align: 'right', shadow: true }).setOrigin(1, 0);
 
-    this.add.image(320, 140, 'prop/cauldron');
-    pixelText(this, 320, 186, 'Draw pile: ' + state.drawPile.length, { size: 8, color: 'v', align: 'center' }).setOrigin(0.5, 0);
+    // Cauldron on the counter, centred under the window.
+    this.add.image(320, COUNTER_TOP - 22, 'prop/cauldron');
+    const steam = this.add.image(320, COUNTER_TOP - 40, 'fx/glow').setTint(0x7fbf5f).setBlendMode(Phaser.BlendModes.ADD).setScale(0.6).setAlpha(0.35);
+    if (!noAnim) this.tweens.add({ targets: steam, alpha: 0.2, duration: 1200, yoyo: true, repeat: -1 });
+
+    // Draw pile: a small stack of card backs at the left end of the counter.
+    for (let i = 0; i < 3; i++) this.add.image(34 + i, HAND_Y - i, 'card/back');
+    pixelText(this, 36, HAND_Y + 42, `Draw ${state.drawPile.length}`, { size: 8, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
 
     const n = state.hand.length;
-    const spacing = Math.min(62, 600 / Math.max(n, 1));
+    const spacing = Math.min(62, 520 / Math.max(n, 1));
     state.hand.forEach((inst, i) => {
-      const x = 320 + (i - (n - 1) / 2) * spacing;
-      const card = createCard(this, x, 292, inst.card);
+      const x = 340 + (i - (n - 1) / 2) * spacing;
+      const card = createCard(this, x, HAND_Y, inst.card);
       card.setInteractive({ useHandCursor: true });
-      card.on('pointerover', () => this.tweens.add({ targets: card, y: 280, duration: 90 }));
-      card.on('pointerout', () => this.tweens.add({ targets: card, y: 292, duration: 90 }));
+      card.on('pointerover', () => this.tweens.add({ targets: card, y: HAND_Y - 12, duration: 90 }));
+      card.on('pointerout', () => this.tweens.add({ targets: card, y: HAND_Y, duration: 90 }));
       if (!noAnim) {
         card.y = 420;
-        this.tweens.add({ targets: card, y: 292, duration: 260, delay: i * 70, ease: 'Back.easeOut' });
+        this.tweens.add({ targets: card, y: HAND_Y, duration: 260, delay: i * 70, ease: 'Back.easeOut' });
       }
     });
 

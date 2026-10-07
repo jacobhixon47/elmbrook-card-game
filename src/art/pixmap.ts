@@ -1,5 +1,7 @@
 import { PALETTE, type PaletteKey } from './palette';
 
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+
 /**
  * A tiny palette-locked raster for procedural art. Works in the browser
  * (uploaded as a canvas texture) and in node scripts (written as PNG), so
@@ -73,15 +75,28 @@ export class Pixmap {
 
   /** Two-colour ordered (Bayer 4x4) dither between rows y0..y1, top colour `a`. */
   ditherV(y0: number, y1: number, a: PaletteKey, b: PaletteKey, x0 = 0, x1 = this.width - 1): this {
-    const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
     for (let y = y0; y <= y1; y++) {
       const t = y1 === y0 ? 1 : (y - y0) / (y1 - y0);
       for (let x = x0; x <= x1; x++) {
-        const threshold = ((bayer[(y % 4) * 4 + (x % 4)] ?? 0) + 0.5) / 16;
+        const threshold = ((BAYER[(y % 4) * 4 + (x % 4)] ?? 0) + 0.5) / 16;
         this.set(x, y, t > threshold ? b : a);
       }
     }
     return this;
+  }
+
+  /**
+   * Shades a pixel from a ramp (dark → light) at brightness t in [0, 1], using
+   * ordered dithering between neighbouring steps. The core of procedural lighting.
+   */
+  shade(x: number, y: number, ramp: readonly PaletteKey[], t: number): this {
+    const clamped = Math.max(0, Math.min(1, t));
+    const pos = clamped * (ramp.length - 1);
+    const lo = Math.floor(pos);
+    const frac = pos - lo;
+    const threshold = ((BAYER[(((y % 4) + 4) % 4) * 4 + (((x % 4) + 4) % 4)] ?? 0) + 0.5) / 16;
+    const key = ramp[Math.min(ramp.length - 1, frac > threshold ? lo + 1 : lo)];
+    return key ? this.set(x, y, key) : this;
   }
 
   /** Adds a 1px outline of `key` around every filled pixel (outside only). */
