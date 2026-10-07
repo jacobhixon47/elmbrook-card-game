@@ -142,6 +142,22 @@ export function nightBackdrop(seed = 'elmbrook'): Pixmap {
   return p;
 }
 
+/** A soft bank of fog: a stippled ellipse that thins toward its edges, drawn semi-transparent. */
+export function fogBank(): Pixmap {
+  const w = 96;
+  const h = 14;
+  const p = new Pixmap(w, h);
+  const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const d = Math.hypot((x + 0.5 - w / 2) / (w / 2), (y + 0.5 - h / 2) / (h / 2));
+      const density = (1 - d) * 1.6;
+      if (density > ((bayer[(y % 4) * 4 + (x % 4)] ?? 0) + 0.5) / 16) p.set(x, y, density > 0.9 ? 'W' : 'm');
+    }
+  }
+  return p;
+}
+
 export function bubble(): Pixmap {
   const p = new Pixmap(5, 5);
   p.fillEllipse(2.5, 2.5, 2.5, 2.5, 'v');
@@ -171,6 +187,7 @@ export function proceduralTextures(): Record<string, Pixmap> {
     'bg/night': nightBackdrop(),
     'bg/shop': shopBackdrop(),
     'fx/bubble': bubble(),
+    'fx/fog': fogBank(),
     'placeholder/16': placeholder(16, 16),
   };
   for (const e of Object.keys(ESSENCE_COLOR) as (keyof typeof ESSENCE_COLOR)[]) out[`pip/${e}`] = essencePip(e);

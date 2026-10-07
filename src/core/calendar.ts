@@ -17,6 +17,14 @@ export const SKY_TIMES: readonly SkyTime[] = ['afternoon', 'sunset', 'twilight',
 export type Weather = 'clear' | 'rain' | 'fog' | 'heatwave' | 'snow';
 export const WEATHERS: readonly Weather[] = ['clear', 'rain', 'fog', 'heatwave', 'snow'];
 
+/** Which weather each season can roll (GDD §4.2). */
+export const SEASON_WEATHER: Record<Season, readonly Weather[]> = {
+  spring: ['clear', 'rain', 'fog'],
+  summer: ['clear', 'rain', 'fog', 'heatwave'],
+  autumn: ['clear', 'rain', 'fog'],
+  winter: ['clear', 'fog', 'snow'],
+};
+
 /** Order Board → afternoon, brewing → sunset, dusk errands → twilight; Night Shifts and the Night Market are night. */
 export function skyTime(state: Pick<RunState, 'day' | 'phase'>): SkyTime {
   if (state.day === NIGHT_SHIFT_DAY || state.phase === 'night-market') return 'night';

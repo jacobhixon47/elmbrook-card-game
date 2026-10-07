@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextFloat, NIGHT_SHIFT_DAY, reduce, seedRng, shuffle, skyTime } from '../src/core';
+import { nextFloat, NIGHT_SHIFT_DAY, reduce, SEASON_WEATHER, SEASONS, seedRng, shuffle, skyTime } from '../src/core';
 
 describe('rng', () => {
   it('is deterministic for a seed', () => {
@@ -64,5 +64,15 @@ describe('calendar', () => {
     expect(skyTime({ day: 3, phase: 'dusk' })).toBe('twilight');
     expect(skyTime({ day: NIGHT_SHIFT_DAY, phase: 'brewing' })).toBe('night');
     expect(skyTime({ day: 2, phase: 'night-market' })).toBe('night');
+  });
+});
+
+describe('weather', () => {
+  it('keeps snow to winter and heatwaves to summer', () => {
+    for (const season of SEASONS) {
+      expect(SEASON_WEATHER[season].includes('snow')).toBe(season === 'winter');
+      expect(SEASON_WEATHER[season].includes('heatwave')).toBe(season === 'summer');
+      expect(SEASON_WEATHER[season]).toContain('clear');
+    }
   });
 });

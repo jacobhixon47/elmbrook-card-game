@@ -109,13 +109,15 @@ Four layers, all seeded into the Calendar at run start so they can be planned ar
 
 **Daily weather** (one per day, shown on the Calendar and in the shop window):
 
-| Weather | Effect | Window |
-|---|---|---|
-| Clear | No effect, a breather | Season as normal |
-| Rain | Creek ingredients +2 Potency; one fewer customer | Grey sky, rain streaks |
-| Fog | Orders hidden until you start brewing | Mist rolling across the valley |
-| Heatwave (summer) | Ember +2 Potency, Tide -2 | Hazy gold air, drifting dust |
-| Snow (winter) | Frost cards are drawn first | Heavy snowfall |
+| Weather | Seasons | Effect | Window |
+|---|---|---|---|
+| Clear | All | No effect, a breather | Season as normal |
+| Rain | Spring, summer, autumn | Creek ingredients +2 Potency; one fewer customer | Cloud banks, rain streaks |
+| Fog | All | Orders hidden until you start brewing | Thick banks rolling across the valley |
+| Heatwave | Summer | Ember +2 Potency, Tide -2 | Gold haze, shimmer, drifting motes |
+| Snow | Winter | Frost cards are drawn first | Snow clouds, heavy snowfall |
+
+The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; the Calendar only rolls from that list.
 
 **Town events** (about one per week, a story choice at twilight, replacing that day's errand choice):
 

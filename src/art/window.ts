@@ -3,7 +3,7 @@
 // so it runs the same in the browser (at boot) and in tests.
 
 import type { Season, SkyTime, Weather } from '../core/calendar';
-import { valueNoise } from './noise';
+import { fbm, valueNoise } from './noise';
 
 type Rgb = readonly [number, number, number];
 
@@ -47,10 +47,26 @@ const LIGHT: Record<SkyTime, { tint: Rgb; mix: number; gain: number }> = {
 
 /** Weather over everything: a colour the air leans toward, how far, and how much the land greys out. */
 const AIR: Record<Exclude<Weather, 'clear'>, Record<SkyTime, Rgb> & { sky: number; land: number; grey: number }> = {
-  rain: { afternoon: rgb('#7d8597'), sunset: rgb('#8a7085'), twilight: rgb('#2f3550'), night: rgb('#1e2234'), sky: 0.7, land: 0.25, grey: 0.45 },
-  fog: { afternoon: rgb('#d3d4dc'), sunset: rgb('#e2b9aa'), twilight: rgb('#4f5577'), night: rgb('#2b3150'), sky: 0.6, land: 0.5, grey: 0.3 },
-  heatwave: { afternoon: rgb('#ffd58a'), sunset: rgb('#ffa060'), twilight: rgb('#7a4a6a'), night: rgb('#3a2c4a'), sky: 0.25, land: 0.18, grey: 0 },
-  snow: { afternoon: rgb('#a9b1c6'), sunset: rgb('#b896a6'), twilight: rgb('#3a4266'), night: rgb('#262d48'), sky: 0.55, land: 0.1, grey: 0.2 },
+  rain: { afternoon: rgb('#7d8597'), sunset: rgb('#857288'), twilight: rgb('#2f3550'), night: rgb('#1e2234'), sky: 0.75, land: 0.3, grey: 0.5 },
+  fog: { afternoon: rgb('#dcdde4'), sunset: rgb('#e8c2b2'), twilight: rgb('#5a6085'), night: rgb('#323a5c'), sky: 0.55, land: 0.35, grey: 0.35 },
+  heatwave: { afternoon: rgb('#ffe2a0'), sunset: rgb('#ffb070'), twilight: rgb('#8a5470'), night: rgb('#3a2c4a'), sky: 0.35, land: 0.35, grey: 0.2 },
+  snow: { afternoon: rgb('#aab2c6'), sunset: rgb('#b896a6'), twilight: rgb('#3a4266'), night: rgb('#262d48'), sky: 0.6, land: 0.12, grey: 0.25 },
+};
+
+/** Cloud masses for overcast weather: lit tops and heavy undersides. */
+const CLOUDS: Partial<Record<Weather, Record<SkyTime, [Rgb, Rgb]>>> = {
+  rain: {
+    afternoon: [rgb('#4f5568'), rgb('#9aa1b4')],
+    sunset: [rgb('#4e4060'), rgb('#b08a98')],
+    twilight: [rgb('#1a1e30'), rgb('#3e4466')],
+    night: [rgb('#12141f'), rgb('#2a3048')],
+  },
+  snow: {
+    afternoon: [rgb('#8d95ab'), rgb('#e4e8f2')],
+    sunset: [rgb('#7c6a86'), rgb('#e0c4c8')],
+    twilight: [rgb('#2a3152'), rgb('#56608a')],
+    night: [rgb('#1c2238'), rgb('#3a4466')],
+  },
 };
 
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
@@ -160,7 +176,16 @@ export function gradeView(src: ViewImage, season: Season, time: SkyTime, skyTop:
         const cloud = speck[i] ? 0 : Math.max(-0.12, Math.min(0.12, (lum(r, g, b) - 0.3) * 0.5));
         c = ramp(skyRamp, t + cloud, x, y);
       }
-      if (air) c = airOver(c, air[time], air.sky * (0.85 + valueNoise(x, y * 3, 24, 7) * 0.3), air.grey, x, y);
+      if (air && weather === 'fog') c = airOver(c, air[time], Math.min(1, 0.3 + Math.max(0, valueNoise(x * 0.35, y * 2.4, 16, 9) - 0.4) * 2), air.grey, x, y);
+      else if (air) c = airOver(c, air[time], air.sky * (0.85 + valueNoise(x, y * 3, 24, 7) * 0.3), air.grey, x, y);
+      const clouds = CLOUDS[weather]?.[time];
+      if (clouds) {
+        // Heavy cloud banks: a dark body with a lighter rim along the top edge.
+        const d = fbm(x * 0.7, y * 1.8, 30, 31, 3) + (1 - t) * 0.08;
+        const above = fbm(x * 0.7, (y - 2) * 1.8, 30, 31, 3) + (1 - t) * 0.08;
+        if (d > 0.5) c = above <= 0.5 ? clouds[1] : airOver(c, clouds[0], Math.min(1, (d - 0.5) * 6), 0, x, y);
+      }
+      if (weather === 'heatwave') c = airOver(c, air![time], Math.max(0, t - 0.45) * 1.2, 0, x, y); // haze at the horizon
     } else if (speck[i]) {
       if (blooms) c = blooms[Math.floor(hash(x, y) * blooms.length)]!;
       else c = [r, g, b];
@@ -174,7 +199,8 @@ export function gradeView(src: ViewImage, season: Season, time: SkyTime, skyTop:
     if (air && kind[i] === 2) {
       // Farther land (higher in the window) disappears into the weather first; fog rolls in bands.
       const far = 1 - Math.max(0, Math.min(1, (y - skyTop) / Math.max(1, height - skyTop)));
-      const band = weather === 'fog' ? (valueNoise(x * 0.5, y * 2, 18, 9) - 0.5) * 0.5 : 0;
+      // Fog lies in thick drifting banks with clearer gaps between them.
+      const band = weather === 'fog' ? Math.max(-0.3, (valueNoise(x * 0.35, y * 2.4, 16, 9) - 0.42) * 1.6) : 0;
       c = airOver(c, air[time], Math.max(0, Math.min(1, air.land + far * 0.35 + band)), air.grey, x, y);
     }
     out[i * 4] = c[0];
