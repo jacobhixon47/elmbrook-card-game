@@ -25,13 +25,14 @@ Touchstones: Balatro (scoring juice, run structure, jokers), Slay the Spire (dec
 ## 3. Run structure
 
 ```
-Week 1 (Waxing Crescent)  Day · Day · Day · Night Shift (First Quarter)   → Rent
-Week 2 (Waxing Gibbous)   Day · Day · Day · Night Shift (FULL MOON)       → Rent
-Week 3 (Waning Gibbous)   Day · Day · Day · Night Shift (Last Quarter)    → Rent
-Week 4 (Waning Crescent)  Day · Day · Day · Night Shift (NEW MOON finale) → Win
+Week 1 (Waxing Crescent)  Day · Day · Day · Day · Night Shift (First Quarter)   → Rent
+Week 2 (Waxing Gibbous)   Day · Day · Day · Day · Night Shift (FULL MOON)       → Rent
+Week 3 (Waning Gibbous)   Day · Day · Day · Day · Night Shift (Last Quarter)    → Rent   (festival week)
+Week 4 (Waning Crescent)  Day · Day · Day · Day · Night Shift (NEW MOON finale) → Win
 ```
 
-- **16 encounters per run** (12 days + 4 nights), similar length to a Balatro run (~45-75 min).
+- **20 encounters per run** (16 days + 4 nights), about 60-75 minutes, still one sitting. Days per week is a single tuning constant (`DAYS_PER_WEEK` in `src/core/calendar.ts`); 3 vs 4 gets compared in the sim before it is locked.
+- **The Calendar is seeded at run start:** each day's weather, the week's town event, the festival in week 3, and any rare sky event, so you can plan around them.
 - **The Calendar is the run map.** It shows the current week, each day's weather/event icon, and the upcoming Night Shift's patron and rule twist (revealed in advance, like Balatro's boss blind).
 - **Rent** is paid automatically after each Night Shift. Starting values: 20 / 45 / 90 / 160 gold. Can't pay = run over ("the Guild reclaims your stall").
 - **Full Moon** (week 2) is the mid-run boss. **New Moon** (week 4) is the finale.
@@ -51,17 +52,26 @@ Seasons scale in difficulty in that order (rent and order targets rise about 15%
 
 ### Time of day
 
-The shop window shows the season and the time: **morning** during the Order Board, **afternoon** while brewing, **evening** at dusk errands, and **night** for Night Shifts and the Night Market. Weather drifts past the glass (blossom, fireflies, leaves, snow). This is presentation only; `skyTime(state)` in `src/core/calendar.ts` derives it from the phase.
+A day is the slow slide from afternoon into night, so the shop is always lamplit and cozy. There is no bright noon.
+
+| Phase | Sky in the window |
+|---|---|
+| Order Board | Golden late afternoon |
+| Brewing | Sunset |
+| Dusk errands | Twilight: first stars, lit cottage windows |
+| Night Shift, Night Market | Full night, moon in its current phase |
+
+The window also shows the season (blossom, deep green, rust and gold, snow) and the day's weather (§4.2), with particles drifting past the glass. This is presentation only; `skyTime(state)` in `src/core/calendar.ts` derives it from the phase.
 
 ### Phases of a Day
 
-1. **Morning — Order Board.** 1-3 customer orders appear (count ramps by week: 1-2 in week 1, 2 in weeks 2-3, 3 in week 4).
-2. **Shop Hours — Brewing.** Draw a hand, brew, deliver. Limited **Brews** (4) and **Discards** (3) for the whole day, shared across all orders.
-3. **Dusk — Reward + Errand.** Pick 1 of 3 ingredient cards (or Skip, see §8). Then choose one **Errand** from 2 offered (§7).
+1. **Afternoon — Order Board.** 1-3 customer orders appear (count ramps by week: 1-2 in week 1, 2 in weeks 2-3, 3 in week 4).
+2. **Sunset — Brewing.** Draw a hand, brew, deliver. Limited **Brews** (4) and **Discards** (3) for the whole day, shared across all orders.
+3. **Twilight — Reward + Errand.** Pick 1 of 3 ingredient cards (or Skip, see §8). Then choose one **Errand** from 2 offered (§7).
 
 ### Phases of a Night Shift
 
-Same as a day, but: the patron's rule twist is active, your **Night Satchel** (§5.4) shuffles into your draw pile, and afterwards the **Night Market** opens (§9) before rent is collected.
+Same as a day, but: the patron's rule twist is active, your **Night Satchel** (§5.4) shuffles into your draw pile, **night customers** (§4.1) place the orders, and afterwards the **Night Market** opens (§9) before rent is collected.
 
 ## 4. Orders and customers
 
@@ -78,6 +88,63 @@ Carried over from 1.0: click an order to open its dialogue; choose **Fulfill**, 
 **Delivering:** a matching potion from your Shelf or a fresh brew fulfils the order. **Declining** costs a heart with that customer. Unfinished orders at end of day count as declined.
 
 **Free brewing:** once every order is resolved, leftover Brews can make potions for the Shelf (from 1.0: "after requests are done you can brew with remaining cards").
+
+### 4.1 Night customers
+
+A separate cast who only come after dark. Stranger and more formal than the day crowd, never horror. Their orders are odd ("a potion that tastes like a memory") and pay in odd things: Omens, a Curse lifted, Lunar cards, a stall discount at the Night Market. Each has hearts like a regular, with their own story beats.
+
+| ID | Name | Who | Tends to order | Pays in |
+|---|---|---|---|---|
+| wisp-courier | The Wisp Courier | Delivers letters between the living and the not-quite | Secrets, Lunar | Omens |
+| lantern-witch | The Lantern Witch | Lights the Night Market's lamps, sharp-tongued | Ember, Vigor | Lunar cards |
+| bog-hag | Granny Bogwort | Lives in the fen, surprisingly sweet | Healing with Umbra | Rare ingredients |
+| moth-duchess | The Moth Duchess | Aristocrat of the lamplight | Beauty, Fortune | Gold, lavishly |
+| sleepless-miller | The Sleepless Miller | Hasn't slept in years | Calming, Sleep | Curses lifted |
+
+The Night Shift patron (§10) is the featured guest; night customers fill the other orders that night.
+
+### 4.2 Events
+
+Four layers, all seeded into the Calendar at run start so they can be planned around.
+
+**Daily weather** (one per day, shown on the Calendar and in the shop window):
+
+| Weather | Effect | Window |
+|---|---|---|
+| Clear | No effect, a breather | Season as normal |
+| Rain | Creek ingredients +2 Potency; one fewer customer | Grey sky, rain streaks |
+| Fog | Orders hidden until you start brewing | Mist rolling across the valley |
+| Heatwave (summer) | Ember +2 Potency, Tide -2 | Hazy gold air, drifting dust |
+| Snow (winter) | Frost cards are drawn first | Heavy snowfall |
+
+**Town events** (about one per week, a story choice at twilight, replacing that day's errand choice):
+
+- A travelling alchemist offers a trade.
+- A cat moves into the shop and becomes a free familiar.
+- The well runs dry: Creekwater costs double for 2 days.
+- A wedding: a big order for 5 Calming potions by the end of the week.
+- The Guild inspector visits: a Superb potion that day earns a rent discount.
+- Plus the ~20 small Events from §7 (fae visits, shop mishaps).
+
+**Seasonal festivals** (fixed, week 3 of every run, visible from the start):
+
+| Season | Festival | What changes |
+|---|---|---|
+| Spring | Bloomtide | Flower recipes pay double; a petal-crown contest order |
+| Summer | Firefly Fair | A Night Market on a day, with games |
+| Autumn | Harvest Fair | The biggest orders of the year; a pie contest |
+| Winter | Longest Night | A double-length Night Shift and a gift exchange of cards |
+
+**Sky events** (rare, at most one per run, announced on the Calendar):
+
+| Event | Effect |
+|---|---|
+| Eclipse | Day and night ingredients mix for a day (§5.4) |
+| Blue Moon | An extra Night Shift with a mystery patron |
+| Meteor Shower | Star essence appears for a week |
+| Fae Ring | A forage errand becomes a fae bargain |
+
+Sky events and festivals feed the Almanac ("brew during an Eclipse", "win the Harvest Fair pie contest").
 
 ## 5. Cards
 

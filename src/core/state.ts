@@ -14,7 +14,7 @@ export type RunState = {
   witch: string;
   season: Season;
   week: number; // 1-4
-  day: number; // 1-4, where 4 is the Night Shift
+  day: number; // 1..NIGHT_SHIFT_DAY; the last is the Night Shift
   phase: Phase;
   gold: number;
   handSize: number;

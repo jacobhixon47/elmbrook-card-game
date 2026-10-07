@@ -2,7 +2,8 @@
 // Pure: takes the view's RGBA pixels (transparent outside the window) and returns new ones,
 // so it runs the same in the browser (at boot) and in tests.
 
-import type { Season, SkyTime } from '../core/calendar';
+import type { Season, SkyTime, Weather } from '../core/calendar';
+import { valueNoise } from './noise';
 
 type Rgb = readonly [number, number, number];
 
@@ -26,22 +27,30 @@ const BLOOMS: Record<Season, readonly Rgb[] | null> = {
 
 /** Sky gradients, top to horizon. Night keeps the painted sky (stars and moon). */
 const SKY: Record<Exclude<SkyTime, 'night'>, readonly Rgb[]> = {
-  morning: ['#6f9ad6', '#a9c4ea', '#f2d0c4', '#ffd9a8'].map(rgb),
-  afternoon: ['#3f7fd0', '#5f9be0', '#93c3ee', '#cbe6f6'].map(rgb),
-  evening: ['#2e2a63', '#7a3f86', '#d9579b', '#f7a35a'].map(rgb),
+  afternoon: ['#6d8fc9', '#a9b8d8', '#f2d6a8', '#ffd58a'].map(rgb),
+  sunset: ['#4a3f7a', '#a8508a', '#f07a5a', '#ffc06a'].map(rgb),
+  twilight: ['#141d3a', '#26335f', '#4c4a85', '#b0708a'].map(rgb),
 };
 const WINTER_SKY: Record<Exclude<SkyTime, 'night'>, readonly Rgb[]> = {
-  morning: ['#8197c0', '#b3c0dc', '#e6d6dc', '#f4e2cf'].map(rgb),
-  afternoon: ['#7f9cc8', '#a6bddc', '#cbd9ec', '#e8eef7'].map(rgb),
-  evening: ['#2e2f5e', '#6a4c88', '#c67aa4', '#eeb38a'].map(rgb),
+  afternoon: ['#7f93bd', '#b2bdd6', '#ead9c8', '#f5d7aa'].map(rgb),
+  sunset: ['#4b4a7c', '#9a6a98', '#e3948a', '#f4c08e'].map(rgb),
+  twilight: ['#161f3c', '#2e3a66', '#5a5389', '#a8829a'].map(rgb),
 };
 
 /** Light over the land: a tint to mix toward, how much, and overall brightness. */
 const LIGHT: Record<SkyTime, { tint: Rgb; mix: number; gain: number }> = {
-  morning: { tint: rgb('#ffd9b0'), mix: 0.14, gain: 0.95 },
-  afternoon: { tint: rgb('#fff6dc'), mix: 0.04, gain: 1 },
-  evening: { tint: rgb('#b0446a'), mix: 0.3, gain: 0.72 },
+  afternoon: { tint: rgb('#ffd9a0'), mix: 0.15, gain: 0.97 },
+  sunset: { tint: rgb('#e0705a'), mix: 0.26, gain: 0.84 },
+  twilight: { tint: rgb('#3a3a78'), mix: 0.38, gain: 0.62 },
   night: { tint: rgb('#33468a'), mix: 0.35, gain: 0.55 },
+};
+
+/** Weather over everything: a colour the air leans toward, how far, and how much the land greys out. */
+const AIR: Record<Exclude<Weather, 'clear'>, Record<SkyTime, Rgb> & { sky: number; land: number; grey: number }> = {
+  rain: { afternoon: rgb('#7d8597'), sunset: rgb('#8a7085'), twilight: rgb('#2f3550'), night: rgb('#1e2234'), sky: 0.7, land: 0.25, grey: 0.45 },
+  fog: { afternoon: rgb('#d3d4dc'), sunset: rgb('#e2b9aa'), twilight: rgb('#4f5577'), night: rgb('#2b3150'), sky: 0.6, land: 0.5, grey: 0.3 },
+  heatwave: { afternoon: rgb('#ffd58a'), sunset: rgb('#ffa060'), twilight: rgb('#7a4a6a'), night: rgb('#3a2c4a'), sky: 0.25, land: 0.18, grey: 0 },
+  snow: { afternoon: rgb('#a9b1c6'), sunset: rgb('#b896a6'), twilight: rgb('#3a4266'), night: rgb('#262d48'), sky: 0.55, land: 0.1, grey: 0.2 },
 };
 
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
@@ -81,10 +90,10 @@ export type ViewImage = { width: number; height: number; data: Uint8ClampedArray
  * Regrades the painted view. `skyTop`/`horizon` are the rows the sky gradient spans.
  * Summer nights return the painting unchanged; everything else is recoloured.
  */
-export function gradeView(src: ViewImage, season: Season, time: SkyTime, skyTop: number, horizon: number): Uint8ClampedArray {
+export function gradeView(src: ViewImage, season: Season, time: SkyTime, skyTop: number, horizon: number, weather: Weather = 'clear'): Uint8ClampedArray {
   const { width, height, data } = src;
   const out = new Uint8ClampedArray(data);
-  if (season === 'summer' && time === 'night') return out;
+  if (season === 'summer' && time === 'night' && weather === 'clear') return out;
 
   // Classify every window pixel as sky or land, and as painted-outside or a bright speck
   // (star, moon, flower). Specks take the majority class of their neighbourhood.
@@ -127,6 +136,9 @@ export function gradeView(src: ViewImage, season: Season, time: SkyTime, skyTop:
   const span = Math.max(0.01, hi - lo);
   const light = LIGHT[time];
   const skyRamp = time === 'night' ? null : (season === 'winter' ? WINTER_SKY : SKY)[time];
+  const air = weather === 'clear' ? null : AIR[weather];
+  // Rain, fog and snow hide the stars; clear twilight shows the first ones high in the sky.
+  const starsVisible = (y: number) => !air || weather === 'heatwave' ? time === 'night' || (time === 'twilight' && y < skyTop + (horizon - skyTop) * 0.55) : false;
   const blooms = BLOOMS[season];
 
   for (let i = 0; i < n; i++) {
@@ -138,11 +150,17 @@ export function gradeView(src: ViewImage, season: Season, time: SkyTime, skyTop:
     const b = data[i * 4 + 2]!;
     let c: Rgb;
     if (kind[i] === 1) {
-      if (!skyRamp) continue; // night: keep the painted sky, stars and moon
-      // Gradient by height, with a little of the painting's cloud texture; stars vanish by day.
       const t = (y - skyTop) / Math.max(1, horizon - skyTop);
-      const cloud = speck[i] ? 0 : Math.max(-0.12, Math.min(0.12, (lum(r, g, b) - 0.3) * 0.5));
-      c = ramp(skyRamp, t + cloud, x, y);
+      if (speck[i] && starsVisible(y)) {
+        c = [r, g, b]; // a star or the moon
+      } else if (!skyRamp) {
+        c = speck[i] ? [data[(i - 2) * 4]!, data[(i - 2) * 4 + 1]!, data[(i - 2) * 4 + 2]!] : [r, g, b]; // painted night sky
+      } else {
+        // Gradient by height, with a little of the painting's cloud texture.
+        const cloud = speck[i] ? 0 : Math.max(-0.12, Math.min(0.12, (lum(r, g, b) - 0.3) * 0.5));
+        c = ramp(skyRamp, t + cloud, x, y);
+      }
+      if (air) c = airOver(c, air[time], air.sky * (0.85 + valueNoise(x, y * 3, 24, 7) * 0.3), air.grey, x, y);
     } else if (speck[i]) {
       if (blooms) c = blooms[Math.floor(hash(x, y) * blooms.length)]!;
       else c = [r, g, b];
@@ -151,7 +169,13 @@ export function gradeView(src: ViewImage, season: Season, time: SkyTime, skyTop:
       // Winter: snow settles on the upper, brighter slopes first.
       const t = (lum(r, g, b) - lo) / span;
       const snowy = season === 'winter' ? Math.min(1, t * (time === 'night' ? 1 : 1.25) + 0.08) : t;
-      c = applyLight(ramp(LAND[season], snowy, x, y), light);
+      c = applyLight(ramp(LAND[season], snowy + (weather === 'snow' ? 0.06 : 0), x, y), light);
+    }
+    if (air && kind[i] === 2) {
+      // Farther land (higher in the window) disappears into the weather first; fog rolls in bands.
+      const far = 1 - Math.max(0, Math.min(1, (y - skyTop) / Math.max(1, height - skyTop)));
+      const band = weather === 'fog' ? (valueNoise(x * 0.5, y * 2, 18, 9) - 0.5) * 0.5 : 0;
+      c = airOver(c, air[time], Math.max(0, Math.min(1, air.land + far * 0.35 + band)), air.grey, x, y);
     }
     out[i * 4] = c[0];
     out[i * 4 + 1] = c[1];
@@ -162,4 +186,13 @@ export function gradeView(src: ViewImage, season: Season, time: SkyTime, skyTop:
 
 function applyLight(c: Rgb, light: { tint: Rgb; mix: number; gain: number }): Rgb {
   return [0, 1, 2].map((k) => Math.round((c[k]! * (1 - light.mix) + light.tint[k]! * light.mix) * light.gain)) as unknown as Rgb;
+}
+
+/** Leans a colour toward the weather's air colour (ordered-dithered) after greying it out a little. */
+function airOver(c: Rgb, airColour: Rgb, amount: number, grey: number, x: number, y: number): Rgb {
+  const l = (c[0] * 0.3 + c[1] * 0.55 + c[2] * 0.15);
+  const g = [0, 1, 2].map((k) => c[k]! * (1 - grey) + l * grey);
+  // Dither the mix amount in quarter steps so weather stays crisp pixel art, not a smooth wash.
+  const stepped = Math.min(1, Math.floor(amount * 4 + dither(x, y)) / 4);
+  return [0, 1, 2].map((k) => Math.round(g[k]! * (1 - stepped) + airColour[k]! * stepped)) as unknown as Rgb;
 }

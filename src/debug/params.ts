@@ -1,6 +1,6 @@
 // Dev URL params: ?fixture=<name> ?seed=<s> ?noanim=1 ?renderer=canvas
 
-export type Fixture = { scene: string; seed?: string; state?: unknown; season?: string; time?: string };
+export type Fixture = { scene: string; seed?: string; state?: unknown; season?: string; time?: string; weather?: string };
 
 const fixtures = import.meta.glob<Fixture>('/fixtures/*.json', { eager: true, import: 'default' });
 

@@ -51,7 +51,7 @@ describe('window view grading', () => {
   });
 
   it('only touches pixels inside the window', () => {
-    const out = gradeView(img, 'winter', 'afternoon', 24, 150);
+    const out = gradeView(img, 'winter', 'afternoon', 24, 150, 'snow');
     let changed = 0;
     for (let i = 0; i < out.length; i += 4) {
       if (img.data[i + 3] === 0) expect(out[i + 3]).toBe(0);

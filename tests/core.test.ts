@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextFloat, reduce, seedRng, shuffle, skyTime } from '../src/core';
+import { nextFloat, NIGHT_SHIFT_DAY, reduce, seedRng, shuffle, skyTime } from '../src/core';
 
 describe('rng', () => {
   it('is deterministic for a seed', () => {
@@ -59,10 +59,10 @@ describe('calendar', () => {
   });
 
   it('derives the sky from the phase of the day', () => {
-    expect(skyTime({ day: 1, phase: 'morning' })).toBe('morning');
-    expect(skyTime({ day: 2, phase: 'brewing' })).toBe('afternoon');
-    expect(skyTime({ day: 3, phase: 'dusk' })).toBe('evening');
-    expect(skyTime({ day: 4, phase: 'brewing' })).toBe('night');
+    expect(skyTime({ day: 1, phase: 'morning' })).toBe('afternoon');
+    expect(skyTime({ day: 2, phase: 'brewing' })).toBe('sunset');
+    expect(skyTime({ day: 3, phase: 'dusk' })).toBe('twilight');
+    expect(skyTime({ day: NIGHT_SHIFT_DAY, phase: 'brewing' })).toBe('night');
     expect(skyTime({ day: 2, phase: 'night-market' })).toBe('night');
   });
 });

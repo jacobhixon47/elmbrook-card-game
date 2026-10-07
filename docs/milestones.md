@@ -34,17 +34,18 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - Dusk reward pick and errand choice.
 - Fixtures + snaps for each state.
 
-**Accept:** Jacob can play Days 1-3 of week 1 in the browser with mouse and keyboard and it feels good.
+**Accept:** Jacob can play the days of week 1 in the browser with mouse and keyboard and it feels good.
 
 ## M3 — Full run
 
-- Calendar scene (run map) with weather/events and next patron preview.
+- Calendar scene (run map), seeded at run start: daily weather, town events, the week-3 festival, rare sky events, next patron preview (GDD §4.2).
+- Night customers (GDD §4.1).
 - Night Shifts with patron twists (all 7), Night Satchel, Lunar cards.
 - Night Market with all 6 stalls and their odd currencies.
 - Familiars, cauldrons, card modifiers, tinctures, remaining errands (Creek, Guild Commissions, Events: first 8).
 - Game over and victory screens; resume mid-run.
 
-**Accept:** a full 16-encounter run is playable start to finish; sim win rate for greedy bot within target band; balance report checked in.
+**Accept:** a full 20-encounter run is playable start to finish; sim win rate for greedy bot within target band; balance report checked in.
 
 ## M4 — Meta and story
 

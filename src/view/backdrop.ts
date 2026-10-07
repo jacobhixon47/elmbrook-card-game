@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { BACKDROPS, type BackdropId } from '../art/backdrops';
 import { gradeView } from '../art/window';
-import { SEASONS, SKY_TIMES, type Season, type SkyTime } from '../core';
+import { SEASONS, SKY_TIMES, WEATHERS, type Season, type SkyTime, type Weather } from '../core';
 import { COUNTER_TOP, SHOP_LANTERNS } from '../art/scenes/shop';
 import { TOWN_LAMPS } from '../art/scenes/town';
 import { params } from '../debug/params';
@@ -29,22 +29,24 @@ export function titleBackdrop(): SceneBackdrop {
   return { texture: backdropTexture('title'), lights: b.lights, counterTop: 0 };
 }
 
-/** `?season=` and `?time=` override what the run says, for previewing the window. */
-export function viewOverrides(): { season?: Season; time?: SkyTime } {
+/** `?season=`, `?time=` and `?weather=` override what the run says, for previewing the window. */
+export function viewOverrides(): { season?: Season; time?: SkyTime; weather?: Weather } {
   const season = params.get('season') as Season | null;
   const time = params.get('time') as SkyTime | null;
+  const weather = params.get('weather') as Weather | null;
   return {
+    ...(weather && WEATHERS.includes(weather) ? { weather } : {}),
     ...(season && SEASONS.includes(season) ? { season } : {}),
     ...(time && SKY_TIMES.includes(time) ? { time } : {}),
   };
 }
 
 /**
- * Returns a texture of the shop window's view regraded for a season and time of day,
+ * Returns a texture of the shop window's view regraded for a season, time of day and weather,
  * building (and caching) it from the painted view on first use.
  */
-export function gradedView(scene: Phaser.Scene, viewKey: string, id: BackdropId, season: Season, time: SkyTime): string {
-  const key = `${viewKey}/${season}-${time}`;
+export function gradedView(scene: Phaser.Scene, viewKey: string, id: BackdropId, season: Season, time: SkyTime, weather: Weather = 'clear'): string {
+  const key = `${viewKey}/${season}-${time}-${weather}`;
   if (scene.textures.exists(key)) return key;
   const b = BACKDROPS[id];
   if (!('view' in b)) throw new Error(`backdrop ${id} has no window view`);
@@ -55,7 +57,7 @@ export function gradedView(scene: Phaser.Scene, viewKey: string, id: BackdropId,
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(img, 0, 0);
   const src = ctx.getImageData(0, 0, img.width, img.height);
-  const graded = gradeView({ width: src.width, height: src.height, data: src.data }, season, time, b.view.skyTop, b.view.horizon);
+  const graded = gradeView({ width: src.width, height: src.height, data: src.data }, season, time, b.view.skyTop, b.view.horizon, weather);
   const tex = scene.textures.createCanvas(key, img.width, img.height)!;
   tex.getContext().putImageData(new ImageData(new Uint8ClampedArray(graded), img.width, img.height), 0, 0);
   tex.refresh();

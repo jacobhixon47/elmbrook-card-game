@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { hex } from '../art/palette';
-import { skyTime, type RunState, type Season, type SkyTime } from '../core';
+import { skyTime, type RunState, type Season, type SkyTime, type Weather } from '../core';
 import { markReady } from '../debug/hook';
 import { noAnim, params, type Fixture } from '../debug/params';
 import { store } from '../store';
@@ -37,8 +37,10 @@ export class Hand extends Phaser.Scene {
       // The view through the window changes with the season and time of day; the room is painted over it.
       const season = viewOverrides().season ?? state.season;
       const time = (fixture?.time as SkyTime | undefined) ?? viewOverrides().time ?? skyTime(state);
-      this.add.image(0, 0, gradedView(this, bg.view, 'shop', season, time)).setOrigin(0);
-      addWeather(this, bg.window, season, time);
+      // Daily weather comes from the seeded Calendar in M3; until then it is clear unless previewed.
+      const weather = (fixture?.weather as Weather | undefined) ?? viewOverrides().weather ?? 'clear';
+      this.add.image(0, 0, gradedView(this, bg.view, 'shop', season, time, weather)).setOrigin(0);
+      addWeather(this, bg.window, season, time, weather);
     }
     this.add.image(0, 0, bg.texture).setOrigin(0);
     for (const l of bg.lights) {
