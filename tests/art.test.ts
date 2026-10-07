@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { PNG } from 'pngjs';
+import { BACKDROPS } from '../src/art/backdrops';
 import { PALETTE } from '../src/art/palette';
 import { proceduralTextures } from '../src/art/procedural';
 import { spriteSize, validateSprite } from '../src/art/sprite';
@@ -25,6 +28,15 @@ describe('art', () => {
         const hex = '#' + [0, 1, 2].map((k) => (pm.data[i + k] ?? 0).toString(16).padStart(2, '0')).join('');
         expect(allowed.has(hex), `${key} uses ${hex}`).toBe(true);
       }
+    }
+  });
+});
+
+describe('painted backdrops', () => {
+  it('every backdrop file exists at 640x360', () => {
+    for (const [id, b] of Object.entries(BACKDROPS)) {
+      const png = PNG.sync.read(readFileSync(`public/${b.file}`));
+      expect({ id, width: png.width, height: png.height }).toEqual({ id, width: 640, height: 360 });
     }
   });
 });

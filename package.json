@@ -16,7 +16,8 @@
     "snap:all": "tsx scripts/snap.ts --all",
     "art:sheet": "tsx scripts/art-sheet.ts",
     "art:check": "tsx scripts/art-check.ts",
-    "render-texture": "tsx scripts/render-texture.ts"
+    "render-texture": "tsx scripts/render-texture.ts",
+    "art:import": "tsx scripts/import-backdrop.ts"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",

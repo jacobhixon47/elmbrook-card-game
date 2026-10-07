@@ -1,6 +1,6 @@
 # Art Pipeline: art as code
 
-There is no image-model API in this project, so every pixel is authored as code, reviewed in screenshots, and reproducible from source. Nothing needs an art app.
+There is no image-model API in this project, so almost every pixel is authored as code, reviewed in screenshots, and reproducible from source. The exception is large painted backdrops, which are pixelized from Midjourney renders (see "Painted backdrops" below). Nothing needs an art app.
 
 ## Art direction
 
@@ -15,15 +15,32 @@ Lighting rules (from the reference art Jacob shared):
 - Small saturated accents (ivy greens, flower pinks, potion glass) sit on top of the muted base.
 - Scenes shade surfaces from light sources via `Pixmap.shade(x, y, ramp, t)` (ordered dither between ramp steps) and add soft additive glows (`fx/glow`) over lanterns.
 
-## Three kinds of art
+## Four kinds of art
 
 | Kind | Where | How it's made | Used for |
 |---|---|---|---|
 | **Sprite grids** | `src/art/sprites/*.ts` | 16×16 grids of palette keys, one string per row, written by hand (by Claude). `recolor()` makes tinted variants. | Ingredients, tinctures, potions, familiars, small portraits |
 | **Procedural** | `src/art/procedural.ts`, `src/art/scenes/*.ts` | Deterministic drawing code on a palette-locked `Pixmap` (rects, ellipses, Bayer dither, outlines, seeded scatter, value noise from `src/art/noise.ts` for stone, wood, thatch and grass grain). Shared town pieces (cottages, mountains, pines, sky) live in `src/art/scenes/town.ts`. | Card frames and backs, cauldrons, pips, backgrounds, UI panels, particles |
+| **Painted backdrops** | `public/backdrops/*.png`, listed in `src/art/backdrops.ts` | A Midjourney render (or other painting) cropped and pixelized by `pnpm art:import`: 640×360, about 48 colours, no dither. | Full-screen backgrounds: the shop, later the Night Market and town |
 | **Baked composites** | `src/view/card.ts` | Procedural frame + sprite at 2× + crisp text, baked into one texture per card at boot. | Card faces (and later: order tickets, stall signs) |
 
-All three share one palette (`src/art/palette.ts`). Nothing off-palette can ship: `tests/art.test.ts` checks every sprite and procedural texture.
+Sprites, procedural art and baked cards share one palette (`src/art/palette.ts`), and nothing off-palette can ship: `tests/art.test.ts` checks every sprite and procedural texture. Painted backdrops keep their own reduced colours; the code-drawn art on top of them should still read as the same world.
+
+## Painted backdrops
+
+Code can't match the painterly depth of a full scene, so big backgrounds are painted (Jacob's Midjourney renders, from 1.0 or new) and pixelized:
+
+```
+pnpm art:import <image> <name> [--grid 2 --panel 0] [--colors 48] [--focus 0.5,0.5]
+```
+
+The script picks one panel of a Midjourney 2×2 grid, trims letterbox bars, crops to 16:9 around the focus point, downsizes to 640×360 with Lanczos and reduces to a small palette with no dither. It writes `public/backdrops/<name>.png` and a 2× preview to `.snaps/backdrop-<name>.png`.
+
+Then add the backdrop to `src/art/backdrops.ts` with its source (so it can be redone), its lamp positions (for additive glows) and any surfaces props stand on, such as `counterTop`. Scenes read layout from there, never hard-coded. Keep originals out of the repo; only the pixelized PNG ships. A test checks every listed backdrop exists at 640×360.
+
+Code-drawn backdrops (`bg/shop`, `bg/night`) stay as fallbacks and for screens without a painting yet; `?backdrops=code` shows them. The title town is code-drawn until there is a painted village to import.
+
+Prompting new backdrops: wide 16:9, "cozy pixel art, moonlit, stone and thatch, medieval fantasy, whimsical magic", with the middle and bottom third kept calm, because cards and the cauldron sit there.
 
 ## Palette
 

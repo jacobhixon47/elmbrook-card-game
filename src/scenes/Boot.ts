@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
+import { BACKDROPS, type BackdropId } from '../art/backdrops';
 import type { Pixmap } from '../art/pixmap';
 import { proceduralTextures } from '../art/procedural';
 import { rasterize } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { loadFixture } from '../debug/params';
+import { backdropTexture } from '../view/backdrop';
 
 function addTexture(scene: Phaser.Scene, key: string, px: { width: number; height: number; data: Uint8ClampedArray }) {
   const tex = scene.textures.createCanvas(key, px.width, px.height);
@@ -31,6 +33,10 @@ function addGlow(scene: Phaser.Scene) {
 export class Boot extends Phaser.Scene {
   constructor() {
     super('Boot');
+  }
+
+  preload() {
+    for (const [id, b] of Object.entries(BACKDROPS)) this.load.image(backdropTexture(id as BackdropId), b.file);
   }
 
   create() {

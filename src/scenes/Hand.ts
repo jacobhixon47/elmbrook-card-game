@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
-import { COUNTER_TOP, SHOP_LANTERNS } from '../art/scenes/shop';
 import type { RunState } from '../core';
 import { markReady } from '../debug/hook';
 import { noAnim, params, type Fixture } from '../debug/params';
 import { store } from '../store';
+import { shopBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
 import { pixelText } from '../view/text';
@@ -28,10 +28,12 @@ export class Hand extends Phaser.Scene {
     }
     const state = store.getState()!;
 
-    this.add.image(0, 0, 'bg/shop').setOrigin(0);
-    for (const l of SHOP_LANTERNS) {
-      const glow = this.add.image(l.x, l.y - 2, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(1.3).setAlpha(0.55);
-      if (!noAnim) this.tweens.add({ targets: glow, alpha: 0.42, scale: 1.24, duration: 900 + l.x, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const bg = shopBackdrop();
+    const COUNTER_TOP = bg.counterTop;
+    this.add.image(0, 0, bg.texture).setOrigin(0);
+    for (const l of bg.lights) {
+      const glow = this.add.image(l.x, l.y, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(l.scale).setAlpha(0.55);
+      if (!noAnim) this.tweens.add({ targets: glow, alpha: 0.42, scale: l.scale * 0.95, duration: 900 + l.x, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
 
     // HUD on the dark heartwood corners.
@@ -40,8 +42,8 @@ export class Hand extends Phaser.Scene {
     pixelText(this, 630, 8, `${state.gold} gold`, { size: 12, color: 'y', align: 'right', shadow: true }).setOrigin(1, 0);
 
     // Cauldron on the counter, centred under the window.
-    this.add.image(320, COUNTER_TOP - 22, 'prop/cauldron');
-    const steam = this.add.image(320, COUNTER_TOP - 40, 'fx/glow').setTint(0x7fbf5f).setBlendMode(Phaser.BlendModes.ADD).setScale(0.6).setAlpha(0.35);
+    this.add.image(320, COUNTER_TOP - 27, 'prop/cauldron');
+    const steam = this.add.image(320, COUNTER_TOP - 45, 'fx/glow').setTint(0x7fbf5f).setBlendMode(Phaser.BlendModes.ADD).setScale(0.6).setAlpha(0.35);
     if (!noAnim) this.tweens.add({ targets: steam, alpha: 0.2, duration: 1200, yoyo: true, repeat: -1 });
 
     // Draw pile: a small stack of card backs at the left end of the counter.
