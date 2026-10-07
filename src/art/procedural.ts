@@ -1,7 +1,8 @@
-import { nextFloat, seedRng, type RngState } from '../core/rng';
+import { seedRng } from '../core/rng';
 import { ESSENCE_COLOR, type PaletteKey } from './palette';
 import { Pixmap } from './pixmap';
 import { shopBackdrop } from './scenes/shop';
+import { townBackdrop } from './scenes/town';
 
 // Procedural art: frames, props and backgrounds drawn by code, palette-locked.
 // Every generator is deterministic so snaps and contact sheets are stable.
@@ -70,94 +71,10 @@ export function cauldron(brew: PaletteKey = 'G', brewLight: PaletteKey = 'l'): P
   return p;
 }
 
-function rand(state: { s: RngState }): number {
-  const [f, s] = nextFloat(state.s);
-  state.s = s;
-  return f;
-}
-
-/** Night sky over the rooftops of Elmbrook. 640x360. */
+/** Elmbrook by moonlight, behind the title. 640x360. */
 export function nightBackdrop(seed = 'elmbrook'): Pixmap {
-  const W = 640;
-  const H = 360;
-  const p = new Pixmap(W, H);
-  const r = { s: seedRng(seed) };
-
-  p.ditherV(0, 140, 'K', 'p');
-  p.ditherV(141, 260, 'p', 'P');
-
-  // Stars.
-  for (let i = 0; i < 140; i++) {
-    const x = Math.floor(rand(r) * W);
-    const y = Math.floor(rand(r) * 220);
-    p.set(x, y, rand(r) > 0.8 ? 'W' : 'm');
-    if (rand(r) > 0.93) {
-      p.set(x - 1, y, 'v').set(x + 1, y, 'v').set(x, y - 1, 'v').set(x, y + 1, 'v');
-    }
-  }
-
-  // Moon with a soft halo.
-  p.fillEllipse(520, 70, 34, 34, 'P');
-  p.fillEllipse(520, 70, 28, 28, 'v');
-  p.fillEllipse(520, 70, 24, 24, 'm');
-  p.fillEllipse(512, 62, 5, 4, 'S').fillEllipse(530, 80, 4, 3, 'S').fillEllipse(527, 60, 2, 2, 'S');
-
-  // Far hills, moonlit.
-  for (let x = 0; x < W; x++) {
-    const hill = 236 + Math.round(Math.sin(x / 70) * 12 + Math.sin(x / 23) * 4);
-    for (let y = hill; y < H; y++) p.shade(x, y, ['z', 'Z', 'x', 'X'], y === hill ? 1 : 0.5 - (y - hill) / 80);
-  }
-
-  // The tree-town: great elms with round lit windows, little doors and rope bridges.
-  const trees: { x: number; w: number; top: number }[] = [];
-  for (let x = 20; x < W; x += 70 + Math.floor(rand(r) * 40)) {
-    trees.push({ x, w: 18 + Math.floor(rand(r) * 16), top: 150 + Math.floor(rand(r) * 60) });
-  }
-  const ground = 300;
-  for (const t of trees) {
-    for (let y = t.top; y < ground + 6; y++) {
-      const k = (y - t.top) / (ground - t.top);
-      const half = (t.w / 2) * (0.75 + k * 0.25) + (k > 0.8 ? ((k - 0.8) / 0.2) ** 2 * t.w : 0);
-      for (let x = Math.round(t.x - half); x <= t.x + half; x++) p.set(x, y, x < t.x - half / 3 ? 'K' : x > t.x + half * 0.5 ? 'q' : 'k');
-    }
-    for (let c = 0; c < 7; c++) {
-      const ccx = t.x + (rand(r) - 0.5) * t.w * 3;
-      const ccy = t.top - 8 + (rand(r) - 0.5) * 22;
-      const rr = t.w * (0.8 + rand(r) * 0.6);
-      for (let y = Math.floor(ccy - rr); y <= ccy + rr; y++) {
-        for (let x = Math.floor(ccx - rr * 1.3); x <= ccx + rr * 1.3; x++) {
-          if (((x - ccx) / (rr * 1.3)) ** 2 + ((y - ccy) / rr) ** 2 > 1) continue;
-          p.shade(x, y, ['K', 'g', 'T', 'x'], 0.2 + ((ccy - y) / rr) * 0.45 + (rand(r) - 0.5) * 0.15);
-        }
-      }
-    }
-    for (let wy = t.top + 16; wy < ground - 24; wy += 22) {
-      if (rand(r) > 0.3) p.fillEllipse(t.x + (rand(r) - 0.5) * t.w * 0.4, wy, 3, 3, rand(r) > 0.3 ? 'y' : 'o');
-    }
-    p.fillRect(t.x - 3, ground - 9, 7, 9, 'o').hline(t.x - 2, t.x + 2, ground - 10, 'o').set(t.x, ground - 6, 'y');
-  }
-  // Rope bridges with lanterns between neighbouring trees.
-  for (let i = 0; i + 1 < trees.length; i++) {
-    const a = trees[i]!;
-    const b = trees[i + 1]!;
-    if (rand(r) > 0.6) continue;
-    const by = Math.max(a.top, b.top) + 30;
-    for (let x = a.x; x <= b.x; x++) {
-      const y = by + Math.round(Math.sin(((x - a.x) / (b.x - a.x)) * Math.PI) * 8);
-      p.set(x, y, 'B');
-      if ((x - a.x) % 18 === 9) p.set(x, y + 1, 'k').set(x, y + 2, 'y').set(x, y + 3, 'Y');
-    }
-  }
-  // Mossy ground, a winding path, and fireflies.
-  for (let y = ground; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const path = Math.abs(x - 320 - Math.sin(y / 9) * 14) < (y - ground) * 0.9 + 4;
-      p.shade(x, y, path ? ['k', 'j', 'J', 'h'] : ['K', 'g', 'G'], path ? 0.35 : 0.25 + Math.sin(x / 3 + y) * 0.08);
-    }
-  }
-  for (let i = 0; i < 40; i++) {
-    p.set(Math.floor(rand(r) * W), 200 + Math.floor(rand(r) * 140), rand(r) > 0.5 ? 'L' : 'y');
-  }
+  const p = new Pixmap(640, 360);
+  townBackdrop(p, { s: seedRng(seed) });
   return p;
 }
 

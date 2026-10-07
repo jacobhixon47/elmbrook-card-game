@@ -4,7 +4,7 @@ There is no image-model API in this project, so every pixel is authored as code,
 
 ## Art direction
 
-Cozy medieval fantasy: a mystical wooded town where folk live in great hollowed trees, somewhere between the Shire and Stardew Valley. Warm, playful, lamplit, never modern (no boxy houses, glass towers, neon). Think round doors and windows, living wood, roots, moss, mushrooms, drying herbs, candle-jar lanterns, rope bridges, fireflies, moonlight.
+Cozy but mysterious medieval fantasy, leaning into whimsical magic and wizardry: Elmbrook is a small forest town under snow-capped mountains, seen on moonlit nights. Fieldstone cottages with thick thatched roofs, smoke curling from chimneys, ivy and moss creeping over walls, warm lit windows, cobbled paths, drystone walls, lantern posts, fireflies and glowing mushrooms. Inside: timber beams, stone walls, shelves crowded with bottles, drying herbs, brass lanterns. Never modern (no boxy houses, glass towers, neon). The Midjourney art from Elmbrook 1.0 is the reference for mood and richness: layered, textured, softly lit, alive.
 
 The look is modern "16-bit-plus" pixel art, like Stardew: chunky whole pixels at a 640×360 base, but a rich palette with hue-shifted ramps, ordered dithering, and soft light glows. Not literal 8-bit.
 
@@ -20,7 +20,7 @@ Lighting rules (from the reference art Jacob shared):
 | Kind | Where | How it's made | Used for |
 |---|---|---|---|
 | **Sprite grids** | `src/art/sprites/*.ts` | 16×16 grids of palette keys, one string per row, written by hand (by Claude). `recolor()` makes tinted variants. | Ingredients, tinctures, potions, familiars, small portraits |
-| **Procedural** | `src/art/procedural.ts`, `src/art/scenes/*.ts` | Deterministic drawing code on a palette-locked `Pixmap` (rects, ellipses, Bayer dither, outlines, seeded scatter). | Card frames and backs, cauldrons, pips, backgrounds, UI panels, particles |
+| **Procedural** | `src/art/procedural.ts`, `src/art/scenes/*.ts` | Deterministic drawing code on a palette-locked `Pixmap` (rects, ellipses, Bayer dither, outlines, seeded scatter, value noise from `src/art/noise.ts` for stone, wood, thatch and grass grain). Shared town pieces (cottages, mountains, pines, sky) live in `src/art/scenes/town.ts`. | Card frames and backs, cauldrons, pips, backgrounds, UI panels, particles |
 | **Baked composites** | `src/view/card.ts` | Procedural frame + sprite at 2× + crisp text, baked into one texture per card at boot. | Card faces (and later: order tickets, stall signs) |
 
 All three share one palette (`src/art/palette.ts`). Nothing off-palette can ship: `tests/art.test.ts` checks every sprite and procedural texture.
@@ -49,7 +49,7 @@ No sprite-sheet animation in v1. Motion comes from code: tweens (bob, lift, squa
 ## Review loop
 
 1. `pnpm art:check` validates every grid and lists which codex cards are still placeholders (the red X tile).
-2. `pnpm snap art` screenshots the in-game art sheet; `pnpm art:sheet` renders the same without a browser; `pnpm render-texture bg/shop 2` renders one procedural texture (fast loop for backgrounds).
+2. `pnpm snap art` screenshots the in-game art sheet; `pnpm render-texture bg/night 2` renders the title town; `pnpm art:sheet` renders the same without a browser; `pnpm render-texture bg/shop 2` renders one procedural texture (fast loop for backgrounds).
 3. Claude looks at the PNG, fixes what reads badly, and repeats. Jacob reviews snaps in the PR.
 
 ## Adding art for a new card

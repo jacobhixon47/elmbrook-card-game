@@ -1,369 +1,331 @@
-import { nextFloat, seedRng, type RngState } from '../../core/rng';
-import { PALETTE, RAMPS, type PaletteKey } from '../palette';
+import { seedRng } from '../../core/rng';
+import { fbm, valueNoise } from '../noise';
+import { PALETTE, type PaletteKey } from '../palette';
 import { Pixmap } from '../pixmap';
+import { cottage, FOLIAGE, mountains, pick, pine, rand, type Rng } from './town';
 
-// The potion shop at night: a room hollowed out of a great elm in the
-// tree-town of Elmbrook. Living-wood walls, a round leaded window onto the
-// moonlit forest and its lit tree-houses, carved shelves of bottles, drying
-// herbs, candle-jar lanterns, and the live-edge counter where cards are played.
+// The potion shop at night, from behind the counter: a stone-walled, timber-
+// framed room in a moonlit forest town. A wide window looks out on mountains,
+// pines and thatched cottages with smoking chimneys; shelves overflow with
+// bottles; vines hang from the beams; two lanterns light the counter.
 // 640x360, deterministic for a seed.
 
 export const SHOP_W = 640;
 export const SHOP_H = 360;
+export const COUNTER_TOP = 230;
 
-/** Warm light sources, in backdrop pixels. Exported so the scene can add glows. */
-export const SHOP_LIGHTS = [
-  { x: 200, y: 92, radius: 200, power: 1 },
-  { x: 440, y: 92, radius: 200, power: 1 },
-  { x: 80, y: 140, radius: 110, power: 0.45 },
-  { x: 560, y: 150, radius: 110, power: 0.4 },
-] as const;
+const WIN = { x0: 198, x1: 442, y0: 32, y1: COUNTER_TOP - 1 };
 
+/** Lantern positions, exported so the scene can add soft glows. */
 export const SHOP_LANTERNS = [
-  { x: 200, y: 92, chain: 70 },
-  { x: 440, y: 92, chain: 70 },
+  { x: 252, y: 78, chain: 44 },
+  { x: 388, y: 72, chain: 38 },
 ] as const;
 
-const WIN = { cx: 320, cy: 116, r: 82 };
-export const COUNTER_TOP = 236;
+/** Warm light sources (lanterns plus spill from the shelves). */
+const LIGHTS = [
+  { x: 252, y: 80, radius: 230, power: 1 },
+  { x: 388, y: 74, radius: 220, power: 0.95 },
+  { x: 96, y: 120, radius: 120, power: 0.35 },
+  { x: 548, y: 120, radius: 120, power: 0.35 },
+];
 
-type Rng = { s: RngState };
+const STONE: readonly PaletteKey[] = ['K', 'q', 'j', 'J', 'h', 'H', 'a'];
+const WOOD: readonly PaletteKey[] = ['K', 'k', 'b', 'B', 'n', 'a'];
+const SKY: readonly PaletteKey[] = ['K', 'z', 'Z', 'q', 'Q', 'P', 'X'];
 
-function rand(r: Rng): number {
-  const [f, s] = nextFloat(r.s);
-  r.s = s;
-  return f;
-}
-
-function pick<T>(r: Rng, items: readonly T[]): T {
-  return items[Math.floor(rand(r) * items.length)] as T;
-}
-
-/** Combined warm light at a point, 0..1. */
 export function lightAt(x: number, y: number): number {
   let total = 0;
-  for (const l of SHOP_LIGHTS) {
+  for (const l of LIGHTS) {
     const d = Math.hypot(x - l.x, (y - l.y) * 1.1) / l.radius;
-    total += l.power * Math.max(0, 1 - d) ** 1.5;
+    total += l.power * Math.max(0, 1 - d) ** 1.4;
   }
   return Math.min(1, total);
 }
 
-/** Is (x, y) inside the hollow of the trunk? Outside it is the tree's dark heartwood. */
-function inHollow(x: number, y: number): boolean {
-  return ((x - 320) / 372) ** 2 + ((y - 380) / 382) ** 2 <= 1;
-}
+// ---------------------------------------------------------------- walls
 
-function livingWoodWall(p: Pixmap): void {
-  for (let y = 0; y < SHOP_H; y++) {
-    for (let x = 0; x < SHOP_W; x++) {
-      // Wavy vertical grain lines that bend around the room.
-      const wave = x + Math.sin(y / 37 + x / 70) * 7 + Math.sin(y / 11) * 1.5;
-      const grain = ((wave % 13) + 13) % 13;
-      const line = grain < 1.2 ? -0.18 : grain < 2.2 ? -0.07 : 0;
-      const t = 0.08 + lightAt(x, y) * 0.7 + line + Math.sin(wave / 5) * 0.03;
-      if (inHollow(x, y)) {
-        p.shade(x, y, ['k', 'b', 'B', 'n', 'a'], t);
-      } else {
-        // Heartwood beyond the arch: near-black with faint growth rings.
-        const ring = Math.hypot((x - 320) / 372, (y - 380) / 382);
-        p.shade(x, y, ['K', 'k', 'b'], 0.15 + (Math.sin(ring * 90) > 0.6 ? 0.25 : 0) + lightAt(x, y) * 0.25);
+/** Irregular dressed stones with bevelled edges, noise grain and warm lighting. */
+function stoneWall(p: Pixmap, r: Rng, x0: number, x1: number, y0: number, y1: number): void {
+  let y = y0;
+  while (y < y1) {
+    const h = 9 + Math.floor(rand(r) * 6);
+    let x = x0 - Math.floor(rand(r) * 20);
+    while (x < x1) {
+      const w = 14 + Math.floor(rand(r) * 18);
+      const tone = (rand(r) - 0.5) * 0.18;
+      for (let j = 0; j < h; j++) {
+        for (let i = 0; i < w; i++) {
+          const px = x + i;
+          const py = y + j;
+          if (px < x0 || px >= x1 || py >= y1) continue;
+          const mortar = i === w - 1 || j === h - 1;
+          // Rounded corners read as worn stone.
+          const corner = (i === 0 || i === w - 2) && (j === 0 || j === h - 2);
+          if (mortar || corner) {
+            p.shade(px, py, STONE, 0.05 + lightAt(px, py) * 0.25);
+            continue;
+          }
+          const bevel = i === 0 || j === 0 ? 0.16 : i === w - 2 || j === h - 2 ? -0.14 : 0;
+          const grain = (fbm(px, py, 6, 3) - 0.5) * 0.28;
+          p.shade(px, py, STONE, 0.1 + lightAt(px, py) * 0.72 + tone + bevel + grain);
+        }
       }
+      x += w;
     }
-  }
-  // Arch edge: a lit rim where the hollow meets the heartwood.
-  for (let x = 0; x < SHOP_W; x++) {
-    for (let y = 0; y < SHOP_H; y++) {
-      if (inHollow(x, y) && !inHollow(x, y - 2)) {
-        p.set(x, y, 'k');
-        p.set(x, y + 1, lightAt(x, y) > 0.35 ? 'n' : 'B');
-        break;
-      }
-    }
-  }
-  // Knots.
-  for (const [kx, ky] of [[168, 210], [520, 60], [600, 200], [58, 104]] as const) {
-    for (let ring = 7; ring >= 1; ring -= 2) p.fillEllipse(kx, ky, ring * 1.3, ring, ring % 4 === 1 ? 'b' : 'B');
-    p.fillEllipse(kx, ky, 1.5, 1, 'k');
+    y += h;
   }
 }
 
-function forestView(p: Pixmap, r: Rng): void {
-  const { cx, cy, r: R } = WIN;
-  const inside = (x: number, y: number) => (x - cx) ** 2 + (y - cy) ** 2 <= (R - 6) ** 2;
-  const top = cy - R;
-  const bottom = cy + R;
-  const horizon = cy + 26;
+/** Wood with long grain, darker streaks, bevelled edges and lighting. */
+function timber(p: Pixmap, x0: number, y0: number, w: number, h: number, vertical: boolean, lift = 0): void {
+  for (let y = y0; y < y0 + h; y++) {
+    for (let x = x0; x < x0 + w; x++) {
+      const along = vertical ? y : x;
+      const across = vertical ? x : y;
+      const grain = Math.sin(across * 1.7 + valueNoise(along, across, 14, 9) * 6) * 0.08 + (valueNoise(along, across * 6, 9, 5) - 0.5) * 0.18;
+      const edge = across === (vertical ? x0 : y0) ? 0.2 : across === (vertical ? x0 + w - 1 : y0 + h - 1) ? -0.25 : 0;
+      p.shade(x, y, WOOD, 0.22 + lightAt(x, y) * 0.55 + grain + edge + lift);
+    }
+  }
+  if (vertical) {
+    for (let y = y0; y < y0 + h; y++) p.set(x0 - 1, y, 'K').set(x0 + w, y, 'K');
+  } else {
+    p.hline(x0, x0 + w - 1, y0 + h, 'K');
+  }
+}
 
-  for (let y = top; y <= bottom; y++) {
-    for (let x = cx - R; x <= cx + R; x++) {
-      if (!inside(x, y)) continue;
-      const t = (y - top) / (horizon - top);
-      if (t < 0.5) p.shade(x, y, ['K', 'z', 'q'], t / 0.5);
-      else p.shade(x, y, ['q', 'Q', 'P', 'X'], (t - 0.5) / 0.65);
-    }
-  }
-  for (let i = 0; i < 80; i++) {
-    const sx = cx - R + Math.floor(rand(r) * R * 2);
-    const sy = top + Math.floor(rand(r) * (horizon - top - 20));
-    if (!inside(sx, sy)) continue;
-    p.set(sx, sy, pick(r, ['W', 'm', 'c', 'I', 'y', 'v'] as const));
-  }
-  // Moon with halo.
-  const mx = cx + 34;
-  const my = cy - 40;
-  for (let y = my - 26; y <= my + 26; y++) {
-    for (let x = mx - 26; x <= mx + 26; x++) {
-      if (!inside(x, y)) continue;
-      const d = Math.hypot(x - mx, y - my);
-      if (d < 9) p.set(x, y, d < 6.5 ? 'W' : 'Y');
-      else if (d < 26) p.shade(x, y, ['q', 'Q', 'P', 'v'], ((26 - d) / 17) ** 1.8 * 0.9);
-    }
-  }
-  // Far hills, moonlit.
-  for (let x = cx - R; x <= cx + R; x++) {
-    const hill = horizon - 8 + Math.round(Math.sin(x / 23) * 7 + Math.sin(x / 9) * 2);
-    for (let y = hill; y <= bottom; y++) if (inside(x, y)) p.shade(x, y, RAMPS.sky, y === hill ? 1 : 0.5 - (y - hill) / 60);
-  }
-  // Great trees of the town: tapering trunks with root flares, big soft
-  // canopies, and a few round lit windows and doors (tree-houses, not towers).
-  const trees = [
-    { x: cx - 50, w: 16, top: cy - 6 },
-    { x: cx + 4, w: 12, top: cy + 8 },
-    { x: cx + 54, w: 18, top: cy - 14 },
-  ];
-  for (const t of trees) {
-    for (let y = t.top; y <= bottom; y++) {
-      const k = (y - t.top) / (bottom - t.top);
-      const half = t.w / 2 * (0.7 + k * 0.3) + (k > 0.75 ? ((k - 0.75) / 0.25) ** 2 * t.w * 0.9 : 0);
-      for (let x = Math.round(t.x - half); x <= t.x + half; x++) {
-        if (inside(x, y)) p.set(x, y, x < t.x - half / 3 ? 'k' : x > t.x + half * 0.6 ? 'p' : 'q');
-      }
-    }
-    // Canopy: overlapping soft clumps, moonlit on top.
-    for (let c = 0; c < 6; c++) {
-      const ccx = t.x + (rand(r) - 0.5) * t.w * 2.6;
-      const ccy = t.top - 6 + (rand(r) - 0.5) * 14;
-      const rr = t.w * (0.7 + rand(r) * 0.5);
-      for (let y = Math.floor(ccy - rr); y <= ccy + rr; y++) {
-        for (let x = Math.floor(ccx - rr * 1.3); x <= ccx + rr * 1.3; x++) {
-          const d = ((x - ccx) / (rr * 1.3)) ** 2 + ((y - ccy) / rr) ** 2;
-          if (d > 1 || !inside(x, y)) continue;
-          p.shade(x, y, ['K', 'g', 'T', 'x'], 0.25 + (ccy - y) / rr * 0.45 + (rand(r) - 0.5) * 0.2);
+function roofRafters(p: Pixmap): void {
+  // Sloped roof beams in the top corners.
+  for (const side of [0, 1] as const) {
+    for (let k = 0; k < 3; k++) {
+      for (let s = 0; s < 120; s++) {
+        const x = side === 0 ? s : SHOP_W - 1 - s;
+        const y = Math.round(60 - s * 0.5) + k * 14 - 20;
+        for (let j = 0; j < 6; j++) {
+          if (y + j < 0) continue;
+          p.shade(x, y + j, WOOD, 0.12 + lightAt(x, y) * 0.4 + (j === 0 ? 0.15 : j === 5 ? -0.2 : 0));
         }
       }
     }
-    // A round window or two, and a little arched door at the base.
-    const wy = Math.round(t.top + (bottom - t.top) * 0.35);
-    if (inside(t.x, wy)) p.fillEllipse(t.x, wy, 2.5, 2.5, 'y').set(t.x - 1, wy - 1, 'Y');
-    if (rand(r) > 0.4 && inside(t.x, wy + 14)) p.fillEllipse(t.x + 1, wy + 14, 2, 2, 'o');
-    const dy = bottom - 16;
-    if (inside(t.x, dy)) {
-      p.fillRect(t.x - 2, dy - 3, 5, 7, 'o').hline(t.x - 1, t.x + 1, dy - 4, 'o').set(t.x, dy - 2, 'y');
-    }
-  }
-  // A lantern-lit rope bridge between the outer trees.
-  for (let x = trees[0]!.x; x <= trees[2]!.x; x++) {
-    const sag = Math.round(Math.sin(((x - trees[0]!.x) / (trees[2]!.x - trees[0]!.x)) * Math.PI) * 7);
-    const by = cy + 14 + sag;
-    if (inside(x, by)) p.set(x, by, 'B');
-    if (x % 9 === 0 && inside(x, by - 1)) p.set(x, by - 1, x % 27 === 0 ? 'y' : 'b');
-  }
-  // Fireflies.
-  for (let i = 0; i < 18; i++) {
-    const fx = cx - R + Math.floor(rand(r) * R * 2);
-    const fy = horizon - 10 + Math.floor(rand(r) * 50);
-    if (inside(fx, fy)) p.set(fx, fy, pick(r, ['L', 'y', 'Y'] as const));
-  }
-
-  // Leaded panes: a ring and a cross of dark lead.
-  for (let y = top; y <= bottom; y++) {
-    for (let x = cx - R; x <= cx + R; x++) {
-      if (!inside(x, y)) continue;
-      const d = Math.hypot(x - cx, y - cy);
-      if (Math.abs(d - 40) < 1 || Math.abs(x - cx) < 1.5 || Math.abs(y - cy) < 1.5) p.set(x, y, 'k');
-    }
-  }
-  // Thick carved frame.
-  for (let y = top - 12; y <= bottom + 12; y++) {
-    for (let x = cx - R - 12; x <= cx + R + 12; x++) {
-      const d = Math.hypot(x - cx, y - cy);
-      if (d >= R - 6 && d < R + 8) {
-        const lit = lightAt(x, y);
-        const edge = d < R - 4.5 || d > R + 6.5;
-        const bevel = y < cy ? 0.15 : -0.1;
-        if (edge) p.set(x, y, 'k');
-        else p.shade(x, y, RAMPS.wood, 0.3 + lit * 0.6 + bevel + (Math.abs(d - R) < 1 ? 0.2 : 0));
-      }
-    }
   }
 }
 
-function bottle(p: Pixmap, r: Rng, x: number, baseY: number, tall: boolean): number {
-  const glass = pick(r, [
-    ['u', 'U', 'c'],
-    ['r', 'R', 'I'],
-    ['g', 'G', 'l'],
-    ['p', 'P', 'v'],
-    ['o', 'y', 'Y'],
-    ['T', 't', 'c'],
-    ['J', 'h', 'H'],
-  ] as const);
-  const w = tall ? 5 + Math.floor(rand(r) * 3) : 7 + Math.floor(rand(r) * 5);
-  const h = tall ? 12 + Math.floor(rand(r) * 8) : 7 + Math.floor(rand(r) * 5);
+// ---------------------------------------------------------------- the view
+
+function windowView(p: Pixmap, r: Rng): void {
+  const { x0, x1, y0, y1 } = WIN;
+  const horizon = y1 - 70;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const t = (y - y0) / (horizon - y0);
+      p.shade(x, y, SKY, 0.15 + t * 0.7 + (valueNoise(x, y, 20, 4) - 0.5) * 0.12);
+    }
+  }
+  // Wispy clouds catching moonlight.
+  for (let y = y0 + 20; y < horizon - 10; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const c = fbm(x * 0.6, y * 2.2, 26, 11, 3);
+      if (c > 0.62) p.shade(x, y, ['q', 'Q', 'P', 'v'], (c - 0.62) * 4.5);
+    }
+  }
+  // Stars of several colours, a few twinkling crosses.
+  for (let i = 0; i < 140; i++) {
+    const sx = x0 + Math.floor(rand(r) * (x1 - x0));
+    const sy = y0 + Math.floor(rand(r) * (horizon - y0));
+    p.set(sx, sy, pick(r, ['W', 'm', 'c', 'v', 'y', 'I'] as const));
+    if (rand(r) > 0.93) p.set(sx - 1, sy, 'P').set(sx + 1, sy, 'P').set(sx, sy - 1, 'P').set(sx, sy + 1, 'P');
+  }
+  // Moon and halo.
+  const mx = 370;
+  const my = 66;
+  for (let y = my - 40; y <= my + 40; y++) {
+    for (let x = mx - 40; x <= mx + 40; x++) {
+      if (x < x0 || x > x1 || y < y0) continue;
+      const d = Math.hypot(x - mx, y - my);
+      if (d < 12) p.shade(x, y, ['m', 'W'], 1 - d / 14 + (valueNoise(x, y, 4, 2) - 0.5) * 0.6);
+      else if (d < 40) p.shade(x, y, ['q', 'Q', 'P', 'v', 'm'], ((40 - d) / 28) ** 2 * 0.8);
+    }
+  }
+  // Mountains: far snow-capped peaks lit from the moon side, then a mist band.
+  mountains(p, x0, x1, horizon + 18, y1, [
+    { x: 205, h: 62 },
+    { x: 262, h: 92 },
+    { x: 318, h: 58 },
+    { x: 362, h: 80 },
+    { x: 432, h: 66 },
+  ]);
+  // Forested ridge: a dark band of pine silhouettes.
+  for (let x = x0; x <= x1; x++) {
+    const near = horizon + 14 + Math.round(Math.sin(x / 31) * 6 + valueNoise(x, 0, 8, 23) * 6);
+    for (let y = near; y <= y1; y++) p.shade(x, y, ['K', 'z', 'g', 'T'], 0.32 - (y - near) / 50 + (y === near ? 0.25 : 0));
+  }
+  for (let i = 0; i < 46; i++) {
+    const tx = x0 + Math.floor(rand(r) * (x1 - x0));
+    pine(p, tx, horizon + 20 + Math.floor(rand(r) * 16), 14 + Math.floor(rand(r) * 14), 0.12, x0, x1);
+  }
+  for (let i = 0; i < 14; i++) {
+    const tx = x0 + Math.floor(rand(r) * (x1 - x0));
+    pine(p, tx, horizon + 42 + Math.floor(rand(r) * 12), 22 + Math.floor(rand(r) * 18), 0.2, x0, x1);
+  }
+  // Thatched stone cottages, far to near, with lit windows and chimney smoke.
+  cottage(p, r, { x: 380, base: horizon + 44, w: 38, wallH: 14 }, y0 + 2);
+  cottage(p, r, { x: 212, base: horizon + 50, w: 44, wallH: 16 }, y0 + 2);
+  cottage(p, r, { x: 290, base: horizon + 62, w: 60, wallH: 20 }, y0 + 2);
+  // Fireflies and a flowering hedge along the sill.
+  for (let i = 0; i < 26; i++) p.set(x0 + Math.floor(rand(r) * (x1 - x0)), horizon + Math.floor(rand(r) * 60), pick(r, ['L', 'y', 'Y'] as const));
+  for (let x = x0; x <= x1; x++) {
+    const hedge = y1 - 12 + Math.round(valueNoise(x, 0, 6, 41) * 8);
+    for (let y = hedge; y <= y1; y++) p.shade(x, y, FOLIAGE, 0.2 + fbm(x, y, 3, 42) * 0.5 + lightAt(x, y) * 0.3);
+    if (rand(r) > 0.82) p.set(x, hedge + 1 + Math.floor(rand(r) * 6), pick(r, ['I', 'i', 'v', 'w'] as const));
+  }
+}
+
+// ---------------------------------------------------------------- props
+
+type Glass = readonly [PaletteKey, PaletteKey, PaletteKey];
+const GLASSES: readonly Glass[] = [
+  ['u', 'U', 'c'],
+  ['r', 'R', 'I'],
+  ['g', 'G', 'l'],
+  ['p', 'P', 'v'],
+  ['b', 'o', 'y'],
+  ['T', 't', 'c'],
+  ['J', 'h', 'H'],
+];
+
+/** A bottle or jar with outline, liquid level, glass highlight and cork. Returns its width. */
+function bottle(p: Pixmap, r: Rng, x: number, baseY: number, kind: 'tall' | 'jar' | 'round'): number {
+  const g = pick(r, GLASSES);
+  const w = kind === 'tall' ? 5 + Math.floor(rand(r) * 3) : kind === 'jar' ? 9 + Math.floor(rand(r) * 5) : 8 + Math.floor(rand(r) * 3);
+  const h = kind === 'tall' ? 14 + Math.floor(rand(r) * 8) : kind === 'jar' ? 10 + Math.floor(rand(r) * 5) : 9 + Math.floor(rand(r) * 3);
   const top = baseY - h;
-  const neck = tall ? Math.max(2, Math.floor(w / 2) - 1) : w - 2;
-  const neckH = tall ? 4 : 1;
-  p.fillRect(x, top + neckH, w, h - neckH, glass[1]);
-  p.fillRect(x, top + neckH + Math.floor((h - neckH) / 3), w, Math.ceil(((h - neckH) * 2) / 3), glass[0]);
-  p.fillRect(x + 1, top + neckH + 1, 1, Math.max(1, h - neckH - 3), glass[2]);
-  const nx = x + Math.floor((w - neck) / 2);
-  p.fillRect(nx, top, neck, neckH, glass[1]);
-  p.fillRect(nx, top - 2, neck, 2, tall ? 'B' : 'n');
+  const neckW = kind === 'jar' ? w - 2 : Math.max(2, Math.floor(w / 2) - 1);
+  const neckH = kind === 'tall' ? 5 : kind === 'round' ? 3 : 1;
+  const bodyTop = top + neckH;
+  const level = bodyTop + Math.floor((h - neckH) * (0.15 + rand(r) * 0.35));
+  for (let y = bodyTop; y < baseY; y++) {
+    for (let i = 0; i < w; i++) {
+      const roundCut = kind === 'round' && (y - bodyTop < 2 || baseY - y < 2) && (i === 0 || i === w - 1);
+      if (roundCut) continue;
+      const liquid = y >= level;
+      const key = liquid ? (i < w / 3 ? g[2] : i > (w * 2) / 3 ? g[0] : g[1]) : i === 1 ? 'm' : 'Q';
+      p.set(x + i, y, key);
+    }
+  }
+  for (let y = bodyTop; y < baseY; y++) p.set(x - 1, y, 'k').set(x + w, y, 'k');
+  p.hline(x, x + w - 1, baseY, 'k');
+  for (let y = bodyTop + 1; y < baseY - 2; y++) if (y % 4 !== 3) p.set(x + 1, y, 'W');
+  const nx = x + Math.floor((w - neckW) / 2);
+  const lid = kind === 'jar' ? 1 : 0;
+  p.fillRect(nx, top, neckW, neckH, 'Q');
+  p.fillRect(nx - lid, top - 2, neckW + lid * 2, 2, kind === 'jar' ? 'n' : 'B');
+  p.hline(nx - lid, nx + neckW - 1 + lid, top - 3, 'k');
+  if (kind === 'jar' && rand(r) > 0.4) p.fillRect(x + 2, bodyTop + Math.floor((h - neckH) / 2), w - 4, 3, 'w');
   return w;
 }
 
-function mushroom(p: Pixmap, x: number, y: number, size: number): void {
-  p.fillRect(x - 1, y - size, 3, size, 'w');
-  p.fillEllipse(x + 0.5, y - size, size * 0.9 + 1, size * 0.5 + 0.5, 'R');
-  p.set(x - 1, y - size - 1, 'W').set(x + 2, y - size, 'W');
-}
-
-/** An arched alcove carved into the trunk, lined with shelves. */
-function alcove(p: Pixmap, r: Rng, x0: number, x1: number, y0: number, y1: number, shelves: number[]): void {
-  const cx = (x0 + x1) / 2;
-  const rx = (x1 - x0) / 2;
-  const archBottom = y0 + rx * 0.7;
-  const isIn = (x: number, y: number) => x >= x0 && x < x1 && y < y1 && (y >= archBottom || ((x - cx) / rx) ** 2 + ((y - archBottom) / (rx * 0.7)) ** 2 <= 1);
-  for (let y = y0; y < y1; y++) {
-    for (let x = x0; x < x1; x++) {
-      if (!isIn(x, y)) continue;
-      const rim = !isIn(x - 2, y) || !isIn(x + 2, y) || !isIn(x, y - 2);
-      p.shade(x, y, rim ? RAMPS.wood : ['K', 'q', 'j'], rim ? 0.15 + lightAt(x, y) * 0.5 : 0.2 + lightAt(x, y) * 0.55);
-    }
-  }
-  for (const sy of shelves) {
-    let bx = x0 + 6;
-    while (bx < x1 - 14) {
-      const w = bottle(p, r, bx, sy, rand(r) > 0.45);
-      bx += w + 1 + Math.floor(rand(r) * 3);
-    }
-    for (let y = sy; y < sy + 4; y++) for (let x = x0 + 2; x < x1 - 2; x++) p.shade(x, y, RAMPS.wood, (y === sy ? 0.55 : 0.3) + lightAt(x, y) * 0.5);
-    p.hline(x0 + 2, x1 - 3, sy + 4, 'k');
-  }
-}
-
-function wallShelf(p: Pixmap, r: Rng, x0: number, x1: number, y: number): void {
+function shelfRow(p: Pixmap, r: Rng, x0: number, x1: number, y: number): void {
   let bx = x0 + 3;
-  while (bx < x1 - 12) {
-    const w = bottle(p, r, bx, y, rand(r) > 0.6);
-    bx += w + 2 + Math.floor(rand(r) * 4);
+  while (bx < x1 - 10) {
+    const w = bottle(p, r, bx, y - 1, pick(r, ['tall', 'tall', 'jar', 'round'] as const));
+    bx += w + 2 + Math.floor(rand(r) * 3);
   }
-  // A branch-like shelf: thicker in the middle.
-  for (let x = x0; x < x1; x++) {
-    const th = 3 + Math.round(Math.sin(((x - x0) / (x1 - x0)) * Math.PI) * 2);
-    for (let j = 0; j < th; j++) p.shade(x, y + j, RAMPS.wood, (j === 0 ? 0.6 : 0.3) + lightAt(x, y) * 0.4);
-    p.set(x, y + th, 'k');
-  }
+  timber(p, x0, y, x1 - x0, 4, false, 0.15);
 }
 
-function herbBundle(p: Pixmap, r: Rng, x: number, len: number, kind: 'lavender' | 'sage' | 'flower'): void {
-  for (let y = 0; y < len; y++) p.set(x, y, 'n');
-  const cols: readonly PaletteKey[] = kind === 'lavender' ? ['P', 'v', 'p'] : kind === 'sage' ? ['G', 'l', 'g'] : ['i', 'I', 'G'];
-  p.fillRect(x - 3, len, 7, 3, 'B').hline(x - 3, x + 3, len, 'n');
-  for (let i = 0; i < 110; i++) {
-    const dy = Math.floor(rand(r) * 28);
-    const spread = 1.5 + dy / 4;
-    const dx = Math.round((rand(r) - 0.5) * 2 * spread);
-    p.set(x + dx, len + 3 + dy, pick(r, cols));
+function cabinet(p: Pixmap, r: Rng, x0: number, x1: number, y0: number, y1: number, shelves: number[]): void {
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) p.shade(x, y, ['K', 'k', 'q', 'j'], 0.15 + lightAt(x, y) * 0.5 + (fbm(x, y, 8, 51) - 0.5) * 0.1);
+  for (const sy of shelves) shelfRow(p, r, x0, x1, sy);
+  timber(p, x0 - 6, y0 - 6, 6, y1 - y0 + 6, true);
+  timber(p, x1, y0 - 6, 6, y1 - y0 + 6, true);
+  timber(p, x0 - 8, y0 - 10, x1 - x0 + 16, 5, false, 0.1);
+}
+
+function vines(p: Pixmap, r: Rng, x0: number, x1: number, y: number, maxLen: number): void {
+  for (let x = x0; x < x1; x += 2 + Math.floor(rand(r) * 4)) {
+    const len = Math.floor(rand(r) ** 2 * maxLen);
+    let vx = x;
+    for (let j = 0; j < len; j++) {
+      if (rand(r) > 0.7) vx += rand(r) > 0.5 ? 1 : -1;
+      p.shade(vx, y + j, FOLIAGE, 0.25 + lightAt(vx, y + j) * 0.5);
+      if (j % 3 === 1) {
+        const side = rand(r) > 0.5 ? 1 : -1;
+        p.shade(vx + side, y + j, FOLIAGE, 0.45 + lightAt(vx, y + j) * 0.5);
+        p.shade(vx + side * 2, y + j - 1, FOLIAGE, 0.55 + lightAt(vx, y + j) * 0.45);
+      }
+      if (rand(r) > 0.95) p.set(vx + 1, y + j, pick(r, ['I', 'i', 'v', 'W'] as const)).set(vx + 2, y + j, 'i');
+    }
   }
 }
 
 function lantern(p: Pixmap, x: number, y: number, chain: number): void {
-  for (let c = 0; c < chain; c++) p.set(x, y - chain + c - 10, c % 2 ? 'S' : 'k');
-  // Glass jar lantern with a candle.
-  p.fillRect(x - 5, y - 11, 11, 2, 'k').fillRect(x - 3, y - 13, 7, 2, 'k');
-  p.fillRect(x - 6, y - 9, 13, 17, 'k');
-  p.fillRect(x - 5, y - 8, 11, 15, 'y');
-  p.fillRect(x - 4, y - 7, 9, 13, 'Y');
-  p.fillRect(x - 1, y - 3, 3, 8, 'W');
-  p.fillRect(x, y - 6, 1, 3, 'o');
-  p.set(x - 4, y - 7, 'W').set(x - 4, y - 6, 'W');
-  p.fillRect(x - 6, y + 8, 13, 2, 'k');
-}
-
-function roots(p: Pixmap, r: Rng): void {
-  // Thick roots curving in along the base of both walls.
-  for (const side of [-1, 1] as const) {
-    for (let k = 0; k < 2; k++) {
-      const y0 = 176 + k * 30 + Math.floor(rand(r) * 8);
-      const reach = 110 - k * 40;
-      const amp = 6 + rand(r) * 6;
-      for (let s = 0; s < reach; s++) {
-        const x = side < 0 ? s : SHOP_W - 1 - s;
-        const y = Math.round(y0 + (s / reach) ** 2 * 40 + Math.sin(s / 14) * amp * 0.3);
-        if (y > COUNTER_TOP) break;
-        const thick = Math.max(1, Math.round((9 - k * 3) * (1 - s / reach)));
-        for (let j = -thick; j <= thick; j++) {
-          const t = 0.2 + lightAt(x, y) * 0.5 + (j < 0 ? 0.25 * (-j / thick) : -0.15 * (j / thick));
-          p.shade(x, y + j, ['k', 'b', 'B', 'n'], t);
-        }
-        p.set(x, y - thick - 1, 'k').set(x, y + thick + 1, 'k');
-      }
-    }
-  }
+  for (let c = 0; c < chain; c++) p.set(x, y - 14 - chain + c, c % 3 === 0 ? 'S' : 'k');
+  // A brass pendant lamp: cap, glass body, base.
+  p.fillRect(x - 3, y - 14, 7, 2, 'k').fillRect(x - 6, y - 12, 13, 3, 'b').hline(x - 5, x + 5, y - 12, 'n');
+  p.fillRect(x - 7, y - 9, 15, 13, 'k');
+  p.fillRect(x - 6, y - 9, 13, 12, 'y');
+  p.fillRect(x - 5, y - 8, 11, 10, 'Y');
+  p.fillRect(x - 2, y - 6, 5, 7, 'W');
+  for (let i = -6; i <= 6; i += 4) for (let j = y - 9; j < y + 3; j++) p.set(x + i, j, 'o');
+  p.fillRect(x - 6, y + 3, 13, 2, 'b').hline(x - 5, x + 5, y + 3, 'n');
+  p.fillRect(x - 1, y + 5, 3, 2, 'b');
 }
 
 function counter(p: Pixmap, r: Rng): void {
-  // Front: a split log with bark grooves and a carved vine band.
+  // Front: framed panels in dark wood, light falling off toward the floor.
   for (let y = COUNTER_TOP + 8; y < SHOP_H; y++) {
     for (let x = 0; x < SHOP_W; x++) {
-      const groove = ((x + Math.sin(y / 9 + x / 40) * 3) % 9 + 9) % 9 < 1.4;
-      const t = 0.1 + lightAt(x, y - 120) * 0.45 - (groove ? 0.12 : 0) - (y - COUNTER_TOP) / 500;
-      p.shade(x, y, ['k', 'b', 'B', 'n'], t + 0.32);
+      const panelX = x % 80;
+      const frame = panelX < 6 || panelX > 73 || y < COUNTER_TOP + 16 || (y > COUNTER_TOP + 96 && y < COUNTER_TOP + 102);
+      const board = x % 10 === 9 && !frame ? -0.15 : 0;
+      const inset = !frame && (panelX === 6 || y === COUNTER_TOP + 16) ? -0.25 : !frame && panelX === 73 ? 0.12 : 0;
+      const grain = (valueNoise(x * 4, y, 10, 61) - 0.5) * 0.15;
+      p.shade(x, y, WOOD, 0.18 + lightAt(x, y - 140) * 0.45 + (frame ? 0.1 : 0) + board + inset + grain - (y - COUNTER_TOP) / 520);
     }
   }
-  // Live-edge worktop: irregular front lip, warm and polished.
-  for (let x = 0; x < SHOP_W; x++) {
-    const lip = COUNTER_TOP + 7 + Math.round(Math.sin(x / 17) * 1.5 + Math.sin(x / 5.3) * 0.7);
-    for (let y = COUNTER_TOP; y <= lip; y++) {
-      const t = (y === COUNTER_TOP ? 0.85 : y === lip ? 0.2 : 0.5) + lightAt(x, y) * 0.3 + Math.sin(x / 3.7 + y) * 0.04;
-      p.shade(x, y, RAMPS.wood, t);
+  // Thick worktop with a bright lamplit front edge.
+  for (let y = COUNTER_TOP; y < COUNTER_TOP + 8; y++) {
+    for (let x = 0; x < SHOP_W; x++) {
+      const t = y === COUNTER_TOP ? 0.6 : y === COUNTER_TOP + 5 ? 0.85 : y > COUNTER_TOP + 5 ? 0.25 : 0.45;
+      p.shade(x, y, WOOD, t + lightAt(x, y) * 0.35 + (valueNoise(x * 3, y, 12, 62) - 0.5) * 0.12);
     }
-    p.set(x, lip + 1, 'k');
   }
   p.hline(0, SHOP_W - 1, COUNTER_TOP - 1, 'k');
+  p.hline(0, SHOP_W - 1, COUNTER_TOP + 8, 'K');
 
   // Clutter on the worktop, leaving the middle clear for the cauldron.
-  for (const cx of [128, 152, 196, 444, 468, 548, 574, 600]) bottle(p, r, cx + Math.floor(rand(r) * 6), COUNTER_TOP, rand(r) > 0.5);
-  // A stack of old books.
-  (['r', 'T', 'P'] as const).forEach((col, i) => {
-    p.fillRect(500 - i, COUNTER_TOP - 4 - i * 4, 26 - i * 3, 4, col);
-    p.hline(500 - i, 523 - i * 3, COUNTER_TOP - 4 - i * 4, 'w');
-  });
-  // Candle with a drip.
-  p.fillRect(236, COUNTER_TOP - 10, 4, 10, 'w').set(236, COUNTER_TOP - 6, 'W').set(237, COUNTER_TOP - 12, 'o').set(237, COUNTER_TOP - 13, 'Y');
-  // Mortar and pestle.
-  p.fillEllipse(410, COUNTER_TOP - 4, 8, 4, 'S').fillEllipse(410, COUNTER_TOP - 6, 7, 2, 's').fillRect(413, COUNTER_TOP - 14, 2, 9, 'n');
-  mushroom(p, 96, COUNTER_TOP, 4);
-  mushroom(p, 104, COUNTER_TOP, 3);
+  for (const [from, to] of [[92, 250], [404, 560]] as const) {
+    let bx = from;
+    while (bx < to) bx += bottle(p, r, bx, COUNTER_TOP - 1, pick(r, ['tall', 'jar', 'round'] as const)) + 3 + Math.floor(rand(r) * 8);
+  }
+  // Potted herbs at both ends.
+  for (const px of [40, 590]) {
+    p.fillRect(px - 8, COUNTER_TOP - 12, 17, 12, 'B').hline(px - 9, px + 9, COUNTER_TOP - 12, 'n').hline(px - 8, px + 8, COUNTER_TOP - 1, 'b');
+    for (let i = 0; i < 160; i++) {
+      const a = rand(r) * Math.PI;
+      const d = rand(r) * 16;
+      const lx = Math.round(px + Math.cos(a) * d * 1.2);
+      const ly = Math.round(COUNTER_TOP - 13 - Math.sin(a) * d);
+      p.shade(lx, ly, FOLIAGE, 0.3 + (ly < COUNTER_TOP - 20 ? 0.25 : 0) + rand(r) * 0.3);
+    }
+  }
 }
 
-/** Darkens the edges by stepping pixels down their ramp, for a cozy, lamplit focus. */
+/** Darkens the edges by stepping pixels one shade down, for a cozy, lamplit focus. */
 function vignette(p: Pixmap): void {
-  const darker: Record<string, PaletteKey> = {};
-  for (const ramp of Object.values(RAMPS)) {
-    for (let i = 1; i < ramp.length; i++) darker[PALETTE[ramp[i] as PaletteKey]] ??= ramp[i - 1] as PaletteKey;
+  const darker = new Map<string, PaletteKey>();
+  for (const ramp of [STONE, WOOD, SKY, FOLIAGE]) {
+    for (let i = 1; i < ramp.length; i++) if (!darker.has(PALETTE[ramp[i]!])) darker.set(PALETTE[ramp[i]!], ramp[i - 1]!);
   }
   const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   for (let y = 0; y < SHOP_H; y++) {
     for (let x = 0; x < SHOP_W; x++) {
-      const v = Math.max(0, Math.hypot((x - 320) / 340, (y - 160) / 240) - 0.6) * 2.2;
-      const threshold = ((bayer[(y % 4) * 4 + (x % 4)] ?? 0) + 0.5) / 16;
-      if (v <= threshold) continue;
+      const v = Math.max(0, Math.hypot((x - 320) / 330, (y - 150) / 230) - 0.55) * 2.2;
+      if (v <= ((bayer[(y % 4) * 4 + (x % 4)] ?? 0) + 0.5) / 16) continue;
       const i = (y * SHOP_W + x) * 4;
       const hexKey = '#' + [0, 1, 2].map((k) => (p.data[i + k] ?? 0).toString(16).padStart(2, '0')).join('');
-      const d = darker[hexKey];
+      const d = darker.get(hexKey);
       if (d) p.set(x, y, d);
     }
   }
@@ -372,17 +334,17 @@ function vignette(p: Pixmap): void {
 export function shopBackdrop(seed = 'elmbrook-shop'): Pixmap {
   const p = new Pixmap(SHOP_W, SHOP_H);
   const r: Rng = { s: seedRng(seed) };
-  livingWoodWall(p);
-  forestView(p, r);
-  roots(p, r);
-  alcove(p, r, 26, 150, 44, COUNTER_TOP, [104, 150, 196, 232]);
-  wallShelf(p, r, 486, 616, 104);
-  wallShelf(p, r, 474, 604, 160);
-  wallShelf(p, r, 490, 612, 214);
-  herbBundle(p, r, 168, 22, 'lavender');
-  herbBundle(p, r, 250, 14, 'sage');
-  herbBundle(p, r, 392, 16, 'flower');
-  herbBundle(p, r, 472, 26, 'sage');
+  stoneWall(p, r, 0, SHOP_W, 18, COUNTER_TOP);
+  windowView(p, r);
+  timber(p, WIN.x0 - 10, WIN.y0 - 4, 10, WIN.y1 - WIN.y0 + 4, true);
+  timber(p, WIN.x1 + 1, WIN.y0 - 4, 10, WIN.y1 - WIN.y0 + 4, true);
+  timber(p, WIN.x0 - 14, WIN.y0 - 14, WIN.x1 - WIN.x0 + 28, 10, false, 0.05);
+  timber(p, 0, 0, SHOP_W, 18, false, -0.1);
+  roofRafters(p);
+  cabinet(p, r, 22, 168, 46, COUNTER_TOP, [86, 128, 170, 212]);
+  cabinet(p, r, 474, 618, 54, COUNTER_TOP, [94, 136, 178, 216]);
+  vines(p, r, 0, SHOP_W, 18, 34);
+  vines(p, r, WIN.x0 - 14, WIN.x1 + 14, WIN.y0 - 4, 30);
   for (const l of SHOP_LANTERNS) lantern(p, l.x, l.y, l.chain);
   counter(p, r);
   vignette(p);

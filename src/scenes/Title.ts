@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { hex } from '../art/palette';
+import { TOWN_LAMPS } from '../art/scenes/town';
 import { markReady } from '../debug/hook';
 import { pixelCamera } from '../view/camera';
 import { noAnim } from '../debug/params';
@@ -14,6 +15,10 @@ export class Title extends Phaser.Scene {
   create() {
     pixelCamera(this);
     this.add.image(0, 0, 'bg/night').setOrigin(0);
+    for (const l of TOWN_LAMPS) {
+      const glow = this.add.image(l.x + 0.5, l.y, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(0.5).setAlpha(0.6);
+      if (!noAnim) this.tweens.add({ targets: glow, alpha: 0.45, duration: 1000 + l.x, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
 
     pixelText(this, 320, 52, 'ELMBROOK', { size: 32, font: 'display', color: 'y', stroke: 'k', align: 'center' }).setOrigin(0.5);
     pixelText(this, 320, 84, '~ Night Market ~', { size: 16, color: 'm', stroke: 'k', align: 'center' }).setOrigin(0.5);
