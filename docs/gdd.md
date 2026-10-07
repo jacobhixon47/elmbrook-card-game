@@ -1,0 +1,300 @@
+# Elmbrook: Night Market — Game Design Document
+
+Working title. A cozy-but-tense roguelike deckbuilder about running a potion stall in Elmbrook for one lunar month.
+
+Status: v0.1 design, written to be built from. Numbers are starting points for tuning, not promises.
+
+---
+
+## 1. Pitch
+
+You've inherited a run-down potion stall in Elmbrook. Your deck is your ingredient satchel. Each day, townsfolk bring orders; you draw ingredients, combine them in your cauldron, and try to brew something good enough to sell. Rent is due every week. On moon nights the shop stays open late and the Night Market comes to town, with stranger customers, lunar ingredients, and vendors who don't take coin.
+
+One run = one lunar month (4 weeks). Survive every rent day and satisfy the Moonless Patron on the final new moon to win.
+
+Touchstones: Balatro (scoring juice, run structure, jokers), Slay the Spire (deck shaping, map choices), Luck be a Landlord (rent pressure), Stardew Valley (tone, townsfolk).
+
+## 2. Design pillars
+
+1. **Every brew is a little puzzle with a satisfying payoff.** The score counter should feel like Balatro's: numbers climbing, sounds stacking, cauldron bubbling over.
+2. **Cozy surface, real stakes.** Warm art and gentle characters, but rent is real and a bad week ends the run.
+3. **The town remembers you.** Regulars carry relationships and stories across runs; that's the meta-progression, not just unlock lists.
+4. **Night is different.** Moon nights change the rules, the customers and the economy.
+5. **Shared world.** Every ingredient, recipe and townsperson belongs to the Elmbrook codex shared with the sibling shop-sim game.
+
+## 3. Run structure
+
+```
+Week 1 (Waxing Crescent)  Day · Day · Day · Night Shift (First Quarter)   → Rent
+Week 2 (Waxing Gibbous)   Day · Day · Day · Night Shift (FULL MOON)       → Rent
+Week 3 (Waning Gibbous)   Day · Day · Day · Night Shift (Last Quarter)    → Rent
+Week 4 (Waning Crescent)  Day · Day · Day · Night Shift (NEW MOON finale) → Win
+```
+
+- **16 encounters per run** (12 days + 4 nights), similar length to a Balatro run (~45-75 min).
+- **The Calendar is the run map.** It shows the current week, each day's weather/event icon, and the upcoming Night Shift's patron and rule twist (revealed in advance, like Balatro's boss blind).
+- **Rent** is paid automatically after each Night Shift. Starting values: 20 / 45 / 90 / 160 gold. Can't pay = run over ("the Guild reclaims your stall").
+- **Full Moon** (week 2) is the mid-run boss. **New Moon** (week 4) is the finale.
+
+### Phases of a Day
+
+1. **Morning — Order Board.** 1-3 customer orders appear (count ramps by week: 1-2 in week 1, 2 in weeks 2-3, 3 in week 4).
+2. **Shop Hours — Brewing.** Draw a hand, brew, deliver. Limited **Brews** (4) and **Discards** (3) for the whole day, shared across all orders.
+3. **Dusk — Reward + Errand.** Pick 1 of 3 ingredient cards (or Skip, see §8). Then choose one **Errand** from 2 offered (§7).
+
+### Phases of a Night Shift
+
+Same as a day, but: the patron's rule twist is active, your **Night Satchel** (§5.4) shuffles into your draw pile, and afterwards the **Night Market** opens (§9) before rent is collected.
+
+## 4. Orders and customers
+
+Each order shows on the Order Board as: portrait, name, hearts (relationship), and once you've opened it, the request and pay.
+
+Carried over from 1.0: click an order to open its dialogue; choose **Fulfill**, **Decline**, or **Back**. Reopening returns to the choice without replaying dialogue. You choose which order to work on and in what order.
+
+**An order has:**
+- **Request:** a specific potion ("Healing Draught") or a family ("anything Warming", "a Calming potion").
+- **Quality minimum:** a quality tier (§6.4).
+- **Pay:** base gold; tips scale with how far you exceed the minimum.
+- **Optional bonus condition:** "no Umbra ingredients", "brewed with exactly 3 ingredients", "use a Wychwood ingredient". Meeting it adds a tip and a heart.
+
+**Delivering:** a matching potion from your Shelf or a fresh brew fulfils the order. **Declining** costs a heart with that customer. Unfinished orders at end of day count as declined.
+
+**Free brewing:** once every order is resolved, leftover Brews can make potions for the Shelf (from 1.0: "after requests are done you can brew with remaining cards").
+
+## 5. Cards
+
+### 5.1 Ingredients
+
+The bulk of the deck. Each has:
+- **Potency** (number, typically 2-12): the "chips".
+- **Essences** (1-2 tags): what recipes it can satisfy.
+- **Rarity:** Common, Uncommon, Rare, Lunar.
+- **Origin:** Garden, Wychwood, Creek, Mine, Market, Night (flavour + bonus conditions + shared codex with game 2).
+- **Optional text effect:** "+2 Harmony if brewed with a Tide ingredient", "When discarded, draw 1".
+
+### 5.2 Essences
+
+Seven essences. Recipes are keyed on essences, not specific ingredients, so many cards can fill a recipe and deckbuilding stays flexible.
+
+| Essence | Theme | Colour cue |
+|---|---|---|
+| Vital | life, healing, growth | green |
+| Ember | fire, warmth, courage | orange |
+| Tide | water, calm, memory | blue |
+| Gale | air, speed, luck | pale teal |
+| Stone | earth, strength, protection | brown |
+| Umbra | shadow, secrets, sleep | purple |
+| Lunar | moonlight (night only) | silver |
+
+### 5.3 Tinctures (action cards)
+
+From 1.0's action/utility cards. Played from hand, don't use a cauldron slot, don't use a Brew.
+Examples: **Stir** (+1 Harmony on next brew), **Forage** (draw 2), **Steep** (next brew's Potency x1.5), **Sift** (discard any number, draw that many; costs no Discard), **Bottle Spare** (next brew yields 2 potions).
+
+### 5.4 Night Satchel (lunar cards)
+
+1.0's Night Deck, reworked for a roguelike:
+- A separate small deck (starts empty) built only at the Night Market and from night rewards.
+- Shuffled into your draw pile **only on Night Shifts**.
+- Holds **Lunar ingredients** (Lunar essence, high potency, odd effects) and **Omens** (powerful Tinctures with drawbacks).
+- **Eclipse** (rare calendar event): the Night Satchel joins a Day, and day/lunar ingredients form special Eclipse recipes.
+
+### 5.5 Card modifiers
+
+Balatro-style editions applied by events/vendors: **Moonlit** (+Harmony), **Aged** (+Potency each day it's in the deck, resets on brew), **Blessed** (retrigger), **Cursed** (big effect + drawback, from Night Market deals).
+
+## 6. Brewing
+
+### 6.1 The cauldron panel
+
+From 1.0, cleaned up for mouse and keyboard:
+- The cauldron sits centre-screen with **2 slots** (a 3rd unlocks via the cauldron upgrade or certain cards; some recipes need 3).
+- Click (or drag) a hand card to drop it in; click a slotted card to return it. Keyboard: number keys select, Enter brews.
+- As soon as the slots match something, a **preview** shows: the recipe name (if known), its essence pattern, and the projected score.
+
+### 6.2 Recipes
+
+A recipe is an essence pattern with a base Harmony and a potion family.
+
+- **Known recipes** are in your **Grimoire**. Each witch starts knowing 4.
+- **Unknown but valid** combinations brew as an **Experiment**: the preview shows "???", and brewing it discovers the recipe (added to the Grimoire for this run, and to the permanent Codex) at -1 quality tier for that first brew. This folds 1.0's separate "recipe experimentation" screen into play.
+- **Invalid** combinations warn first, then produce **Sludge** if you insist: no potion, and a Sludge junk card is added to the deck (it can be removed at errands).
+
+### 6.3 Scoring
+
+**Quality = Potency × Harmony**
+
+- **Potency** = sum of ingredient Potency + flat bonuses.
+- **Harmony** = recipe base Harmony + bonuses (matching essences, card effects, familiars, cauldron, modifiers), then multipliers.
+- Resolution order (deterministic, animated left to right like Balatro): ingredients in slot order → tinctures → card modifiers → familiars in slot order → cauldron.
+- Every step emits an event the UI animates (number pops, cauldron glow, familiar bounce).
+
+### 6.4 Quality tiers
+
+| Tier | Quality | Pay multiplier |
+|---|---|---|
+| Crude | < 10 | ×0.5 |
+| Fine | 10+ | ×1 |
+| Superb | 30+ | ×1.5 |
+| Masterwork | 100+ | ×2 |
+| Legendary | 300+ | ×3 |
+
+Sanity check: a starter Healing Draught (Elmroot 4 + Creekwater 3) × 2 = 14, Fine. Greater Restorative (4 + 4 + 3) × 5 = 55, Superb. Week 4 orders should ask for Masterwork, which needs familiars and modifiers. Thresholds scale up across weeks via order difficulty, not by changing the tiers.
+
+### 6.5 The Shelf
+
+Brewed potions not delivered go to the Shelf (4 slots, upgradable). Shelf potions can fill later orders (from 1.0's "fulfil from inventory"), carry between days, and sell at the Night Market. Potions on the Shelf at rent time are not worth anything unless sold.
+
+## 7. Dusk errands
+
+After the reward pick, choose one of two offered errands. This is the run's branching.
+
+| Errand | Effect |
+|---|---|
+| Market Square | Coin shop: ingredients, tinctures, a familiar or two, Shelf upgrade. |
+| Wychwood Forage | Choose 2 of 5 Wychwood ingredients for free. Small chance of a fae encounter. |
+| Creek Bank | Upgrade a card's Potency, or add a modifier. |
+| Guild Hall | Take a Guild Commission (multi-day quest: "deliver 3 Superb Calming potions by the Full Moon" → relic reward). From 1.0's guild quests. |
+| Hearth (rest) | Remove a card from the deck. |
+| Event | One of ~20 small events (fae visits, shop mishaps, a festival) with choices. From 1.0's random encounters. |
+
+## 8. Rewards
+
+- After each Day/Night: pick 1 of 3 cards, or **Skip**.
+- **Skip pity** (from 1.0): each consecutive skip raises the rarity odds of the next offer and pays 2 gold.
+
+## 9. The Night Market
+
+Opens after each Night Shift, before rent. A street of stalls; you can visit them all, and stock depends on moon phase.
+
+| Stall | Trades in | Example |
+|---|---|---|
+| The Lantern Seller | Gold | Lunar ingredients, Omens. |
+| The Moth Broker | Memories | Forget a known recipe this run → gain a rare card or familiar. |
+| The Hollow Tailor | Cards | Give up a card permanently → its essence is woven into another card (merge). |
+| The Name-Taker | Your name | Take a Curse (persistent run debuff) for a powerful Cursed card or relic. |
+| Fortune Tent | Gold, gamble | Draw a tarot: big boon or a twist on next week's orders. |
+| The Fence | Potions | Buys your Shelf at night prices; pays more for Umbra and Lunar potions. |
+
+Phase flavour: First/Last Quarter nights have 3 stalls. Full Moon has all stalls plus a rare visiting vendor. New Moon (finale) has the black-market stock before the final rent.
+
+## 10. Night Shift patrons (bosses)
+
+Each Night Shift has one featured patron with a rule twist, shown on the Calendar a week ahead.
+
+| Patron | Twist |
+|---|---|
+| The Lamplighter | Your hand is face-down until you hover a card. |
+| Mother Hollow | Each brew must use an ingredient from a different Origin than the last. |
+| The Twin Owls | Every order needs two identical potions. |
+| Sir Bramble | Ember ingredients have 0 Potency. |
+| The Clockless Man | Orders expire after 2 brews (1.0's "timed orders", as a twist). |
+| The Pale Courier (Full Moon) | Needs a Masterwork Lunar potion; ordinary orders pay double. |
+| The Moonless Patron (finale) | Three escalating orders; your Grimoire is hidden. |
+
+## 11. Familiars (jokers)
+
+Up to 4 familiar slots (5 with an upgrade). Passive, order matters.
+
+| Familiar | Effect |
+|---|---|
+| Black Cat | +3 Harmony per Umbra ingredient. |
+| Hearth Toad | +1 Harmony for each potion on your Shelf. |
+| Barn Owl | See the top 3 cards of your draw pile. |
+| Moth | Lunar ingredients count as every essence. |
+| Raven | +8 gold whenever you decline an order (rude, but practical). |
+| Hedgehog | Stone ingredients +4 Potency. |
+| Will-o'-Wisp | First brew each day: ×2 Harmony. |
+| Ferret | Every 3rd discard draws an extra card. |
+
+## 12. Witches and cauldrons (run starts)
+
+Pick a **Witch** (starting deck, 4 known recipes, a quirk) and a **Cauldron** (run modifier, like Balatro decks). From 1.0's specialisation tree.
+
+| Witch | Focus | Quirk |
+|---|---|---|
+| Hedge Witch (start) | Vital, Tide; healing | +1 card in hand. |
+| Alchemist | Stone, Ember; transformation | Experiments brew at full quality. |
+| Illusionist | Umbra, Gale; glamours | Can disguise one potion as another once per day. |
+
+| Cauldron | Effect |
+|---|---|
+| Copper (start) | No effect. |
+| Iron | 3 slots from the start, -1 Brew per day. |
+| Glass | Previews show exact final quality including familiars. |
+| Bone | Starts with 2 Lunar cards; rent +25%. |
+
+## 13. Meta-progression
+
+- **Codex:** every ingredient, recipe, customer and patron you've met, with lore. Shared with the sibling game.
+- **Regulars:** six townsfolk with hearts that persist across runs. Heart milestones unlock Ink story beats, new recipes, familiars, and their own special orders. Story finale per regular.
+- **Unlocks:** witches, cauldrons, familiars and cards enter the pool via achievements and regulars' stories.
+- **Modes (later):** Endless (keep going past the finale), Daily seeded run, Challenge runs ("no Vital ingredients").
+
+## 14. Starter content (v0)
+
+Enough for the first playable. Codex IDs are kebab-case.
+
+### Ingredients
+
+| ID | Name | Essences | Potency | Rarity | Origin | Effect |
+|---|---|---|---|---|---|---|
+| elmroot | Elmroot | Vital | 4 | Common | Garden | — |
+| creekwater | Creekwater | Tide | 3 | Common | Creek | — |
+| emberbloom | Emberbloom | Ember | 4 | Common | Garden | — |
+| thistledown | Thistledown | Gale | 3 | Common | Wychwood | When discarded, draw 1. |
+| river-clay | River Clay | Stone | 5 | Common | Creek | — |
+| nightshade | Nightshade | Umbra | 5 | Common | Wychwood | — |
+| honeycomb | Honeycomb | Vital, Ember | 4 | Uncommon | Market | — |
+| mistcap | Mistcap Mushroom | Tide, Umbra | 5 | Uncommon | Wychwood | — |
+| quartz-dust | Quartz Dust | Stone, Gale | 4 | Uncommon | Mine | +2 Harmony if brewed with 3 ingredients. |
+| dragon-pepper | Dragon Pepper | Ember | 8 | Uncommon | Market | Brewing it costs 1 Discard. |
+| willow-bark | Willow Bark | Vital, Tide | 5 | Uncommon | Creek | — |
+| crow-feather | Crow Feather | Gale, Umbra | 6 | Rare | Wychwood | +1 Harmony per Umbra card in hand. |
+| amber-sap | Amber Sap | Stone, Vital | 7 | Rare | Wychwood | Aged. |
+| starlit-dew | Starlit Dew | Lunar, Tide | 9 | Lunar | Night | Night only. |
+| moonmoth-wing | Moonmoth Wing | Lunar, Gale | 8 | Lunar | Night | Night only. Counts as any essence. |
+| grave-moss | Grave Moss | Lunar, Umbra | 10 | Lunar | Night | Night only. -1 heart with the customer. |
+
+### Recipes
+
+| ID | Name | Pattern | Base Harmony | Family |
+|---|---|---|---|---|
+| healing-draught | Healing Draught | Vital + Tide | 2 | Healing |
+| hearthwarm-tonic | Hearthwarm Tonic | Ember + Vital | 2 | Warming |
+| sleep-syrup | Sleep Syrup | Umbra + Tide | 2 | Calming |
+| fleetfoot-elixir | Fleetfoot Elixir | Gale + Ember | 2 | Vigor |
+| ironhide-salve | Ironhide Salve | Stone + Vital | 2 | Protection |
+| whisper-ink | Whisper Ink | Umbra + Gale | 3 | Secrets |
+| courage-cordial | Courage Cordial | Ember + Stone | 3 | Vigor |
+| calm-waters | Calm Waters | Tide + Gale | 2 | Calming |
+| philter-of-luck | Philter of Luck | Gale + Gale + Vital | 4 | Fortune |
+| greater-restorative | Greater Restorative | Vital + Vital + Tide | 5 | Healing |
+| shadowstep-draught | Shadowstep Draught | Umbra + Umbra + Gale | 5 | Secrets |
+| moonglass-elixir | Moonglass Elixir | Lunar + Tide + any | 8 | Lunar |
+
+### Regulars
+
+| ID | Name | Who | Tends to order |
+|---|---|---|---|
+| bea-thornwick | Bea Thornwick | The baker, frantic and kind | Warming, Vigor |
+| old-tobin | Old Tobin | Retired miner with aches | Healing, Protection |
+| pip-and-quill | Pip & Quill | Twin kids, up to mischief | Secrets, Fortune |
+| sister-alder | Sister Alder | Keeper of the shrine | Calming, Healing |
+| marlowe-vance | Marlowe Vance | Travelling merchant, haggles | anything Rare, pays in odd items |
+| the-gardener | The Gardener | Nobody's sure who they are | Lunar (only at night) |
+
+### Starting deck (Hedge Witch)
+
+3× Elmroot, 3× Creekwater, 2× Emberbloom, 2× Thistledown, 1× River Clay, 1× Nightshade, 1× Willow Bark, 1× Stir. Known recipes: Healing Draught, Hearthwarm Tonic, Calm Waters, Sleep Syrup.
+
+## 15. Tone and writing
+
+- Gentle, warm, a little wry. Stardew's warmth with a touch of Discworld.
+- Dialogue lines are short (1-2 sentences). Customers state requests in character, the UI states them plainly.
+- Night characters are stranger and more formal, never horror.
+
+## 16. Out of scope for v1
+
+Controller support, localisation, the separate shop-sim game, multiplayer, voice. Keep these possible but don't build them.
