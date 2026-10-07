@@ -21,6 +21,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - Scoring pipeline with full event stream (GDD §6.3), quality tiers, pay and tips.
 - Shelf, deliver/decline, hearts. Day → dusk reward (with skip pity) → errands (Market, Forage, Hearth only).
 - Week structure and rent; run loss/win.
+- `season` in run state (Spring only for now) and the season twist hook.
 - `pnpm sim` with a greedy bot; prints the report from `tech.md`.
 - Dev overlay (backtick): seed, state inspector, add gold, jump to day.
 
@@ -48,6 +49,8 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 ## M4 — Meta and story
 
 - Codex screen; persistent save with migrations.
+- The Year: season unlocks (Summer, Autumn, Winter content and twists), Year modifiers.
+- Reputation and Guild Hall perks; Almanac achievements that unlock pool content.
 - Six regulars with hearts, Ink dialogue, heart-milestone beats and unlocks.
 - Witch and cauldron selection; unlock flow.
 
@@ -56,7 +59,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 ## M5 — Art and audio pass
 
 - Author sprite grids for every codex card (`art:check` shows 0 placeholders); portraits for regulars and patrons.
-- Procedural backgrounds for every scene (shop by day, dusk, Night Market street).
+- Backdrops for every scene (painted where possible, see art-pipeline.md): Night Market street, Calendar, Guild Hall. The shop window already regrades by season and time of day.
 - Art sheet reviewed for consistency.
 - SFX and music loops wired in, with volume settings.
 
@@ -70,3 +73,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - Optional: Claude Code terminal preview mod.
 
 **Accept:** a friend can play the itch build without help.
+
+## After launch
+
+- Long Year mode (GDD §13): all four seasons as one run, with mid-run saves.

@@ -38,6 +38,12 @@ The script picks one panel of a Midjourney 2×2 grid, trims letterbox bars, crop
 
 Then add the backdrop to `src/art/backdrops.ts` with its source (so it can be redone), its lamp positions (for additive glows) and any surfaces props stand on, such as `counterTop`. Scenes read layout from there, never hard-coded. Keep originals out of the repo; only the pixelized PNG ships. A test checks every listed backdrop exists at 640×360.
 
+### Windows that change with the season
+
+A backdrop with a window can have its outside view cut out at import: `--window x,y[;x,y] --bbox x0,y0,x1,y1` flood-fills from the seed points over sky- and valley-coloured pixels, fills enclosed specks (stars, moon), and writes the room with a transparent hole plus `<name>-view.png`. The manifest's `view` entry gives the sky's rows and the window area.
+
+At runtime `gradeView` (`src/art/window.ts`, pure) regrades the painted view: the land is remapped onto a season ramp (spring green and blossom, summer deep green, autumn rust and gold, winter snow), the sky onto a time-of-day gradient (morning peach, afternoon blue, evening magenta to amber), and night keeps the painted stars and moon. Summer at night is the original painting. Seasonal particles (`src/view/weather.ts`) drift between the view and the room, so the window frame hides them. Tune colours with `pnpm art:window`, which renders all 16 combinations to one sheet.
+
 Code-drawn backdrops (`bg/shop`, `bg/night`) stay as fallbacks and for screens without a painting yet; `?backdrops=code` shows them. The title town is code-drawn until there is a painted village to import.
 
 Prompting new backdrops: wide 16:9, "cozy pixel art, moonlit, stone and thatch, medieval fantasy, whimsical magic", with the middle and bottom third kept calm, because cards and the cauldron sit there.

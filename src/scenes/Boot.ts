@@ -36,7 +36,10 @@ export class Boot extends Phaser.Scene {
   }
 
   preload() {
-    for (const [id, b] of Object.entries(BACKDROPS)) this.load.image(backdropTexture(id as BackdropId), b.file);
+    for (const [id, b] of Object.entries(BACKDROPS) as [BackdropId, (typeof BACKDROPS)[BackdropId]][]) {
+      this.load.image(backdropTexture(id), b.file);
+      if ('view' in b) this.load.image(`${backdropTexture(id)}-view`, b.view.file);
+    }
   }
 
   create() {

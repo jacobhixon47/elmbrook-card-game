@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextFloat, reduce, seedRng, shuffle } from '../src/core';
+import { nextFloat, reduce, seedRng, shuffle, skyTime } from '../src/core';
 
 describe('rng', () => {
   it('is deterministic for a seed', () => {
@@ -49,5 +49,20 @@ describe('run start', () => {
 
   it('rejects unknown witches', () => {
     expect(() => reduce(null, { type: 'startRun', seed: 'x', witch: 'nobody' })).toThrow(/unknown witch/);
+  });
+});
+
+describe('calendar', () => {
+  it('runs default to spring and can start in another season', () => {
+    expect(reduce(null, { type: 'startRun', seed: 's', witch: 'hedge-witch' }).state.season).toBe('spring');
+    expect(reduce(null, { type: 'startRun', seed: 's', witch: 'hedge-witch', season: 'winter' }).state.season).toBe('winter');
+  });
+
+  it('derives the sky from the phase of the day', () => {
+    expect(skyTime({ day: 1, phase: 'morning' })).toBe('morning');
+    expect(skyTime({ day: 2, phase: 'brewing' })).toBe('afternoon');
+    expect(skyTime({ day: 3, phase: 'dusk' })).toBe('evening');
+    expect(skyTime({ day: 4, phase: 'brewing' })).toBe('night');
+    expect(skyTime({ day: 2, phase: 'night-market' })).toBe('night');
   });
 });

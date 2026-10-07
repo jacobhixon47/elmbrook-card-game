@@ -1,3 +1,4 @@
+import type { Season } from './calendar';
 import type { RngState } from './rng';
 
 /** A card instance in a run. `card` is a codex id; `uid` is unique within the run. */
@@ -11,6 +12,7 @@ export type RunState = {
   seed: string;
   rng: RngState;
   witch: string;
+  season: Season;
   week: number; // 1-4
   day: number; // 1-4, where 4 is the Night Shift
   phase: Phase;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { BACKDROPS } from '../src/art/backdrops';
+import { gradeView } from '../src/art/window';
 import { PALETTE } from '../src/art/palette';
 import { proceduralTextures } from '../src/art/procedural';
 import { spriteSize, validateSprite } from '../src/art/sprite';
@@ -38,5 +39,24 @@ describe('painted backdrops', () => {
       const png = PNG.sync.read(readFileSync(`public/${b.file}`));
       expect({ id, width: png.width, height: png.height }).toEqual({ id, width: 640, height: 360 });
     }
+  });
+});
+
+describe('window view grading', () => {
+  const view = PNG.sync.read(readFileSync('public/backdrops/shop-view.png'));
+  const img = { width: view.width, height: view.height, data: new Uint8ClampedArray(view.data) };
+
+  it('keeps the painting for summer nights', () => {
+    expect(gradeView(img, 'summer', 'night', 24, 150)).toEqual(img.data);
+  });
+
+  it('only touches pixels inside the window', () => {
+    const out = gradeView(img, 'winter', 'afternoon', 24, 150);
+    let changed = 0;
+    for (let i = 0; i < out.length; i += 4) {
+      if (img.data[i + 3] === 0) expect(out[i + 3]).toBe(0);
+      else if (out[i] !== img.data[i] || out[i + 1] !== img.data[i + 1] || out[i + 2] !== img.data[i + 2]) changed++;
+    }
+    expect(changed).toBeGreaterThan(10000);
   });
 });

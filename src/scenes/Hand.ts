@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
-import type { RunState } from '../core';
+import { skyTime, type RunState, type Season, type SkyTime } from '../core';
 import { markReady } from '../debug/hook';
 import { noAnim, params, type Fixture } from '../debug/params';
 import { store } from '../store';
-import { shopBackdrop } from '../view/backdrop';
+import { gradedView, shopBackdrop, viewOverrides } from '../view/backdrop';
+import { addWeather } from '../view/weather';
 import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
 import { pixelText } from '../view/text';
@@ -23,13 +24,21 @@ export class Hand extends Phaser.Scene {
       store.load(fixture.state as RunState);
     } else {
       const seed = fixture?.seed ?? params.get('seed') ?? `run-${Math.floor(Math.random() * 1e9)}`;
-      store.dispatch({ type: 'startRun', seed, witch: 'hedge-witch' });
+      const season = (fixture?.season as Season | undefined) ?? viewOverrides().season;
+      store.dispatch({ type: 'startRun', seed, witch: 'hedge-witch', ...(season ? { season } : {}) });
       store.dispatch({ type: 'drawToHandSize' });
     }
     const state = store.getState()!;
 
     const bg = shopBackdrop();
     const COUNTER_TOP = bg.counterTop;
+    if (bg.view && bg.window) {
+      // The view through the window changes with the season and time of day; the room is painted over it.
+      const season = viewOverrides().season ?? state.season;
+      const time = (fixture?.time as SkyTime | undefined) ?? viewOverrides().time ?? skyTime(state);
+      this.add.image(0, 0, gradedView(this, bg.view, 'shop', season, time)).setOrigin(0);
+      addWeather(this, bg.window, season, time);
+    }
     this.add.image(0, 0, bg.texture).setOrigin(0);
     for (const l of bg.lights) {
       const glow = this.add.image(l.x, l.y, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(l.scale).setAlpha(0.55);

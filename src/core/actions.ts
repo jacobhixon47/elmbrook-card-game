@@ -1,5 +1,7 @@
+import type { Season } from './calendar';
+
 export type Action =
-  | { type: 'startRun'; seed: string; witch: string }
+  | { type: 'startRun'; seed: string; witch: string; season?: Season }
   | { type: 'drawToHandSize' };
 
 export type GameEvent =

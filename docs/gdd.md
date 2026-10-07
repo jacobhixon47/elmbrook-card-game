@@ -1,6 +1,6 @@
 # Elmbrook: Night Market — Game Design Document
 
-Working title. A cozy-but-tense roguelike deckbuilder about running a potion stall in Elmbrook for one lunar month.
+Working title. A cozy-but-tense roguelite deckbuilder about running a potion stall in Elmbrook, one moon at a time, through the seasons of a year.
 
 Status: v0.1 design, written to be built from. Numbers are starting points for tuning, not promises.
 
@@ -10,7 +10,7 @@ Status: v0.1 design, written to be built from. Numbers are starting points for t
 
 You've inherited a run-down potion stall in Elmbrook. Your deck is your ingredient satchel. Each day, townsfolk bring orders; you draw ingredients, combine them in your cauldron, and try to brew something good enough to sell. Rent is due every week. On moon nights the shop stays open late and the Night Market comes to town, with stranger customers, lunar ingredients, and vendors who don't take coin.
 
-One run = one lunar month (4 weeks). Survive every rent day and satisfy the Moonless Patron on the final new moon to win.
+One run = one lunar month (4 weeks) in one season. Survive every rent day and satisfy the Moonless Patron on the final new moon to win. Winning a season unlocks the next; clearing all four is your first Year in Elmbrook (§13).
 
 Touchstones: Balatro (scoring juice, run structure, jokers), Slay the Spire (deck shaping, map choices), Luck be a Landlord (rent pressure), Stardew Valley (tone, townsfolk).
 
@@ -35,6 +35,23 @@ Week 4 (Waning Crescent)  Day · Day · Day · Night Shift (NEW MOON finale) →
 - **The Calendar is the run map.** It shows the current week, each day's weather/event icon, and the upcoming Night Shift's patron and rule twist (revealed in advance, like Balatro's boss blind).
 - **Rent** is paid automatically after each Night Shift. Starting values: 20 / 45 / 90 / 160 gold. Can't pay = run over ("the Guild reclaims your stall").
 - **Full Moon** (week 2) is the mid-run boss. **New Moon** (week 4) is the finale.
+
+### Seasons
+
+Every run happens in one season. The season is chosen at run start from those you've unlocked (§13) and colours the whole month:
+
+| Season | Ingredient pool | Twist | Feel |
+|---|---|---|---|
+| Spring | Fresh herbs and flowers more common (Vital, Calming) | Gentle: lower rent, the tutorial season | Blossom, rain, new beginnings |
+| Summer | Fruit, honey, Ember ingredients | Long days: +1 Brew on Days, Night Shifts are short (-1 Discard) | Fireflies, festivals |
+| Autumn | Roots, mushrooms, Umbra ingredients | Harvest patrons: bigger orders, bigger tips | Falling leaves, lanterns, the Harvest Fair |
+| Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | Frost Night Market: stalls take only odd currencies | Snow, hearth fires, the longest nights |
+
+Seasons scale in difficulty in that order (rent and order targets rise about 15% per season). Numbers are tuning starting points. Each season adds its own ingredients, patrons, events and two Night Market variants to the pools, so later seasons also feel new, not only harder.
+
+### Time of day
+
+The shop window shows the season and the time: **morning** during the Order Board, **afternoon** while brewing, **evening** at dusk errands, and **night** for Night Shifts and the Night Market. Weather drifts past the glass (blossom, fireflies, leaves, snow). This is presentation only; `skyTime(state)` in `src/core/calendar.ts` derives it from the phase.
 
 ### Phases of a Day
 
@@ -227,10 +244,15 @@ Pick a **Witch** (starting deck, 4 known recipes, a quirk) and a **Cauldron** (r
 
 ## 13. Meta-progression
 
+Elmbrook is a roguelite: every run, won or lost, moves something forward.
+
+- **The Year:** Spring is open from the start. Winning a season unlocks the next (Summer, then Autumn, then Winter). Clearing Winter completes **Year 1** and shows a short "year in Elmbrook" ending. Each later Year adds a stacking modifier to every season, like Ascension in Slay the Spire (Year 2: patrons reveal their twist only a day ahead; Year 3: rent +20%; and so on, about 10 Years).
+- **Reputation:** earned every run from potions sold, orders filled and weeks survived, even on a loss. Spent at the **Guild Hall** between runs on small permanent perks: +1 Shelf slot, starting gold, one free reroll per Night Market, a starting familiar slot. A short list of meaningful upgrades, not a grind.
+- **Almanac (achievements):** a page per season of goals ("brew a Legendary", "win Winter without a Discard", "fill every regular's favourite order"). Each one unlocks a card, familiar, witch or cauldron into the pools, so achievements are how the game grows.
 - **Codex:** every ingredient, recipe, customer and patron you've met, with lore. Shared with the sibling game.
 - **Regulars:** six townsfolk with hearts that persist across runs. Heart milestones unlock Ink story beats, new recipes, familiars, and their own special orders. Story finale per regular.
 - **Unlocks:** witches, cauldrons, familiars and cards enter the pool via achievements and regulars' stories.
-- **Modes (later):** Endless (keep going past the finale), Daily seeded run, Challenge runs ("no Vital ingredients").
+- **Modes (later):** **Long Year** (unlocked by completing Year 1): one continuous run through all four seasons, 16 weeks, with mid-run saves; the deck, familiars and gold carry over between seasons. Also Endless (keep going past the finale), Daily seeded run, Challenge runs ("no Vital ingredients").
 
 ## 14. Starter content (v0)
 

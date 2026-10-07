@@ -17,7 +17,8 @@
     "art:sheet": "tsx scripts/art-sheet.ts",
     "art:check": "tsx scripts/art-check.ts",
     "render-texture": "tsx scripts/render-texture.ts",
-    "art:import": "tsx scripts/import-backdrop.ts"
+    "art:import": "tsx scripts/import-backdrop.ts",
+    "art:window": "tsx scripts/window-sheet.ts"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",

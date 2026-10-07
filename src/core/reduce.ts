@@ -1,11 +1,12 @@
 import { codex } from '../codex';
 import type { Action, GameEvent } from './actions';
+import type { Season } from './calendar';
 import { seedRng, shuffle } from './rng';
 import type { CardInstance, RunState } from './state';
 
 export type ReduceResult = { state: RunState; events: GameEvent[] };
 
-export function newRun(seed: string, witchId: string): ReduceResult {
+export function newRun(seed: string, witchId: string, season: Season = 'spring'): ReduceResult {
   const witch = codex.witches.get(witchId);
   if (!witch) throw new Error(`unknown witch: ${witchId}`);
 
@@ -21,6 +22,7 @@ export function newRun(seed: string, witchId: string): ReduceResult {
     seed,
     rng,
     witch: witch.id,
+    season,
     week: 1,
     day: 1,
     phase: 'morning',
@@ -65,7 +67,7 @@ function drawToHandSize(state: RunState): ReduceResult {
 export function reduce(state: RunState | null, action: Action): ReduceResult {
   switch (action.type) {
     case 'startRun':
-      return newRun(action.seed, action.witch);
+      return newRun(action.seed, action.witch, action.season);
     case 'drawToHandSize':
       if (!state) throw new Error('no run in progress');
       return drawToHandSize(state);

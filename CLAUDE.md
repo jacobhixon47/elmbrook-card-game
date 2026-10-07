@@ -12,9 +12,10 @@ Read before working: `docs/gdd.md` (what to build), `docs/tech.md` (how), `docs/
 - `pnpm art:check`: validate sprite grids, list cards still on placeholders
 - `pnpm art:sheet`: render all art to `.snaps/art-sheet.png` without a browser
 - `pnpm art:import <image> <name> [--grid 2 --panel 0]`: pixelize a painted image into `public/backdrops/<name>.png`
+- `pnpm art:window`: render the shop window in every season and time of day to `.snaps/window-grades.png`
 - `pnpm sim --runs <n>` (M1+): headless balance report
 
-Dev URL params: `?fixture=<name>`, `?seed=<s>`, `?noanim=1`, `?renderer=canvas`, `?backdrops=code` (code-drawn backdrops instead of painted ones).
+Dev URL params: `?fixture=<name>`, `?seed=<s>`, `?noanim=1`, `?renderer=canvas`, `?backdrops=code` (code-drawn backdrops instead of painted ones), `?season=winter` and `?time=night` (preview the shop window).
 
 ## Rules
 
