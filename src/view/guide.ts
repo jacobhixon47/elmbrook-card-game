@@ -1,7 +1,7 @@
 import { cardKind, codex } from '../codex';
 import type { Recipe } from '../codex/schema';
 import {
-  BREWS_PER_DAY, DAYS_PER_WEEK, DISCARDS_PER_DAY, NIGHT_SHIFT_DAY, RENT, WEEKS, type RunState,
+  BREWS_PER_DAY, DAYS_PER_WEEK, DISCARDS_PER_DAY, FINALE_ORDERS, NIGHT_SHIFT_DAY, RENT, WEEKS, type RunState,
 } from '../core';
 import { recipeAvailable } from '../core/brew';
 import { familyName } from './describe';
@@ -93,7 +93,7 @@ export function guideSections(): { title: string; body: string }[] {
   return [
     {
       title: 'A run',
-      body: `${WEEKS} weeks. Each has ${DAYS_PER_WEEK} days, then a Night Shift. After the Night Shift the Night Market opens and the Guild collects rent: ${RENT.join(', ')} gold. Miss a payment and the run is over; pay all ${WEEKS} and the stall is yours. The Calendar tab shows each day's weather, the week 3 festival and any sky event.`,
+      body: `${WEEKS} weeks. Each has ${DAYS_PER_WEEK} days, then a Night Shift with a patron who twists the rules. After it the Night Market opens and the Guild collects rent: ${RENT.join(', ')} gold. Miss a payment and the run is over. Pay all ${WEEKS} and fill ${FINALE_ORDERS === 1 ? 'an order' : FINALE_ORDERS >= 3 ? 'all three orders' : `${FINALE_ORDERS} orders`} for the Moonless Patron, and the stall is yours. The Calendar tab shows the weather, festival, sky events and patrons.`,
     },
     {
       title: 'A day',

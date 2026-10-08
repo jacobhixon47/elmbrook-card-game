@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex } from '../codex';
 import {
-  NIGHT_SHIFT_DAY, previewBrew, rentDue, SKIP_GOLD, skyTime, payout, todaysWeather,
-  type Action, type CardInstance, type GameEvent, type Order, type Potion, type RunState, type Season, type SkyTime, type Weather,
+  brewBlocked, FINALE_ORDERS, isPatron, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentDue, SKIP_GOLD, skyTime, payout, todaysWeather, twistNow,
+  type Action, type CardInstance, type GameEvent, type Gift, type Order, type Potion, type RunState, type Season, type SkyTime, type Weather,
 } from '../core';
 import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
@@ -15,7 +15,8 @@ import { gradedView, shopBackdrop, viewOverrides } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
 import {
-  BONUS_TEXT, cardText, customerLine, customerName, dayLabel, ERRAND_TEXT, orderTerms, recipeName, requestText, TIER_NAME,
+  BONUS_TEXT, cardText, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, orderNeeds, orderTerms, recipeName,
+  requestText, TIER_NAME,
 } from '../view/describe';
 import { drawGrimoire, type GrimoireTab } from '../view/grimoire';
 import { stages } from '../view/guide';
@@ -301,7 +302,19 @@ export class Run extends Phaser.Scene {
     }
     this.text(630, 24, `Rent ${rentDue(s.season, s.week)}g after the Night Shift`, { size: 7, color: 'a', shadow: true }).setOrigin(1, 0);
     if (s.phase !== 'game-over' && s.phase !== 'victory') this.drawRibbon(s);
-    this.add2(button(this, 478, 16, 'Grimoire (G)', () => this.openBook(this.book ? null : 'recipes'), { w: 74 }));
+    const hidden = this.grimoireHidden(s);
+    this.add2(button(this, 478, 16, hidden ? 'Grimoire hidden' : 'Grimoire (G)', () => this.toggleBook(s), { w: 74, enabled: !hidden }));
+  }
+
+  /** The Moonless Patron hides the Grimoire for the finale's Night Shift (GDD §10). */
+  private grimoireHidden(s: RunState) {
+    return twistNow(s) === 'grimoire-hidden' && (s.phase === 'morning' || s.phase === 'brewing');
+  }
+
+  private toggleBook(s: RunState) {
+    if (this.book) return this.openBook(null);
+    if (this.grimoireHidden(s)) return this.toast('The Moonless Patron has hidden your Grimoire tonight.');
+    this.openBook('recipes');
   }
 
   /** Where am I: this week's days, then today's steps, the current one lit (GDD §15.1). */
@@ -333,22 +346,25 @@ export class Run extends Phaser.Scene {
     s.orders.forEach((o, i) => {
       const y = this.ticketY(i);
       const open = o.status === 'open';
-      const bg = this.add2(panel(this, ORDERS.x, y, ORDERS.w, TICKET_H, 'w', 0.95, o.id === this.pinned ? 'y' : 'n'));
-      if (o.id === this.pinned) bg.setStrokeStyle(2, hex('y'));
+      // The patron's order stands out: it is the night's featured guest (GDD §10).
+      const patron = isPatron(o.customer);
+      const bg = this.add2(panel(this, ORDERS.x, y, ORDERS.w, TICKET_H, patron ? 'W' : 'w', 0.95, o.id === this.pinned ? 'y' : patron ? 'v' : 'n'));
+      if (o.id === this.pinned || patron) bg.setStrokeStyle(2, hex(o.id === this.pinned ? 'y' : 'v'));
       const hearts = s.hearts[o.customer] ?? 0;
-      this.text(ORDERS.x + 5, y + 3, customerName(o.customer), { size: 8, color: 'k' });
-      this.text(ORDERS.x + ORDERS.w - 5, y + 3, `${'♥'.repeat(Math.min(hearts, 5))}${hearts > 5 ? '+' : ''}`, { size: 7, color: 'R' }).setOrigin(1, 0);
+      this.text(ORDERS.x + 5, y + 3, customerName(o.customer), { size: 8, color: patron ? 'P' : 'k' });
+      if (o.expiresIn !== null && open) this.text(ORDERS.x + ORDERS.w - 5, y + 3, `${o.expiresIn} brew${o.expiresIn === 1 ? '' : 's'} left`, { size: 7, color: 'r' }).setOrigin(1, 0);
+      else if (!patron) this.text(ORDERS.x + ORDERS.w - 5, y + 3, `${'♥'.repeat(Math.min(hearts, 5))}${hearts > 5 ? '+' : ''}`, { size: 7, color: 'R' }).setOrigin(1, 0);
       if (s.fog && open) {
         this.text(ORDERS.x + 5, y + 14, 'Hidden in the fog', { size: 8, color: 'h' });
         this.text(ORDERS.x + 5, y + 26, 'Brew or Discard to see it', { size: 7, color: 'h' });
       } else {
-        this.text(ORDERS.x + 5, y + 14, requestText(o), { size: 8, color: 'B' });
+        this.text(ORDERS.x + 5, y + 14, `${requestText(o)}${o.needsUmbra ? ' + Umbra' : ''}`, { size: 8, color: 'B' });
         this.text(ORDERS.x + 5, y + 26, orderTerms(o), { size: 7, color: 'r' });
       }
       if (o.bonus && !s.fog) this.text(ORDERS.x + ORDERS.w - 5, y + 26, '★', { size: 8, color: 'o' }).setOrigin(1, 0);
       if (!open) {
         bg.setAlpha(0.6);
-        this.text(ORDERS.x + ORDERS.w / 2, y + TICKET_H / 2, o.status === 'filled' ? 'FILLED' : 'DECLINED', { size: 10, font: 'display', color: o.status === 'filled' ? 'G' : 'r', stroke: 'w' })
+        this.text(ORDERS.x + ORDERS.w / 2, y + TICKET_H / 2, o.status === 'filled' ? 'FILLED' : o.expiresIn === 0 ? 'LEFT' : 'DECLINED', { size: 10, font: 'display', color: o.status === 'filled' ? 'G' : 'r', stroke: 'w' })
           .setOrigin(0.5).setAngle(-8);
       }
       bg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
@@ -366,9 +382,19 @@ export class Run extends Phaser.Scene {
     this.add2(panel(this, SIDE.x, SIDE.y, SIDE.w, 98));
     const x = SIDE.x + 6;
     const preview = previewBrew(s, s.cauldron, s.hand);
-    if (s.phase === 'morning') {
+    const patron = s.day === NIGHT_SHIFT_DAY ? patronOf(s) : null;
+    const blocked = s.phase === 'brewing' && preview.kind !== 'empty' ? brewBlocked(s, s.cauldron) : null;
+    if (s.phase === 'morning' && patron) {
+      // Tonight's patron and their twist (GDD §10).
+      this.text(x, SIDE.y + 5, patron.name, { size: 8, color: 'v', wrap: SIDE.w - 12 });
+      const twist = this.text(x, SIDE.y + 19, patron.text, { size: 7, color: 'W', wrap: SIDE.w - 12 });
+      this.text(x, SIDE.y + 23 + twist.height, `Fill their order: ${extraPay(patron.id)}.`, { size: 7, color: 'l', wrap: SIDE.w - 12 });
+    } else if (s.phase === 'morning') {
       this.text(x, SIDE.y + 5, 'The Order Board', { size: 8, color: 'y' });
       this.text(x, SIDE.y + 19, 'Click an order to read it. Open the shop when you are ready to brew.', { size: 7, color: 'a', wrap: SIDE.w - 12 });
+    } else if (blocked) {
+      this.text(x, SIDE.y + 5, 'Not tonight', { size: 10, color: 'R' });
+      this.text(x, SIDE.y + 21, `${blocked}.`, { size: 7, color: 'a', wrap: SIDE.w - 12 });
     } else if (preview.kind === 'empty') {
       this.text(x, SIDE.y + 5, 'Cauldron', { size: 8, color: 'y' });
       this.text(x, SIDE.y + 19, `Click ingredients to add them. Two make a potion${s.cauldronSlots > 2 ? ', three a stronger one' : ''}.`, { size: 7, color: 'a', wrap: SIDE.w - 12 });
@@ -460,6 +486,8 @@ export class Run extends Phaser.Scene {
 
     const picked = this.mode.kind === 'select' ? this.mode.picked : [];
     const tincture = this.mode.kind === 'select' ? this.mode.tincture : undefined;
+    // The Lamplighter: cards lie face-down until you hover them.
+    const hidden = twistNow(s) === 'hand-hidden' && s.phase === 'brewing';
     s.hand.forEach((inst, i) => {
       const x = this.handX(i, s.hand.length);
       const lifted = picked.includes(inst.uid) || inst.uid === tincture;
@@ -467,6 +495,12 @@ export class Run extends Phaser.Scene {
       if (lifted) card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex(inst.uid === tincture ? 'Y' : 'R')), 0);
       this.add2(card);
       card.setInteractive({ useHandCursor: s.phase === 'brewing' });
+      if (hidden && !lifted) {
+        const back = this.add.image(0, 0, 'card/back');
+        card.add(back);
+        card.on('pointerover', () => back.setVisible(false));
+        card.on('pointerout', () => back.setVisible(true));
+      }
       this.inspect(card, inst.card);
       if (s.phase !== 'brewing') {
         card.setAlpha(0.85);
@@ -531,7 +565,8 @@ export class Run extends Phaser.Scene {
     }
     const preview = previewBrew(s, s.cauldron, s.hand);
     const brewLabel = this.confirm === 'sludge' ? 'Brew Sludge?' : `Brew (${s.brewsLeft})`;
-    this.add2(button(this, 320, y, brewLabel, () => this.brew(), { w: 76, color: this.confirm === 'sludge' ? 'I' : 'Y', enabled: preview.kind !== 'empty' && s.brewsLeft > 0 }));
+    const blocked = brewBlocked(s, s.cauldron) !== null;
+    this.add2(button(this, 320, y, brewLabel, () => this.brew(), { w: 76, color: this.confirm === 'sludge' ? 'I' : 'Y', enabled: preview.kind !== 'empty' && s.brewsLeft > 0 && !blocked }));
     this.add2(button(this, 236, y, `Discard (${s.discardsLeft})`, () => this.startDiscard(s), { w: 76, enabled: s.discardsLeft > 0 }));
     const open = s.orders.filter((o) => o.status === 'open').length;
     const endLabel = this.confirm === 'endDay' ? `Decline ${open} & end?` : 'End day';
@@ -620,14 +655,20 @@ export class Run extends Phaser.Scene {
     const y0 = 70;
     const w = 300;
     this.add2(panel(this, x0, y0, w, 150, 'k', 0.97, 'n'));
-    const reg = codex.regulars.get(o.customer);
-    this.text(x0 + 12, y0 + 10, customerName(o.customer), { size: 12, color: 'y' });
+    this.text(x0 + 12, y0 + 10, customerName(o.customer), { size: 12, color: isPatron(o.customer) ? 'v' : 'y' });
     this.text(x0 + w - 12, y0 + 12, `${'♥'.repeat(Math.min(s.hearts[o.customer] ?? 0, 10)) || '♡'}`, { size: 8, color: 'R' }).setOrigin(1, 0);
-    if (reg) this.text(x0 + 12, y0 + 28, reg.blurb, { size: 7, color: 'a' });
+    this.text(x0 + 12, y0 + 28, customerBlurb(o.customer), { size: 7, color: 'a' });
     this.text(x0 + 12, y0 + 44, `"${customerLine(o)}"`, { size: 8, color: 'W', wrap: w - 24 });
     this.text(x0 + 12, y0 + 70, `Wants: ${requestText(o)}`, { size: 8, color: 'w' });
     this.text(x0 + 12, y0 + 82, orderTerms(o), { size: 8, color: 'c' });
-    if (o.bonus) this.text(x0 + 12, y0 + 94, `★ Bonus: ${BONUS_TEXT[o.bonus]} (+2g, +1 heart)`, { size: 7, color: 'o' });
+    const extra = extraPay(o.customer);
+    const needs = orderNeeds(o);
+    const notes = [
+      ...(o.bonus ? [{ t: `★ Bonus: ${BONUS_TEXT[o.bonus]} (+2g, +1 heart)`, c: 'o' as const }] : []),
+      ...(extra ? [{ t: `Also pays: ${extra}`, c: 'l' as const }] : []),
+      ...(needs ? [{ t: needs, c: 'I' as const }] : []),
+    ];
+    notes.slice(0, 2).forEach((n, i) => this.text(x0 + 12, y0 + 94 + i * 10, n.t, { size: 7, color: n.c }));
 
     const by = y0 + 130;
     if (o.status !== 'open') {
@@ -747,13 +788,18 @@ export class Run extends Phaser.Scene {
       this.text(320, 60, sub, { size: 8, color: 'a', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);
     };
 
+    if (s.phase === 'game-over' && s.lostTo === 'finale') {
+      title('The Moonless Patron leaves unhappy', `Rent is paid, but the month is lost. The Moonless Patron wanted ${FINALE_ORDERS === 1 ? 'one of their orders' : FINALE_ORDERS >= 3 ? 'all three of their orders' : `${FINALE_ORDERS} of their orders`} done.`);
+      this.add2(button(this, 320, 180, 'Try again', () => this.newRun(), { w: 80, color: 'Y' }));
+      return;
+    }
     if (s.phase === 'game-over') {
       title('The Guild reclaims your stall', `You couldn't make week ${s.week}'s rent of ${rentDue(s.season, s.week)}g.`);
       this.add2(button(this, 320, 180, 'Try again', () => this.newRun(), { w: 80, color: 'Y' }));
       return;
     }
     if (s.phase === 'victory') {
-      title('The month is done', `Rent paid every week. The stall is yours, with ${s.gold}g to spare.`);
+      title('The month is done', `Rent paid every week and the Moonless Patron served. The stall is yours, with ${s.gold}g to spare.`);
       this.add2(button(this, 320, 180, 'New run', () => this.newRun(), { w: 80, color: 'Y' }));
       return;
     }
@@ -824,6 +870,13 @@ export class Run extends Phaser.Scene {
         this.add2(button(this, 320, 262, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
         return;
       }
+      case 'gift': {
+        const [head, sub] = GIFT_TITLE[offer.source];
+        title(head, `${sub} ${offer.into === 'satchel' ? 'It goes in your Night Satchel, which joins your deck only on Night Shifts.' : 'It goes in your deck.'}`);
+        offer.cards.forEach((id, i) => this.offerCard(320 + (i - (offer.cards.length - 1) / 2) * 80, 150, id, () => this.dispatch({ type: 'takeGift', index: i })));
+        this.add2(button(this, 320, 250, 'No thanks', () => this.dispatch({ type: 'passGift' }), { w: 72 }));
+        return;
+      }
       case 'fence': {
         const due = rentDue(s.season, s.week);
         title('The Night Market', `The night's work is done. Sell potions from your Shelf to the Fence, then the Guild collects this week's rent: ${due}g. You have ${s.gold}g.`);
@@ -864,7 +917,7 @@ export class Run extends Phaser.Scene {
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
       if (this.busy) return;
       const s = store.getState()!;
-      if (e.key === 'g' || e.key === 'G') return this.openBook(this.book ? null : 'recipes');
+      if (e.key === 'g' || e.key === 'G') return this.toggleBook(s);
       if (this.book) {
         if (e.key === 'Escape') this.openBook(null);
         return;
@@ -886,6 +939,13 @@ export class Run extends Phaser.Scene {
     });
   }
 }
+
+const GIFT_TITLE: Record<Gift['source'], [string, string]> = {
+  'first-night': ['A gift from the night', 'Week 1 is nearly done. Take one Lunar ingredient, free.'],
+  'lantern-witch': ['The Lantern Witch pays', 'She pays in moonlight. Take one Lunar ingredient.'],
+  'bog-hag': ['Granny Bogwort pays', 'Something rare from the fen. Take one.'],
+  patron: ['The patron\'s reward', 'Take one, with their thanks.'],
+};
 
 /** First-time players get the tutorial; ?tutorial=0, a chosen ?seed= or a finished one skip it, ?tutorial=1 forces it. */
 function wantsTutorial(): boolean {

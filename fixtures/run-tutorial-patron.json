@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{ "patron": [1, "lamplighter"] }, { "jump": [1, 5] }], "ui": { "tutorial": "patron" } }

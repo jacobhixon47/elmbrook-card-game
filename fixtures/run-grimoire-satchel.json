@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{ "jump": [1, 5] }, "openShop", "endDay", "skipReward", { "gift": 0 }, { "gold": 30 }, "leaveMarket", "openShop"], "ui": { "grimoire": "deck" } }

@@ -84,7 +84,20 @@ export function drawGrimoire(
       c.on('pointerout', () => tip.hide());
       text(x, y + 32, `×${r.total} · ${r.inDraw} to draw`, { size: 7, color: r.inDraw ? 'W' : 'a', align: 'center' }).setOrigin(0.5, 0);
     });
-    text(X + 12, Y + H - 14, 'Hover a card to read it.', { size: 7, color: 'a' });
+    // The Night Satchel (GDD §5.4): Lunar cards and Omens that join the deck only on Night Shifts.
+    const satchel = deckRows({ drawPile: [], hand: [], discardPile: s.satchel, cauldron: [] });
+    const sy = Y + H - 44;
+    text(X + 12, sy - 6, 'Night Satchel', { size: 8, color: 'v' });
+    text(X + 12, sy + 6, satchel.length ? 'Joins your deck on Night Shifts.' : s.day === NIGHT_SHIFT_DAY ? 'In your deck tonight.' : 'Empty. Lunar cards and Omens go here.', { size: 6, color: 'a', wrap: 90 });
+    satchel.forEach((r, i) => {
+      const x = X + 130 + i * 42;
+      const c = add(createCard(scene, x, sy + 4, r.card).setScale(0.6));
+      c.setInteractive();
+      c.on('pointerover', () => tip.card(r.card, x, sy - 20, sy + 28));
+      c.on('pointerout', () => tip.hide());
+      if (r.total > 1) text(x + 14, sy + 20, `×${r.total}`, { size: 7, color: 'W', stroke: 'k' });
+    });
+    text(X + W - 12, Y + H - 24, 'Hover a card to read it.', { size: 7, color: 'a' }).setOrigin(1, 0);
     return;
   }
 

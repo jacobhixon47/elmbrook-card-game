@@ -16,7 +16,9 @@ export const GLOSSARY: Record<string, string> = {
   Aged: 'Gains Potency each day it stays in your deck; resets when brewed.',
   Sludge: 'What a mix that matches no recipe makes. A junk card that does nothing.',
   Hearth: 'An evening errand where you burn one card from your deck.',
-  Lunar: 'Moonlight essence. Lunar cards only come out on Night Shifts.',
+  Lunar: 'Moonlight essence. Lunar cards live in the Night Satchel and only come out on Night Shifts.',
+  Satchel: 'The Night Satchel: Lunar cards and Omens, shuffled into your deck only on Night Shifts.',
+  Omen: 'A Night Satchel Tincture: strong, with a drawback.',
   Hearts: 'Hearts are a customer\'s fondness for you. Bonuses earn them.',
 };
 
@@ -38,7 +40,7 @@ export function cardInfo(id: string): CardInfo {
     const essences = ing.essences.map(cap).join(' and ');
     const lines = [`${essences} essence${ing.essences.length > 1 ? 's' : ''}. Potency ${ing.potency}.`];
     if (ing.text) lines.push(ing.text);
-    if (ing.nightOnly) lines.push('Night Shifts only.');
+    if (ing.nightOnly) lines.push('Kept in your Night Satchel: Night Shifts only.');
     const text = lines.join(' ');
     return {
       title: ing.name,
@@ -51,6 +53,10 @@ export function cardInfo(id: string): CardInfo {
   }
   if (kind === 'tincture') {
     const t = codex.tinctures.get(id)!;
+    if (t.rarity === 'lunar') {
+      const text = `${t.text} Kept in your Night Satchel: Night Shifts only.`;
+      return { title: t.name, kind: 'Omen · Lunar tincture', essences: [], potency: null, text, terms: termsIn(`Omen Tincture ${text}`) };
+    }
     return { title: t.name, kind: `${cap(t.rarity)} tincture`, essences: [], potency: null, text: t.text, terms: termsIn(`Tincture ${t.text}`) };
   }
   const j = codex.junk.get(id)!;

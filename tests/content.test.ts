@@ -94,7 +94,7 @@ describe('new ingredient effects', () => {
   });
 
   it('Heartstone potions earn an extra heart; Charm Sachet adds a heart and a tip once', () => {
-    const order: Order = { id: 500, customer: 'old-tobin', request: { kind: 'family', family: 'healing' }, minTier: 'crude', pay: 10, bonus: null, status: 'open', quantity: 1, delivered: 0, tagBonus: null };
+    const order: Order = { id: 500, customer: 'old-tobin', request: { kind: 'family', family: 'healing' }, minTier: 'crude', pay: 10, bonus: null, status: 'open', quantity: 1, delivered: 0, tagBonus: null, needsUmbra: false, expiresIn: null };
     const potion = { uid: 600, recipe: 'healing-draught', family: 'healing' as const, quality: 14, tier: 'fine' as const, ingredients: ['elmroot', 'creekwater'], experiment: false };
     const base: RunState = { ...brewing(), orders: [order], hearts: { 'old-tobin': 0 } };
     const plain = ok({ ...base, shelf: [{ ...potion, heartDelta: 0 }] }, { type: 'deliver', order: 500, potion: 600 }).state;
@@ -102,11 +102,11 @@ describe('new ingredient effects', () => {
     expect(hearty.hearts['old-tobin']).toBe(plain.hearts['old-tobin']! + 1);
 
     const charmed = play(['charm-sachet'], undefined, (s) => Object.assign(s, { orders: [order], shelf: [{ ...potion, heartDelta: 0 }], hearts: { 'old-tobin': 0 } }));
-    expect(charmed.state.delivery).toEqual({ hearts: 1, tip: 3 });
+    expect(charmed.state.delivery).toEqual({ hearts: 1, tip: 3, payMult: 1 });
     const r = ok(charmed.state, { type: 'deliver', order: 500, potion: 600 });
     expect(r.state.hearts['old-tobin']).toBe(plain.hearts['old-tobin']! + 1);
     expect(r.state.gold - charmed.state.gold).toBe(plain.gold - base.gold + 3);
-    expect(r.state.delivery).toEqual({ hearts: 0, tip: 0 });
+    expect(r.state.delivery).toEqual({ hearts: 0, tip: 0, payMult: 1 });
   });
 
   it('Wolfsbane costs a Discard when drawn on a Night Shift only', () => {
@@ -172,6 +172,7 @@ describe('junk', () => {
     s = ok(s, { type: 'openShop' }).state;
     s = ok(s, { type: 'endDay' }).state;
     s = ok(s, { type: 'skipReward' }).state;
+    s = ok(s, { type: 'passGift' }).state; // the first-night Lunar card
     const r = ok(s, { type: 'leaveMarket' });
     expect(r.state.week).toBe(2);
     expect([...r.state.drawPile, ...r.state.hand].some((c) => c.uid === 960)).toBe(false);
@@ -256,7 +257,7 @@ describe('new tinctures', () => {
 describe('customers', () => {
   it('tip multipliers scale the tip, not the pay', () => {
     const potion = { tier: 'superb' as const, ingredients: ['elmroot', 'creekwater'] };
-    const order = (customer: string): Order => ({ id: 1, customer, request: { kind: 'family', family: 'secrets' }, minTier: 'fine', pay: 20, bonus: null, status: 'open', quantity: 1, delivered: 0, tagBonus: null });
+    const order = (customer: string): Order => ({ id: 1, customer, request: { kind: 'family', family: 'secrets' }, minTier: 'fine', pay: 20, bonus: null, status: 'open', quantity: 1, delivered: 0, tagBonus: null, needsUmbra: false, expiresIn: null });
     const plain = payout(potion, order('old-tobin'));
     const twins = payout(potion, order('pip-and-quill'));
     expect(twins.pay).toBe(plain.pay);

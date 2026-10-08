@@ -7,7 +7,7 @@ import {
 import { brewing, no, ofType, ok, slotAll, start, withHand } from './helpers';
 
 const order = (o: Partial<Order> = {}): Order => ({
-  id: 500, customer: 'old-tobin', request: { kind: 'family', family: 'healing' }, minTier: 'fine', pay: 10, bonus: null, status: 'open', quantity: 1, delivered: 0, tagBonus: null, ...o,
+  id: 500, customer: 'old-tobin', request: { kind: 'family', family: 'healing' }, minTier: 'fine', pay: 10, bonus: null, status: 'open', quantity: 1, delivered: 0, tagBonus: null, needsUmbra: false, expiresIn: null, ...o,
 });
 const potion = (p: Partial<Potion> = {}): Potion => ({
   uid: 600, recipe: 'healing-draught', family: 'healing', quality: 14, tier: 'fine', ingredients: ['elmroot', 'creekwater'],
@@ -25,6 +25,7 @@ function skipDay(s: RunState): RunState {
   if (s.phase === 'morning') s = ok(s, { type: 'openShop' }).state;
   s = ok(s, { type: 'endDay' }).state;
   s = ok(s, { type: 'skipReward' }).state;
+  while (s.offer?.kind === 'gift') s = ok(s, { type: 'passGift' }).state;
   if (s.phase === 'night-market') return s;
   s = ok(s, { type: 'chooseErrand', errand: (s.offer as { options: ('market' | 'forage' | 'hearth')[] }).options[0]! }).state;
   return ok(s, { type: 'leaveErrand' }).state;
@@ -248,12 +249,18 @@ describe('weeks, rent and the end of a run', () => {
     expect(no(r.state, { type: 'openShop' })).toMatch(/game-over/);
   });
 
-  it('paying the fourth rent wins', () => {
+  it('paying the fourth rent and filling the Moonless Patron\'s orders wins', () => {
     const s = ok(start(), { type: 'debug', op: 'jumpToDay', week: 4, day: NIGHT_SHIFT_DAY }).state;
-    const r = ok({ ...skipDay(s), gold: 500 }, { type: 'leaveMarket' });
+    expect(s.orders.every((o) => o.customer === 'moonless-patron')).toBe(true);
+    const market = skipDay({ ...s, orders: s.orders.map((o) => ({ ...o, status: 'filled' as const })) });
+    const r = ok({ ...market, gold: 500 }, { type: 'leaveMarket' });
     expect(r.state.phase).toBe('victory');
     expect(r.state.gold).toBe(340);
     expect(ofType(r.events, 'runWon')).toHaveLength(1);
+    // Rent paid but the finale not met: the month is lost.
+    const short = ok({ ...skipDay(s), gold: 500 }, { type: 'leaveMarket' });
+    expect(short.state.phase).toBe('game-over');
+    expect(ofType(short.events, 'finaleFailed')).toEqual([{ type: 'finaleFailed', patron: 'moonless-patron' }]);
   });
 
   it('seasons scale the rent and twist the day', () => {

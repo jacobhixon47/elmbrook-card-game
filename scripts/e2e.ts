@@ -87,6 +87,8 @@ while (steps++ < 400 && !(s.week === 2 && s.day === 2) && s.phase !== 'game-over
     case 'endDay': await endDay(); break;
     case 'pickReward': await click(240 + a.index * 80, 150); break;
     case 'skipReward': await click(320, 250); break;
+    case 'takeGift': { const n = (s.offer as { cards: string[] }).cards.length; await click(320 + (a.index - (n - 1) / 2) * 80, 150); break; }
+    case 'passGift': await click(320, 250); break;
     case 'chooseErrand': { const o = s.offer as { options: string[] }; await click(220 + o.options.indexOf(a.errand) * 200, 150); break; }
     default: await hook(a);
   }

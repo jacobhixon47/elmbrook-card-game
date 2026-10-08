@@ -1,6 +1,7 @@
 import { codex } from '../codex';
 import type { PotionFamily } from '../codex/schema';
-import { NIGHT_SHIFT_DAY, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
+import type { NightPayment, PatronReward } from '../codex/schema';
+import { NIGHT_SHIFT_DAY, STAND_IN_GOLD, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
 
 // Plain words for what the rules engine holds. Pure, so the wording is tested without a browser.
 
@@ -53,7 +54,43 @@ export function cardText(id: string): string {
 }
 
 export function customerName(id: string): string {
-  return codex.regulars.get(id)?.name ?? id;
+  return codex.regulars.get(id)?.name ?? codex.nightCustomers.get(id)?.name ?? codex.patrons.get(id)?.name ?? id;
+}
+
+/** Who they are, in a few words. */
+export function customerBlurb(id: string): string {
+  return codex.regulars.get(id)?.blurb ?? codex.nightCustomers.get(id)?.blurb ?? codex.patrons.get(id)?.blurb ?? '';
+}
+
+/** What a night customer or patron gives beyond the gold, if anything. */
+export function extraPay(customer: string): string | null {
+  const patron = codex.patrons.get(customer);
+  if (patron) return PATRON_REWARD_TEXT(patron.reward);
+  const pays = codex.nightCustomers.get(customer)?.paysIn.kind;
+  return pays ? NIGHT_PAY_TEXT[pays] : null;
+}
+
+const NIGHT_PAY_TEXT: Record<NightPayment['kind'], string | null> = {
+  gold: null,
+  omen: 'an Omen for your Satchel',
+  'lunar-card': 'pick a Lunar card',
+  'rare-card': 'pick a Rare card',
+  'lift-curse': null,
+};
+
+function PATRON_REWARD_TEXT(r: PatronReward): string {
+  switch (r.kind) {
+    case 'gold':
+      return `+${r.amount}g`;
+    case 'card-pick':
+      return `pick 1 of ${r.count} ${cap(r.rarity)} cards`;
+    case 'familiar-pick':
+      return `+${STAND_IN_GOLD.familiar}g (a familiar, once they arrive)`;
+    case 'relic':
+      return `+${STAND_IN_GOLD.relic[r.tier]}g (a relic, once they arrive)`;
+    case 'win':
+      return 'the month';
+  }
 }
 
 export function requestText(order: Pick<Order, 'request'> & Partial<Pick<Order, 'quantity' | 'delivered'>>): string {
@@ -64,15 +101,42 @@ export function requestText(order: Pick<Order, 'request'> & Partial<Pick<Order, 
 }
 
 /** The customer's line, in character (GDD §15: customers speak, the UI states it plainly). */
-export function customerLine(order: Pick<Order, 'request'>): string {
+export function customerLine(order: Pick<Order, 'request'> & Partial<Pick<Order, 'customer'>>): string {
+  if (order.customer && codex.patrons.has(order.customer)) return PATRON_LINE[order.customer] ?? 'You know what I came for.';
   if (order.request.kind === 'recipe') return `A ${recipeName(order.request.recipe)}, if you'd be so kind.`;
   return FAMILY_LINE[order.request.family];
 }
 
-export function orderTerms(order: Pick<Order, 'minTier' | 'pay'> & Partial<Pick<Order, 'tagBonus'>>): string {
+export function orderTerms(order: Pick<Order, 'minTier' | 'pay'> & Partial<Pick<Order, 'tagBonus' | 'customer'>>): string {
   if (order.tagBonus) return `${TIER_NAME[order.minTier]}+ · ${order.pay}g · ×${order.tagBonus.mult} ${cap(order.tagBonus.tag)}`;
+  const extra = order.customer && codex.nightCustomers.get(order.customer)?.paysIn.kind;
+  if (extra === 'omen') return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + Omen`;
+  if (extra === 'lunar-card') return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + Lunar`;
+  if (extra === 'rare-card') return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + Rare`;
   return `${TIER_NAME[order.minTier]} or better · ${order.pay}g`;
 }
+
+/** Extra conditions on an order, for its ticket and dialogue: an Umbra ingredient, a clock. */
+export function orderNeeds(order: Pick<Order, 'needsUmbra' | 'expiresIn' | 'status'>): string | null {
+  const parts: string[] = [];
+  if (order.needsUmbra) parts.push('needs Umbra');
+  if (order.expiresIn !== null && order.status === 'open') parts.push(`leaves in ${order.expiresIn} brew${order.expiresIn === 1 ? '' : 's'}`);
+  return parts.length ? cap(parts.join(', ')) : null;
+}
+
+const PATRON_LINE: Record<string, string> = {
+  lamplighter: 'Mind the dark. Brew what you cannot see.',
+  'mother-hollow': 'A little from every corner of the valley, dear.',
+  'twin-owls': 'Two, please. We always share.',
+  'sir-bramble': 'Nothing hot in my cup, if you please.',
+  'clockless-man': "I can't stay. I never can.",
+  'may-queen': 'Surprise me each time, or not at all.',
+  'firefly-conductor': 'Keep time with the lights!',
+  'tithe-reeve': "The harvest's due. So is the tithe.",
+  'frost-warden': 'Only the cold keeps.',
+  'pale-courier': 'Sealed, and by moonlight. The best you can make.',
+  'moonless-patron': '...',
+};
 
 const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
 

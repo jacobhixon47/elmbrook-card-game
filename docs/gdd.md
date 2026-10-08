@@ -10,7 +10,7 @@ Status: v0.1 design, written to be built from. Numbers are starting points for t
 
 You've inherited a run-down potion stall in Elmbrook. Your deck is your ingredient satchel. Each day, townsfolk bring orders; you draw ingredients, combine them in your cauldron, and try to brew something good enough to sell. Rent is due every week. On moon nights the shop stays open late and the Night Market comes to town, with stranger customers, lunar ingredients, and vendors who don't take coin.
 
-One run = one lunar month (4 weeks) in one season. Survive every rent day and satisfy the Moonless Patron on the final new moon to win. Winning a season unlocks the next; clearing all four is your first Year in Elmbrook (§13).
+One run = one lunar month (4 weeks) in one season. Survive every rent day and satisfy the Moonless Patron on the final new moon to win. (In the build, satisfying them means filling all three of their orders, `FINALE_ORDERS` in `rules.ts`; see §10.) Winning a season unlocks the next; clearing all four is your first Year in Elmbrook (§13).
 
 Touchstones: Balatro (scoring juice, run structure, jokers), Slay the Spire (deck shaping, map choices), Luck be a Landlord (rent pressure), Stardew Valley (tone, townsfolk).
 
@@ -95,15 +95,15 @@ Carried over from 1.0: click an order to open its dialogue; choose **Fulfill**, 
 
 A separate cast who only come after dark. Stranger and more formal than the day crowd, never horror. Their orders are odd ("a potion that tastes like a memory") and pay in odd things: Omens, a Curse lifted, Lunar cards, a stall discount at the Night Market. Each has hearts like a regular, with their own story beats.
 
-| ID | Name | Who | Tends to order | Pays in |
-|---|---|---|---|---|
-| wisp-courier | The Wisp Courier | Delivers letters between the living and the not-quite | Secrets, Lunar | Omens |
-| lantern-witch | The Lantern Witch | Lights the Night Market's lamps, sharp-tongued | Ember, Vigor | Lunar cards |
-| bog-hag | Granny Bogwort | Lives in the fen, surprisingly sweet | Healing with Umbra | Rare ingredients |
-| moth-duchess | The Moth Duchess | Aristocrat of the lamplight | Illusion, Fortune | Gold, lavishly |
-| sleepless-miller | The Sleepless Miller | Hasn't slept in years | Calming, Sleep | Curses lifted |
+| ID | Name | Who | Tends to order | Gold | Pays in |
+|---|---|---|---|---|---|
+| wisp-courier | The Wisp Courier | Delivers letters between the living and the not-quite | Secrets, Lunar | ×0.5 | A random Omen into the Night Satchel |
+| lantern-witch | The Lantern Witch | Lights the Night Market's lamps, sharp-tongued | Vigor, Warming | ×0.5 | Pick 1 of 2 Lunar ingredients after the shift |
+| bog-hag | Granny Bogwort | Lives in the fen, surprisingly sweet | Healing, and it must have an Umbra ingredient | ×0.5 | Pick 1 of 3 Rare ingredients after the shift |
+| moth-duchess | The Moth Duchess | Aristocrat of the lamplight | Illusion, Fortune | ×2.5 | Gold, lavishly |
+| sleepless-miller | The Sleepless Miller | Hasn't slept in years | Calming | ×1 | Lifts your oldest Curse, or ×1.5 gold with none (curses arrive with M3 part 5, so always gold for now) |
 
-The Night Shift patron (§10) is the featured guest; night customers fill the other orders that night.
+The Night Shift patron (§10) is the featured guest; night customers fill the other orders that night, along with the regulars who only come at night (The Gardener). Gold is the order's normal night pay times the multiplier. Picks wait until after the shift's twilight reward, before the Night Market. Granny Bogwort only insists on Umbra when your deck can brew it into her potion.
 
 ### 4.2 Events
 
@@ -196,9 +196,23 @@ Some ask for a target: **Infuse** (a hand ingredient gains +2 Potency for the ru
 1.0's Night Deck, reworked for a roguelike:
 - A separate small deck (starts empty) built only at the Night Market and from night rewards.
 - **First-night gift:** after the week-1 Night Shift you pick 1 of 2 Lunar ingredients for free, so week 2's Lunar orders are reachable.
-- Shuffled into your draw pile **only on Night Shifts**.
-- Holds **Lunar ingredients** (Lunar essence, high potency, odd effects) and **Omens** (powerful Tinctures with drawbacks).
-- **Eclipse** (rare calendar event): the Night Satchel joins a Day, and day/lunar ingredients form special Eclipse recipes.
+- Shuffled into your draw pile **only on Night Shifts**. The next morning its cards go back into the Satchel, so the Hearth can't burn them and they never crowd a day.
+- Holds **Lunar ingredients** (Lunar essence, high potency, odd effects) and **Omens** (powerful Tinctures with drawbacks). Any Lunar ingredient or Omen you gain goes there; Fallen Star is a day card and goes in the deck.
+- **Eclipse** (rare calendar event): the Night Satchel joins that Day, and day/lunar ingredients form special Eclipse recipes.
+- The Grimoire's Deck tab lists the Satchel under the deck.
+
+**Omens** (from the balance tables; Cracked Mirror and Moth Swarm are unlocks):
+
+| Omen | Effect |
+|---|---|
+| Blood Moon | Next brew: Harmony ×2. Lose 1 Discard. |
+| Black Cat Crossing | Draw 3, then discard a random card. |
+| Raven Call | Gain 1 Brew. -1 heart with the next customer you serve. |
+| Witching Hour | Next brew: Potency ×2. Add a Sludge to your deck. |
+| Howl | Next brew: every ingredient +2 Potency per Lunar card in the cauldron. |
+| Cracked Mirror | Add a copy of a card in hand to your deck. Lose 3 gold. |
+| Wishing Star | Your next delivery pays double. Lose 1 Discard. |
+| Moth Swarm | Every ingredient also counts as Lunar for your next brew. -1 heart with the next customer you serve. |
 
 ### 5.5 Card modifiers
 
@@ -288,15 +302,25 @@ Phase flavour: First/Last Quarter nights have 3 stalls. Full Moon has all stalls
 
 Each Night Shift has one featured patron with a rule twist, shown on the Calendar a week ahead.
 
-| Patron | Twist |
-|---|---|
-| The Lamplighter | Your hand is face-down until you hover a card. |
-| Mother Hollow | Each brew must use an ingredient from a different Origin than the last. |
-| The Twin Owls | Every order needs two identical potions. |
-| Sir Bramble | Ember ingredients have 0 Potency. |
-| The Clockless Man | Orders expire after 2 brews (1.0's "timed orders", as a twist). |
-| The Pale Courier (Full Moon) | Needs a Masterwork Lunar potion; ordinary orders pay double. |
-| The Moonless Patron (finale) | Three escalating orders; your Grimoire is hidden. |
+In the build the whole month's patrons are rolled at run start (on their own seed stream, so a seed's weather doesn't change) and shown on the Calendar's Night cells, in the HUD line and in the morning side panel. Week 2 is always the Pale Courier and week 4 the Moonless Patron; weeks 1 and 3 draw from the rest that fit the season, never the same one twice. The patron's order is the first on the board, one tier harder (capped by what the deck can reach, like every order), and filling it pays their reward on top. Night customers fill the other orders. A Night Shift posts the patron's `orderCount` orders in all (Longest Night adds 2; Rain keeps one night customer home on a 3-order night).
+
+| Patron | Weeks | Twist | Reward for their order |
+|---|---|---|---|
+| The Lamplighter | 1, 3 | Your hand is face-down until you hover a card. | 6 gold |
+| Mother Hollow | 1, 3 | Each brew must use an ingredient from a different Origin than the last. | Pick 1 of 2 familiars |
+| The Twin Owls | 1, 3 | Every order needs two identical potions, and pays ×2. Two orders. | Pick 1 of 3 Rare cards |
+| Sir Bramble | 1, 3 | Ember ingredients have 0 Potency. | 6 gold |
+| The Clockless Man | 3 | Orders leave after 2 brews (1.0's "timed orders", as a twist). No heart is lost when they go. | Tier 1 relic |
+| The May Queen (spring) | 1, 3 | Each delivery must be a different family from the one before. | Tier 1 relic |
+| The Firefly Conductor (summer) | 1, 3 | After every brew, your hand is discarded and redrawn. | Pick 1 of 2 familiars |
+| The Tithe Reeve (autumn) | 1, 3 | Every brew costs 2 gold; orders pay ×1.5. | 10 gold |
+| The Frost Warden (winter) | 1, 3 | Ingredients without the Frost tag have -2 Potency. | Tier 2 relic |
+| The Pale Courier (Full Moon) | 2 | Needs a Masterwork Lunar potion; ordinary orders pay double. With no way to brew Lunar yet, it asks for your best family at your best tier. | Tier 2 relic |
+| The Moonless Patron (finale) | 4 | Three escalating orders (Superb, Masterwork, Masterwork, capped by reach); your Grimoire is hidden. | The month |
+
+Familiars and relics arrive in M3 part 5. Until then those rewards pay gold instead: 8 for a familiar pick, 8 for a tier 1 relic, 12 for tier 2.
+
+*Balance note (M3 part 3):* requiring all three of the Moonless Patron's orders dropped the greedy bot from about 27% wins to 5% in Spring (two of three: 17%, one of three: 25%), because Masterwork is out of reach without familiars and the Night Market. The build still needs all three, as designed (`FINALE_ORDERS` in `rules.ts`), so expect a low win rate until those systems land.
 
 ## 11. Familiars (jokers)
 
@@ -385,7 +409,7 @@ Decided after the M2 playtest: the rules must explain themselves before M3 adds 
   - *Deck:* every card in the run, with what is in the draw pile now. Clicking the draw pile opens it here.
   - *How to play:* the run and the day, brewing, the scoring formula, quality tiers and the glossary.
 - **Where am I.** A ribbon at the top shows the week's days (four days, then the Night Shift) and the steps of the current one: Orders, Brew, Twilight, then Errand, or on a Night Shift, the Night Market. Every evening screen says in one line what it is for.
-- **Tutorial.** A player's first run is a guided week 1 on a fixed seed, and it can't be skipped. Tips appear as each part of the game first comes up; most wait for the player to do the thing (open an order, slot two cards, brew), the rest have a Got it button. Finishing week 1 marks the tutorial done in the player's profile (browser storage until M4 brings saves). Developers skip it with `?tutorial=0` or the dev overlay; fixtures and `pnpm e2e` never show it unless they ask for a tip. Night Market stalls, patrons and the Calendar add their own tips when M3 brings them.
+- **Tutorial.** A player's first run is a guided week 1 on a fixed seed, and it can't be skipped. Tips appear as each part of the game first comes up; most wait for the player to do the thing (open an order, slot two cards, brew), the rest have a Got it button. Finishing week 1 marks the tutorial done in the player's profile (browser storage until M4 brings saves). Developers skip it with `?tutorial=0` or the dev overlay; fixtures and `pnpm e2e` never show it unless they ask for a tip. The Calendar, patrons and the Night Satchel have their own tips (weather, patron, gift); Night Market stalls add theirs in M3 part 4.
 
 ## 16. Out of scope for v1
 

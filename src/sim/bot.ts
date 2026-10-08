@@ -1,9 +1,10 @@
 import { codex } from '../codex';
 import {
-  NIGHT_SHIFT_DAY, payout, previewBrew, rentDue, satisfies, tierIndex,
+  fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentDue, tierIndex,
   type Action, type BrewPreview, type CardInstance, type Order, type Potion, type RunState,
 } from '../core';
 import { targetsOf } from '../core/effects';
+import { brewBlocked } from '../core/night';
 import { fencePrice } from '../core/reduce';
 import { nextFloat, type RngState } from '../core/rng';
 
@@ -42,7 +43,7 @@ function brewOptions(s: RunState): Plan[] {
     seen.add(key);
     const rest = pool.filter((c) => !cards.includes(c));
     const preview = previewBrew(s, cards, rest);
-    if (preview.kind !== 'potion' || preview.discardCost > s.discardsLeft) continue;
+    if (preview.kind !== 'potion' || preview.discardCost > s.discardsLeft || brewBlocked(s, cards)) continue;
     out.push({ cards, preview, value: 0 });
   }
   return out;
@@ -74,6 +75,8 @@ function stepToward(s: RunState, plan: Plan): Action {
 const TINCTURE_VALUE: Record<string, number> = {
   'second-wind': 10, 'bottle-spare': 9, 'double-boil': 9, steep: 8, infuse: 7, 'pinch-of-salt': 6, 'tidy-up': 6, decant: 6,
   stir: 5, simmer: 5, 'grimoire-page': 5, 'charm-sachet': 5, forage: 4, sift: 4, 'taste-test': 3,
+  // Omens: Night Satchel only, so they never thin the day deck.
+  'blood-moon': 9, 'witching-hour': 8, 'wishing-star': 7, howl: 6, 'raven-call': 6, 'moth-swarm': 6, 'cracked-mirror': 5, 'black-cat-crossing': 4,
 };
 
 function cardValue(s: RunState, id: string): number {
@@ -103,7 +106,7 @@ function greedyBrewing(s: RunState): Action {
 
   // Fill from the Shelf first: it costs nothing.
   for (const o of [...open].sort((a, b) => b.pay - a.pay)) {
-    const p = s.shelf.filter((x) => satisfies(x, o)).sort((a, b) => orderValue(b, o) - orderValue(a, o))[0];
+    const p = s.shelf.filter((x) => fits(s, x, o)).sort((a, b) => orderValue(b, o) - orderValue(a, o))[0];
     if (p) return { type: 'deliver', order: o.id, potion: p.uid };
   }
   if (s.brewsLeft <= 0) return { type: 'endDay' };
@@ -113,7 +116,7 @@ function greedyBrewing(s: RunState): Action {
   for (const plan of options) {
     const potion = asPotion(plan);
     for (const o of open) {
-      if (!satisfies(potion, o)) continue;
+      if (!fits(s, potion, o)) continue;
       const value = orderValue(potion, o);
       if (!best || value > best.value) best = { ...plan, deliverTo: o.id, value };
     }
@@ -215,6 +218,11 @@ function greedyDusk(s: RunState): Action {
       const worst = deck.slice().sort((a, b) => cardValue(s, a.card) - cardValue(s, b.card))[0]!;
       return cardValue(s, worst.card) < 6 ? { type: 'removeCard', uid: worst.uid } : { type: 'leaveErrand' };
     }
+    case 'gift': {
+      // Satchel cards are free and never thin the day deck; deck cards are taken like rewards.
+      const best = offer.cards.map((card, index) => ({ index, v: cardValue(s, card) })).sort((a, b) => b.v - a.v)[0]!;
+      return offer.into === 'satchel' || (deck.length < 24 && best.v >= 5) ? { type: 'takeGift', index: best.index } : { type: 'passGift' };
+    }
     case 'fence':
       return s.shelf[0] ? { type: 'sellPotion', uid: s.shelf[0].uid } : { type: 'leaveMarket' };
   }
@@ -261,6 +269,8 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'deliver', order, potion },
     { type: 'decline', order },
     { type: 'pickReward', index: roll(4) },
+    { type: 'takeGift', index: roll(4) },
+    { type: 'passGift' },
     { type: 'chooseErrand', errand: any(['market', 'forage', 'hearth'] as const)! },
     { type: 'buy', index: roll(7) },
     { type: 'forage', index: roll(5) },

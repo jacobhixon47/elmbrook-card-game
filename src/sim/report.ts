@@ -21,10 +21,20 @@ export function report(runs: RunRecord[], title: string): string {
   lines.push(`rejected acts ${avg(runs.map((r) => r.rejected)).toFixed(1)} per run`);
   lines.push(`orders        ${avg(runs.map((r) => r.ordersFilled)).toFixed(1)} filled, ${avg(runs.map((r) => r.ordersDeclined)).toFixed(1)} declined per run`);
 
-  lines.push('', 'rent failed in week');
+  lines.push('', 'run lost in week');
   for (let w = 1; w <= WEEKS; w++) {
     const k = runs.filter((r) => r.lostWeek === w).length;
     lines.push(`  week ${w}  ${String(k).padStart(5)}  ${pct(k, n).padStart(6)}  ${bar(k, n)}`);
+  }
+
+  const finale = runs.filter((r) => r.finaleFailed).length;
+  lines.push(`  of which week 4 rent paid, Moonless Patron not met: ${finale} (${pct(finale, n)})`);
+
+  lines.push('', 'patron orders filled');
+  for (let w = 1; w <= WEEKS; w++) {
+    const posted = runs.reduce((k, r) => k + (r.patronPosted[w - 1] ?? 0), 0);
+    const filled = runs.reduce((k, r) => k + (r.patronFilled[w - 1] ?? 0), 0);
+    lines.push(`  week ${w}  ${pct(filled, posted).padStart(6)}  (${filled}/${posted})`);
   }
 
   lines.push('', 'average quality brewed (potions)');

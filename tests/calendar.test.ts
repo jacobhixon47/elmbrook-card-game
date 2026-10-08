@@ -108,7 +108,7 @@ describe('weather', () => {
 
   it('Snow puts Frost cards on top of the deck', () => {
     let s = { ...start('snowy', 'winter'), calendar: sky('snow') };
-    s = { ...s, discardPile: [{ uid: 990, card: 'ice-lily' }, { uid: 991, card: 'rime-blossom' }] };
+    s = { ...s, discardPile: [{ uid: 990, card: 'ice-lily' }, { uid: 991, card: 'frostcap' }] };
     const r = ok(s, { type: 'debug', op: 'jumpToDay', week: 1, day: 2 }).state;
     expect(r.drawPile.slice(0, 2).map((c) => c.uid).sort()).toEqual([990, 991]);
   });
@@ -187,9 +187,13 @@ describe('Calendar view', () => {
     const autumn = on(sky('fog'), FESTIVAL_WEEK, FESTIVAL_DAY, 'autumn');
     expect(todayLine(autumn)).toMatch(/Harvest Fair/);
     const winter = { ...start('w', 'winter'), calendar: sky('fog') };
+    const patron = codex.patrons.get(winter.patrons[FESTIVAL_WEEK - 1]!)!;
     expect(dayRules(winter, { week: FESTIVAL_WEEK, day: NIGHT_SHIFT_DAY, weather: 'fog' })).toEqual([
-      'Fog: it never hides a Night Shift\'s orders.', expect.stringMatching(/^Longest Night/),
+      `${patron.name}: ${patron.text}`, 'Fog: it never hides a Night Shift\'s orders.', expect.stringMatching(/^Longest Night/),
     ]);
+    // Each Night cell names its patron; the HUD line leads with tonight's.
+    expect(calendarWeeks(winter).map((w) => w.cells[NIGHT_SHIFT_DAY - 1]!.marks[0])).toEqual(winter.patrons.map((id) => codex.patrons.get(id)!.name.replace(/^The /, '')));
+    expect(todayLine({ ...winter, day: NIGHT_SHIFT_DAY })).toMatch(new RegExp(`^${codex.patrons.get(winter.patrons[0]!)!.name} · `));
   });
 });
 
