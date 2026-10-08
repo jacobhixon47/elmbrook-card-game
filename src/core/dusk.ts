@@ -2,8 +2,9 @@ import { codex } from '../codex';
 import type { Pool } from '../codex/schema';
 import { activeEvents } from './calendar';
 import { pickWeighted, shuffled, type Ctx } from './ctx';
+import { familiarPrice, rollFamiliars } from './familiars';
 import {
-  CARD_PRICE, CAULDRON_SLOT_PRICE, FORAGE_CARDS, FORAGE_PICKS, MARKET_CARDS, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS,
+  CARD_PRICE, CAULDRON_SLOT_PRICE, FORAGE_CARDS, FORAGE_PICKS, MARKET_CARDS, MARKET_FAMILIARS, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS,
   rarityWeights, SHELF_SLOT_PRICE, type ShopRarity,
 } from './rules';
 import type { Errand, RunState, StockItem } from './state';
@@ -78,6 +79,7 @@ export function openErrand(ctx: Ctx, errand: Errand): void {
       const stock: StockItem[] = rollCards(ctx, MARKET_CARDS, rarityWeights(0)).map((card) => ({
         kind: 'card', card, price: CARD_PRICE[rarityOf(card)], sold: false,
       }));
+      for (const familiar of rollFamiliars(ctx, MARKET_FAMILIARS)) stock.push({ kind: 'familiar', familiar, price: familiarPrice(familiar), sold: false });
       if (s.cauldronSlots < MAX_CAULDRON_SLOTS) stock.push({ kind: 'cauldron-slot', price: CAULDRON_SLOT_PRICE, sold: false });
       if (s.shelfSize < MAX_SHELF_SLOTS) stock.push({ kind: 'shelf-slot', price: SHELF_SLOT_PRICE, sold: false });
       s.offer = { kind: 'market', stock };

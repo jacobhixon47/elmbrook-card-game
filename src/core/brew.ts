@@ -1,8 +1,9 @@
 import { codex } from '../codex';
-import type { Essence, Ingredient, PotionFamily, Recipe } from '../codex/schema';
+import { ESSENCES, type Essence, type Ingredient, type PotionFamily, type Recipe } from '../codex/schema';
 import type { GameEvent } from './actions';
 import { effectsOf, hasEffect, sumEffect, type ScoreCtx } from './effects';
-import { activeEvents, todaysWeather, type Weather } from './calendar';
+import { activeEvents, NIGHT_SHIFT_DAY, todaysWeather, type Weather } from './calendar';
+import { FAMILIAR_SCORE } from './familiars';
 import { FROST_WARDEN_POTENCY, HEATWAVE_EMBER_POTENCY, RAIN_POTENCY, tierOf, tierStep, type Tier } from './rules';
 import { twistNow } from './night';
 import type { CardInstance, RunState } from './state';
@@ -110,13 +111,15 @@ export function ingredientsOf(cards: readonly CardInstance[]): Ingredient[] | nu
  * What brewing these cards would make, with every scoring step (GDD §6.3). Pure; used by the
  * cauldron preview, the bot and `brew` itself, so the preview is never wrong.
  */
-export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons'>>;
+export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf'>>;
 
 export function previewBrew(state: BrewState, cards: readonly CardInstance[], hand: readonly CardInstance[]): BrewPreview {
   const raw = ingredientsOf(cards);
   if (!raw || raw.length < 2) return { kind: 'empty' };
   // Moth Swarm: every ingredient also counts as Lunar for this brew.
-  const ings = state.pending.allLunar ? raw.map((i) => (i.essences.includes('lunar') ? i : { ...i, essences: [...i.essences, 'lunar' as const] })) : raw;
+  const swarm = state.pending.allLunar ? raw.map((i) => (i.essences.includes('lunar') ? i : { ...i, essences: [...i.essences, 'lunar' as const] })) : raw;
+  // The Moth familiar: Lunar ingredients count as every essence.
+  const ings = state.familiars?.includes('moth') ? swarm.map((i) => (i.essences.includes('lunar') ? { ...i, essences: [...ESSENCES] } : i)) : swarm;
   const discardCost = cards.reduce((n, c) => n + sumEffect(c.card, 'discardCost'), 0);
   const recipe = matchRecipe(ings, state);
   if (!recipe) return { kind: 'sludge', discardCost };
@@ -194,7 +197,26 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     steps.push({ type: 'scoreStep', source: 'tincture', id: 'pending', potency: c.potency, harmony: c.harmony });
   }
 
-  // 3-5. Card modifiers, familiars and the cauldron resolve here once they exist (M3).
+  // 3. Card modifiers resolve here once they exist (M3 part 5).
+
+  // 4. Familiars, in slot order (GDD §11): a flat bonus before a multiplier gets multiplied.
+  const first = cards[0]!;
+  const familiarBrew = {
+    ingredients: raw,
+    firstPotency: raw[0]!.potency + (first.bonus ?? 0) + (hasEffect(raw[0]!.id, 'aged') ? first.aged ?? 0 : 0),
+    shelf: state.shelf?.length ?? 0,
+    night: state.day === NIGHT_SHIFT_DAY,
+    firstBrew: c.firstBrew,
+  };
+  for (const id of state.familiars ?? []) {
+    const step = FAMILIAR_SCORE[id]?.(familiarBrew);
+    if (!step) continue;
+    c.potency += step.potency;
+    c.harmony = (c.harmony + step.harmony) * step.harmonyMult;
+    steps.push({ type: 'scoreStep', source: 'familiar', id, potency: c.potency, harmony: c.harmony, note: step.note });
+  }
+
+  // 5. The cauldron resolves here once cauldrons exist (M4's run starts).
 
   // Harmony can be fractional after a ×1.5; quality rounds down.
   const quality = Math.floor(c.potency * c.harmony);

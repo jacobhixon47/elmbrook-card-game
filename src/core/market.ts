@@ -3,9 +3,10 @@ import type { StallId, TarotEffect } from '../codex/schema';
 import { essencesOf, recipeAvailable } from './brew';
 import { NIGHT_SHIFT_DAY } from './calendar';
 import { changeGold, gainCard, pick, pickWeighted, reject, shuffled, type Ctx } from './ctx';
+import { addFamiliar, familiarPrice, rollFamiliars } from './familiars';
 import { draft, lunarPool, omenPool, rarityPool } from './night';
 import {
-  BLACK_MARKET, BROKER_CARDS, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_HEARTS, MAX_SHELF_SLOTS, MIN_DECK,
+  BLACK_MARKET, BROKER_CARDS, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_HEARTS, MAX_SHELF_SLOTS, MIN_DECK,
   QUARTER_DRAWN_STALLS, TAILOR_POTENCY, TINKER_PRICE, WEEKS,
 } from './rules';
 import { allCards, type CardInstance, type RunState, type StallState, type StockItem } from './state';
@@ -43,7 +44,7 @@ function openStall(ctx: Ctx, id: StallId): StallState {
         ],
       };
     case 'wandering-tinker': {
-      const stock: StockItem[] = [];
+      const stock: StockItem[] = rollFamiliars(ctx, 1, 'rare').map((familiar) => ({ kind: 'familiar', familiar, price: Math.round(familiarPrice(familiar) * TINKER_FAMILIAR), sold: false }));
       if (s.cauldronSlots < MAX_CAULDRON_SLOTS) stock.push({ kind: 'cauldron-slot', price: TINKER_PRICE.cauldronSlot, sold: false });
       if (s.shelfSize < MAX_SHELF_SLOTS) stock.push({ kind: 'shelf-slot', price: TINKER_PRICE.shelfSlot, sold: false });
       return { id, stock };
@@ -53,7 +54,7 @@ function openStall(ctx: Ctx, id: StallId): StallState {
     case 'fence':
       return { id };
     case 'moth-broker':
-      return { id, forgot: null, cards: [], done: false };
+      return { id, forgot: null, cards: [], familiars: [], done: false };
     case 'hollow-tailor':
       return { id, done: false };
     case 'fortune-tent':
@@ -107,16 +108,21 @@ export function forgetRecipe(ctx: Ctx, recipe: string): void {
   ctx.s.knownRecipes = ctx.s.knownRecipes.filter((r) => r !== recipe);
   stall.forgot = recipe;
   stall.cards = draft(ctx, rarityPool(ctx.s, 'rare'), BROKER_CARDS);
+  stall.familiars = rollFamiliars(ctx, BROKER_FAMILIARS);
   ctx.ev.push({ type: 'recipeForgotten', recipe, cards: stall.cards });
 }
 
+/** Take one of the Moth Broker's offers: `index` runs over the Rare cards, then the familiars. */
 export function brokerPick(ctx: Ctx, index: number): void {
   const stall = atStall(ctx, 'moth-broker');
-  const card = stall.cards[index];
-  if (stall.done || !card) reject(`no card ${index} from the Moth Broker`);
-  gainCard(ctx, card, 'market');
+  const offers = [...stall.cards, ...stall.familiars];
+  const pick = offers[index];
+  if (stall.done || !pick) reject(`no card ${index} from the Moth Broker`);
+  if (index < stall.cards.length) gainCard(ctx, pick, 'market');
+  else addFamiliar(ctx, pick);
   stall.done = true;
   stall.cards = [];
+  stall.familiars = [];
 }
 
 // ------------------------------------------------------------------ the Hollow Tailor
@@ -172,10 +178,16 @@ export function drawTarot(ctx: Ctx): void {
   const amount = card.amount ?? 0;
   switch (card.effect) {
     case 'gold':
-    case 'familiar-stand-in':
     case 'relic-stand-in':
       changeGold(ctx, amount, 'fortune');
       return;
+    case 'familiar': {
+      // A familiar if a slot is free, or its gold.
+      const [f] = s.familiars.length < s.familiarSlots ? rollFamiliars(ctx, 1) : [];
+      if (f) addFamiliar(ctx, f);
+      else changeGold(ctx, amount, 'fortune');
+      return;
+    }
     case 'lunar-card': {
       const pool = lunarPool(s);
       if (pool.length) gainCard(ctx, pick(ctx, pool), 'fortune');

@@ -154,7 +154,21 @@ export const FROST_WARDEN_POTENCY = -2;
  * Familiars and relics arrive in M3 part 5. Until then a patron who would give one pays this much
  * gold instead (about a common familiar's price, and a tier-2 relic a little more).
  */
-export const STAND_IN_GOLD = { familiar: 8, relic: [0, 8, 12, 16] } as const;
+export const STAND_IN_GOLD = { relic: [0, 8, 12, 16] } as const;
+
+// Familiars (GDD §11; balance tables, items.json).
+
+export const FAMILIAR_SLOTS = 4;
+export const MAX_FAMILIAR_SLOTS = 5;
+export const FAMILIAR_PRICE: Record<ShopRarity, number> = { common: 8, uncommon: 12, rare: 18 };
+/** Selling a familiar pays back this share of its price. */
+export const FAMILIAR_SELL = 0.5;
+/** Familiars in a Market Square's stock. */
+export const MARKET_FAMILIARS = 1;
+/** The Wandering Tinker's rare familiar costs this share of its price. */
+export const TINKER_FAMILIAR = 0.75;
+/** The Moth Broker's familiar choice, beside the Rare cards. */
+export const BROKER_FAMILIARS = 2;
 /**
  * The Moonless Patron's orders you must fill to win the month: all three, as the GDD says (Jacob's call,
  * Oct 8). Until familiars and the Night Market land the sim wins about 5% this way (1 of 3: 25%).

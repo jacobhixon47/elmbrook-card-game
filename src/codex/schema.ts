@@ -204,7 +204,7 @@ export const Stall = z.object({
 export type Stall = z.infer<typeof Stall>;
 
 /** What a tarot card does; each is handled by id in core/market.ts. */
-export const TAROT_EFFECTS = ['gold', 'lunar-card', 'learn-recipe', 'hearts', 'familiar-stand-in', 'relic-stand-in', 'fewer-orders', 'harder-orders', 'fog-week', 'bad-omen', 'lose-card'] as const;
+export const TAROT_EFFECTS = ['gold', 'lunar-card', 'learn-recipe', 'hearts', 'familiar', 'relic-stand-in', 'fewer-orders', 'harder-orders', 'fog-week', 'bad-omen', 'lose-card'] as const;
 export const TarotEffect = z.enum(TAROT_EFFECTS);
 export type TarotEffect = z.infer<typeof TarotEffect>;
 
@@ -223,3 +223,13 @@ export const Tarot = z.object({
   text: z.string().min(1),
 });
 export type Tarot = z.infer<typeof Tarot>;
+
+/** Familiars (GDD §11): passive helpers in slots, resolved in slot order. Their rules are code, by id, in core/familiars.ts. */
+export const Familiar = z.object({
+  id: Id,
+  name: z.string().min(1),
+  rarity: z.enum(['common', 'uncommon', 'rare']),
+  text: z.string().min(1),
+  pool: Pool.default('base'),
+});
+export type Familiar = z.infer<typeof Familiar>;

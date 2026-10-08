@@ -77,6 +77,7 @@ export type Errand = 'market' | 'forage' | 'hearth';
 
 export type StockItem =
   | { kind: 'card'; card: string; price: number; sold: boolean }
+  | { kind: 'familiar'; familiar: string; price: number; sold: boolean }
   | { kind: 'cauldron-slot' | 'shelf-slot'; price: number; sold: boolean };
 
 /** What the player is choosing between right now outside of brewing. */
@@ -94,7 +95,7 @@ export type StallState =
   | { id: 'lantern-seller' | 'wandering-tinker' | 'black-market'; stock: StockItem[] }
   | { id: 'fence' }
   /** `cards` is the Rare pick after forgetting a recipe; one trade a night. */
-  | { id: 'moth-broker'; forgot: string | null; cards: string[]; done: boolean }
+  | { id: 'moth-broker'; forgot: string | null; cards: string[]; familiars: string[]; done: boolean }
   | { id: 'hollow-tailor'; done: boolean }
   | { id: 'fortune-tent'; drawn: string[] };
 
@@ -104,11 +105,12 @@ export type { StallId };
 export type GiftSource = 'first-night' | 'lantern-witch' | 'bog-hag' | 'patron';
 
 /** A free pick after a Night Shift: the first-night Lunar card, a night customer's payment or a patron's reward. */
-export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'deck' | 'satchel' };
+/** `cards` are familiar ids when it goes `into` your familiar slots. */
+export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'deck' | 'satchel' | 'familiar' };
 
 /** Plain, JSON-serialisable run state. Fixtures and saves are exactly this shape. */
 export type RunState = {
-  version: 6;
+  version: 7;
   seed: string;
   rng: RngState;
   witch: string;
@@ -149,6 +151,11 @@ export type RunState = {
   delivery: DeliveryBoost;
   /** Brews made today, for first-brew effects. */
   brewsToday: number;
+  /** Familiars in slot order (GDD §11). They score left to right. */
+  familiars: string[];
+  familiarSlots: number;
+  /** Discards made this run, for the Ferret's every-third. */
+  discardCount: number;
   /** Fortune Tent twists on a later week (The Hermit, The Tower, The Moon). */
   fortunes: { week: number; card: string }[];
   /** Unlock-pool content this run may offer (meta-progression, M4). Base-pool content is always on. */

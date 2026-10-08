@@ -3,6 +3,7 @@ import type { Ingredient, Recipe, Regular } from '../codex/schema';
 import { fillsPattern, recipeAvailable } from './brew';
 import { FESTIVAL_DAY, festivalOn, todaysWeather } from './calendar';
 import { pick, pickWeighted, rand, type Ctx } from './ctx';
+import { FAMILIAR_RULES } from './familiars';
 import { fortuneOn } from './market';
 import { patronOf, twistNow } from './night';
 import {
@@ -284,11 +285,12 @@ export function meetsBonus(potion: Pick<Potion, 'ingredients'>, bonus: OrderBonu
 }
 
 /** Pay plus tip: the tip grows with how far the potion beats the minimum tier, plus the bonus. */
-export function payout(potion: Pick<Potion, 'tier' | 'ingredients'>, order: Order): { pay: number; tip: number; bonus: boolean } {
+export function payout(potion: Pick<Potion, 'tier' | 'ingredients'>, order: Order, familiars: readonly string[] = []): { pay: number; tip: number; bonus: boolean } {
   const bonus = order.bonus !== null && meetsBonus(potion, order.bonus);
   const tagged = order.tagBonus !== null && potion.ingredients.some((id) => codex.ingredients.get(id)?.tags.includes(order.tagBonus!.tag));
   const pay = tagged ? Math.round(order.pay * order.tagBonus!.mult) : order.pay;
-  const tierTip = Math.round(order.pay * (TIER_PAY[potion.tier] / TIER_PAY[order.minTier] - 1));
+  // The Fox doubles the tip for beating the minimum tier.
+  const tierTip = Math.round(order.pay * (TIER_PAY[potion.tier] / TIER_PAY[order.minTier] - 1)) * (familiars.includes('fox') ? FAMILIAR_RULES.foxTipMult : 1);
   const tipMult = codex.regulars.get(order.customer)?.tipMult ?? 1;
   return { pay, tip: Math.round((Math.max(0, tierTip) + (bonus ? BONUS_TIP : 0)) * tipMult), bonus };
 }

@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{ "familiar": "hearth-toad" }, { "familiar": "barn-owl" }, { "familiar": "jackdaw" }, { "familiar": "will-o-wisp" }, "openShop", { "slot": 0 }, { "slot": 1 }] }

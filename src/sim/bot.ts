@@ -1,7 +1,7 @@
 import { codex } from '../codex';
 import {
   allCards, fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentDue, tierIndex, WEEKS,
-  type Action, type BrewPreview, type CardInstance, type Order, type Potion, type RunState, type StallState,
+  type Action, type BrewPreview, type CardInstance, type Order, type Potion, type RunState, type StallState, type StockItem,
 } from '../core';
 import { targetsOf } from '../core/effects';
 import { brewBlocked, isSatchelCard } from '../core/night';
@@ -78,6 +78,53 @@ const TINCTURE_VALUE: Record<string, number> = {
   // Omens: Night Satchel only, so they never thin the day deck.
   'blood-moon': 9, 'witching-hour': 8, 'wishing-star': 7, howl: 6, 'raven-call': 6, 'moth-swarm': 6, 'cracked-mirror': 5, 'black-cat-crossing': 4,
 };
+
+/** Sell the weakest familiar when one worth `v` would be clearly better and every slot is taken. */
+function makeRoom(s: RunState, v: number): Action | null {
+  if (s.familiars.length < s.familiarSlots) return null;
+  const worst = s.familiars.map((id, index) => ({ index, v: familiarValue(s, id) })).sort((a, b) => a.v - b.v)[0];
+  return worst && v >= worst.v + 5 ? { type: 'sellFamiliar', index: worst.index } : null;
+}
+
+/** Buy the best familiar on sale worth having, making room first if needed. */
+function buyFamiliar(s: RunState, stock: readonly StockItem[], spare: number): Action | null {
+  const best = stock
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => item.kind === 'familiar' && !item.sold && item.price <= spare)
+    .map(({ item, index }) => ({ index, v: item.kind === 'familiar' ? familiarValue(s, item.familiar) : 0 }))
+    .sort((a, b) => b.v - a.v)[0];
+  if (!best || best.v < 7) return null;
+  return makeRoom(s, best.v) ?? (s.familiars.length < s.familiarSlots ? { type: 'buy', index: best.index } : null);
+}
+
+/** How much a familiar would help this deck, on the same scale as cardValue. */
+export function familiarValue(s: RunState, id: string): number {
+  const f = codex.familiars.get(id);
+  if (!f) return -10;
+  const deck = allCards(s).map((c) => codex.ingredients.get(c.card)).filter((i) => i !== undefined);
+  const share = (test: (i: (typeof deck)[number]) => boolean) => deck.filter(test).length / Math.max(1, deck.length);
+  const has = (e: string) => share((i) => i.essences.includes(e as never));
+  switch (id) {
+    case 'will-o-wisp': return 16;
+    case 'old-hound': return s.cauldronSlots >= 3 ? 14 : 4;
+    case 'hob': return 12;
+    case 'black-cat': return 4 + 30 * has('umbra');
+    case 'hedgehog': return 4 + 40 * has('stone');
+    case 'heron': return 4 + 30 * has('tide');
+    case 'salamander': return 4 + 30 * has('ember');
+    case 'garden-snail': return 4 + 20 * share((i) => i.essences.length === 2);
+    case 'jackdaw': return 10;
+    case 'otter': return 9;
+    case 'hearth-toad': return 7;
+    case 'firefly': return 6;
+    case 'frost-hare': return 2 + 20 * share((i) => i.tags.includes('frost'));
+    case 'tortoise': case 'magpie': return 7;
+    case 'fox': return 6;
+    case 'ferret': return 5;
+    case 'moth': return 3 + 4 * s.satchel.length;
+    default: return 2;
+  }
+}
 
 function cardValue(s: RunState, id: string): number {
   if (codex.tinctures.has(id)) {
@@ -200,6 +247,8 @@ function greedyDusk(s: RunState): Action {
       const spare = s.gold - reserve;
       const slot = offer.stock.findIndex((i) => i.kind === 'cauldron-slot' && !i.sold && i.price <= spare);
       if (slot >= 0) return { type: 'buy', index: slot };
+      const fam = buyFamiliar(s, offer.stock, spare);
+      if (fam) return fam;
       const card = offer.stock
         .map((item, index) => ({ item, index }))
         .filter(({ item }) => item.kind === 'card' && !item.sold && item.price <= spare)
@@ -219,6 +268,10 @@ function greedyDusk(s: RunState): Action {
       return cardValue(s, worst.card) < 6 ? { type: 'removeCard', uid: worst.uid } : { type: 'leaveErrand' };
     }
     case 'gift': {
+      if (offer.into === 'familiar') {
+        const best = offer.cards.map((id, index) => ({ index, id, v: familiarValue(s, id) })).sort((a, b) => b.v - a.v)[0]!;
+        return makeRoom(s, best.v) ?? (s.familiars.length < s.familiarSlots ? { type: 'takeGift', index: best.index } : { type: 'passGift' });
+      }
       // Satchel cards are free and never thin the day deck; deck cards are taken like rewards.
       const best = offer.cards.map((card, index) => ({ index, v: cardValue(s, card) })).sort((a, b) => b.v - a.v)[0]!;
       return offer.into === 'satchel' || (deck.length < 24 && best.v >= 5) ? { type: 'takeGift', index: best.index } : { type: 'passGift' };
@@ -256,7 +309,7 @@ function stallAction(s: RunState, stall: StallState): Action | null {
     }
     case 'wandering-tinker': {
       const slot = stall.stock.findIndex((i) => i.kind === 'cauldron-slot' && !i.sold && i.price <= spare);
-      return slot >= 0 ? { type: 'buy', index: slot } : null;
+      return slot >= 0 ? { type: 'buy', index: slot } : buyFamiliar(s, stall.stock, spare);
     }
     default:
       // The Moth Broker, the Hollow Tailor, the Fortune Tent and the Black Market: the random bot covers them.
@@ -313,6 +366,8 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'forage', index: roll(5) },
     { type: 'removeCard', uid: any([...s.drawPile, ...s.hand, ...s.discardPile].map((c) => c.uid)) ?? 0 },
     { type: 'sellPotion', uid: potion },
+    { type: 'sellFamiliar', index: roll(5) },
+    { type: 'moveFamiliar', from: roll(5), to: roll(5) },
     { type: 'visitStall', index: roll(7) },
     { type: 'visitStall', index: roll(7) },
     { type: 'leaveStall' },

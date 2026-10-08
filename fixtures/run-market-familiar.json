@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fx-3", "steps": [{ "gold": 30 }, { "familiar": "otter" }, "openShop", "endDay", "skipReward", { "errand": "market" }] }
