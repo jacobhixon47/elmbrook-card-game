@@ -54,10 +54,14 @@ export function bakeCardFace(scene: Phaser.Scene, cardId: string): string {
     ctx.font = `${8 * Z}px ${FONT_DISPLAY}`;
     ctx.fillStyle = PALETTE.r;
     ctx.fillText(String(ing.potency), 5 * Z, (CARD_H - 13) * Z);
-  } else {
+  } else if (kind === 'tincture') {
     const t = codex.tinctures.get(cardId)!;
     text(t.name, CARD_W / 2, 44, 7, 'k', FONT_BODY, 52);
     text('TINCTURE', CARD_W / 2, CARD_H - 12, 6, 'P', FONT_DISPLAY);
+  } else {
+    const j = codex.junk.get(cardId)!;
+    text(j.name, CARD_W / 2, 44, 7, 'k', FONT_BODY, 52);
+    text('JUNK', CARD_W / 2, CARD_H - 12, 6, 'h', FONT_DISPLAY);
   }
   tex.refresh();
   return key;

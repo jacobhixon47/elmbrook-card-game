@@ -17,7 +17,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
-      - run: pnpm test
+      - run: pnpm test:coverage
+      - run: pnpm sim --runs 300 --strategy greedy
+      - run: pnpm sim --runs 100 --strategy random
       - run: pnpm art:check
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium

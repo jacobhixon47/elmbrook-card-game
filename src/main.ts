@@ -2,7 +2,8 @@ import '@fontsource/pixelify-sans/400.css';
 import '@fontsource/silkscreen/400.css';
 import Phaser from 'phaser';
 import { installHook } from './debug/hook';
-import { params } from './debug/params';
+import { installOverlay } from './debug/overlay';
+import { loadFixture, params } from './debug/params';
 import { ArtSheet } from './scenes/ArtSheet';
 import { Boot } from './scenes/Boot';
 import { Hand } from './scenes/Hand';
@@ -35,6 +36,7 @@ async function start() {
     if (integerZoom() !== ZOOM) location.reload();
   });
   installHook(game);
+  installOverlay(game, loadFixture()?.overlay === true);
 }
 
 void start();

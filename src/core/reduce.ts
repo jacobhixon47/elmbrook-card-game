@@ -1,10 +1,21 @@
 import { codex } from '../codex';
 import type { Action, GameEvent } from './actions';
-import type { Season } from './calendar';
-import { seedRng, shuffle } from './rng';
-import type { CardInstance, RunState } from './state';
+import { previewBrew } from './brew';
+import { NIGHT_SHIFT_DAY, type Season } from './calendar';
+import { changeGold, draw, drawToHandSize, gainCard, Reject, reject, shuffled, takeFromHand, type Ctx } from './ctx';
+import { hasEffect, effectsOf, sumEffect } from './effects';
+import { offerErrands, offerReward, openErrand } from './dusk';
+import { postOrders, payout, satisfies } from './orders';
+import { seedRng } from './rng';
+import {
+  BREWS_PER_DAY, CAULDRON_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK,
+  rentDue, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, WEEKS,
+} from './rules';
+import { allCards, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState } from './state';
 
 export type ReduceResult = { state: RunState; events: GameEvent[] };
+
+const freshPending = (): Pending => ({ harmony: 0, potencyMult: 1, copies: 1 });
 
 export function newRun(seed: string, witchId: string, season: Season = 'spring'): ReduceResult {
   const witch = codex.witches.get(witchId);
@@ -15,61 +26,429 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring')
   for (const entry of witch.startingDeck) {
     for (let i = 0; i < entry.count; i++) deck.push({ uid: uid++, card: entry.card });
   }
-  const [drawPile, rng] = shuffle(deck, seedRng(seed));
 
-  const state: RunState = {
-    version: 1,
+  const s: RunState = {
+    version: 2,
     seed,
-    rng,
+    rng: seedRng(seed),
     witch: witch.id,
     season,
     week: 1,
     day: 1,
     phase: 'morning',
-    gold: 10,
+    gold: START_GOLD,
     handSize: witch.handSize,
-    drawPile,
+    brewsLeft: 0,
+    discardsLeft: 0,
+    cauldronSlots: CAULDRON_SLOTS,
+    shelfSize: SHELF_SLOTS,
+    drawPile: deck,
     hand: [],
     discardPile: [],
+    cauldron: [],
     knownRecipes: [...witch.knownRecipes],
+    orders: [],
+    shelf: [],
+    hearts: {},
+    pending: freshPending(),
+    offer: null,
+    skipStreak: 0,
     nextUid: uid,
   };
-  return {
-    state,
-    events: [
-      { type: 'runStarted', seed, witch: witch.id },
-      { type: 'deckShuffled', size: drawPile.length },
-    ],
-  };
+  const ctx: Ctx = { s, ev: [{ type: 'runStarted', seed, witch: witch.id, season }] };
+  startDay(ctx);
+  return { state: ctx.s, events: ctx.ev };
 }
 
-function drawToHandSize(state: RunState): ReduceResult {
-  const events: GameEvent[] = [];
-  let { drawPile, discardPile, rng } = state;
-  const hand = state.hand.slice();
-  while (hand.length < state.handSize) {
-    if (drawPile.length === 0) {
-      if (discardPile.length === 0) break;
-      [drawPile, rng] = shuffle(discardPile, rng);
-      discardPile = [];
-      events.push({ type: 'deckShuffled', size: drawPile.length });
+export function isNightShift(state: Pick<RunState, 'day'>): boolean {
+  return state.day === NIGHT_SHIFT_DAY;
+}
+
+/** Afternoon: the whole deck is shuffled back together and the Order Board fills. */
+function startDay(ctx: Ctx): void {
+  const s = ctx.s;
+  const night = isNightShift(s);
+  s.drawPile = shuffled(ctx, allCards(s));
+  s.hand = [];
+  s.discardPile = [];
+  s.cauldron = [];
+  s.orders = [];
+  s.offer = null;
+  s.pending = freshPending();
+  s.phase = 'morning';
+  const rules = SEASON_RULES[s.season];
+  s.brewsLeft = BREWS_PER_DAY + (night ? 0 : rules.dayBrews);
+  s.discardsLeft = DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0);
+  ctx.ev.push({ type: 'dayStarted', week: s.week, day: s.day, nightShift: night });
+  ctx.ev.push({ type: 'deckShuffled', size: s.drawPile.length });
+  postOrders(ctx, night);
+}
+
+function requirePhase(ctx: Ctx, ...phases: Phase[]): void {
+  if (!phases.includes(ctx.s.phase)) reject(`not allowed during ${ctx.s.phase}`);
+}
+
+function changeHearts(ctx: Ctx, customer: string, delta: number): void {
+  const before = ctx.s.hearts[customer] ?? 0;
+  const after = Math.max(0, Math.min(MAX_HEARTS, before + delta));
+  ctx.s.hearts[customer] = after;
+  if (after !== before) ctx.ev.push({ type: 'heartsChanged', customer, hearts: after, delta: after - before });
+}
+
+function openOrder(ctx: Ctx, id: number): Order {
+  const order = ctx.s.orders.find((o) => o.id === id);
+  if (!order) reject(`no order ${id}`);
+  if (order.status !== 'open') reject(`order ${id} is already ${order.status}`);
+  return order;
+}
+
+function fill(ctx: Ctx, order: Order, potion: Potion): void {
+  const { pay, tip, bonus } = payout(potion, order);
+  order.status = 'filled';
+  ctx.ev.push({ type: 'orderFilled', order: order.id, customer: order.customer, potion: potion.uid, tier: potion.tier, pay, tip, bonus });
+  changeGold(ctx, pay + tip, 'order');
+  changeHearts(ctx, order.customer, (bonus ? 2 : 1) - (potion.costsHeart ? 1 : 0));
+}
+
+function shelve(ctx: Ctx, potion: Potion): void {
+  if (ctx.s.shelf.length < ctx.s.shelfSize) {
+    ctx.s.shelf.push(potion);
+    ctx.ev.push({ type: 'potionShelved', uid: potion.uid });
+  } else {
+    ctx.ev.push({ type: 'potionSpilled', uid: potion.uid });
+  }
+}
+
+function brew(ctx: Ctx, deliverTo: number | undefined): void {
+  const s = ctx.s;
+  requirePhase(ctx, 'brewing');
+  if (s.brewsLeft <= 0) reject('no Brews left today');
+  const target = deliverTo === undefined ? null : openOrder(ctx, deliverTo);
+  const preview = previewBrew(s, s.cauldron, s.hand);
+  if (preview.kind === 'empty') reject('the cauldron needs at least two ingredients');
+  if (preview.discardCost > s.discardsLeft) reject('not enough Discards left');
+
+  const used = s.cauldron;
+  s.cauldron = [];
+  s.brewsLeft -= 1;
+  s.discardsLeft -= preview.discardCost;
+  for (const c of used) delete c.aged;
+  s.discardPile.push(...used);
+  s.pending = freshPending();
+
+  if (preview.kind === 'sludge') {
+    const junk = gainCard(ctx, 'sludge', 'sludge');
+    ctx.ev.push({ type: 'sludge', uid: junk.uid });
+  } else {
+    ctx.ev.push(...preview.steps);
+    if (!preview.known) {
+      s.knownRecipes.push(preview.recipe);
+      ctx.ev.push({ type: 'recipeDiscovered', recipe: preview.recipe });
     }
-    const [top, ...rest] = drawPile;
-    if (!top) break;
-    drawPile = rest;
-    hand.push(top);
-    events.push({ type: 'cardDrawn', uid: top.uid, card: top.card });
+    const base = {
+      recipe: preview.recipe,
+      family: preview.family,
+      quality: preview.quality,
+      tier: preview.tier,
+      ingredients: used.map((c) => c.card),
+      experiment: !preview.known,
+      costsHeart: used.some((c) => hasEffect(c.card, 'costsHeart')),
+    };
+    for (let i = 0; i < preview.copies; i++) {
+      const potion: Potion = { uid: s.nextUid++, ...base };
+      if (i === 0) ctx.ev.push({ type: 'brewed', potion, copies: preview.copies });
+      if (i === 0 && target && satisfies(potion, target)) fill(ctx, target, potion);
+      else shelve(ctx, potion);
+    }
   }
-  return { state: { ...state, drawPile, discardPile, hand, rng }, events };
+  drawToHandSize(ctx);
 }
 
-/** The single entry point for game rules. Pure: same input, same output. */
-export function reduce(state: RunState | null, action: Action): ReduceResult {
-  switch (action.type) {
-    case 'startRun':
-      return newRun(action.seed, action.witch, action.season);
-    case 'drawToHandSize':
-      if (!state) throw new Error('no run in progress');
-      return drawToHandSize(state);
+function endDay(ctx: Ctx): void {
+  const s = ctx.s;
+  requirePhase(ctx, 'brewing');
+  s.hand.push(...s.cauldron);
+  s.cauldron = [];
+  // Unfinished orders count as declined (GDD §4).
+  for (const o of s.orders) {
+    if (o.status !== 'open') continue;
+    o.status = 'declined';
+    ctx.ev.push({ type: 'orderDeclined', order: o.id, customer: o.customer });
+    changeHearts(ctx, o.customer, -1);
   }
+  for (const c of allCards(s)) if (hasEffect(c.card, 'aged')) c.aged = (c.aged ?? 0) + 1;
+  ctx.ev.push({ type: 'dayEnded', week: s.week, day: s.day });
+  s.phase = 'dusk';
+  offerReward(ctx);
+}
+
+function afterReward(ctx: Ctx): void {
+  if (isNightShift(ctx.s)) {
+    ctx.s.phase = 'night-market';
+    ctx.s.offer = { kind: 'fence' };
+    ctx.ev.push({ type: 'nightMarketOpened' });
+  } else {
+    offerErrands(ctx);
+  }
+}
+
+/** After the Night Market: pay rent or lose the stall; the fourth rent wins the run. */
+function collectRent(ctx: Ctx): void {
+  const s = ctx.s;
+  const due = rentDue(s.season, s.week);
+  s.offer = null;
+  if (s.gold < due) {
+    ctx.ev.push({ type: 'rentFailed', week: s.week, amount: due, gold: s.gold });
+    ctx.ev.push({ type: 'runLost', week: s.week });
+    s.phase = 'game-over';
+    return;
+  }
+  changeGold(ctx, -due, 'rent');
+  ctx.ev.push({ type: 'rentPaid', week: s.week, amount: due });
+  if (s.week >= WEEKS) {
+    s.phase = 'victory';
+    ctx.ev.push({ type: 'runWon' });
+    return;
+  }
+  s.week += 1;
+  s.day = 1;
+  startDay(ctx);
+}
+
+function offerOf<K extends NonNullable<RunState['offer']>['kind']>(ctx: Ctx, kind: K): Extract<NonNullable<RunState['offer']>, { kind: K }> {
+  const offer = ctx.s.offer;
+  if (offer?.kind !== kind) reject(`nothing to do with a ${kind} right now`);
+  return offer as Extract<NonNullable<RunState['offer']>, { kind: K }>;
+}
+
+function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
+  const s = ctx.s;
+  switch (action.type) {
+    case 'openShop':
+      requirePhase(ctx, 'morning');
+      s.phase = 'brewing';
+      ctx.ev.push({ type: 'shopOpened' });
+      drawToHandSize(ctx);
+      return;
+
+    case 'slot': {
+      requirePhase(ctx, 'brewing');
+      const inHand = s.hand.find((c) => c.uid === action.uid);
+      if (!inHand) reject(`card ${action.uid} is not in hand`);
+      if (!codex.ingredients.has(inHand.card)) reject('only ingredients go in the cauldron');
+      if (s.cauldron.length >= s.cauldronSlots) reject('the cauldron is full');
+      const card = takeFromHand(ctx, action.uid);
+      s.cauldron.push(card);
+      ctx.ev.push({ type: 'cardSlotted', uid: card.uid, slot: s.cauldron.length - 1 });
+      return;
+    }
+
+    case 'unslot': {
+      requirePhase(ctx, 'brewing');
+      const i = s.cauldron.findIndex((c) => c.uid === action.uid);
+      if (i < 0) reject(`card ${action.uid} is not in the cauldron`);
+      s.hand.push(...s.cauldron.splice(i, 1));
+      ctx.ev.push({ type: 'cardUnslotted', uid: action.uid });
+      return;
+    }
+
+    case 'brew':
+      brew(ctx, action.deliverTo);
+      return;
+
+    case 'discard': {
+      requirePhase(ctx, 'brewing');
+      if (s.discardsLeft <= 0) reject('no Discards left today');
+      const uids = [...new Set(action.uids)];
+      if (uids.length === 0 || uids.length > MAX_DISCARD) reject(`discard 1 to ${MAX_DISCARD} cards`);
+      const thrown = uids.map((uid) => takeFromHand(ctx, uid));
+      s.discardPile.push(...thrown);
+      s.discardsLeft -= 1;
+      ctx.ev.push({ type: 'cardsDiscarded', uids });
+      const extra = thrown.reduce((n, c) => n + sumEffect(c.card, 'drawOnDiscard'), 0);
+      draw(ctx, Math.max(0, s.handSize - s.hand.length) + extra);
+      return;
+    }
+
+    case 'playTincture': {
+      requirePhase(ctx, 'brewing');
+      const inHand = s.hand.find((c) => c.uid === action.uid);
+      if (!inHand || !codex.tinctures.has(inHand.card)) reject('only Tinctures can be played');
+      if (action.targets?.includes(action.uid)) reject('a Tincture cannot target itself');
+      const card = takeFromHand(ctx, action.uid);
+      ctx.ev.push({ type: 'tincturePlayed', uid: card.uid, card: card.card });
+      for (const e of effectsOf(card.card)) e.onPlay?.(ctx, action.targets ?? []);
+      s.discardPile.push(card);
+      return;
+    }
+
+    case 'deliver': {
+      requirePhase(ctx, 'brewing');
+      const order = openOrder(ctx, action.order);
+      const i = s.shelf.findIndex((p) => p.uid === action.potion);
+      if (i < 0) reject(`potion ${action.potion} is not on the Shelf`);
+      const potion = s.shelf[i]!;
+      if (!satisfies(potion, order)) reject('that potion does not fill this order');
+      s.shelf.splice(i, 1);
+      fill(ctx, order, potion);
+      return;
+    }
+
+    case 'decline': {
+      requirePhase(ctx, 'morning', 'brewing');
+      const order = openOrder(ctx, action.order);
+      order.status = 'declined';
+      ctx.ev.push({ type: 'orderDeclined', order: order.id, customer: order.customer });
+      changeHearts(ctx, order.customer, -1);
+      return;
+    }
+
+    case 'endDay':
+      endDay(ctx);
+      return;
+
+    case 'pickReward': {
+      const offer = offerOf(ctx, 'reward');
+      const card = offer.cards[action.index];
+      if (!card) reject(`no reward ${action.index}`);
+      const inst = gainCard(ctx, card, 'reward');
+      ctx.ev.push({ type: 'rewardPicked', card, uid: inst.uid });
+      s.skipStreak = 0;
+      afterReward(ctx);
+      return;
+    }
+
+    case 'skipReward':
+      offerOf(ctx, 'reward');
+      s.skipStreak += 1;
+      ctx.ev.push({ type: 'rewardSkipped' });
+      changeGold(ctx, SKIP_GOLD, 'skip');
+      afterReward(ctx);
+      return;
+
+    case 'chooseErrand': {
+      const offer = offerOf(ctx, 'errands');
+      if (!offer.options.includes(action.errand)) reject(`${action.errand} is not on offer`);
+      openErrand(ctx, action.errand);
+      return;
+    }
+
+    case 'buy': {
+      const item = offerOf(ctx, 'market').stock[action.index];
+      if (!item) reject(`no stock ${action.index}`);
+      if (item.sold) reject('already sold');
+      if (s.gold < item.price) reject('not enough gold');
+      item.sold = true;
+      changeGold(ctx, -item.price, 'market');
+      if (item.kind === 'card') {
+        gainCard(ctx, item.card, 'market');
+      } else {
+        if (item.kind === 'cauldron-slot') s.cauldronSlots += 1;
+        else s.shelfSize += 1;
+        ctx.ev.push({ type: 'upgradeBought', upgrade: item.kind });
+      }
+      return;
+    }
+
+    case 'forage': {
+      const offer = offerOf(ctx, 'forage');
+      if (offer.picksLeft <= 0) reject('no picks left');
+      const card = offer.cards[action.index];
+      if (!card) reject(`no forage card ${action.index}`);
+      offer.cards.splice(action.index, 1);
+      offer.picksLeft -= 1;
+      gainCard(ctx, card, 'forage');
+      return;
+    }
+
+    case 'removeCard': {
+      const offer = offerOf(ctx, 'hearth');
+      if (offer.removed) reject('the Hearth takes one card a night');
+      if (allCards(s).length <= MIN_DECK) reject(`the deck can't go below ${MIN_DECK} cards`);
+      for (const pile of [s.drawPile, s.hand, s.discardPile] as const) {
+        const i = pile.findIndex((c) => c.uid === action.uid);
+        if (i < 0) continue;
+        const [card] = pile.splice(i, 1);
+        offer.removed = true;
+        ctx.ev.push({ type: 'cardRemoved', uid: card!.uid, card: card!.card });
+        return;
+      }
+      reject(`card ${action.uid} is not in the deck`);
+      return;
+    }
+
+    case 'leaveErrand': {
+      requirePhase(ctx, 'dusk');
+      const kind = s.offer?.kind;
+      if (kind !== 'market' && kind !== 'forage' && kind !== 'hearth') reject('choose an errand first');
+      s.day += 1;
+      startDay(ctx);
+      return;
+    }
+
+    case 'sellPotion': {
+      offerOf(ctx, 'fence');
+      const i = s.shelf.findIndex((p) => p.uid === action.uid);
+      if (i < 0) reject(`potion ${action.uid} is not on the Shelf`);
+      const [potion] = s.shelf.splice(i, 1);
+      const price = fencePrice(potion!);
+      ctx.ev.push({ type: 'potionSold', uid: potion!.uid, price });
+      changeGold(ctx, price, 'fence');
+      return;
+    }
+
+    case 'leaveMarket':
+      offerOf(ctx, 'fence');
+      collectRent(ctx);
+      return;
+
+    case 'debug':
+      if (action.op === 'addGold') {
+        changeGold(ctx, action.amount, 'debug');
+      } else {
+        if (action.week < 1 || action.week > WEEKS || action.day < 1 || action.day > NIGHT_SHIFT_DAY) reject('no such day');
+        s.week = action.week;
+        s.day = action.day;
+        startDay(ctx);
+      }
+      return;
+  }
+}
+
+/** The Fence pays by tier, and half again for potions with Umbra or Lunar in them (GDD §9). */
+export function fencePrice(potion: Pick<Potion, 'tier' | 'ingredients'>): number {
+  const shadowy = potion.ingredients.some((id) => {
+    const e = codex.ingredients.get(id)?.essences ?? [];
+    return e.includes('umbra') || e.includes('lunar');
+  });
+  return Math.round(FENCE_PRICE[potion.tier] * (shadowy ? FENCE_SHADOW_BONUS : 1));
+}
+
+/** The single entry point for game rules. Pure: same input, same output. A broken rule returns the old state and a `rejected` event. */
+export function reduce(state: RunState | null, action: Action): ReduceResult {
+  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season);
+  if (!state) throw new Error('no run in progress');
+  const ctx: Ctx = { s: structuredClone(state), ev: [] };
+  try {
+    apply(ctx, action);
+  } catch (e) {
+    if (e instanceof Reject) return { state, events: [{ type: 'rejected', action: action.type, reason: e.message }] };
+    throw e;
+  }
+  return { state: ctx.s, events: ctx.ev };
+}
+
+/** Rebuild a run from its action log (the first action must be `startRun`). Bug reports are replay files. */
+export function replay(actions: readonly Action[]): ReduceResult & { rejected: number } {
+  let state: RunState | null = null;
+  const events: GameEvent[] = [];
+  let rejected = 0;
+  for (const action of actions) {
+    const r = reduce(state, action);
+    state = r.state;
+    events.push(...r.events);
+    rejected += r.events.filter((e) => e.type === 'rejected').length;
+  }
+  if (!state) throw new Error('empty action log');
+  return { state, events, rejected };
 }

@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "snap": "tsx scripts/snap.ts",
     "snap:all": "tsx scripts/snap.ts --all",
@@ -18,7 +19,8 @@
     "art:check": "tsx scripts/art-check.ts",
     "render-texture": "tsx scripts/render-texture.ts",
     "art:import": "tsx scripts/import-backdrop.ts",
-    "art:window": "tsx scripts/window-sheet.ts"
+    "art:window": "tsx scripts/window-sheet.ts",
+    "sim": "tsx scripts/sim.ts"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
@@ -30,6 +32,7 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.4",
     "@types/pngjs": "^6.0.5",
+    "@vitest/coverage-v8": "5.0.3",
     "eslint": "^10.12.0",
     "playwright": "^1.63.0",
     "pngjs": "^7.0.0",

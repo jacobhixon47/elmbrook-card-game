@@ -7,6 +7,8 @@ export type ElmbrookHook = {
   ready: string | null;
   getState: () => RunState | null;
   dispatch: (action: Action) => void;
+  /** Every action since the page loaded: a replay file is `{ seed, actions: getLog() }`. */
+  getLog: () => Action[];
   game: Phaser.Game;
 };
 
@@ -21,6 +23,7 @@ export function installHook(game: Phaser.Game): void {
     ready: null,
     getState: () => store.getState(),
     dispatch: (a) => void store.dispatch(a),
+    getLog: () => store.log.slice(),
     game,
   };
 }

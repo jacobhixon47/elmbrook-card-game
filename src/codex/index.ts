@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import * as raw from './content';
-import { Ingredient, Recipe, Regular, Tincture, Witch } from './schema';
+import { Ingredient, Junk, Recipe, Regular, Tincture, Witch } from './schema';
 
 export * from './schema';
 
@@ -17,15 +17,17 @@ function table<T extends z.ZodTypeAny>(schema: T, rows: unknown[], kind: string)
 export const codex = {
   ingredients: table(Ingredient, raw.ingredients, 'ingredient'),
   tinctures: table(Tincture, raw.tinctures, 'tincture'),
+  junk: table(Junk, raw.junk, 'junk'),
   recipes: table(Recipe, raw.recipes, 'recipe'),
   regulars: table(Regular, raw.regulars, 'regular'),
   witches: table(Witch, raw.witches, 'witch'),
 };
 
-export type CardKind = 'ingredient' | 'tincture';
+export type CardKind = 'ingredient' | 'tincture' | 'junk';
 
 export function cardKind(id: string): CardKind {
   if (codex.ingredients.has(id)) return 'ingredient';
   if (codex.tinctures.has(id)) return 'tincture';
+  if (codex.junk.has(id)) return 'junk';
   throw new Error(`unknown card id: ${id}`);
 }

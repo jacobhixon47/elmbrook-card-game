@@ -35,6 +35,14 @@ export const Tincture = z.object({
 });
 export type Tincture = z.infer<typeof Tincture>;
 
+/** Junk clogs the hand and does nothing (Sludge from a failed brew). Remove it at the Hearth. */
+export const Junk = z.object({
+  id: Id,
+  name: z.string().min(1),
+  text: z.string().min(1),
+});
+export type Junk = z.infer<typeof Junk>;
+
 export const PotionFamily = z.enum([
   'healing', 'warming', 'calming', 'vigor', 'protection', 'secrets', 'fortune', 'lunar',
 ]);
