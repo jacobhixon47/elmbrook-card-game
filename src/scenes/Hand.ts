@@ -12,7 +12,7 @@ import { pixelText } from '../view/text';
 
 const HAND_Y = 304;
 
-/** M0 proof that core → view works: a seeded run's opening hand, laid out on the shop counter. */
+/** Proof that core → view works: a seeded run's hand, laid out on the shop counter. M2 replaces it with the Run scene. */
 export class Hand extends Phaser.Scene {
   constructor() {
     super('Hand');
@@ -23,11 +23,13 @@ export class Hand extends Phaser.Scene {
     const fixture = data.fixture;
     if (fixture?.state) {
       store.load(fixture.state as RunState);
+      // A new day starts at the Order Board; this scene shows the hand, so open the shop.
+      if (store.getState()!.phase === 'morning') store.dispatch({ type: 'openShop' });
     } else {
       const seed = fixture?.seed ?? params.get('seed') ?? `run-${Math.floor(Math.random() * 1e9)}`;
       const season = (fixture?.season as Season | undefined) ?? viewOverrides().season;
       store.dispatch({ type: 'startRun', seed, witch: 'hedge-witch', ...(season ? { season } : {}) });
-      store.dispatch({ type: 'drawToHandSize' });
+      store.dispatch({ type: 'openShop' });
     }
     const state = store.getState()!;
 

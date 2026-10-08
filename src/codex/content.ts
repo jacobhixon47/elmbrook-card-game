@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Ingredient, Recipe, Regular, Tincture, Witch } from './schema';
+import type { Ingredient, Junk, Recipe, Regular, Tincture, Witch } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -31,6 +31,10 @@ export const tinctures: In<typeof Tincture>[] = [
   { id: 'steep', name: 'Steep', rarity: 'uncommon', effects: ['next-brew-potency-x1.5'], text: 'Next brew: Potency x1.5.' },
   { id: 'sift', name: 'Sift', rarity: 'uncommon', effects: ['free-redraw'], text: 'Discard any number, draw that many. Costs no Discard.' },
   { id: 'bottle-spare', name: 'Bottle Spare', rarity: 'rare', effects: ['next-brew-double'], text: 'Your next brew makes 2 potions.' },
+];
+
+export const junk: In<typeof Junk>[] = [
+  { id: 'sludge', name: 'Sludge', text: 'Does nothing. Remove it at the Hearth.' },
 ];
 
 export const recipes: In<typeof Recipe>[] = [

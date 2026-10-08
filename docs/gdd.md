@@ -66,7 +66,7 @@ The window also shows the season (blossom, deep green, rust and gold, snow) and 
 ### Phases of a Day
 
 1. **Afternoon — Order Board.** 1-3 customer orders appear (count ramps by week: 1-2 in week 1, 2 in weeks 2-3, 3 in week 4).
-2. **Sunset — Brewing.** Draw a hand, brew, deliver. Limited **Brews** (4) and **Discards** (3) for the whole day, shared across all orders.
+2. **Sunset — Brewing.** Draw a hand, brew, deliver. Limited **Brews** (4) and **Discards** (3) for the whole day, shared across all orders. Each day starts with the whole deck shuffled together; after every brew or Discard you draw back up to hand size. One Discard throws away 1-5 cards.
 3. **Twilight — Reward + Errand.** Pick 1 of 3 ingredient cards (or Skip, see §8). Then choose one **Errand** from 2 offered (§7).
 
 ### Phases of a Night Shift
@@ -81,11 +81,11 @@ Carried over from 1.0: click an order to open its dialogue; choose **Fulfill**, 
 
 **An order has:**
 - **Request:** a specific potion ("Healing Draught") or a family ("anything Warming", "a Calming potion").
-- **Quality minimum:** a quality tier (§6.4).
+- **Quality minimum:** a quality tier (§6.4). The minimum rises by week (Fine in week 1; mostly Superb by week 3; half Masterwork in week 4; the Night Shift's first order is one tier harder), but an order never asks for more than your deck could brew with a perfect draw and the Tinctures you own. A weak deck gets easier orders that pay less, so rent is what squeezes it.
 - **Pay:** base gold; tips scale with how far you exceed the minimum.
 - **Optional bonus condition:** "no Umbra ingredients", "brewed with exactly 3 ingredients", "use a Wychwood ingredient". Meeting it adds a tip and a heart.
 
-**Delivering:** a matching potion from your Shelf or a fresh brew fulfils the order. **Declining** costs a heart with that customer. Unfinished orders at end of day count as declined.
+**Delivering:** a matching potion from your Shelf or a fresh brew fulfils the order and earns a heart (two if the bonus condition is met). **Declining** costs a heart with that customer. Unfinished orders at end of day count as declined. Hearts run from 0 to 10.
 
 **Free brewing:** once every order is resolved, leftover Brews can make potions for the Shelf (from 1.0: "after requests are done you can brew with remaining cards").
 
@@ -228,6 +228,8 @@ A recipe is an essence pattern with a base Harmony and a potion family.
 
 Sanity check: a starter Healing Draught (Elmroot 4 + Creekwater 3) × 2 = 14, Fine. Greater Restorative (4 + 4 + 3) × 5 = 55, Superb. Week 4 orders should ask for Masterwork, which needs familiars and modifiers. Thresholds scale up across weeks via order difficulty, not by changing the tiers.
 
+Pay, tips, Fence prices and shop prices live in `src/core/rules.ts` and are tuned with `pnpm sim`. As of M1, a Fine order in week 1 pays about 3 gold, and pay grows about 15% a week on top of the tier multiplier.
+
 ### 6.5 The Shelf
 
 Brewed potions not delivered go to the Shelf (4 slots, upgradable). Shelf potions can fill later orders (from 1.0's "fulfil from inventory"), carry between days, and sell at the Night Market. Potions on the Shelf at rent time are not worth anything unless sold.
@@ -242,7 +244,7 @@ After the reward pick, choose one of two offered errands. This is the run's bran
 | Wychwood Forage | Choose 2 of 5 Wychwood ingredients for free. Small chance of a fae encounter. |
 | Creek Bank | Upgrade a card's Potency, or add a modifier. |
 | Guild Hall | Take a Guild Commission (multi-day quest: "deliver 3 Superb Calming potions by the Full Moon" → relic reward). From 1.0's guild quests. |
-| Hearth (rest) | Remove a card from the deck. |
+| Hearth (rest) | Remove a card from the deck (one per visit; the deck never drops below 8). |
 | Event | One of ~20 small events (fae visits, shop mishaps, a festival) with choices. From 1.0's random encounters. |
 
 ## 8. Rewards

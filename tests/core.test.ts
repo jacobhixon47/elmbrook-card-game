@@ -21,22 +21,26 @@ describe('rng', () => {
 });
 
 describe('run start', () => {
-  it('builds the witch starting deck and draws to hand size', () => {
+  it('builds the witch starting deck, posts orders and draws to hand size when the shop opens', () => {
     const start = reduce(null, { type: 'startRun', seed: 'test', witch: 'hedge-witch' });
     expect(start.state.drawPile).toHaveLength(14);
+    expect(start.state.phase).toBe('morning');
+    expect(start.state.orders.length).toBeGreaterThanOrEqual(1);
     expect(start.state.knownRecipes).toContain('healing-draught');
+    expect(start.events.map((e) => e.type)).toContain('orderPosted');
 
-    const drawn = reduce(start.state, { type: 'drawToHandSize' });
-    expect(drawn.state.hand).toHaveLength(8);
-    expect(drawn.state.drawPile).toHaveLength(6);
-    expect(drawn.events.filter((e) => e.type === 'cardDrawn')).toHaveLength(8);
-    expect(new Set(drawn.state.hand.map((c) => c.uid)).size).toBe(8);
+    const opened = reduce(start.state, { type: 'openShop' });
+    expect(opened.state.phase).toBe('brewing');
+    expect(opened.state.hand).toHaveLength(8);
+    expect(opened.state.drawPile).toHaveLength(6);
+    expect(opened.events.filter((e) => e.type === 'cardDrawn')).toHaveLength(8);
+    expect(new Set(opened.state.hand.map((c) => c.uid)).size).toBe(8);
   });
 
   it('same seed gives the same opening hand; different seeds differ', () => {
     const hand = (seed: string) => {
       const s = reduce(null, { type: 'startRun', seed, witch: 'hedge-witch' }).state;
-      return reduce(s, { type: 'drawToHandSize' }).state.hand.map((c) => c.card);
+      return reduce(s, { type: 'openShop' }).state.hand.map((c) => c.card);
     };
     expect(hand('a')).toEqual(hand('a'));
     expect(['b', 'c', 'd', 'e'].some((s) => hand(s).join() !== hand('a').join())).toBe(true);
@@ -47,8 +51,9 @@ describe('run start', () => {
     expect(JSON.parse(JSON.stringify(s))).toEqual(s);
   });
 
-  it('rejects unknown witches', () => {
+  it('rejects unknown witches and actions without a run', () => {
     expect(() => reduce(null, { type: 'startRun', seed: 'x', witch: 'nobody' })).toThrow(/unknown witch/);
+    expect(() => reduce(null, { type: 'openShop' })).toThrow(/no run/);
   });
 });
 

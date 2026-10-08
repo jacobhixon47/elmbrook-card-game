@@ -67,9 +67,11 @@ Built in M0 and kept working forever.
 - **Window hook** in dev: `window.__elmbrook = { getState, dispatch, events$ }` so Playwright can drive the game deterministically without pixel-clicking.
 - **`pnpm snap <fixture...> [--out path]`** opens each fixture in headless Chromium at 1280×720 (2× zoom), waits for the scene to report ready, writes a PNG to `.snaps/`, and fails on any console error. Claude reads the PNG to check its own visual work. Uses `/opt/pw-browsers/chromium` or `CHROMIUM_PATH` when present.
 - **`pnpm snap:all`** snaps every fixture; used for visual review and as optional screenshot regression in CI.
-- **`pnpm sim --runs 2000 --strategy greedy`** plays full runs headlessly with simple bot strategies and prints: win rate, rent-failure week histogram, average quality per week, most/least picked cards, gold curve. Balance changes should come with a before/after sim report.
+- **`pnpm sim --runs 2000 --strategy greedy`** plays full runs headlessly with simple bot strategies and prints: win rate, rent-failure week histogram, average quality per week, most/least picked cards, gold curve. Balance changes should come with a before/after sim report. `--strategy random` fuzzes the rules with random (mostly illegal) actions; `--season` picks the season. The bots live in `src/sim/` and only read state and return actions, like the UI. A crashed run is written to `.sim/<seed>.json`.
+- **Rejected actions:** an action that breaks a rule returns the old state and one `rejected` event with a reason, so the UI can explain it and the sim can count it (the greedy bot should never trigger one).
+- **`pnpm test:coverage`** runs the tests with coverage on `src/core`; CI fails under 90% lines.
 - **Dev overlay** (backtick key): current seed, state inspector, buttons to add gold, draw specific cards, jump to any day.
-- **Action log export**: any run can be saved as `{seed, actions[]}` and replayed. Bug reports = a replay file.
+- **Action log export**: any run can be saved as `{seed, actions[]}` (dev overlay button, or `window.__elmbrook.getLog()`) and replayed with `pnpm sim --replay <file>` or `replay(actions)` in tests. Bug reports = a replay file.
 
 ## Rendering
 

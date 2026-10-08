@@ -7,13 +7,14 @@ Read before working: `docs/gdd.md` (what to build), `docs/tech.md` (how), `docs/
 ## Commands
 
 - `pnpm dev`: run with hot reload (open in a browser or VS Code's Simple Browser)
-- `pnpm test` / `pnpm typecheck` / `pnpm lint` / `pnpm build`
+- `pnpm test` / `pnpm typecheck` / `pnpm lint` / `pnpm build`; `pnpm test:coverage` checks ≥90% on `src/core`
 - `pnpm snap <fixture...>`: screenshot fixtures to `.snaps/<fixture>.png`; `pnpm snap:all` for every fixture
 - `pnpm art:check`: validate sprite grids, list cards still on placeholders
 - `pnpm art:sheet`: render all art to `.snaps/art-sheet.png` without a browser
 - `pnpm art:import <image> <name> [--grid 2 --panel 0]`: pixelize a painted image into `public/backdrops/<name>.png`
 - `pnpm art:window`: render the shop window in every season, time of day and weather to `.snaps/window-grades.png` and `.snaps/window-weather.png`
-- `pnpm sim --runs <n>` (M1+): headless balance report
+- `pnpm sim --runs <n> [--strategy greedy|random] [--season s]`: headless balance report; `pnpm sim --replay <file>` replays an action log
+- Dev overlay: press backtick in the game for seed, state, +gold, jump to day and action-log export
 
 Dev URL params: `?fixture=<name>`, `?seed=<s>`, `?noanim=1`, `?renderer=canvas`, `?backdrops=code` (code-drawn backdrops instead of painted ones), `?season=winter`, `?time=night` and `?weather=snow` (preview the shop window).
 

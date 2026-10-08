@@ -3,3 +3,4 @@ dist
 .snaps
 *.log
 .DS_Store
+.sim

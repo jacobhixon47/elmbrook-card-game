@@ -2,11 +2,11 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', '.snaps', 'node_modules'] },
+  { ignores: ['dist', '.snaps', '.sim', 'coverage', 'node_modules'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['src/core/**/*.ts', 'src/codex/**/*.ts'],
+    files: ['src/core/**/*.ts', 'src/codex/**/*.ts', 'src/sim/**/*.ts'],
     rules: {
       // The rules engine and content stay pure: no engine, no DOM, no ambient randomness.
       'no-restricted-imports': ['error', { patterns: ['phaser', '../scenes/*', '../view/*', '../debug/*'] }],
