@@ -10,9 +10,9 @@ export const WEATHER_NAME: Record<Weather, string> = { clear: 'Clear', rain: 'Ra
 /** A few words for the HUD; the full rule is in the tooltip. */
 const WEATHER_SHORT: Record<Weather, string> = {
   clear: 'Clear skies',
-  rain: 'Rain: Creek cards +2',
+  rain: 'Rain: Creek, Tide +2',
   fog: 'Fog: orders hidden',
-  heatwave: 'Heatwave: Ember +2, Tide -2',
+  heatwave: 'Heatwave: Ember +2',
   snow: 'Snow: Frost cards first',
 };
 

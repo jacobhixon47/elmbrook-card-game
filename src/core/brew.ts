@@ -3,7 +3,7 @@ import type { Ingredient, PotionFamily, Recipe } from '../codex/schema';
 import type { GameEvent } from './actions';
 import { effectsOf, hasEffect, sumEffect, type ScoreCtx } from './effects';
 import { activeEvents, todaysWeather, type Weather } from './calendar';
-import { HEATWAVE_EMBER_POTENCY, HEATWAVE_TIDE_POTENCY, RAIN_CREEK_POTENCY, tierOf, tierStep, type Tier } from './rules';
+import { HEATWAVE_EMBER_POTENCY, RAIN_POTENCY, tierOf, tierStep, type Tier } from './rules';
 import type { CardInstance, RunState } from './state';
 
 type ScoreStep = Extract<GameEvent, { type: 'scoreStep' }>;
@@ -58,14 +58,11 @@ export function recipeAvailable(r: Recipe, s: RecipeAccess): boolean {
   return r.pool === 'base' || s.unlocks.includes(r.id);
 }
 
-/** How much today's weather changes one ingredient's Potency. A card never drops below 0 Potency. */
+/** How much today's weather adds to one ingredient's Potency. Weather only ever helps, once per card. */
 export function weatherPotency(ing: Ingredient, weather: Weather): number {
-  if (weather === 'rain') return ing.origin === 'creek' ? RAIN_CREEK_POTENCY : 0;
-  if (weather !== 'heatwave') return 0;
-  let d = 0;
-  if (ing.essences.includes('ember')) d += HEATWAVE_EMBER_POTENCY;
-  if (ing.essences.includes('tide')) d += HEATWAVE_TIDE_POTENCY;
-  return Math.max(d, -ing.potency);
+  if (weather === 'rain') return ing.origin === 'creek' || ing.essences.includes('tide') ? RAIN_POTENCY : 0;
+  if (weather === 'heatwave') return ing.essences.includes('ember') ? HEATWAVE_EMBER_POTENCY : 0;
+  return 0;
 }
 
 const anySlots = (r: Recipe) => r.pattern.filter((e) => e === 'any').length;
@@ -146,7 +143,7 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     steps.push({ type: 'scoreStep', source: 'ingredient', id: ing.id, potency: c.potency, harmony: c.harmony, ...(notes.length ? { note: notes.join(', ') } : {}) });
   });
 
-  // Today's weather (GDD §4.2): Rain helps Creek ingredients; a Heatwave helps Ember and wilts Tide.
+  // Today's weather (GDD §4.2): Rain helps Creek and Tide ingredients; a Heatwave helps Ember.
   const weather = todaysWeather(state);
   const shift = ings.reduce((n, ing) => n + weatherPotency(ing, weather), 0);
   if (shift !== 0) {

@@ -62,9 +62,11 @@ describe('rolling the Calendar', () => {
 });
 
 describe('weather', () => {
-  it('Rain gives Creek ingredients +2 Potency and posts one fewer order', () => {
+  it('Rain gives Creek and Tide ingredients +2 Potency and posts one fewer order', () => {
     const creek = codex.ingredients.get('creekwater')!;
-    expect(weatherPotency(creek, 'rain')).toBe(2);
+    expect(weatherPotency(creek, 'rain')).toBe(2); // Creek and Tide: still +2, once per card
+    expect(weatherPotency(codex.ingredients.get('river-clay')!, 'rain')).toBe(2); // Creek, Stone
+    expect(weatherPotency(codex.ingredients.get('lavender')!, 'rain')).toBe(2); // Garden, Tide
     expect(weatherPotency(codex.ingredients.get('elmroot')!, 'rain')).toBe(0);
     const [s0, uids] = withHand(on(sky('rain')), ['elmroot', 'creekwater']);
     const p = previewBrew(slotAll(s0, uids), slotAll(s0, uids).cauldron, []);
@@ -81,12 +83,14 @@ describe('weather', () => {
     expect(on(sky('rain'), WEEKS).orders.length).toBe(on(sky('clear'), WEEKS).orders.length - 1);
   });
 
-  it('a Heatwave helps Ember and wilts Tide, never below 0', () => {
+  it('a Heatwave helps Ember and weakens nothing', () => {
     expect(weatherPotency(codex.ingredients.get('emberbloom')!, 'heatwave')).toBe(2);
-    expect(weatherPotency(codex.ingredients.get('creekwater')!, 'heatwave')).toBe(-2);
     expect(weatherPotency(codex.ingredients.get('honeycomb')!, 'heatwave')).toBe(2); // Vital, Ember
-    const tide = [...codex.ingredients.values()].find((i) => i.essences.includes('tide') && !i.essences.includes('ember') && i.potency < 2);
-    if (tide) expect(weatherPotency(tide, 'heatwave')).toBe(-tide.potency);
+    expect(weatherPotency(codex.ingredients.get('creekwater')!, 'heatwave')).toBe(0);
+    // Weather only boosts.
+    for (const w of ['clear', 'rain', 'fog', 'heatwave', 'snow'] as const) {
+      for (const i of codex.ingredients.values()) expect(weatherPotency(i, w)).toBeGreaterThanOrEqual(0);
+    }
   });
 
   it('Fog hides the orders until the first brew or Discard', () => {
@@ -154,7 +158,9 @@ describe('sky events', () => {
     expect(recipeAvailable(corona, { ...access, week: 2, day: 2 })).toBe(false);
     expect(recipeAvailable(corona, { knownRecipes: ['corona-draught'], unlocks: [], calendar: eclipse, week: 3, day: 3 })).toBe(false);
     expect(activeEvents({ calendar: eclipse, week: 2, day: 3 })).toEqual(['eclipse']);
-    const single = (e: string) => [...codex.ingredients.values()].find((i) => i.essences.length === 1 && i.essences[0] === e && !i.effects.includes('wild-essence'))!;
+    // No plain single-essence Lunar card is in the codex since Dusk Shard was cut, so the tests make one.
+    const single = (e: string) => [...codex.ingredients.values()].find((i) => i.essences.length === 1 && i.essences[0] === e && !i.effects.includes('wild-essence'))
+      ?? { ...codex.ingredients.get('starlit-dew')!, essences: [e as 'lunar'] };
     const cards = ['lunar', 'ember', 'vital'].map(single);
     expect(matchRecipe(cards, { ...access, week: 2, day: 3 })?.id).toBe('corona-draught');
   });
@@ -176,7 +182,7 @@ describe('Calendar view', () => {
     expect(weeks[1]!.moon).toBe('Full Moon');
     expect(weeks[0]!.cells[0]).toMatchObject({ mark: 'now', weather: 'rain', marks: ['Eclipse'] });
     expect(weeks[0]!.cells[1]!.mark).toBe('next');
-    expect(todayLine(s)).toBe('Rain: Creek cards +2 · Eclipse');
+    expect(todayLine(s)).toBe('Rain: Creek, Tide +2 · Eclipse');
     expect(todayRules(s)).toHaveLength(2);
     const autumn = on(sky('fog'), FESTIVAL_WEEK, FESTIVAL_DAY, 'autumn');
     expect(todayLine(autumn)).toMatch(/Harvest Fair/);

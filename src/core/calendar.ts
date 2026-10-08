@@ -129,8 +129,8 @@ export function activeEvents(s: Partial<When>): string[] {
 /** What each weather does, in one line for the HUD and the Calendar. */
 export const WEATHER_RULE: Record<Weather, string> = {
   clear: 'Clear skies. No effect.',
-  rain: 'Rain: Creek ingredients +2 Potency; one fewer order on a busy day (3+).',
+  rain: 'Rain: Creek and Tide ingredients +2 Potency; one fewer order on a busy day (3+).',
   fog: 'Fog: orders stay hidden until your first brew or Discard.',
-  heatwave: 'Heatwave: Ember ingredients +2 Potency, Tide -2.',
+  heatwave: 'Heatwave: Ember ingredients +2 Potency.',
   snow: 'Snow: Frost cards are drawn first.',
 };
