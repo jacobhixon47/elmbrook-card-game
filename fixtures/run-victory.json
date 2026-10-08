@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "steps": [{ "jump": [4, 5] }, { "gold": 500 }, "openShop", "endDay", "skipReward", "leaveMarket"] }

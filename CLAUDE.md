@@ -8,7 +8,8 @@ Read before working: `docs/gdd.md` (what to build), `docs/tech.md` (how), `docs/
 
 - `pnpm dev`: run with hot reload (open in a browser or VS Code's Simple Browser)
 - `pnpm test` / `pnpm typecheck` / `pnpm lint` / `pnpm build`; `pnpm test:coverage` checks ≥90% on `src/core`
-- `pnpm snap <fixture...>`: screenshot fixtures to `.snaps/<fixture>.png`; `pnpm snap:all` for every fixture
+- `pnpm snap <fixture...>`: screenshot fixtures to `.snaps/<fixture>.png`; `pnpm snap:all` for every fixture. Fixtures reach a state with `steps` (see `src/debug/fixture-steps.ts`) and `ui` (an open dialogue, picked cards)
+- `pnpm e2e`: plays week 1 through the real UI in headless Chromium, with animations on
 - `pnpm art:check`: validate sprite grids, list cards still on placeholders
 - `pnpm art:sheet`: render all art to `.snaps/art-sheet.png` without a browser
 - `pnpm art:import <image> <name> [--grid 2 --panel 0]`: pixelize a painted image into `public/backdrops/<name>.png`
