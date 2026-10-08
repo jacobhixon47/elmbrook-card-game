@@ -18,14 +18,38 @@ await page.waitForFunction(() => window.__elmbrook?.ready === 'Title');
 await page.keyboard.press('x');
 await page.waitForFunction(() => window.__elmbrook?.ready === 'Run');
 const box = (await page.locator('canvas').boundingBox())!;
-const click = (x: number, y: number) => page.mouse.click(box.x + x * 2, box.y + y * 2);
 const get = () => page.evaluate(() => window.__elmbrook!.getState()) as Promise<RunState>;
 const hook = (a: Action) => page.evaluate((a) => window.__elmbrook!.dispatch(a), a);
-const wait = (ms: number) => page.waitForTimeout(ms);
-// Phaser reads the keyboard once a frame and headless frames are slow, so type like a person.
+// Phaser handles input once a frame, and CI's software-rendered frames are slow and uneven, so
+// every press and release gets its own frames instead of a fixed delay.
+const frames = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 const key = async (k: string) => {
-  await page.keyboard.press(k);
-  await wait(80);
+  await page.keyboard.down(k);
+  await frames();
+  await page.keyboard.up(k);
+  await frames();
+};
+const click = async (x: number, y: number) => {
+  await page.mouse.move(box.x + x * 2, box.y + y * 2);
+  await frames();
+  await page.mouse.down();
+  await frames();
+  await page.mouse.up();
+  await frames();
+};
+const run = `window.__elmbrook.game.scene.getScene('Run')`;
+// Wait until the Run scene is up (it restarts when the sky changes) and not animating, then give it two frames.
+const settle = async () => {
+  await page.waitForFunction(`(() => { const r = ${run}; return r && r.sys.isActive() && !r.busy; })()`, null, { timeout: 30000 });
+  await frames();
+};
+// End day takes a second click to confirm when orders are still open; retry until the phase moves on.
+const endDay = async () => {
+  for (let i = 0; i < 6 && (await get()).phase === 'brewing'; i++) {
+    await settle();
+    await click(580, 244);
+    await page.waitForFunction(`(() => { const r = ${run}; return window.__elmbrook.getState().phase !== 'brewing' || (r && r.confirm === 'endDay'); })()`, null, { timeout: 2000 }).catch(() => {});
+  }
 };
 const counts: Record<string, number> = {};
 let steps = 0;
@@ -34,6 +58,7 @@ while (steps++ < 400 && !(s.week === 2 && s.day === 2) && s.phase !== 'game-over
   const a = greedyAction(s);
   if (process.env.TRACE) console.log(JSON.stringify(a));
   counts[a.type] = (counts[a.type] ?? 0) + 1;
+  await settle();
   const idx = (uid: number) => s.hand.findIndex((c) => c.uid === uid);
   switch (a.type) {
     case 'openShop': await key('Space'); break;
@@ -59,13 +84,15 @@ while (steps++ < 400 && !(s.week === 2 && s.day === 2) && s.phase !== 'game-over
       await key(String(idx(a.uid) + 1));
       if (a.targets?.length) { for (const u of a.targets) await key(String(idx(u) + 1)); await key('Enter'); }
       break;
-    case 'endDay': await click(580, 244); await wait(100); if ((await get()).phase === 'brewing') await click(580, 244); await wait(400); break;
+    case 'endDay': await endDay(); break;
     case 'pickReward': await click(240 + a.index * 80, 150); break;
     case 'skipReward': await click(320, 250); break;
     case 'chooseErrand': { const o = s.offer as { options: string[] }; await click(220 + o.options.indexOf(a.errand) * 200, 150); break; }
     default: await hook(a);
   }
-  await wait(250);
+  // Give the action time to land before calling the run stuck.
+  const before = JSON.stringify(s);
+  await page.waitForFunction((b) => JSON.stringify(window.__elmbrook!.getState()) !== b, before, { timeout: 5000 }).catch(() => {});
   const next = await get();
   if (JSON.stringify(next) === JSON.stringify(s)) {
     const mode = await page.evaluate(() => (window.__elmbrook!.game.scene.getScene('Run') as unknown as { mode: unknown }).mode);
