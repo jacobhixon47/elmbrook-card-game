@@ -1,5 +1,5 @@
 import { codex } from '../codex';
-import type { Ingredient, PotionFamily, Recipe } from '../codex/schema';
+import type { Essence, Ingredient, PotionFamily, Recipe } from '../codex/schema';
 import type { GameEvent } from './actions';
 import { effectsOf, hasEffect, sumEffect, type ScoreCtx } from './effects';
 import { activeEvents, todaysWeather, type Weather } from './calendar';
@@ -88,12 +88,20 @@ export function matchRecipe(ings: readonly Ingredient[], s: RecipeAccess): Recip
   return best;
 }
 
+/** A card's essences after any weaving (the Hollow Tailor): the woven one replaces the second. */
+export function essencesOf(card: Pick<CardInstance, 'card' | 'woven'>): Essence[] {
+  const base = codex.ingredients.get(card.card)?.essences ?? [];
+  if (!card.woven || base.includes(card.woven)) return [...base];
+  return [base[0]!, card.woven];
+}
+
+/** The ingredients these cards are, with any woven essence in place. Null if one isn't an ingredient. */
 export function ingredientsOf(cards: readonly CardInstance[]): Ingredient[] | null {
   const out: Ingredient[] = [];
   for (const c of cards) {
     const ing = codex.ingredients.get(c.card);
     if (!ing) return null;
-    out.push(ing);
+    out.push(c.woven ? { ...ing, essences: essencesOf(c) } : ing);
   }
   return out;
 }

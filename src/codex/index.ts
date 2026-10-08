@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import * as raw from './content';
-import { Ingredient, Junk, NightCustomer, Patron, Recipe, Regular, Tincture, Witch } from './schema';
+import { Ingredient, Junk, NightCustomer, Patron, Recipe, Regular, Stall, Tarot, Tincture, Witch } from './schema';
 
 export * from './schema';
 
@@ -22,6 +22,8 @@ export const codex = {
   regulars: table(Regular, raw.regulars, 'regular'),
   nightCustomers: table(NightCustomer, raw.nightCustomers, 'night customer'),
   patrons: table(Patron, raw.patrons, 'patron'),
+  stalls: table(Stall, raw.stalls, 'stall'),
+  tarot: table(Tarot, raw.tarot, 'tarot card'),
   witches: table(Witch, raw.witches, 'witch'),
 };
 

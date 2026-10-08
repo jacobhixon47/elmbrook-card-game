@@ -57,7 +57,7 @@ describe('Grimoire', () => {
 
   it('has a guide with the glossary', () => {
     const g = guideSections();
-    expect(g.map((x) => x.title)).toEqual(['A run', 'A day', 'Brewing', 'Quality', 'Glossary']);
+    expect(g.map((x) => x.title)).toEqual(['A run', 'A day', 'Brewing', 'The Night Market', 'Quality', 'Glossary']);
     expect(g.at(-1)!.body.split('\n')).toHaveLength(Object.keys(GLOSSARY).length);
   });
 });
@@ -73,7 +73,7 @@ describe('stage ribbon', () => {
     expect(stages(dusk).steps[2]).toEqual({ label: 'Twilight', mark: 'now' });
     const errand = ok(dusk, { type: 'skipReward' }).state;
     expect(stages(errand).steps[3]).toEqual({ label: 'Errand', mark: 'now' });
-    const night = { ...start(), day: 5, phase: 'night-market' as const, offer: { kind: 'fence' as const } };
+    const night = { ...start(), day: 5, phase: 'night-market' as const, offer: { kind: 'night-market' as const, stalls: [], at: null } };
     expect(stages(night).days.at(-1)).toEqual({ label: 'Night', mark: 'now' });
     expect(stages(night).steps[3]).toEqual({ label: 'Night Market', mark: 'now' });
     expect(stages({ ...night, phase: 'victory', offer: null }).steps.every((x) => x.mark === 'done')).toBe(true);

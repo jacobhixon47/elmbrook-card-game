@@ -1,3 +1,4 @@
+import { codex } from '../codex';
 import {
   patronOf, FESTIVAL_WEEK, festivalOn, MOON_NAME, NIGHT_SHIFT_DAY, SEASON_FESTIVAL, todaysWeather, WEATHER_RULE, weatherOn,
   WEEK_MOONS, WEEKS, type Festival, type RunState, type SkyEvent, type Weather,
@@ -34,7 +35,7 @@ export const SKY_RULE: Record<SkyEvent, string> = {
   'meteor-shower': 'Fallen Stars can turn up in rewards, the Market and the Forage all week.',
 };
 
-type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'> & Partial<Pick<RunState, 'patrons'>>;
+type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'> & Partial<Pick<RunState, 'patrons' | 'fortunes'>>;
 
 /** The patron of a week's Night Shift (GDD §10). */
 function patronFor(s: When, week: number) {
@@ -83,6 +84,13 @@ export function dayRules(s: When, c: Pick<CalendarCell, 'week' | 'day' | 'weathe
   if (f) out.push(`${FESTIVAL_NAME[f]}: ${FESTIVAL_RULE[f]}`);
   const e = skyOn(s, c.week, c.day);
   if (e) out.push(`${SKY_NAME[e]}: ${SKY_RULE[e]}`);
+  // Fortune Tent twists on this week's days (The Moon's fog already shows as the weather).
+  if (c.day < NIGHT_SHIFT_DAY) {
+    for (const f of s.fortunes ?? []) {
+      const t = codex.tarot.get(f.card);
+      if (f.week === c.week && t && t.effect !== 'fog-week') out.push(`${t.name}: ${t.text.replace(/^Next week: /, '')}`);
+    }
+  }
   return out;
 }
 

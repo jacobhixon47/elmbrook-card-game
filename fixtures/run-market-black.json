@@ -1,0 +1,1 @@
+{"scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{"jump": [4, 5]}, "openShop", "endDay", "skipReward", {"gold": 200}, {"visit": 5}], "ui": {"stall": {"swap": 0, "picked": [1]}}}

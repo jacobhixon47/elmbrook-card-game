@@ -67,6 +67,21 @@ export const ORDER_TIERS: Record<number, [Tier, number][]> = {
 export const FENCE_PRICE: Record<Tier, number> = { crude: 1, fine: 2, superb: 3, masterwork: 6, legendary: 10 };
 export const FENCE_SHADOW_BONUS = 1.5;
 
+// The rest of the Night Market (GDD §9; numbers from the balance tables, shops.json).
+
+/** Stalls on a quarter-moon night: the Lantern Seller, the Fence and this many drawn ones. */
+export const QUARTER_DRAWN_STALLS = 1;
+export const LANTERN_STOCK = { lunar: 3, lunarPrice: 7, omens: 2, omenPrice: 6 };
+export const BROKER_CARDS = 3;
+export const TAILOR_POTENCY = 1;
+/** The Fortune Tent's first draw costs this, and each draw in the same night costs `step` more. */
+export const FORTUNE_PRICE = { base: 5, step: 3 };
+export const TINKER_PRICE = { cauldronSlot: 12, shelfSlot: 4 };
+export const BLACK_MARKET = { cards: 3, price: 14, swap: 2 };
+/** The Hermit: one order fewer a day, each paying this much more. The Tower: one tier up, this much more pay. */
+export const HERMIT_PAY = 1.5;
+export const TOWER_PAY = 2;
+
 // Rewards and the Market (GDD §7, §8)
 
 export type ShopRarity = 'common' | 'uncommon' | 'rare';

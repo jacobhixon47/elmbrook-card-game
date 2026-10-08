@@ -1,5 +1,6 @@
 import type { Season, Weather } from './calendar';
 import type { Tier } from './rules';
+import type { Essence, StallId } from '../codex/schema';
 import type { Errand, GiftSource, Order, Potion } from './state';
 
 export type Action =
@@ -26,8 +27,15 @@ export type Action =
   // After a Night Shift: free picks (the first-night Lunar card, night customers' payments, a patron's reward).
   | { type: 'takeGift'; index: number }
   | { type: 'passGift' }
-  // Night Market, then rent.
+  // Night Market (a street of stalls), then rent. `buy` also buys from the stall you're at.
+  | { type: 'visitStall'; index: number }
+  | { type: 'leaveStall' }
   | { type: 'sellPotion'; uid: number }
+  | { type: 'forgetRecipe'; recipe: string }
+  | { type: 'brokerPick'; index: number }
+  | { type: 'weave'; from: number; into: number }
+  | { type: 'drawTarot' }
+  | { type: 'swapForCard'; index: number; uids: number[] }
   | { type: 'leaveMarket' }
   // Dev overlay only.
   | { type: 'debug'; op: 'addGold'; amount: number }
@@ -40,7 +48,7 @@ export type Action =
 export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
 
 /** Where a gained card came from. */
-export type CardSource = 'reward' | 'market' | 'forage' | 'sludge' | 'gift' | 'payment' | 'copy';
+export type CardSource = 'reward' | 'market' | 'forage' | 'sludge' | 'gift' | 'payment' | 'copy' | 'fortune';
 
 export type GameEvent =
   | { type: 'runStarted'; seed: string; witch: string; season: Season }
@@ -88,7 +96,11 @@ export type GameEvent =
   | { type: 'finaleFailed'; patron: string }
   | { type: 'upgradeBought'; upgrade: 'cauldron-slot' | 'shelf-slot' }
   | { type: 'cardRemoved'; uid: number; card: string }
-  | { type: 'nightMarketOpened' }
+  | { type: 'nightMarketOpened'; stalls: StallId[] }
+  | { type: 'stallVisited'; stall: StallId }
+  | { type: 'recipeForgotten'; recipe: string; cards: string[] }
+  | { type: 'cardWoven'; from: string; fromUid: number; into: string; intoUid: number; essence: Essence }
+  | { type: 'tarotDrawn'; card: string; price: number }
   | { type: 'potionSold'; uid: number; price: number }
   | { type: 'rentPaid'; week: number; amount: number }
   | { type: 'rentFailed'; week: number; amount: number; gold: number }

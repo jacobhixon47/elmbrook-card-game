@@ -125,7 +125,8 @@ export function drawGrimoire(
   }
 
   const sections = guideSections();
-  const cols = [sections.slice(0, 3), sections.slice(3)];
+  // The glossary is long, so it gets the right column to itself.
+  const cols = [sections.slice(0, -2), sections.slice(-2)];
   cols.forEach((col, ci) => {
     let y = top;
     for (const sec of col) {

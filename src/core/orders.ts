@@ -3,10 +3,11 @@ import type { Ingredient, Recipe, Regular } from '../codex/schema';
 import { fillsPattern, recipeAvailable } from './brew';
 import { FESTIVAL_DAY, festivalOn, todaysWeather } from './calendar';
 import { pick, pickWeighted, rand, type Ctx } from './ctx';
+import { fortuneOn } from './market';
 import { patronOf, twistNow } from './night';
 import {
   BONUS_TIP, CLOCKLESS_BREWS, RAIN_MIN_ORDERS, HARVEST_FAIR, LONGEST_NIGHT, BLOOMTIDE_PAY, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount,
-  PALE_COURIER_PAY, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, WEEK_PAY_STEP, type Tier,
+  HERMIT_PAY, PALE_COURIER_PAY, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, TOWER_PAY, WEEK_PAY_STEP, type Tier,
 } from './rules';
 import { allCards, type CardInstance, type Order, type OrderBonus, type OrderRequest, type Potion, type RunState } from './state';
 
@@ -173,15 +174,20 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
   const harvest = festival === 'harvest-fair';
   if (harvest) count += HARVEST_FAIR.extraOrders;
   const bloomtide = festival === 'bloomtide';
+  // Fortune Tent twists on this week: The Hermit (fewer, richer orders) and The Tower (harder, richer).
+  const hermit = fortuneOn(s, 'fewer-orders');
+  const tower = fortuneOn(s, 'harder-orders');
+  if (hermit) count = Math.max(1, count - 1);
 
   for (let i = 0; i < count; i++) {
     const customer = customers[i % customers.length]!;
     const request = requestFor(ctx, r, customer.prefers);
     const ceiling = ceilingOf(r, request);
-    const minTier = pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
+    const rolled = pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
+    const minTier = tower ? tierStep(rolled, 1) : rolled;
     postOrder(ctx, {
       customer: customer.id, request, minTier, ceiling,
-      payScale: weekScale(s, false) * customer.payMult * (harvest ? HARVEST_FAIR.payMult : 1),
+      payScale: weekScale(s, false) * customer.payMult * (harvest ? HARVEST_FAIR.payMult : 1) * (hermit ? HERMIT_PAY : 1) * (tower ? TOWER_PAY : 1),
       bonus: rand(ctx) < customer.bonusChance ? pick(ctx, customer.bonusPool) : null,
       quantity: harvest ? HARVEST_FAIR.quantity : 1,
       tagBonus: bloomtide ? { tag: 'flower', mult: BLOOMTIDE_PAY } : null,

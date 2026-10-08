@@ -182,3 +182,44 @@ export const Witch = z.object({
   knownRecipes: z.array(Id).min(1),
 });
 export type Witch = z.infer<typeof Witch>;
+
+/** The Night Market's stalls (GDD §9). Their trades need code, so each id is handled in core/market.ts. */
+export const STALLS = ['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'wandering-tinker', 'black-market'] as const;
+export const StallId = z.enum(STALLS);
+export type StallId = z.infer<typeof StallId>;
+
+export const Stall = z.object({
+  id: StallId,
+  name: z.string().min(1),
+  /** What it takes instead of (or as well as) gold, shown on its sign. */
+  currency: z.string().min(1),
+  /** The trade in a sentence, for its sign on the street. */
+  text: z.string().min(1),
+  /**
+   * Which nights it opens: `always` every night, `drawn` one of them on quarter-moon nights and all
+   * of them at the full and new moon, or only on that moon.
+   */
+  opens: z.enum(['always', 'drawn', 'full-moon', 'new-moon']),
+});
+export type Stall = z.infer<typeof Stall>;
+
+/** What a tarot card does; each is handled by id in core/market.ts. */
+export const TAROT_EFFECTS = ['gold', 'lunar-card', 'learn-recipe', 'hearts', 'familiar-stand-in', 'relic-stand-in', 'fewer-orders', 'harder-orders', 'fog-week', 'bad-omen', 'lose-card'] as const;
+export const TarotEffect = z.enum(TAROT_EFFECTS);
+export type TarotEffect = z.infer<typeof TarotEffect>;
+
+/** The Fortune Tent's deck (GDD §9). Boons happen at once; twists change next week. */
+export const Tarot = z.object({
+  id: Id,
+  name: z.string().min(1),
+  kind: z.enum(['boon', 'twist']),
+  /** Draw chance, relative to the others. */
+  weight: z.number().positive(),
+  effect: TarotEffect,
+  /** Gold, hearts or the like, when the effect takes an amount. */
+  amount: z.number().int().optional(),
+  /** It changes next week's days, so it isn't drawn in the last week. */
+  nextWeek: z.boolean().default(false),
+  text: z.string().min(1),
+});
+export type Tarot = z.infer<typeof Tarot>;
