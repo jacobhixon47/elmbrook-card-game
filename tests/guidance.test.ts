@@ -125,9 +125,14 @@ describe('tutorial', () => {
     expect(tip()).toBe('night');
     expect(t.done.has('weather')).toBe(true); // skipped past
     expect(t.finished(s)).toBe(false);
+    t.dismiss('night');
+    expect(tip()).toBe('patron');
     act({ type: 'openShop' });
     act({ type: 'endDay' });
     act({ type: 'skipReward' });
+    expect(tip()).toBe('gift');
+    act({ type: 'takeGift', index: 0 });
+    expect(s.satchel).toHaveLength(1);
     expect(tip()).toBe('fence');
     act({ type: 'debug', op: 'addGold', amount: 100 });
     act({ type: 'leaveMarket' });

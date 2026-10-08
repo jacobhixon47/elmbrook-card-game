@@ -176,12 +176,12 @@ describe('tinctures', () => {
     const [s0, uids] = withHand(brewing(), ['stir', 'steep', 'elmroot', 'creekwater']);
     let s = ok(s0, { type: 'playTincture', uid: uids[0]! }).state;
     s = ok(s, { type: 'playTincture', uid: uids[1]! }).state;
-    expect(s.pending).toEqual({ harmony: 1, harmonyMult: 1, potency: 0, potencyMult: 1.5, copies: 1, fullExperiment: false });
+    expect(s.pending).toEqual({ harmony: 1, harmonyMult: 1, potency: 0, potencyMult: 1.5, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false });
     s = slotAll(s, uids.slice(2));
     const r = ok(s, { type: 'brew' });
     // floor(7 x 1.5) = 10, Harmony 2 + 1.
     expect(ofType(r.events, 'scoreStep').at(-1)).toMatchObject({ source: 'tincture', potency: 10, harmony: 3 });
-    expect(r.state.pending).toEqual({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false });
+    expect(r.state.pending).toEqual({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false });
   });
 
   it('Bottle Spare makes two potions', () => {

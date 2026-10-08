@@ -47,6 +47,10 @@ export type Order = {
   delivered: number;
   /** Pay multiplier when the potion has an ingredient with this tag (Bloomtide). */
   tagBonus: { tag: string; mult: number } | null;
+  /** The potion needs an Umbra ingredient in it (Granny Bogwort). */
+  needsUmbra: boolean;
+  /** Brews left before the customer gives up and leaves (The Clockless Man); null when they wait all day. */
+  expiresIn: number | null;
 };
 
 /** Effects queued by Tinctures for the next brew. */
@@ -58,10 +62,14 @@ export type Pending = {
   copies: number;
   /** The next Experiment brews at its full tier (Grimoire Page). */
   fullExperiment: boolean;
+  /** Every ingredient gets this much Potency per Lunar card in the brew (Howl). */
+  lunarPotency: number;
+  /** Every ingredient also counts as Lunar (Moth Swarm). */
+  allLunar: boolean;
 };
 
 /** Extras for the next delivery (Charm Sachet). */
-export type DeliveryBoost = { hearts: number; tip: number };
+export type DeliveryBoost = { hearts: number; tip: number; payMult: number };
 
 export type Errand = 'market' | 'forage' | 'hearth';
 
@@ -76,11 +84,18 @@ export type Offer =
   | { kind: 'market'; stock: StockItem[] }
   | { kind: 'forage'; cards: string[]; picksLeft: number }
   | { kind: 'hearth'; removed: boolean }
-  | { kind: 'fence' };
+  | { kind: 'fence' }
+  | Gift;
+
+/** Why a free pick is on offer at night. */
+export type GiftSource = 'first-night' | 'lantern-witch' | 'bog-hag' | 'patron';
+
+/** A free pick after a Night Shift: the first-night Lunar card, a night customer's payment or a patron's reward. */
+export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'deck' | 'satchel' };
 
 /** Plain, JSON-serialisable run state. Fixtures and saves are exactly this shape. */
 export type RunState = {
-  version: 4;
+  version: 5;
   seed: string;
   rng: RngState;
   witch: string;
@@ -97,6 +112,16 @@ export type RunState = {
   cauldronSlots: number;
   shelfSize: number;
   drawPile: CardInstance[];
+  /** The Night Satchel (GDD §5.4): Lunar ingredients and Omens, shuffled in only on Night Shifts. Empty while they are. */
+  satchel: CardInstance[];
+  /** Each week's Night Shift patron, rolled at run start (GDD §10). */
+  patrons: string[];
+  /** Free picks still to come after tonight's reward. */
+  gifts: Gift[];
+  /** Card ids in today's last brew (Mother Hollow). */
+  lastBrew: string[];
+  /** The family of the last potion delivered today (The May Queen). */
+  lastFamily: PotionFamily | null;
   hand: CardInstance[];
   discardPile: CardInstance[];
   /** Cards slotted into the cauldron, in slot order. */
@@ -119,6 +144,8 @@ export type RunState = {
   /** Consecutive reward skips, for skip pity. */
   skipStreak: number;
   nextUid: number;
+  /** Why a lost run ended: the rent, or the Moonless Patron left unsatisfied. */
+  lostTo?: 'rent' | 'finale';
 };
 
 /** Every card the player owns, wherever it is right now. */

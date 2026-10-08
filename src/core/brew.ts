@@ -3,7 +3,8 @@ import type { Ingredient, PotionFamily, Recipe } from '../codex/schema';
 import type { GameEvent } from './actions';
 import { effectsOf, hasEffect, sumEffect, type ScoreCtx } from './effects';
 import { activeEvents, todaysWeather, type Weather } from './calendar';
-import { HEATWAVE_EMBER_POTENCY, RAIN_POTENCY, tierOf, tierStep, type Tier } from './rules';
+import { FROST_WARDEN_POTENCY, HEATWAVE_EMBER_POTENCY, RAIN_POTENCY, tierOf, tierStep, type Tier } from './rules';
+import { twistNow } from './night';
 import type { CardInstance, RunState } from './state';
 
 type ScoreStep = Extract<GameEvent, { type: 'scoreStep' }>;
@@ -101,11 +102,13 @@ export function ingredientsOf(cards: readonly CardInstance[]): Ingredient[] | nu
  * What brewing these cards would make, with every scoring step (GDD §6.3). Pure; used by the
  * cauldron preview, the bot and `brew` itself, so the preview is never wrong.
  */
-export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'>;
+export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons'>>;
 
 export function previewBrew(state: BrewState, cards: readonly CardInstance[], hand: readonly CardInstance[]): BrewPreview {
-  const ings = ingredientsOf(cards);
-  if (!ings || ings.length < 2) return { kind: 'empty' };
+  const raw = ingredientsOf(cards);
+  if (!raw || raw.length < 2) return { kind: 'empty' };
+  // Moth Swarm: every ingredient also counts as Lunar for this brew.
+  const ings = state.pending.allLunar ? raw.map((i) => (i.essences.includes('lunar') ? i : { ...i, essences: [...i.essences, 'lunar' as const] })) : raw;
   const discardCost = cards.reduce((n, c) => n + sumEffect(c.card, 'discardCost'), 0);
   const recipe = matchRecipe(ings, state);
   if (!recipe) return { kind: 'sludge', discardCost };
@@ -151,6 +154,21 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     steps.push({ type: 'scoreStep', source: 'weather', id: weather, potency: c.potency, harmony: c.harmony, note: `${shift > 0 ? '+' : ''}${shift} Potency` });
   }
 
+  // Tonight's patron (GDD §10): Sir Bramble douses Ember, the Frost Warden chills the rest.
+  const twist = twistNow(state);
+  if (twist === 'ember-zero' || twist === 'non-frost-minus-2') {
+    let cut = 0;
+    cards.forEach((card, i) => {
+      const ing = raw[i]!;
+      if (twist === 'ember-zero' && ing.essences.includes('ember')) cut += ing.potency + (card.bonus ?? 0) + (hasEffect(ing.id, 'aged') ? card.aged ?? 0 : 0) + weatherPotency(ing, weather);
+      if (twist === 'non-frost-minus-2' && !ing.tags.includes('frost')) cut += -FROST_WARDEN_POTENCY;
+    });
+    if (cut > 0) {
+      c.potency = Math.max(0, c.potency - cut);
+      steps.push({ type: 'scoreStep', source: 'patron', id: twist, potency: c.potency, harmony: c.harmony, note: `-${cut} Potency` });
+    }
+  }
+
   // Junk in hand that drags every brew down (Bad Omen).
   const drag = hand.reduce((n, card) => n + sumEffect(card.card, 'inHandHarmony'), 0);
   if (drag !== 0) {
@@ -160,8 +178,10 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
 
   // 2. Tinctures played before this brew: flat bonuses, then multipliers.
   const p = state.pending;
-  if (p.harmony !== 0 || p.potency !== 0 || p.potencyMult !== 1 || p.harmonyMult !== 1) {
-    c.potency = Math.floor((c.potency + p.potency) * p.potencyMult);
+  // Howl: every ingredient gets Potency for each Lunar card in the brew.
+  const howl = p.lunarPotency * ings.length * raw.filter((i) => i.essences.includes('lunar')).length;
+  if (p.harmony !== 0 || p.potency !== 0 || howl !== 0 || p.potencyMult !== 1 || p.harmonyMult !== 1) {
+    c.potency = Math.floor((c.potency + p.potency + howl) * p.potencyMult);
     c.harmony = (c.harmony + p.harmony) * p.harmonyMult;
     steps.push({ type: 'scoreStep', source: 'tincture', id: 'pending', potency: c.potency, harmony: c.harmony });
   }

@@ -121,3 +121,27 @@ export const BLOOMTIDE_PAY = 2;
 export const HARVEST_FAIR = { extraOrders: 1, quantity: 2, payMult: 2.5 };
 /** Longest Night: the festival week's Night Shift gets more of everything. */
 export const LONGEST_NIGHT = { brews: 2, discards: 1, extraOrders: 2 };
+
+// ---------------------------------------------------------------- Night Shifts (GDD §4.1, §5.4, §10)
+
+/** After the week-1 Night Shift, pick 1 of this many Lunar ingredients for free (balance audit, Oct 8). */
+export const FIRST_NIGHT_GIFT = 2;
+/** Cards offered by the Lantern Witch's and Granny Bogwort's payments. */
+export const LUNAR_GIFT = 2;
+export const RARE_GIFT = 3;
+/** The Pale Courier: the other orders that night pay this much more. */
+export const PALE_COURIER_PAY = 2;
+/** Brews before an order leaves on The Clockless Man's night. */
+export const CLOCKLESS_BREWS = 2;
+export const TITHE_GOLD = 2;
+export const FROST_WARDEN_POTENCY = -2;
+/**
+ * Familiars and relics arrive in M3 part 5. Until then a patron who would give one pays this much
+ * gold instead (about a common familiar's price, and a tier-2 relic a little more).
+ */
+export const STAND_IN_GOLD = { familiar: 8, relic: [0, 8, 12, 16] } as const;
+/**
+ * The Moonless Patron's orders you must fill to win the month. The GDD's "satisfy the patron" means
+ * all three, but without familiars and the Night Market the sim wins 5% that way (1 of 3: 25%).
+ */
+export const FINALE_ORDERS = 1;

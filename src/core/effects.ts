@@ -1,6 +1,6 @@
 import { codex } from '../codex';
 import type { Essence, Ingredient, Recipe } from '../codex/schema';
-import { draw, reject, takeFromHand, type Ctx } from './ctx';
+import { changeGold, draw, gainCard, randInt, reject, takeFromHand, type Ctx } from './ctx';
 import { tierIndex, tierStep } from './rules';
 import type { CardInstance } from './state';
 
@@ -212,6 +212,35 @@ export const EFFECTS: Record<string, Effect> = {
       if (tierIndex(potion.tier) >= tierIndex('superb')) reject('Decant raises potions up to Superb');
       potion.tier = tierStep(potion.tier, 1);
       ctx.ev.push({ type: 'potionUpgraded', uid: potion.uid, tier: potion.tier });
+    },
+  },
+
+  // Omens (GDD §5.4): strong, with a drawback.
+  'next-brew-harmony-x2': nextBrew((p) => (p.harmonyMult *= 2)),
+  'next-brew-potency-x2': nextBrew((p) => (p.potencyMult *= 2)),
+  'potency-2-per-lunar-in-brew': nextBrew((p) => (p.lunarPotency += 2)),
+  'hand-counts-lunar': nextBrew((p) => (p.allLunar = true)),
+  'lose-discard': { onPlay: (ctx) => void (ctx.s.discardsLeft = Math.max(0, ctx.s.discardsLeft - 1)) },
+  'draw-3': { onPlay: (ctx) => draw(ctx, 3) },
+  'discard-random-1': {
+    onPlay: (ctx) => {
+      if (ctx.s.hand.length === 0) return;
+      const [card] = ctx.s.hand.splice(randInt(ctx, ctx.s.hand.length), 1);
+      ctx.s.discardPile.push(card!);
+      ctx.ev.push({ type: 'cardsDiscarded', uids: [card!.uid] });
+    },
+  },
+  'next-customer-lose-heart': { onPlay: (ctx) => void (ctx.s.delivery.hearts -= 1) },
+  'next-delivery-pay-x2': { onPlay: (ctx) => void (ctx.s.delivery.payMult *= 2) },
+  'add-sludge': { onPlay: (ctx) => void gainCard(ctx, 'sludge', 'sludge') },
+  'lose-gold-3': { onPlay: (ctx) => changeGold(ctx, -Math.min(3, ctx.s.gold), 'omen') },
+  'copy-card-permanent': {
+    targets: 'hand-one',
+    onPlay: (ctx, targets) => {
+      if (targets.length !== 1) reject('choose one card in hand');
+      const card = ctx.s.hand.find((c) => c.uid === targets[0]);
+      if (!card) reject(`card ${targets[0]} is not in hand`);
+      gainCard(ctx, card.card, 'copy');
     },
   },
 };

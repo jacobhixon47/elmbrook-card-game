@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Ingredient, Junk, Recipe, Regular, Tincture, Witch } from './schema';
+import type { Ingredient, Junk, NightCustomer, Patron, Recipe, Regular, Tincture, Witch } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -75,6 +75,15 @@ export const tinctures: In<typeof Tincture>[] = [
   { id: 'bottle-spare', name: 'Bottle Spare', rarity: 'rare', effects: ['next-brew-double'], text: 'Your next brew makes 2 potions.' },
   { id: 'second-wind', name: 'Second Wind', rarity: 'rare', effects: ['gain-brew'], text: 'Gain 1 Brew today.', pool: 'unlock' },
   { id: 'grimoire-page', name: 'Grimoire Page', rarity: 'rare', effects: ['next-experiment-full', 'draw-2'], text: 'Your next Experiment brews at full quality. Draw 2.', pool: 'unlock' },
+  // Omens: Night Satchel Tinctures (GDD §5.4), strong with a drawback. They only come out on Night Shifts.
+  { id: 'blood-moon', name: 'Blood Moon', rarity: 'lunar', effects: ['next-brew-harmony-x2', 'lose-discard'], text: 'Next brew: Harmony x2. Lose 1 Discard.' },
+  { id: 'black-cat-crossing', name: 'Black Cat Crossing', rarity: 'lunar', effects: ['draw-3', 'discard-random-1'], text: 'Draw 3, then discard a random card.' },
+  { id: 'raven-call', name: 'Raven Call', rarity: 'lunar', effects: ['gain-brew', 'next-customer-lose-heart'], text: 'Gain 1 Brew. -1 heart with the next customer you serve.' },
+  { id: 'witching-hour', name: 'Witching Hour', rarity: 'lunar', effects: ['next-brew-potency-x2', 'add-sludge'], text: 'Next brew: Potency x2. Add a Sludge to your deck.' },
+  { id: 'howl', name: 'Howl', rarity: 'lunar', effects: ['potency-2-per-lunar-in-brew'], text: 'Next brew: every ingredient +2 Potency per Lunar card in the cauldron.' },
+  { id: 'cracked-mirror', name: 'Cracked Mirror', rarity: 'lunar', effects: ['copy-card-permanent', 'lose-gold-3'], text: 'Add a copy of a card in hand to your deck. Lose 3 gold.', pool: 'unlock' },
+  { id: 'wishing-star', name: 'Wishing Star', rarity: 'lunar', effects: ['next-delivery-pay-x2', 'lose-discard'], text: 'Your next delivery pays double. Lose 1 Discard.' },
+  { id: 'moth-swarm', name: 'Moth Swarm', rarity: 'lunar', effects: ['hand-counts-lunar', 'next-customer-lose-heart'], text: 'Every ingredient also counts as Lunar for your next brew. -1 heart with the next customer you serve.', pool: 'unlock' },
 ];
 
 export const junk: In<typeof Junk>[] = [
@@ -129,6 +138,30 @@ export const regulars: In<typeof Regular>[] = [
   { id: 'sister-alder', name: 'Sister Alder', blurb: 'Keeper of the shrine.', prefers: ['calming', 'healing'], weight: 3, bonusPool: ['no-umbra', 'wychwood-ingredient'] },
   { id: 'marlowe-vance', name: 'Marlowe Vance', blurb: 'Travelling merchant who haggles.', prefers: ['rare'], weight: 2, payMult: 1.25, bonusPool: ['three-ingredients'] },
   { id: 'the-gardener', name: 'The Gardener', blurb: 'Nobody\'s sure who they are.', prefers: ['lunar'], nightOnly: true, weight: 2, payMult: 1.5, bonusPool: ['wychwood-ingredient'] },
+];
+
+// Night customers (GDD §4.1): only on Night Shifts, after the patron's order.
+export const nightCustomers: In<typeof NightCustomer>[] = [
+  { id: 'wisp-courier', name: 'The Wisp Courier', blurb: 'Carries letters for the not-quite-living.', prefers: ['secrets', 'lunar'], weight: 2, goldMult: 0.5, paysIn: { kind: 'omen' } },
+  { id: 'lantern-witch', name: 'The Lantern Witch', blurb: 'Lights the Night Market. Sharp-tongued.', prefers: ['vigor', 'warming'], weight: 2, goldMult: 0.5, paysIn: { kind: 'lunar-card' } },
+  { id: 'bog-hag', name: 'Granny Bogwort', blurb: 'Lives in the fen. Surprisingly sweet.', prefers: ['healing'], weight: 2, goldMult: 0.5, paysIn: { kind: 'rare-card' }, requiresUmbra: true },
+  { id: 'moth-duchess', name: 'The Moth Duchess', blurb: 'Aristocrat of the lamplight.', prefers: ['illusion', 'fortune'], weight: 2, goldMult: 2.5, paysIn: { kind: 'gold' } },
+  { id: 'sleepless-miller', name: 'The Sleepless Miller', blurb: "Hasn't slept in years.", prefers: ['calming'], weight: 2, goldMult: 1, paysIn: { kind: 'lift-curse', noCurseMult: 1.5 } },
+];
+
+// Night Shift patrons (GDD §10). Weeks 1 and 3 roll one of the eligible; week 2 is the Pale Courier, week 4 the finale.
+export const patrons: In<typeof Patron>[] = [
+  { id: 'lamplighter', name: 'The Lamplighter', blurb: 'Keeps the lamps, and your secrets.', weeks: [1, 3], twist: 'hand-hidden', text: 'Your hand is face-down until you hover a card.', orderCount: 3, reward: { kind: 'gold', amount: 6 } },
+  { id: 'mother-hollow', name: 'Mother Hollow', blurb: 'Wants a little of everywhere.', weeks: [1, 3], twist: 'origin-chain', text: 'Each brew must use an ingredient from a different Origin than the last.', orderCount: 3, reward: { kind: 'familiar-pick', count: 2 } },
+  { id: 'twin-owls', name: 'The Twin Owls', blurb: 'Two of everything, always.', weeks: [1, 3], twist: 'orders-double', text: 'Every order needs two identical potions, and pays double.', orderCount: 2, payMult: 2, reward: { kind: 'card-pick', rarity: 'rare', count: 3 } },
+  { id: 'sir-bramble', name: 'Sir Bramble', blurb: 'A knight of the hedgerow. Can\'t abide a hot hearth.', weeks: [1, 3], twist: 'ember-zero', text: 'Ember ingredients have 0 Potency.', orderCount: 3, reward: { kind: 'gold', amount: 6 } },
+  { id: 'clockless-man', name: 'The Clockless Man', blurb: 'Always late, never waits.', weeks: [3], twist: 'orders-expire-2', text: 'Orders leave after 2 brews.', orderCount: 3, reward: { kind: 'relic', tier: 1 } },
+  { id: 'may-queen', name: 'The May Queen', blurb: 'Crowned in blossom, bored by repeats.', weeks: [1, 3], season: 'spring', twist: 'family-chain', text: 'Each delivery must be a different family from the one before.', orderCount: 3, reward: { kind: 'relic', tier: 1 } },
+  { id: 'firefly-conductor', name: 'The Firefly Conductor', blurb: 'Leads the summer lights in time.', weeks: [1, 3], season: 'summer', twist: 'hand-refresh', text: 'After every brew, your hand is discarded and redrawn.', orderCount: 3, reward: { kind: 'familiar-pick', count: 2 } },
+  { id: 'tithe-reeve', name: 'The Tithe Reeve', blurb: 'Collects the harvest due.', weeks: [1, 3], season: 'autumn', twist: 'brew-costs-gold-2', text: 'Every brew costs 2 gold. Orders pay ×1.5.', orderCount: 3, payMult: 1.5, reward: { kind: 'gold', amount: 10 } },
+  { id: 'frost-warden', name: 'The Frost Warden', blurb: 'Guards the long cold.', weeks: [1, 3], season: 'winter', twist: 'non-frost-minus-2', text: 'Ingredients without the Frost tag have -2 Potency.', orderCount: 3, reward: { kind: 'relic', tier: 2 } },
+  { id: 'pale-courier', name: 'The Pale Courier', blurb: 'Comes at the full moon with a sealed request.', weeks: [2], twist: 'pale-courier', text: 'Wants a Masterwork Lunar potion. The other orders pay double.', orderCount: 3, fixedOrder: { family: 'lunar', minTier: 'masterwork' }, reward: { kind: 'relic', tier: 2 } },
+  { id: 'moonless-patron', name: 'The Moonless Patron', blurb: 'Comes on the new moon. Nobody sees a face.', weeks: [4], twist: 'grimoire-hidden', text: 'Three escalating orders, and your Grimoire is hidden. Fill them all to win the month.', orderCount: 3, ladder: ['superb', 'masterwork', 'masterwork'], reward: { kind: 'win' } },
 ];
 
 export const witches: In<typeof Witch>[] = [

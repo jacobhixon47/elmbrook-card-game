@@ -1,6 +1,7 @@
-import type { GameEvent } from './actions';
+import type { CardSource, GameEvent } from './actions';
 import { NIGHT_SHIFT_DAY } from './calendar';
 import { sumEffect } from './effects';
+import { isSatchelCard } from './night';
 import { nextFloat, shuffle } from './rng';
 import type { CardInstance, RunState } from './state';
 
@@ -71,9 +72,10 @@ export function drawToHandSize(ctx: Ctx): void {
   draw(ctx, Math.max(0, ctx.s.handSize - ctx.s.hand.length));
 }
 
-export function gainCard(ctx: Ctx, card: string, source: 'reward' | 'market' | 'forage' | 'sludge'): CardInstance {
+/** A new card for the deck, or for the Night Satchel if it is a Lunar ingredient or an Omen (GDD §5.4). */
+export function gainCard(ctx: Ctx, card: string, source: CardSource): CardInstance {
   const inst = { uid: ctx.s.nextUid++, card };
-  ctx.s.discardPile.push(inst);
+  (isSatchelCard(card) ? ctx.s.satchel : ctx.s.discardPile).push(inst);
   ctx.ev.push({ type: 'cardGained', card, uid: inst.uid, source });
   return inst;
 }

@@ -1,21 +1,23 @@
 import { codex } from '../codex';
 import type { Action, GameEvent } from './actions';
 import { previewBrew } from './brew';
-import { FESTIVAL_DAY, festivalOn, NIGHT_SHIFT_DAY, rollCalendar, todaysWeather, type Season } from './calendar';
+import { activeEvents, FESTIVAL_DAY, festivalOn, NIGHT_SHIFT_DAY, rollCalendar, todaysWeather, type Season } from './calendar';
 import { changeGold, draw, drawToHandSize, gainCard, Reject, reject, shuffled, takeFromHand, type Ctx } from './ctx';
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
-import { postOrders, payout, satisfies } from './orders';
+import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
+import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import {
   BREWS_PER_DAY, CAULDRON_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK,
-  LONGEST_NIGHT, rentDue, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, WEEKS,
+  LONGEST_NIGHT, rentDue, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, WEEKS,
 } from './rules';
 import { allCards, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState } from './state';
 
 export type ReduceResult = { state: RunState; events: GameEvent[] };
 
-const freshPending = (): Pending => ({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false });
+const freshPending = (): Pending => ({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false });
+const noBoost = () => ({ hearts: 0, tip: 0, payMult: 1 });
 
 export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = []): ReduceResult {
   const witch = codex.witches.get(witchId);
@@ -28,7 +30,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   }
 
   const s: RunState = {
-    version: 4,
+    version: 5,
     seed,
     rng: seedRng(seed),
     witch: witch.id,
@@ -44,6 +46,11 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     cauldronSlots: CAULDRON_SLOTS,
     shelfSize: SHELF_SLOTS,
     drawPile: deck,
+    satchel: [],
+    patrons: rollPatrons(seed, season),
+    gifts: [],
+    lastBrew: [],
+    lastFamily: null,
     hand: [],
     discardPile: [],
     cauldron: [],
@@ -52,7 +59,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     shelf: [],
     hearts: {},
     pending: freshPending(),
-    delivery: { hearts: 0, tip: 0 },
+    delivery: noBoost(),
     brewsToday: 0,
     unlocks: [...unlocks],
     fog: false,
@@ -73,7 +80,11 @@ export function isNightShift(state: Pick<RunState, 'day'>): boolean {
 function startDay(ctx: Ctx): void {
   const s = ctx.s;
   const night = isNightShift(s);
-  s.drawPile = shuffled(ctx, allCards(s));
+  // The Night Satchel joins the deck only on a Night Shift, or on the day of an Eclipse (GDD §5.4).
+  stowSatchel(s);
+  const satchel = night || activeEvents(s).includes('eclipse');
+  s.drawPile = shuffled(ctx, satchel ? [...allCards(s), ...s.satchel] : allCards(s));
+  if (satchel) s.satchel = [];
   const weather = todaysWeather(s);
   // Snow: Frost cards are drawn first (GDD §4.2).
   if (weather === 'snow') s.drawPile = [...s.drawPile.filter(isFrost), ...s.drawPile.filter((c) => !isFrost(c))];
@@ -84,6 +95,9 @@ function startDay(ctx: Ctx): void {
   s.cauldron = [];
   s.orders = [];
   s.offer = null;
+  s.gifts = [];
+  s.lastBrew = [];
+  s.lastFamily = null;
   s.pending = freshPending();
   s.brewsToday = 0;
   s.phase = 'morning';
@@ -134,15 +148,20 @@ function fill(ctx: Ctx, order: Order, potion: Potion): void {
     return;
   }
   const paid = payout(potion, order);
-  const { pay, bonus } = paid;
+  const { bonus } = paid;
   // A Ribbon or similar boosts the next delivery once (GDD §6.4).
   const boost = ctx.s.delivery;
+  const pay = Math.round(paid.pay * boost.payMult);
   const tip = paid.tip + boost.tip;
-  ctx.s.delivery = { hearts: 0, tip: 0 };
+  ctx.s.delivery = noBoost();
   order.status = 'filled';
   ctx.ev.push({ type: 'orderFilled', order: order.id, customer: order.customer, potion: potion.uid, tier: potion.tier, pay, tip, bonus });
   changeGold(ctx, pay + tip, 'order');
   changeHearts(ctx, order.customer, (bonus ? 2 : 1) + potion.heartDelta + boost.hearts);
+  ctx.s.lastFamily = potion.family;
+  const patron = codex.patrons.get(order.customer);
+  if (patron) patronReward(ctx, patron);
+  else nightPayment(ctx, order);
 }
 
 function shelve(ctx: Ctx, potion: Potion): void {
@@ -163,6 +182,10 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
   const preview = previewBrew(s, s.cauldron, s.hand);
   if (preview.kind === 'empty') reject('the cauldron needs at least two ingredients');
   if (preview.discardCost > s.discardsLeft) reject('not enough Discards left');
+  const blocked = brewBlocked(s, s.cauldron);
+  if (blocked) reject(blocked);
+  const twist = twistNow(s);
+  if (twist === 'brew-costs-gold-2') changeGold(ctx, -TITHE_GOLD, 'patron');
 
   const used = s.cauldron;
   s.cauldron = [];
@@ -172,6 +195,7 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
   s.discardsLeft -= preview.discardCost;
   for (const c of used) delete c.aged;
   s.discardPile.push(...used);
+  s.lastBrew = used.map((c) => c.card);
   // A Grimoire Page waits for the next Experiment; every other tincture lasts one brew.
   const experiment = preview.kind === 'potion' && !preview.known;
   s.pending = { ...freshPending(), fullExperiment: s.pending.fullExperiment && !experiment };
@@ -197,9 +221,24 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
     for (let i = 0; i < preview.copies; i++) {
       const potion: Potion = { uid: s.nextUid++, ...base };
       if (i === 0) ctx.ev.push({ type: 'brewed', potion, copies: preview.copies });
-      if (i === 0 && target && satisfies(potion, target)) fill(ctx, target, potion);
+      if (i === 0 && target && fits(s, potion, target)) fill(ctx, target, potion);
       else shelve(ctx, potion);
     }
+  }
+  // The Clockless Man: every open order loses patience with each brew.
+  for (const o of s.orders) {
+    if (o.status !== 'open' || o.expiresIn === null) continue;
+    o.expiresIn -= 1;
+    if (o.expiresIn > 0) continue;
+    o.status = 'declined';
+    ctx.ev.push({ type: 'orderExpired', order: o.id, customer: o.customer });
+  }
+  // The Firefly Conductor: the whole hand goes after every brew.
+  if (twist === 'hand-refresh' && s.hand.length) {
+    const uids = s.hand.map((c) => c.uid);
+    s.discardPile.push(...s.hand);
+    s.hand = [];
+    ctx.ev.push({ type: 'cardsDiscarded', uids });
   }
   drawToHandSize(ctx);
   const extra = used.reduce((n, c) => n + sumEffect(c.card, 'drawOnBrew'), 0);
@@ -220,6 +259,7 @@ function endDay(ctx: Ctx): void {
   }
   for (const c of allCards(s)) if (hasEffect(c.card, 'aged')) c.aged = (c.aged ?? 0) + 1;
   expireCards(ctx);
+  if (isNightShift(s)) queueFirstNightGift(ctx);
   ctx.ev.push({ type: 'dayEnded', week: s.week, day: s.day });
   s.phase = 'dusk';
   offerReward(ctx);
@@ -256,6 +296,12 @@ function removeWeekCards(ctx: Ctx): void {
 
 function afterReward(ctx: Ctx): void {
   if (isNightShift(ctx.s)) {
+    // Free picks first (the first-night Lunar card, night customers' payments), then the Market.
+    const gift = ctx.s.gifts.shift();
+    if (gift) {
+      ctx.s.offer = gift;
+      return;
+    }
     ctx.s.phase = 'night-market';
     ctx.s.offer = { kind: 'fence' };
     ctx.ev.push({ type: 'nightMarketOpened' });
@@ -273,10 +319,19 @@ function collectRent(ctx: Ctx): void {
     ctx.ev.push({ type: 'rentFailed', week: s.week, amount: due, gold: s.gold });
     ctx.ev.push({ type: 'runLost', week: s.week });
     s.phase = 'game-over';
+    s.lostTo = 'rent';
     return;
   }
   changeGold(ctx, -due, 'rent');
   ctx.ev.push({ type: 'rentPaid', week: s.week, amount: due });
+  if (!finaleMet(s)) {
+    // GDD §1: the month is won by surviving every rent and satisfying the Moonless Patron.
+    ctx.ev.push({ type: 'finaleFailed', patron: s.patrons[s.week - 1]! });
+    ctx.ev.push({ type: 'runLost', week: s.week });
+    s.phase = 'game-over';
+    s.lostTo = 'finale';
+    return;
+  }
   if (s.week >= WEEKS) {
     s.phase = 'victory';
     ctx.ev.push({ type: 'runWon' });
@@ -364,6 +419,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       if (i < 0) reject(`potion ${action.potion} is not on the Shelf`);
       const potion = s.shelf[i]!;
       if (!satisfies(potion, order)) reject('that potion does not fill this order');
+      if (!fits(s, potion, order)) reject('The May Queen wants a different family from your last delivery');
       s.shelf.splice(i, 1);
       fill(ctx, order, potion);
       return;
@@ -461,6 +517,23 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       return;
     }
 
+    case 'takeGift': {
+      const gift = offerOf(ctx, 'gift');
+      const card = gift.cards[action.index];
+      if (!card) reject(`no gift ${action.index}`);
+      const inst = gainCard(ctx, card, 'gift');
+      ctx.ev.push({ type: 'giftTaken', source: gift.source, card, uid: inst.uid });
+      afterReward(ctx);
+      return;
+    }
+
+    case 'passGift': {
+      const gift = offerOf(ctx, 'gift');
+      ctx.ev.push({ type: 'giftPassed', source: gift.source });
+      afterReward(ctx);
+      return;
+    }
+
     case 'sellPotion': {
       offerOf(ctx, 'fence');
       const i = s.shelf.findIndex((p) => p.uid === action.uid);
@@ -483,6 +556,11 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       } else if (action.op === 'setWeather') {
         s.calendar.weather[s.week - 1]![s.day - 1] = action.weather;
         s.fog = action.weather === 'fog' && !isNightShift(s) && s.brewsToday === 0;
+      } else if (action.op === 'setPatron') {
+        const patron = codex.patrons.get(action.patron);
+        if (!patron) reject(`no patron ${action.patron}`);
+        if (action.week < 1 || action.week > WEEKS) reject('no such week');
+        s.patrons[action.week - 1] = patron.id;
       } else if (action.op === 'learnRecipes') {
         for (const r of action.recipes) if (!codex.recipes.has(r)) reject(`no recipe ${r}`);
         for (const r of action.recipes) if (!s.knownRecipes.includes(r)) s.knownRecipes.push(r);

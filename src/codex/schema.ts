@@ -96,6 +96,80 @@ export const Regular = z.object({
 });
 export type Regular = z.infer<typeof Regular>;
 
+/** What a night customer gives on top of (or instead of) gold (GDD §4.1). */
+export const NightPayment = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('gold') }),
+  /** A random Omen into the Night Satchel. */
+  z.object({ kind: z.literal('omen') }),
+  /** Pick 1 of 2 Lunar ingredients into the Night Satchel. */
+  z.object({ kind: z.literal('lunar-card') }),
+  /** Pick 1 of 3 Rare day ingredients. */
+  z.object({ kind: z.literal('rare-card') }),
+  /** Lifts your oldest Curse; pays `noCurseMult` × gold instead when you have none. */
+  z.object({ kind: z.literal('lift-curse'), noCurseMult: z.number().positive() }),
+]);
+export type NightPayment = z.infer<typeof NightPayment>;
+
+/** Customers who only come on Night Shifts, after the patron (GDD §4.1). */
+export const NightCustomer = z.object({
+  id: Id,
+  name: z.string().min(1),
+  blurb: z.string().min(1),
+  prefers: z.array(PotionFamily).min(1),
+  weight: z.number().positive().default(1),
+  /** Scales the order's normal gold pay. */
+  goldMult: z.number().min(0),
+  paysIn: NightPayment,
+  /** The potion must have an Umbra ingredient in it (Granny Bogwort). */
+  requiresUmbra: z.boolean().default(false),
+});
+export type NightCustomer = z.infer<typeof NightCustomer>;
+
+/** Rule twists a patron puts on their Night Shift (GDD §10). Each is handled by id in the core. */
+export const TWISTS = [
+  'hand-hidden', 'origin-chain', 'orders-double', 'ember-zero', 'orders-expire-2', 'family-chain', 'hand-refresh',
+  'brew-costs-gold-2', 'non-frost-minus-2', 'pale-courier', 'grimoire-hidden',
+] as const;
+export const Twist = z.enum(TWISTS);
+export type Twist = z.infer<typeof Twist>;
+
+/** What filling the patron's order gives on top of its pay. */
+export const PatronReward = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('gold'), amount: z.number().int().positive() }),
+  z.object({ kind: z.literal('card-pick'), rarity: z.enum(['common', 'uncommon', 'rare']), count: z.number().int().min(1) }),
+  z.object({ kind: z.literal('familiar-pick'), count: z.number().int().min(1) }),
+  z.object({ kind: z.literal('relic'), tier: z.number().int().min(1).max(3) }),
+  /** The finale: filling every order of the shift is what wins the run. */
+  z.object({ kind: z.literal('win') }),
+]);
+export type PatronReward = z.infer<typeof PatronReward>;
+
+const TierName = z.enum(['crude', 'fine', 'superb', 'masterwork', 'legendary']);
+
+/** The featured guest of a Night Shift, with a rule twist (GDD §10). */
+export const Patron = z.object({
+  id: Id,
+  name: z.string().min(1),
+  blurb: z.string().min(1),
+  /** Which weeks' Night Shifts can roll them. */
+  weeks: z.array(z.number().int().min(1).max(4)).min(1),
+  /** Only in this season. */
+  season: Season.optional(),
+  twist: Twist,
+  /** The twist in a sentence, for the Calendar and the HUD. */
+  text: z.string().min(1),
+  /** Orders the shift posts in all: the patron's, then night customers. */
+  orderCount: z.number().int().min(1),
+  /** Pay multiplier on every order that night. */
+  payMult: z.number().positive().default(1),
+  reward: PatronReward,
+  /** The patron's order is always this (The Pale Courier), capped by what the deck can reach. */
+  fixedOrder: z.object({ family: PotionFamily, minTier: TierName }).optional(),
+  /** Every order is the patron's, at these minimum tiers (The Moonless Patron). */
+  ladder: z.array(TierName).optional(),
+});
+export type Patron = z.infer<typeof Patron>;
+
 export const DeckEntry = z.object({ card: Id, count: z.number().int().min(1) });
 
 export const Witch = z.object({

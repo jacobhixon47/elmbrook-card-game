@@ -126,9 +126,22 @@ export const TIPS: Tip[] = [
   },
   {
     id: 'night',
-    text: 'The Night Shift ends the week. Night customers pay more. Afterwards the Night Market opens and rent is due.',
+    text: 'The Night Shift ends the week. Night customers pay more, some in odd things. Afterwards the Night Market opens and rent is due.',
     when: (s) => s.week === 1 && s.day === NIGHT_SHIFT_DAY && s.phase === 'morning',
     target: RIBBON, at: { x: 320, y: 150 },
+  },
+  {
+    id: 'patron',
+    text: 'Each Night Shift has a patron with a twist on the rules, shown here and on the Calendar. Their order is at the top, one tier harder, and pays a reward.',
+    when: (s) => s.week === 1 && s.day === NIGHT_SHIFT_DAY && s.phase === 'morning',
+    target: SIDE, at: { x: 380, y: 160 },
+  },
+  {
+    id: 'gift',
+    text: 'A gift from the night: a Lunar ingredient, free. Lunar cards live in your Night Satchel and join your deck only on Night Shifts, so they never crowd your days.',
+    when: (s) => s.week === 1 && s.offer?.kind === 'gift' && s.offer.source === 'first-night',
+    until: (s) => s.offer?.kind !== 'gift',
+    at: { x: 320, y: 270 },
   },
   {
     id: 'fence',

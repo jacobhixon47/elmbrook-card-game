@@ -1,4 +1,4 @@
-import { reduce, type Action, type GameEvent, type RunState, type Season } from '../core';
+import { isPatron, reduce, type Action, type GameEvent, type RunState, type Season } from '../core';
 import { seedRng } from '../core/rng';
 import { greedyAction, isOver, randomAction, type Strategy } from './bot';
 
@@ -20,6 +20,11 @@ export type RunRecord = {
   rejected: number;
   /** Times each Tincture was played. */
   tinctures: Record<string, number>;
+  /** Rent was paid in week 4 but the Moonless Patron's orders weren't all filled. */
+  finaleFailed: boolean;
+  /** Patron orders posted and filled, by week. */
+  patronPosted: number[];
+  patronFilled: number[];
   error?: string;
 };
 
@@ -30,6 +35,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
   const rec: RunRecord = {
     seed, won: false, lostWeek: null, finished: false, actions: [], quality: [], gold: [],
     offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {},
+    finaleFailed: false, patronPosted: [], patronFilled: [],
   };
   const max = opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000);
   let rng = seedRng(`bot:${seed}`);
@@ -54,6 +60,13 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
           break;
         case 'orderFilled':
           rec.ordersFilled++;
+          if (isPatron(e.customer)) rec.patronFilled[s.week - 1] = (rec.patronFilled[s.week - 1] ?? 0) + 1;
+          break;
+        case 'orderPosted':
+          if (isPatron(e.order.customer)) rec.patronPosted[s.week - 1] = (rec.patronPosted[s.week - 1] ?? 0) + 1;
+          break;
+        case 'finaleFailed':
+          rec.finaleFailed = true;
           break;
         case 'orderDeclined':
           rec.ordersDeclined++;

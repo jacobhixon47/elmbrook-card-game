@@ -1,5 +1,5 @@
 import {
-  FESTIVAL_WEEK, festivalOn, MOON_NAME, NIGHT_SHIFT_DAY, SEASON_FESTIVAL, todaysWeather, WEATHER_RULE, weatherOn,
+  patronOf, FESTIVAL_WEEK, festivalOn, MOON_NAME, NIGHT_SHIFT_DAY, SEASON_FESTIVAL, todaysWeather, WEATHER_RULE, weatherOn,
   WEEK_MOONS, WEEKS, type Festival, type RunState, type SkyEvent, type Weather,
 } from '../core';
 
@@ -30,11 +30,16 @@ export const FESTIVAL_RULE: Record<Festival, string> = {
 
 export const SKY_NAME: Record<SkyEvent, string> = { eclipse: 'Eclipse', 'meteor-shower': 'Meteor Shower' };
 export const SKY_RULE: Record<SkyEvent, string> = {
-  eclipse: 'Day and night mix: Eclipse recipes can be brewed today.',
+  eclipse: 'Day and night mix: your Night Satchel joins today\'s deck, and Eclipse recipes can be brewed.',
   'meteor-shower': 'Fallen Stars can turn up in rewards, the Market and the Forage all week.',
 };
 
-type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'>;
+type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'> & Partial<Pick<RunState, 'patrons'>>;
+
+/** The patron of a week's Night Shift (GDD §10). */
+function patronFor(s: When, week: number) {
+  return s.patrons ? patronOf({ patrons: s.patrons, week }) : null;
+}
 
 /** The sky event on this day, if any (a Meteor Shower covers its whole week). */
 function skyOn(s: Pick<RunState, 'calendar'>, week: number, day: number): SkyEvent | null {
@@ -54,6 +59,8 @@ function festivalToday(s: When, week: number, day: number): Festival | null {
 /** One short line for the HUD: the weather, plus a festival or sky event when there is one. */
 export function todayLine(s: When): string {
   const parts = [WEATHER_SHORT[todaysWeather(s)]];
+  const patron = s.day === NIGHT_SHIFT_DAY ? patronFor(s, s.week) : null;
+  if (patron) parts.unshift(patron.name);
   const f = festivalToday(s, s.week, s.day);
   if (f) parts.push(FESTIVAL_NAME[f]);
   const e = skyOn(s, s.week, s.day);
@@ -70,6 +77,8 @@ export function todayRules(s: When): string[] {
 export function dayRules(s: When, c: Pick<CalendarCell, 'week' | 'day' | 'weather'>): string[] {
   const out = [WEATHER_RULE[c.weather]];
   if (c.weather === 'fog' && c.day === NIGHT_SHIFT_DAY) out[0] = 'Fog: it never hides a Night Shift\'s orders.';
+  const patron = c.day === NIGHT_SHIFT_DAY ? patronFor(s, c.week) : null;
+  if (patron) out.unshift(`${patron.name}: ${patron.text}`);
   const f = festivalToday(s, c.week, c.day);
   if (f) out.push(`${FESTIVAL_NAME[f]}: ${FESTIVAL_RULE[f]}`);
   const e = skyOn(s, c.week, c.day);
@@ -87,6 +96,8 @@ export function calendarWeeks(s: When): CalendarWeek[] {
     const cells = Array.from({ length: NIGHT_SHIFT_DAY }, (_, d): CalendarCell => {
       const day = d + 1;
       const marks: string[] = [];
+      const patron = day === NIGHT_SHIFT_DAY ? patronFor(s, week) : null;
+      if (patron) marks.push(patron.name.replace(/^The /, ''));
       const f = festivalToday(s, week, day);
       if (f) marks.push(FESTIVAL_NAME[f]);
       const e = skyOn(s, week, day);

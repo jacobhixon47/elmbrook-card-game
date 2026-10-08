@@ -1,13 +1,14 @@
 import { codex } from '../codex';
-import type { Ingredient, Recipe } from '../codex/schema';
+import type { Ingredient, Recipe, Regular } from '../codex/schema';
 import { fillsPattern, recipeAvailable } from './brew';
 import { FESTIVAL_DAY, festivalOn, todaysWeather } from './calendar';
 import { pick, pickWeighted, rand, type Ctx } from './ctx';
+import { patronOf, twistNow } from './night';
 import {
-  BONUS_TIP, RAIN_MIN_ORDERS, HARVEST_FAIR, LONGEST_NIGHT, BLOOMTIDE_PAY, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, WEEK_PAY_STEP,
+  BONUS_TIP, CLOCKLESS_BREWS, RAIN_MIN_ORDERS, HARVEST_FAIR, LONGEST_NIGHT, BLOOMTIDE_PAY, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount,
+  PALE_COURIER_PAY, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, WEEK_PAY_STEP, type Tier,
 } from './rules';
 import { allCards, type CardInstance, type Order, type OrderBonus, type OrderRequest, type Potion, type RunState } from './state';
-
 
 /** Distinct ingredients in these cards with how many copies of each. */
 function ingredientCounts(cards: readonly CardInstance[], night: boolean): [Ingredient, number][] {
@@ -72,6 +73,87 @@ function weightedOrder<T extends { weight: number }>(ctx: Ctx, items: readonly T
   return out;
 }
 
+type Guest = {
+  id: string;
+  prefers: readonly string[];
+  payMult: number;
+  bonusChance: number;
+  bonusPool: readonly OrderBonus[];
+  needsUmbra?: boolean;
+};
+
+const regularGuest = (r: Regular): Guest => ({ id: r.id, prefers: r.prefers, payMult: r.payMult, bonusChance: r.bonusChance, bonusPool: r.bonusPool });
+
+/** Night customers, and the regulars who only come at night (The Gardener). Night customers set no bonus conditions. */
+function nightGuests(): (Guest & { weight: number })[] {
+  return [
+    ...[...codex.nightCustomers.values()].map((n) => ({
+      id: n.id, weight: n.weight, prefers: n.prefers, bonusChance: 0, bonusPool: [] as OrderBonus[], needsUmbra: n.requiresUmbra,
+      payMult: n.paysIn.kind === 'lift-curse' ? n.paysIn.noCurseMult : n.goldMult,
+    })),
+    ...[...codex.regulars.values()].filter((r) => r.nightOnly).map((r) => ({ ...regularGuest(r), weight: r.weight })),
+  ];
+}
+
+type Reach = { reach: Map<string, number>; recipes: Recipe[] };
+
+/** The best quality the deck can reach for a request. */
+function ceilingOf(r: Reach, request: OrderRequest): number {
+  if (request.kind === 'recipe') return r.reach.get(request.recipe)!;
+  return Math.max(...r.recipes.filter((x) => x.family === request.family).map((x) => r.reach.get(x.id)!));
+}
+
+/** A request this guest likes, from what the deck can brew: half the time a named recipe, half a family. */
+function requestFor(ctx: Ctx, r: Reach, prefers: readonly string[]): OrderRequest {
+  const liked = r.recipes.filter((x) => prefers.some((p) => (p === 'rare' ? x.pattern.length === 3 || x.baseHarmony >= 3 : x.family === p)));
+  const recipe = pick(ctx, liked.length ? liked : r.recipes);
+  return rand(ctx) < 0.5 ? { kind: 'recipe', recipe: recipe.id } : { kind: 'family', family: recipe.family };
+}
+
+/** Can the deck put an Umbra ingredient into a potion of this request? */
+function umbraFits(s: RunState, request: OrderRequest, r: Reach): boolean {
+  const hasUmbra = allCards(s).some((c) => codex.ingredients.get(c.card)?.essences.includes('umbra'));
+  const recipes = r.recipes.filter((x) => (request.kind === 'recipe' ? x.id === request.recipe : x.family === request.family));
+  return hasUmbra && recipes.some((x) => x.pattern.includes('umbra') || x.pattern.includes('any'));
+}
+
+type OrderOpts = {
+  customer: string;
+  request: OrderRequest;
+  minTier: Tier;
+  ceiling: number;
+  payScale: number;
+  bonus: OrderBonus | null;
+  quantity?: number;
+  tagBonus?: Order['tagBonus'];
+  needsUmbra?: boolean;
+  expiresIn?: number | null;
+};
+
+function postOrder(ctx: Ctx, o: OrderOpts): void {
+  const s = ctx.s;
+  const cap = tierOf(o.ceiling);
+  const minTier = tierIndex(o.minTier) > tierIndex(cap) ? cap : o.minTier;
+  const order: Order = {
+    id: s.nextUid++,
+    customer: o.customer,
+    request: o.request,
+    minTier,
+    pay: Math.round(ORDER_PAY[minTier] * o.payScale),
+    bonus: o.bonus,
+    status: 'open',
+    quantity: o.quantity ?? 1,
+    delivered: 0,
+    tagBonus: o.tagBonus ?? null,
+    needsUmbra: o.needsUmbra ?? false,
+    expiresIn: o.expiresIn ?? null,
+  };
+  s.orders.push(order);
+  ctx.ev.push({ type: 'orderPosted', order });
+}
+
+const weekScale = (s: RunState, night: boolean) => (1 + WEEK_PAY_STEP * (s.week - 1)) * (night ? NIGHT_PAY : 1) * SEASON_RULES[s.season].payMult;
+
 /**
  * Post the day's orders. Customers ask for what they like (GDD §14 regulars) from what your deck can
  * brew, and never for a tier your deck can't reach, so a weak deck gets easier, poorer orders.
@@ -80,51 +162,87 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
   const s = ctx.s;
   const reach = reachableRecipes(s, nightShift);
   if (reach.size === 0) return;
-  const reachable = [...reach.keys()].map((id) => codex.recipes.get(id)!);
-  const customers = weightedOrder(ctx, [...codex.regulars.values()].filter((r) => nightShift || !r.nightOnly));
-  const weather = todaysWeather(s);
-  const festival = festivalOn(s, s.week, nightShift ? FESTIVAL_DAY : s.day);
-  let count = orderCount(s.week, nightShift, rand(ctx));
+  const r: Reach = { reach, recipes: [...reach.keys()].map((id) => codex.recipes.get(id)!) };
+  if (nightShift) return postNightOrders(ctx, r);
+
+  const customers = weightedOrder(ctx, [...codex.regulars.values()].filter((x) => !x.nightOnly));
+  const festival = festivalOn(s, s.week, s.day);
+  let count = orderCount(s.week, false, rand(ctx));
   // Rain keeps one customer home, but only on a busy day (sim: cutting quiet days too halves the win rate).
-  if (weather === 'rain' && count >= RAIN_MIN_ORDERS) count -= 1;
-  const harvest = !nightShift && festival === 'harvest-fair';
+  if (todaysWeather(s) === 'rain' && count >= RAIN_MIN_ORDERS) count -= 1;
+  const harvest = festival === 'harvest-fair';
   if (harvest) count += HARVEST_FAIR.extraOrders;
-  if (nightShift && festival === 'longest-night') count += LONGEST_NIGHT.extraOrders;
-  const bloomtide = !nightShift && festival === 'bloomtide';
+  const bloomtide = festival === 'bloomtide';
 
   for (let i = 0; i < count; i++) {
     const customer = customers[i % customers.length]!;
-    const liked = reachable.filter((r) =>
-      customer.prefers.some((p) => (p === 'rare' ? r.pattern.length === 3 || r.baseHarmony >= 3 : r.family === p)),
-    );
-    const recipe = pick(ctx, liked.length ? liked : reachable);
-    const request: OrderRequest = rand(ctx) < 0.5 ? { kind: 'recipe', recipe: recipe.id } : { kind: 'family', family: recipe.family };
-    const ceiling =
-      request.kind === 'recipe'
-        ? reach.get(recipe.id)!
-        : Math.max(...reachable.filter((r) => r.family === recipe.family).map((r) => reach.get(r.id)!));
-
-    let minTier = pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
-    // The Night Shift's first order is the patron's: one tier harder.
-    if (nightShift && i === 0) minTier = tierStep(minTier, 1);
-    const cap = tierOf(ceiling);
-    if (tierIndex(minTier) > tierIndex(cap)) minTier = cap;
-
-    const scale = (1 + WEEK_PAY_STEP * (s.week - 1)) * (nightShift ? NIGHT_PAY : 1) * SEASON_RULES[s.season].payMult * customer.payMult;
-    const order: Order = {
-      id: s.nextUid++,
-      customer: customer.id,
-      request,
-      minTier,
-      pay: Math.round(ORDER_PAY[minTier] * scale * (harvest ? HARVEST_FAIR.payMult : 1)),
+    const request = requestFor(ctx, r, customer.prefers);
+    const ceiling = ceilingOf(r, request);
+    const minTier = pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
+    postOrder(ctx, {
+      customer: customer.id, request, minTier, ceiling,
+      payScale: weekScale(s, false) * customer.payMult * (harvest ? HARVEST_FAIR.payMult : 1),
       bonus: rand(ctx) < customer.bonusChance ? pick(ctx, customer.bonusPool) : null,
-      status: 'open',
       quantity: harvest ? HARVEST_FAIR.quantity : 1,
-      delivered: 0,
       tagBonus: bloomtide ? { tag: 'flower', mult: BLOOMTIDE_PAY } : null,
-    };
-    s.orders.push(order);
-    ctx.ev.push({ type: 'orderPosted', order });
+    });
+  }
+}
+
+/**
+ * A Night Shift's orders (GDD §10): the patron's first, one tier harder, then night customers. The
+ * patron's twist can change every order (two potions each, a clock, double pay).
+ */
+function postNightOrders(ctx: Ctx, r: Reach): void {
+  const s = ctx.s;
+  const patron = patronOf(s)!;
+  const twist = patron.twist;
+  let count = patron.orderCount;
+  if (festivalOn(s, s.week, FESTIVAL_DAY) === 'longest-night') count += LONGEST_NIGHT.extraOrders;
+  // Rain keeps a night customer home on a busy night; the patron always comes.
+  if (todaysWeather(s) === 'rain' && count >= RAIN_MIN_ORDERS && !patron.ladder) count -= 1;
+  const scale = weekScale(s, true) * patron.payMult;
+  const every = { quantity: twist === 'orders-double' ? 2 : 1, expiresIn: twist === 'orders-expire-2' ? CLOCKLESS_BREWS : null };
+  const rolled = () => pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
+
+  // The patron's order(s).
+  const ladder = patron.ladder ?? [];
+  for (const tier of ladder) {
+    const request = requestFor(ctx, r, ['lunar', 'rare']);
+    postOrder(ctx, { customer: patron.id, request, minTier: tier, ceiling: ceilingOf(r, request), payScale: scale, bonus: null, ...every });
+  }
+  if (!ladder.length) {
+    const fixed = patron.fixedOrder;
+    let request: OrderRequest;
+    let minTier: Tier;
+    if (fixed && r.recipes.some((x) => x.family === fixed.family)) {
+      request = { kind: 'family', family: fixed.family };
+      minTier = fixed.minTier;
+    } else if (fixed) {
+      // No way to brew it yet: the patron asks for the deck's best family at its best tier instead.
+      const best = [...r.recipes].sort((a, b) => r.reach.get(b.id)! - r.reach.get(a.id)!)[0]!;
+      request = { kind: 'family', family: best.family };
+      minTier = tierOf(r.reach.get(best.id)!);
+    } else {
+      request = requestFor(ctx, r, ['rare']);
+      minTier = tierStep(rolled(), 1);
+    }
+    postOrder(ctx, { customer: patron.id, request, minTier, ceiling: ceilingOf(r, request), payScale: scale, bonus: null, ...every });
+  }
+
+  // Night customers fill the rest.
+  const guests = weightedOrder(ctx, nightGuests());
+  const extra = twist === 'pale-courier' ? PALE_COURIER_PAY : 1;
+  for (let i = 0; i < count - Math.max(1, ladder.length); i++) {
+    const guest = guests[i % guests.length]!;
+    const request = requestFor(ctx, r, guest.prefers);
+    postOrder(ctx, {
+      customer: guest.id, request, minTier: rolled(), ceiling: ceilingOf(r, request),
+      payScale: scale * guest.payMult * extra,
+      bonus: guest.bonusChance > 0 && rand(ctx) < guest.bonusChance ? pick(ctx, guest.bonusPool) : null,
+      needsUmbra: guest.needsUmbra === true && umbraFits(s, request, r),
+      ...every,
+    });
   }
 }
 
@@ -132,8 +250,19 @@ export function matchesRequest(potion: Pick<Potion, 'recipe' | 'family'>, reques
   return request.kind === 'recipe' ? potion.recipe === request.recipe : potion.family === request.family;
 }
 
-export function satisfies(potion: Pick<Potion, 'recipe' | 'family' | 'tier'>, order: Order): boolean {
-  return order.status === 'open' && matchesRequest(potion, order.request) && tierIndex(potion.tier) >= tierIndex(order.minTier);
+type PotionLike = Pick<Potion, 'recipe' | 'family' | 'tier' | 'ingredients'>;
+
+const hasUmbra = (p: Pick<Potion, 'ingredients'>) => p.ingredients.some((id) => codex.ingredients.get(id)?.essences.includes('umbra'));
+
+export function satisfies(potion: PotionLike, order: Order): boolean {
+  return order.status === 'open' && matchesRequest(potion, order.request) && tierIndex(potion.tier) >= tierIndex(order.minTier)
+    && (!order.needsUmbra || hasUmbra(potion));
+}
+
+/** `satisfies`, plus tonight's twist: The May Queen won't take the same family twice running. */
+export function fits(s: Partial<Pick<RunState, 'patrons' | 'week' | 'day' | 'lastFamily'>>, potion: PotionLike, order: Order): boolean {
+  if (!satisfies(potion, order)) return false;
+  return !(twistNow(s) === 'family-chain' && s.lastFamily === potion.family);
 }
 
 export function meetsBonus(potion: Pick<Potion, 'ingredients'>, bonus: OrderBonus): boolean {

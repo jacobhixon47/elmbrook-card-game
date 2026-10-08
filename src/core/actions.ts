@@ -1,6 +1,6 @@
 import type { Season, Weather } from './calendar';
 import type { Tier } from './rules';
-import type { Errand, Order, Potion } from './state';
+import type { Errand, GiftSource, Order, Potion } from './state';
 
 export type Action =
   | { type: 'startRun'; seed: string; witch: string; season?: Season; unlocks?: string[] }
@@ -23,6 +23,9 @@ export type Action =
   | { type: 'forage'; index: number }
   | { type: 'removeCard'; uid: number }
   | { type: 'leaveErrand' }
+  // After a Night Shift: free picks (the first-night Lunar card, night customers' payments, a patron's reward).
+  | { type: 'takeGift'; index: number }
+  | { type: 'passGift' }
   // Night Market, then rent.
   | { type: 'sellPotion'; uid: number }
   | { type: 'leaveMarket' }
@@ -31,9 +34,13 @@ export type Action =
   | { type: 'debug'; op: 'jumpToDay'; week: number; day: number }
   | { type: 'debug'; op: 'giveCard'; card: string }
   | { type: 'debug'; op: 'learnRecipes'; recipes: string[] }
-  | { type: 'debug'; op: 'setWeather'; weather: Weather };
+  | { type: 'debug'; op: 'setWeather'; weather: Weather }
+  | { type: 'debug'; op: 'setPatron'; week: number; patron: string };
 
-export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'curse' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
+export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
+
+/** Where a gained card came from. */
+export type CardSource = 'reward' | 'market' | 'forage' | 'sludge' | 'gift' | 'payment' | 'copy';
 
 export type GameEvent =
   | { type: 'runStarted'; seed: string; witch: string; season: Season }
@@ -70,7 +77,15 @@ export type GameEvent =
   | { type: 'rewardSkipped' }
   | { type: 'errandsOffered'; options: Errand[] }
   | { type: 'errandChosen'; errand: Errand }
-  | { type: 'cardGained'; card: string; uid: number; source: 'reward' | 'market' | 'forage' | 'sludge' }
+  | { type: 'cardGained'; card: string; uid: number; source: CardSource }
+  /** A free pick waits for after tonight's reward. */
+  | { type: 'giftQueued'; source: GiftSource; cards: string[] }
+  | { type: 'giftTaken'; source: GiftSource; card: string; uid: number }
+  | { type: 'giftPassed'; source: GiftSource }
+  /** The customer gave up waiting (The Clockless Man). */
+  | { type: 'orderExpired'; order: number; customer: string }
+  /** The finale's orders weren't all filled, so the month is lost. */
+  | { type: 'finaleFailed'; patron: string }
   | { type: 'upgradeBought'; upgrade: 'cauldron-slot' | 'shelf-slot' }
   | { type: 'cardRemoved'; uid: number; card: string }
   | { type: 'nightMarketOpened' }
