@@ -5,7 +5,8 @@ import { EFFECTS } from '../src/core/effects';
 import { brewing, no, ofType, ok, slotAll, withHand } from './helpers';
 
 const ings = (...ids: string[]) => ids.map((id) => codex.ingredients.get(id)!);
-const known = ['healing-draught', 'hearthwarm-tonic', 'calm-waters', 'sleep-syrup'];
+const knownRecipes = ['healing-draught', 'hearthwarm-tonic', 'calm-waters', 'sleep-syrup'];
+const known = { knownRecipes, unlocks: [] };
 
 /** Brew these cards from a fresh brewing state; returns the result. */
 function brewCards(cards: string[], tweak?: (s: RunState) => void) {
@@ -29,7 +30,7 @@ describe('recipe matching', () => {
     expect(matchRecipe(ings('mistcap', 'thistledown'), known)?.id).toBe('whisper-ink');
     // Honeycomb + Willow Bark make Healing Draught or Hearthwarm Tonic (both 2).
     expect(matchRecipe(ings('honeycomb', 'willow-bark'), known)?.id).toBe('healing-draught');
-    expect(matchRecipe(ings('honeycomb', 'willow-bark'), ['hearthwarm-tonic'])?.id).toBe('hearthwarm-tonic');
+    expect(matchRecipe(ings('honeycomb', 'willow-bark'), { knownRecipes: ['hearthwarm-tonic'], unlocks: [] })?.id).toBe('hearthwarm-tonic');
   });
 
   it('wild essences and "any" slots match anything', () => {
@@ -175,12 +176,12 @@ describe('tinctures', () => {
     const [s0, uids] = withHand(brewing(), ['stir', 'steep', 'elmroot', 'creekwater']);
     let s = ok(s0, { type: 'playTincture', uid: uids[0]! }).state;
     s = ok(s, { type: 'playTincture', uid: uids[1]! }).state;
-    expect(s.pending).toEqual({ harmony: 1, potencyMult: 1.5, copies: 1 });
+    expect(s.pending).toEqual({ harmony: 1, harmonyMult: 1, potency: 0, potencyMult: 1.5, copies: 1, fullExperiment: false });
     s = slotAll(s, uids.slice(2));
     const r = ok(s, { type: 'brew' });
     // floor(7 x 1.5) = 10, Harmony 2 + 1.
     expect(ofType(r.events, 'scoreStep').at(-1)).toMatchObject({ source: 'tincture', potency: 10, harmony: 3 });
-    expect(r.state.pending).toEqual({ harmony: 0, potencyMult: 1, copies: 1 });
+    expect(r.state.pending).toEqual({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false });
   });
 
   it('Bottle Spare makes two potions', () => {

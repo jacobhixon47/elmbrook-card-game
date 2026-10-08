@@ -3,6 +3,7 @@ import type { Recipe } from '../codex/schema';
 import {
   BREWS_PER_DAY, DAYS_PER_WEEK, DISCARDS_PER_DAY, NIGHT_SHIFT_DAY, RENT, WEEKS, type RunState,
 } from '../core';
+import { recipeAvailable } from '../core/brew';
 import { familyName } from './describe';
 import { GLOSSARY, tierLadder } from './inspect';
 
@@ -39,9 +40,9 @@ export type RecipeRow = {
   note: string;
 };
 
-/** Every recipe in the game: known ones in full, the rest as "???" with their size. */
-export function recipeRows(s: Pick<RunState, 'knownRecipes' | 'cauldronSlots'>): RecipeRow[] {
-  return [...codex.recipes.values()].map((r) => {
+/** Every recipe this run can brew: known ones in full, the rest as "???" with their size. */
+export function recipeRows(s: Pick<RunState, 'knownRecipes' | 'unlocks' | 'cauldronSlots'>): RecipeRow[] {
+  return [...codex.recipes.values()].filter((r) => recipeAvailable(r, s)).map((r) => {
     const known = s.knownRecipes.includes(r.id);
     const big = r.pattern.length > s.cauldronSlots;
     const note = big ? `Needs ${r.pattern.length} cauldron slots.` : known ? '' : 'Brew the right essences to discover it.';
@@ -56,6 +57,17 @@ export function recipeRows(s: Pick<RunState, 'knownRecipes' | 'cauldronSlots'>):
       note,
     };
   }).sort((a, b) => Number(b.known) - Number(a.known) || a.slots - b.slots);
+}
+
+/** One line on what is left to discover, by size. */
+export function undiscoveredLine(rows: readonly RecipeRow[], cauldronSlots: number): string {
+  const left = rows.filter((r) => !r.known);
+  if (left.length === 0) return 'You have found every recipe you can brew this run.';
+  const bySize = new Map<number, number>();
+  for (const r of left) bySize.set(r.slots, (bySize.get(r.slots) ?? 0) + 1);
+  const words = ['', 'one', 'two', 'three', 'four'];
+  const parts = [...bySize].sort((a, b) => a[0] - b[0]).map(([n, k]) => `${k} with ${words[n] ?? n} ingredients${n > cauldronSlots ? ` (needs ${n} cauldron slots)` : ''}`);
+  return `Still to discover: ${parts.join(', ')}. Brew the right essences to discover them.`;
 }
 
 export type DeckRow = { card: string; total: number; inDraw: number };

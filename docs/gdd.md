@@ -83,7 +83,8 @@ Carried over from 1.0: click an order to open its dialogue; choose **Fulfill**, 
 - **Request:** a specific potion ("Healing Draught") or a family ("anything Warming", "a Calming potion").
 - **Quality minimum:** a quality tier (§6.4). The minimum rises by week (Fine in week 1; mostly Superb by week 3; half Masterwork in week 4; the Night Shift's first order is one tier harder), but an order never asks for more than your deck could brew with a perfect draw and the Tinctures you own. A weak deck gets easier orders that pay less, so rent is what squeezes it.
 - **Pay:** base gold; tips scale with how far you exceed the minimum.
-- **Optional bonus condition:** "no Umbra ingredients", "brewed with exactly 3 ingredients", "use a Wychwood ingredient". Meeting it adds a tip and a heart.
+- **Optional bonus condition:** "no Umbra ingredients", "brewed with exactly 3 ingredients", "use a Wychwood ingredient". Meeting it adds a tip and a heart. Each regular has their own bonus chance and conditions.
+- **Who comes in:** regulars have a weight (how often they visit), a pay multiplier and a tip multiplier, so Pip & Quill pay little but tip well and Marlowe pays more.
 
 **Delivering:** a matching potion from your Shelf or a fresh brew fulfils the order and earns a heart (two if the bonus condition is met). **Declining** costs a heart with that customer. Unfinished orders at end of day count as declined. Hearts run from 0 to 10.
 
@@ -98,7 +99,7 @@ A separate cast who only come after dark. Stranger and more formal than the day 
 | wisp-courier | The Wisp Courier | Delivers letters between the living and the not-quite | Secrets, Lunar | Omens |
 | lantern-witch | The Lantern Witch | Lights the Night Market's lamps, sharp-tongued | Ember, Vigor | Lunar cards |
 | bog-hag | Granny Bogwort | Lives in the fen, surprisingly sweet | Healing with Umbra | Rare ingredients |
-| moth-duchess | The Moth Duchess | Aristocrat of the lamplight | Beauty, Fortune | Gold, lavishly |
+| moth-duchess | The Moth Duchess | Aristocrat of the lamplight | Illusion, Fortune | Gold, lavishly |
 | sleepless-miller | The Sleepless Miller | Hasn't slept in years | Calming, Sleep | Curses lifted |
 
 The Night Shift patron (§10) is the featured guest; night customers fill the other orders that night.
@@ -158,6 +159,9 @@ The bulk of the deck. Each has:
 - **Rarity:** Common, Uncommon, Rare, Lunar.
 - **Origin:** Garden, Wychwood, Creek, Mine, Market, Night (flavour + bonus conditions + shared codex with game 2).
 - **Optional text effect:** "+2 Harmony if brewed with a Tide ingredient", "When discarded, draw 1".
+- **Tags** (flower, root, frost, mineral…) that effects and later systems key on, e.g. Ice Lily's "+1 Harmony per Frost ingredient".
+- **In season:** the seasons it grows in. In-season ingredients are three times as likely in rewards, the Market and the Forage.
+- **Pool:** base (offered from the first run), unlock (offered once unlocked, §13) or event (only from its calendar event).
 
 ### 5.2 Essences
 
@@ -177,6 +181,8 @@ Seven essences. Recipes are keyed on essences, not specific ingredients, so many
 
 From 1.0's action/utility cards. Played from hand, don't use a cauldron slot, don't use a Brew.
 Examples: **Stir** (+1 Harmony on next brew), **Forage** (draw 2), **Steep** (next brew's Potency x1.5), **Sift** (discard any number, draw that many; costs no Discard), **Bottle Spare** (next brew yields 2 potions).
+
+Some ask for a target: **Infuse** (a hand ingredient gains +2 Potency for the run), **Taste Test** (see the top 3 cards of the draw pile and put them back in the order you click), **Decant** (raise a Shelf potion one tier, up to Superb). The scene asks for the target after the card is clicked; Cancel puts the Tincture back. "Next brew" bonuses last one brew, except Grimoire Page, which waits for the next Experiment.
 
 ### 5.4 Night Satchel (lunar cards)
 
@@ -207,6 +213,8 @@ A recipe is an essence pattern with a base Harmony and a potion family.
 - **Known recipes** are in your **Grimoire**. Each witch starts knowing 4.
 - **Unknown but valid** combinations brew as an **Experiment**: the preview shows "???", and brewing it discovers the recipe (added to the Grimoire for this run, and to the permanent Codex) at -1 quality tier for that first brew. This folds 1.0's separate "recipe experimentation" screen into play.
 - **Invalid** combinations warn first, then produce **Sludge** if you insist: no potion, and a Sludge junk card is added to the deck (it can be removed at errands).
+- **When several recipes match**, the most specific pattern wins (fewest "any" slots), then the higher base Harmony, then a recipe you already know, then codex order.
+- **Pools:** base recipes can be discovered in any run. Unlock-pool recipes need a meta unlock (§13) first, and event recipes (Eclipse) only brew during their event.
 
 ### 6.3 Scoring
 
@@ -326,58 +334,26 @@ Elmbrook is a roguelite: every run, won or lost, moves something forward.
 - **Unlocks:** witches, cauldrons, familiars and cards enter the pool via achievements and regulars' stories.
 - **Modes (later):** **Long Year** (unlocked by completing Year 1): one continuous run through all four seasons, 16 weeks, with mid-run saves; the deck, familiars and gold carry over between seasons. Also Endless (keep going past the finale), Daily seeded run, Challenge runs ("no Vital ingredients").
 
-## 14. Starter content (v0)
+## 14. Starter content
 
-Enough for the first playable. Codex IDs are kebab-case.
+The content lives in `src/codex/content.ts`, imported from the balance tables (`elmbrook/balance/data` in the project files). As of M3 part 1: 51 ingredients, 15 Tinctures, 3 junk cards and 36 recipes across nine families: Healing, Warming, Calming, Vigor, Protection, Secrets, Fortune, **Illusion** and Lunar.
 
-### Ingredients
+**Illusion** replaces the earlier Beauty family: disguises, illusions and borrowed faces (Mirror Mask, Fetch Draught, Moonlit Veil). The Moth Duchess orders it, and it suits the Illusionist. The family is one id (`illusion`) in the schema, so renaming it later is a codex change.
 
-| ID | Name | Essences | Potency | Rarity | Origin | Effect |
-|---|---|---|---|---|---|---|
-| elmroot | Elmroot | Vital | 4 | Common | Garden | — |
-| creekwater | Creekwater | Tide | 3 | Common | Creek | — |
-| emberbloom | Emberbloom | Ember | 4 | Common | Garden | — |
-| thistledown | Thistledown | Gale | 3 | Common | Wychwood | When discarded, draw 1. |
-| river-clay | River Clay | Stone | 5 | Common | Creek | — |
-| nightshade | Nightshade | Umbra | 5 | Common | Wychwood | — |
-| honeycomb | Honeycomb | Vital, Ember | 4 | Uncommon | Market | — |
-| mistcap | Mistcap Mushroom | Tide, Umbra | 5 | Uncommon | Wychwood | — |
-| quartz-dust | Quartz Dust | Stone, Gale | 4 | Uncommon | Mine | +2 Harmony if brewed with 3 ingredients. |
-| dragon-pepper | Dragon Pepper | Ember | 8 | Uncommon | Market | Brewing it costs 1 Discard. |
-| willow-bark | Willow Bark | Vital, Tide | 5 | Uncommon | Creek | — |
-| crow-feather | Crow Feather | Gale, Umbra | 6 | Rare | Wychwood | +1 Harmony per Umbra card in hand. |
-| amber-sap | Amber Sap | Stone, Vital | 7 | Rare | Wychwood | Aged. |
-| starlit-dew | Starlit Dew | Lunar, Tide | 9 | Lunar | Night | Night only. |
-| moonmoth-wing | Moonmoth Wing | Lunar, Gale | 8 | Lunar | Night | Night only. Counts as any essence. |
-| grave-moss | Grave Moss | Lunar, Umbra | 10 | Lunar | Night | Night only. -1 heart with the customer. |
+Every pair of the six day essences brews something, so two-card Sludge only happens with a same-essence pair. Base Harmony runs 2-3 for two-card recipes, 4-6 for three-card ones, 5-10 for Lunar and 10-12 for Eclipse.
 
-### Recipes
-
-| ID | Name | Pattern | Base Harmony | Family |
-|---|---|---|---|---|
-| healing-draught | Healing Draught | Vital + Tide | 2 | Healing |
-| hearthwarm-tonic | Hearthwarm Tonic | Ember + Vital | 2 | Warming |
-| sleep-syrup | Sleep Syrup | Umbra + Tide | 2 | Calming |
-| fleetfoot-elixir | Fleetfoot Elixir | Gale + Ember | 2 | Vigor |
-| ironhide-salve | Ironhide Salve | Stone + Vital | 2 | Protection |
-| whisper-ink | Whisper Ink | Umbra + Gale | 3 | Secrets |
-| courage-cordial | Courage Cordial | Ember + Stone | 3 | Vigor |
-| calm-waters | Calm Waters | Tide + Gale | 2 | Calming |
-| philter-of-luck | Philter of Luck | Gale + Gale + Vital | 4 | Fortune |
-| greater-restorative | Greater Restorative | Vital + Vital + Tide | 5 | Healing |
-| shadowstep-draught | Shadowstep Draught | Umbra + Umbra + Gale | 5 | Secrets |
-| moonglass-elixir | Moonglass Elixir | Lunar + Tide + any | 8 | Lunar |
+Junk: **Sludge** (does nothing), **Cobweb** (blows away after 3 days), **Bad Omen** (-1 Harmony on every brew while it sits in hand, never below 1).
 
 ### Regulars
 
-| ID | Name | Who | Tends to order |
-|---|---|---|---|
-| bea-thornwick | Bea Thornwick | The baker, frantic and kind | Warming, Vigor |
-| old-tobin | Old Tobin | Retired miner with aches | Healing, Protection |
-| pip-and-quill | Pip & Quill | Twin kids, up to mischief | Secrets, Fortune |
-| sister-alder | Sister Alder | Keeper of the shrine | Calming, Healing |
-| marlowe-vance | Marlowe Vance | Travelling merchant, haggles | anything Rare, pays in odd items |
-| the-gardener | The Gardener | Nobody's sure who they are | Lunar (only at night) |
+| ID | Name | Who | Tends to order | Quirk |
+|---|---|---|---|---|
+| bea-thornwick | Bea Thornwick | The baker, frantic and kind | Warming, Vigor | Comes often |
+| old-tobin | Old Tobin | Retired miner with aches | Healing, Protection | Comes often |
+| pip-and-quill | Pip & Quill | Twin kids, up to mischief | Secrets, Fortune | Pay ×0.8, tips ×1.5, more bonus conditions |
+| sister-alder | Sister Alder | Keeper of the shrine | Calming, Healing | Comes often |
+| marlowe-vance | Marlowe Vance | Travelling merchant, haggles | anything Rare | Pays ×1.25 |
+| the-gardener | The Gardener | Nobody's sure who they are | Lunar (only at night) | Pays ×1.5 |
 
 ### Starting deck (Hedge Witch)
 

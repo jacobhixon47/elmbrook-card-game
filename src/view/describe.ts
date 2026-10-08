@@ -26,6 +26,7 @@ const FAMILY_LINE: Record<PotionFamily, string> = {
   protection: 'Something to keep me in one piece?',
   secrets: "Nothing anyone else needs to know about.",
   fortune: 'I could use a bit of luck.',
+  illusion: 'I need to look like someone else for an evening.',
   lunar: 'Something that remembers the moon.',
 };
 

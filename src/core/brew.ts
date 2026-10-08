@@ -43,17 +43,36 @@ export function fillsPattern(ings: readonly Ingredient[], pattern: Recipe['patte
   );
 }
 
+export type RecipeAccess = Pick<RunState, 'knownRecipes' | 'unlocks'>;
+
 /**
- * The recipe these ingredients brew, if any. When several match, the highest base Harmony wins,
- * then a recipe you already know, then codex order.
+ * Whether this run can brew a recipe: base-pool recipes always, unlock-pool ones once unlocked,
+ * and anything already in the Grimoire. Eclipse and other event recipes wait for their event (M3 Calendar).
  */
-export function matchRecipe(ings: readonly Ingredient[], known: readonly string[]): Recipe | null {
+export function recipeAvailable(r: Recipe, s: RecipeAccess): boolean {
+  if (s.knownRecipes.includes(r.id)) return true;
+  if (r.eclipseOnly || r.pool === 'event') return false;
+  return r.pool === 'base' || s.unlocks.includes(r.id);
+}
+
+const anySlots = (r: Recipe) => r.pattern.filter((e) => e === 'any').length;
+
+/**
+ * The recipe these ingredients brew, if any. When several match, the most specific pattern wins
+ * (fewest "any" slots), then the highest base Harmony, then a recipe you already know, then codex order.
+ */
+export function matchRecipe(ings: readonly Ingredient[], s: RecipeAccess): Recipe | null {
   let best: Recipe | null = null;
+  const rank = (r: Recipe) => [-anySlots(r), r.baseHarmony, s.knownRecipes.includes(r.id) ? 1 : 0];
   for (const r of codex.recipes.values()) {
-    if (!fillsPattern(ings, r.pattern)) continue;
-    if (!best || r.baseHarmony > best.baseHarmony || (r.baseHarmony === best.baseHarmony && known.includes(r.id) && !known.includes(best.id))) {
+    if (!recipeAvailable(r, s) || !fillsPattern(ings, r.pattern)) continue;
+    if (!best) {
       best = r;
+      continue;
     }
+    const [a, b] = [rank(r), rank(best)];
+    const i = a.findIndex((v, k) => v !== b[k]);
+    if (i >= 0 && a[i]! > b[i]!) best = r;
   }
   return best;
 }
@@ -72,19 +91,26 @@ export function ingredientsOf(cards: readonly CardInstance[]): Ingredient[] | nu
  * What brewing these cards would make, with every scoring step (GDD §6.3). Pure; used by the
  * cauldron preview, the bot and `brew` itself, so the preview is never wrong.
  */
-export function previewBrew(
-  state: Pick<RunState, 'knownRecipes' | 'pending'>,
-  cards: readonly CardInstance[],
-  hand: readonly CardInstance[],
-): BrewPreview {
+export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'brewsToday' | 'orders'>;
+
+export function previewBrew(state: BrewState, cards: readonly CardInstance[], hand: readonly CardInstance[]): BrewPreview {
   const ings = ingredientsOf(cards);
   if (!ings || ings.length < 2) return { kind: 'empty' };
   const discardCost = cards.reduce((n, c) => n + sumEffect(c.card, 'discardCost'), 0);
-  const recipe = matchRecipe(ings, state.knownRecipes);
+  const recipe = matchRecipe(ings, state);
   if (!recipe) return { kind: 'sludge', discardCost };
 
   const steps: ScoreStep[] = [];
-  const c: ScoreCtx = { potency: 0, harmony: recipe.baseHarmony, ingredients: ings, hand };
+  const c: ScoreCtx = {
+    potency: 0,
+    harmony: recipe.baseHarmony,
+    recipe,
+    ingredients: ings,
+    hand,
+    week: state.week,
+    firstBrew: state.brewsToday === 0,
+    filledToday: state.orders.filter((o) => o.status === 'filled').length,
+  };
   steps.push({ type: 'scoreStep', source: 'recipe', id: recipe.id, potency: 0, harmony: c.harmony });
 
   // 1. Ingredients, in slot order.
@@ -92,6 +118,10 @@ export function previewBrew(
     const ing = ings[i]!;
     const notes: string[] = [];
     c.potency += ing.potency;
+    if (card.bonus) {
+      c.potency += card.bonus;
+      notes.push(`Infused +${card.bonus}`);
+    }
     if (hasEffect(ing.id, 'aged') && card.aged) {
       c.potency += card.aged;
       notes.push(`Aged +${card.aged}`);
@@ -103,20 +133,29 @@ export function previewBrew(
     steps.push({ type: 'scoreStep', source: 'ingredient', id: ing.id, potency: c.potency, harmony: c.harmony, ...(notes.length ? { note: notes.join(', ') } : {}) });
   });
 
-  // 2. Tinctures played before this brew.
-  const { harmony, potencyMult } = state.pending;
-  if (harmony !== 0 || potencyMult !== 1) {
-    c.harmony += harmony;
-    c.potency = Math.floor(c.potency * potencyMult);
+  // Junk in hand that drags every brew down (Bad Omen).
+  const drag = hand.reduce((n, card) => n + sumEffect(card.card, 'inHandHarmony'), 0);
+  if (drag !== 0) {
+    c.harmony = Math.max(1, c.harmony + drag);
+    steps.push({ type: 'scoreStep', source: 'curse', id: 'in-hand', potency: c.potency, harmony: c.harmony, note: `${drag} Harmony` });
+  }
+
+  // 2. Tinctures played before this brew: flat bonuses, then multipliers.
+  const p = state.pending;
+  if (p.harmony !== 0 || p.potency !== 0 || p.potencyMult !== 1 || p.harmonyMult !== 1) {
+    c.potency = Math.floor((c.potency + p.potency) * p.potencyMult);
+    c.harmony = (c.harmony + p.harmony) * p.harmonyMult;
     steps.push({ type: 'scoreStep', source: 'tincture', id: 'pending', potency: c.potency, harmony: c.harmony });
   }
 
   // 3-5. Card modifiers, familiars and the cauldron resolve here once they exist (M3).
 
-  const quality = c.potency * c.harmony;
+  // Harmony can be fractional after a ×1.5; quality rounds down.
+  const quality = Math.floor(c.potency * c.harmony);
   const known = state.knownRecipes.includes(recipe.id);
-  // An Experiment discovers the recipe but brews one tier lower (GDD §6.2).
-  const tier = known ? tierOf(quality) : tierStep(tierOf(quality), -1);
+  // An Experiment discovers the recipe but brews one tier lower (GDD §6.2), unless a Grimoire Page helps.
+  const tier = known || p.fullExperiment ? tierOf(quality) : tierStep(tierOf(quality), -1);
+  const copies = Math.max(p.copies, ...cards.flatMap((card) => effectsOf(card.card).map((e) => e.copies ?? 1)));
   return {
     kind: 'potion',
     recipe: recipe.id,
@@ -126,7 +165,7 @@ export function previewBrew(
     harmony: c.harmony,
     quality,
     tier,
-    copies: state.pending.copies,
+    copies,
     discardCost,
     steps,
   };

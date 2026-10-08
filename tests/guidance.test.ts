@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import { previewBrew, type Action, type RunState } from '../src/core';
-import { deckRows, guideSections, recipeRows, stages } from '../src/view/guide';
+import { deckRows, guideSections, recipeRows, stages, undiscoveredLine } from '../src/view/guide';
 import { cardInfo, GLOSSARY, termsIn, tierLadder } from '../src/view/inspect';
 import { TIPS, TUTORIAL_SEED, TutorialProgress, type TutorialView } from '../src/view/tutorial';
 import { brewing, ok, start } from './helpers';
@@ -18,7 +18,7 @@ describe('card inspect', () => {
 
   it('names essences and potency and defines the terms a card uses', () => {
     const info = cardInfo('thistledown');
-    expect(info.kind).toBe('Common ingredient · Wychwood');
+    expect(info.kind).toBe('Common ingredient · Wychwood · Flower');
     expect(info.essences).toEqual(['gale']);
     expect(info.text).toBe('Gale essence. Potency 3. When discarded, draw 1.');
     expect(info.terms.map(([t]) => t)).toEqual(['Essence', 'Potency', 'Discard']);
@@ -34,16 +34,17 @@ describe('card inspect', () => {
 });
 
 describe('Grimoire', () => {
-  it('shows known recipes in full and hides the rest', () => {
+  it('shows known recipes in full and counts the rest', () => {
     const rows = recipeRows(start());
-    expect(rows).toHaveLength(codex.recipes.size);
+    expect(rows.length).toBeLessThan(codex.recipes.size); // unlock and event recipes are left out
     const known = rows.filter((r) => r.known);
     expect(known.map((r) => r.id).sort()).toEqual([...start().knownRecipes].sort());
     expect(known[0]!.pattern).not.toBeNull();
     const hidden = rows.find((r) => !r.known)!;
     expect(hidden).toMatchObject({ name: '???', pattern: null, harmony: null });
-    expect(rows.find((r) => r.slots === 3)!.note).toMatch(/3 cauldron slots/);
-    expect(recipeRows({ ...start(), cauldronSlots: 3 }).find((r) => r.slots === 3 && !r.known)!.note).toMatch(/discover/);
+    expect(undiscoveredLine(rows, 2)).toMatch(/with three ingredients \(needs 3 cauldron slots\)/);
+    expect(undiscoveredLine(rows, 3)).not.toMatch(/needs/);
+    expect(undiscoveredLine(known, 2)).toMatch(/every recipe/);
   });
 
   it('groups the deck and counts what is left to draw', () => {

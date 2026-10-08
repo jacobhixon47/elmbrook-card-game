@@ -5,6 +5,7 @@ import {
   NIGHT_SHIFT_DAY, previewBrew, rentDue, SKIP_GOLD, skyTime, payout,
   type Action, type CardInstance, type GameEvent, type Order, type Potion, type RunState, type Season, type SkyTime, type Weather,
 } from '../core';
+import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
 import { stepAction } from '../debug/fixture-steps';
 import { markReady } from '../debug/hook';
@@ -29,7 +30,17 @@ import { addWeather } from '../view/weather';
 type Mode =
   | { kind: 'idle' }
   | { kind: 'dialog'; order: number }
-  | { kind: 'select'; purpose: 'discard' | 'sift'; tincture?: number; picked: number[] };
+  | { kind: 'select'; purpose: Purpose; tincture?: number; picked: number[] };
+
+/** What a selection is for: a Discard, or the targets of a Tincture (see `targetsOf`). */
+type Purpose = 'discard' | 'hand' | 'hand-one' | 'top-3' | 'shelf-one';
+
+const PICK_PROMPT: Record<Exclude<Purpose, 'discard'>, string> = {
+  hand: 'Pick the cards to Sift away.',
+  'hand-one': 'Pick an ingredient to Infuse.',
+  'top-3': 'Click the cards in the order you want to draw them.',
+  'shelf-one': 'Pick a Shelf potion to Decant.',
+};
 
 const HAND_Y = 304;
 const SLOT_Y = 128;
@@ -54,6 +65,7 @@ export class Run extends Phaser.Scene {
   private cauldronY = 195;
   /** The open Grimoire tab, drawn over any screen; null when closed. */
   private book: GrimoireTab | null = null;
+  private bookPage = 0;
   private tip!: Tooltip;
   /** The first-run tutorial, while it lasts (GDD §15.1). Kept across restarts for a new sky. */
   private tutorial: TutorialProgress | null = null;
@@ -89,6 +101,12 @@ export class Run extends Phaser.Scene {
       if (order) this.mode = { kind: 'dialog', order: order.id };
     }
     if (fixture?.ui?.discard) this.mode = { kind: 'select', purpose: 'discard', picked: fixture.ui.discard.map((i) => state.hand[i]!.uid) };
+    if (fixture?.ui?.target) {
+      const t = fixture.ui.target;
+      const inst = state.hand[t.hand]!;
+      const picked = (t.picked ?? []).map((i) => (targetsOf(inst.card) === 'top-3' ? state.drawPile[i]! : state.hand[i]!).uid);
+      this.mode = { kind: 'select', purpose: targetsOf(inst.card)!, tincture: inst.uid, picked };
+    }
     if (fixture?.ui?.grimoire) this.book = fixture.ui.grimoire;
     if (fixture?.ui?.tutorial) {
       // Show one tip: everything before it counts as done.
@@ -198,12 +216,17 @@ export class Run extends Phaser.Scene {
       drawGrimoire(this, this.ui, s, this.book, this.tip, {
         tab: (t) => this.openBook(t),
         close: () => this.openBook(null),
-      });
+        page: (n) => {
+          this.bookPage = n;
+          this.render();
+        },
+      }, this.bookPage);
     }
     this.drawTutorial(s);
   }
 
   private openBook(tab: GrimoireTab | null) {
+    if (tab !== this.book) this.bookPage = 0;
     this.book = tab;
     this.render();
   }
@@ -360,9 +383,19 @@ export class Run extends Phaser.Scene {
       img.setInteractive({ useHandCursor: true });
       img.on('pointerover', () => this.shelfHint?.setText(`${recipeName(p.recipe)} · ${TIER_NAME[p.tier]} ${p.quality}`));
       img.on('pointerout', () => this.shelfHint?.setText('Click a potion to deliver it.'));
-      img.on('pointerdown', () => this.deliverShelf(s, p));
+      img.on('pointerdown', () => {
+        if (this.mode.kind === 'select' && this.mode.purpose === 'shelf-one') {
+          const tincture = this.mode.tincture!;
+          this.mode = { kind: 'idle' };
+          return void this.dispatch({ type: 'playTincture', uid: tincture, targets: [p.uid] });
+        }
+        this.deliverShelf(s, p);
+      });
     });
-    this.shelfHint = this.text(x, SHELF_Y + 56, s.shelf.length ? 'Click a potion to deliver it.' : 'Potions you keep wait here.', { size: 7, color: 'a' });
+    const decanting = this.mode.kind === 'select' && this.mode.purpose === 'shelf-one';
+    if (decanting) this.add2(this.add.rectangle(SIDE.x, SHELF_Y, SIDE.w, 70).setOrigin(0).setStrokeStyle(2, hex('Y')));
+    const hint = decanting ? 'Click a potion to Decant it.' : s.shelf.length ? 'Click a potion to deliver it.' : 'Potions you keep wait here.';
+    this.shelfHint = this.text(x, SHELF_Y + 56, hint, { size: 7, color: decanting ? 'y' : 'a' });
   }
 
   private shelfHint?: Phaser.GameObjects.Text;
@@ -404,11 +437,12 @@ export class Run extends Phaser.Scene {
     this.text(36, HAND_Y + 42, `Draw ${s.drawPile.length}`, { size: 8, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
 
     const picked = this.mode.kind === 'select' ? this.mode.picked : [];
+    const tincture = this.mode.kind === 'select' ? this.mode.tincture : undefined;
     s.hand.forEach((inst, i) => {
       const x = this.handX(i, s.hand.length);
-      const lifted = picked.includes(inst.uid);
+      const lifted = picked.includes(inst.uid) || inst.uid === tincture;
       const card = createCard(this, x, lifted ? HAND_Y - 14 : HAND_Y, inst.card);
-      if (lifted) card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex('R')), 0);
+      if (lifted) card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex(inst.uid === tincture ? 'Y' : 'R')), 0);
       this.add2(card);
       card.setInteractive({ useHandCursor: s.phase === 'brewing' });
       this.inspect(card, inst.card);
@@ -428,14 +462,23 @@ export class Run extends Phaser.Scene {
     if (this.mode.kind === 'select') {
       const mode = this.mode;
       if (inst.uid === mode.tincture) return;
+      if (mode.purpose === 'top-3' || mode.purpose === 'shelf-one') return;
+      if (mode.purpose === 'hand-one') {
+        if (!codex.ingredients.has(inst.card)) return this.toast('Only an ingredient can be infused.');
+        mode.picked = mode.picked.includes(inst.uid) ? [] : [inst.uid];
+        return this.render();
+      }
       mode.picked = mode.picked.includes(inst.uid) ? mode.picked.filter((u) => u !== inst.uid) : [...mode.picked, inst.uid].slice(-5);
       return this.render();
     }
     this.confirm = null;
     if (codex.ingredients.has(inst.card)) return void this.dispatch({ type: 'slot', uid: inst.uid });
-    if (inst.card === 'sift') {
-      this.mode = { kind: 'select', purpose: 'sift', tincture: inst.uid, picked: [] };
-      this.toast('Pick the cards to Sift away.');
+    const targets = codex.tinctures.has(inst.card) ? targetsOf(inst.card) : undefined;
+    if (targets) {
+      if (targets === 'shelf-one' && s.shelf.length === 0) return this.toast('Your Shelf is empty: nothing to Decant.');
+      if (targets === 'top-3' && s.drawPile.length + s.discardPile.length === 0) return this.toast('Your draw pile is empty.');
+      this.mode = { kind: 'select', purpose: targets, tincture: inst.uid, picked: [] };
+      this.toast(PICK_PROMPT[targets]);
       return this.render();
     }
     if (codex.tinctures.has(inst.card)) return void this.dispatch({ type: 'playTincture', uid: inst.uid });
@@ -451,8 +494,13 @@ export class Run extends Phaser.Scene {
     if (this.mode.kind === 'select') {
       const mode = this.mode;
       const n = mode.picked.length;
-      const label = mode.purpose === 'sift' ? `Sift ${n}` : `Discard ${n}`;
-      this.add2(button(this, 290, y, label, () => this.confirmSelect(), { w: 64, enabled: n > 0 }));
+      const top = mode.purpose === 'top-3' ? Math.min(3, s.drawPile.length) : 0;
+      const label = mode.purpose === 'discard' ? `Discard ${n}`
+        : mode.purpose === 'hand' ? `Sift ${n}`
+          : mode.purpose === 'hand-one' ? 'Infuse'
+            : mode.purpose === 'top-3' ? (n === top ? 'Put back' : 'Keep order') : null;
+      if (label) this.add2(button(this, 290, y, label, () => this.confirmSelect(), { w: 64, enabled: n > 0 || mode.purpose === 'top-3' }));
+      if (mode.purpose === 'top-3') this.drawPeek(s, mode.picked);
       this.add2(button(this, 360, y, 'Cancel', () => {
         this.mode = { kind: 'idle' };
         this.render();
@@ -479,9 +527,37 @@ export class Run extends Phaser.Scene {
     if (this.mode.kind !== 'select') return;
     const { purpose, picked, tincture } = this.mode;
     this.mode = { kind: 'idle' };
+    if (purpose === 'top-3') {
+      // A partial order keeps the pile as it was.
+      const top = Math.min(3, store.getState()!.drawPile.length);
+      return void this.dispatch({ type: 'playTincture', uid: tincture!, targets: picked.length === top ? picked : [] });
+    }
     if (picked.length === 0) return this.render();
-    if (purpose === 'sift') this.dispatch({ type: 'playTincture', uid: tincture!, targets: picked });
-    else this.dispatch({ type: 'discard', uids: picked });
+    if (purpose === 'discard') this.dispatch({ type: 'discard', uids: picked });
+    else this.dispatch({ type: 'playTincture', uid: tincture!, targets: picked });
+  }
+
+  /** Taste Test: the top cards of the draw pile, numbered in the order the player clicks them. */
+  private drawPeek(s: RunState, picked: number[]) {
+    const top = s.drawPile.slice(0, 3);
+    this.add2(panel(this, 196, 118, 248, 112, 'k', 0.95, 'n'));
+    this.text(320, 122, 'Taste Test: top of your draw pile', { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
+    top.forEach((inst, i) => {
+      const x = 320 + (i - (top.length - 1) / 2) * 70;
+      const card = this.add2(createCard(this, x, 178, inst.card));
+      const at = picked.indexOf(inst.uid);
+      if (at >= 0) {
+        card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex('Y')), 0);
+        this.text(x + 24, 140, String(at + 1), { size: 10, color: 'y', stroke: 'k' }).setOrigin(0.5, 0);
+      }
+      card.setInteractive({ useHandCursor: true });
+      this.inspect(card, inst.card);
+      card.on('pointerdown', () => {
+        if (this.mode.kind !== 'select') return;
+        this.mode.picked = at >= 0 ? picked.filter((u) => u !== inst.uid) : [...picked, inst.uid];
+        this.render();
+      });
+    });
   }
 
   private brew() {

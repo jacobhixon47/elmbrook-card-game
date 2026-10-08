@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import { hex } from '../art/palette';
 import type { RunState } from '../core';
 import { createCard } from './card';
-import { deckRows, guideSections, recipeRows } from './guide';
+import { deckRows, guideSections, recipeRows, undiscoveredLine } from './guide';
 import { pixelText } from './text';
 import type { Tooltip } from './tooltip';
 import { button, panel } from './ui';
@@ -14,6 +14,8 @@ const X = 40;
 const Y = 30;
 const W = 560;
 const H = 304;
+/** Known recipes per Grimoire page: two columns. */
+export const RECIPES_PER_PAGE = 14;
 
 /**
  * The Grimoire (GDD §15.1): known recipes, the deck and a rules guide, drawn over whatever screen
@@ -21,7 +23,7 @@ const H = 304;
  */
 export function drawGrimoire(
   scene: Phaser.Scene, layer: Phaser.GameObjects.Container, s: RunState, tab: GrimoireTab, tip: Tooltip,
-  on: { tab(t: GrimoireTab): void; close(): void },
+  on: { tab(t: GrimoireTab): void; close(): void; page(n: number): void }, page = 0,
 ) {
   const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => (layer.add(o), o);
   const text = (x: number, y: number, str: string, opts: Parameters<typeof pixelText>[4] = {}) => add(pixelText(scene, x, y, str, opts));
@@ -40,23 +42,26 @@ export function drawGrimoire(
   const top = Y + 36;
   if (tab === 'recipes') {
     const rows = recipeRows(s);
-    const known = rows.filter((r) => r.known).length;
-    text(X + 12, top, `You know ${known} of ${rows.length} recipes. Match the essence pattern, in any order.`, { size: 7, color: 'a' });
-    rows.forEach((r, i) => {
-      const x = X + 12 + (i >= 6 ? 272 : 0);
-      const y = top + 14 + (i % 6) * 40;
-      text(x, y, r.name, { size: 9, color: r.known ? 'y' : 'h' });
-      if (r.pattern) {
-        r.pattern.forEach((e, j) => (e === 'any'
-          ? text(x + 2 + j * 10, y + 13, '?', { size: 7, color: 'W' })
-          : add(scene.add.image(x + 4 + j * 10, y + 17, `pip/${e}`))));
-        const words = r.pattern.map((e) => e[0]!.toUpperCase() + e.slice(1)).join(' + ');
-        text(x + 4 + r.slots * 10, y + 13, `${words} → ${r.family} · Harmony ${r.harmony}`, { size: 7, color: 'W' });
-      } else {
-        text(x, y + 13, `${r.slots} ingredients`, { size: 7, color: 'h' });
-      }
-      if (r.note) text(x, y + 24, r.note, { size: 6, color: 'a' });
+    const known = rows.filter((r) => r.known);
+    text(X + 12, top, `You know ${known.length} of the ${rows.length} recipes you can discover this run. Match the essence pattern, in any order.`, { size: 7, color: 'a' });
+    const pages = Math.max(1, Math.ceil(known.length / RECIPES_PER_PAGE));
+    const at = Math.min(page, pages - 1);
+    known.slice(at * RECIPES_PER_PAGE, (at + 1) * RECIPES_PER_PAGE).forEach((r, i) => {
+      const x = X + 12 + (i >= RECIPES_PER_PAGE / 2 ? 272 : 0);
+      const y = top + 14 + (i % (RECIPES_PER_PAGE / 2)) * 28;
+      text(x, y, r.name, { size: 9, color: 'y' });
+      r.pattern!.forEach((e, j) => (e === 'any'
+        ? text(x + 2 + j * 10, y + 13, '?', { size: 7, color: 'W' })
+        : add(scene.add.image(x + 4 + j * 10, y + 17, `pip/${e}`))));
+      const words = r.pattern!.map((e) => e[0]!.toUpperCase() + e.slice(1)).join(' + ');
+      text(x + 4 + r.slots * 10, y + 13, `${words} → ${r.family} · Harmony ${r.harmony}`, { size: 7, color: 'W' });
     });
+    if (pages > 1) {
+      add(button(scene, X + W - 170, Y + H - 34, '‹ Prev', () => on.page(at - 1), { w: 50, enabled: at > 0 }));
+      text(X + W - 115, Y + H - 38, `${at + 1} / ${pages}`, { size: 7, color: 'a', align: 'center' }).setOrigin(0.5, 0);
+      add(button(scene, X + W - 60, Y + H - 34, 'Next ›', () => on.page(at + 1), { w: 50, enabled: at < pages - 1 }));
+    }
+    text(X + 12, Y + H - 24, undiscoveredLine(rows, s.cauldronSlots), { size: 7, color: 'a', wrap: W - 200 });
     return;
   }
 
