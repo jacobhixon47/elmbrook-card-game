@@ -1,9 +1,10 @@
 import { codex } from '../codex';
 import type { Ingredient, Recipe } from '../codex/schema';
 import { fillsPattern, recipeAvailable } from './brew';
+import { FESTIVAL_DAY, festivalOn, todaysWeather } from './calendar';
 import { pick, pickWeighted, rand, type Ctx } from './ctx';
 import {
-  BONUS_TIP, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, WEEK_PAY_STEP,
+  BONUS_TIP, RAIN_MIN_ORDERS, HARVEST_FAIR, LONGEST_NIGHT, BLOOMTIDE_PAY, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, WEEK_PAY_STEP,
 } from './rules';
 import { allCards, type CardInstance, type Order, type OrderBonus, type OrderRequest, type Potion, type RunState } from './state';
 
@@ -81,7 +82,15 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
   if (reach.size === 0) return;
   const reachable = [...reach.keys()].map((id) => codex.recipes.get(id)!);
   const customers = weightedOrder(ctx, [...codex.regulars.values()].filter((r) => nightShift || !r.nightOnly));
-  const count = orderCount(s.week, nightShift, rand(ctx));
+  const weather = todaysWeather(s);
+  const festival = festivalOn(s, s.week, nightShift ? FESTIVAL_DAY : s.day);
+  let count = orderCount(s.week, nightShift, rand(ctx));
+  // Rain keeps one customer home, but only on a busy day (sim: cutting quiet days too halves the win rate).
+  if (weather === 'rain' && count >= RAIN_MIN_ORDERS) count -= 1;
+  const harvest = !nightShift && festival === 'harvest-fair';
+  if (harvest) count += HARVEST_FAIR.extraOrders;
+  if (nightShift && festival === 'longest-night') count += LONGEST_NIGHT.extraOrders;
+  const bloomtide = !nightShift && festival === 'bloomtide';
 
   for (let i = 0; i < count; i++) {
     const customer = customers[i % customers.length]!;
@@ -107,9 +116,12 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
       customer: customer.id,
       request,
       minTier,
-      pay: Math.round(ORDER_PAY[minTier] * scale),
+      pay: Math.round(ORDER_PAY[minTier] * scale * (harvest ? HARVEST_FAIR.payMult : 1)),
       bonus: rand(ctx) < customer.bonusChance ? pick(ctx, customer.bonusPool) : null,
       status: 'open',
+      quantity: harvest ? HARVEST_FAIR.quantity : 1,
+      delivered: 0,
+      tagBonus: bloomtide ? { tag: 'flower', mult: BLOOMTIDE_PAY } : null,
     };
     s.orders.push(order);
     ctx.ev.push({ type: 'orderPosted', order });
@@ -139,7 +151,9 @@ export function meetsBonus(potion: Pick<Potion, 'ingredients'>, bonus: OrderBonu
 /** Pay plus tip: the tip grows with how far the potion beats the minimum tier, plus the bonus. */
 export function payout(potion: Pick<Potion, 'tier' | 'ingredients'>, order: Order): { pay: number; tip: number; bonus: boolean } {
   const bonus = order.bonus !== null && meetsBonus(potion, order.bonus);
+  const tagged = order.tagBonus !== null && potion.ingredients.some((id) => codex.ingredients.get(id)?.tags.includes(order.tagBonus!.tag));
+  const pay = tagged ? Math.round(order.pay * order.tagBonus!.mult) : order.pay;
   const tierTip = Math.round(order.pay * (TIER_PAY[potion.tier] / TIER_PAY[order.minTier] - 1));
   const tipMult = codex.regulars.get(order.customer)?.tipMult ?? 1;
-  return { pay: order.pay, tip: Math.round((Math.max(0, tierTip) + (bonus ? BONUS_TIP : 0)) * tipMult), bonus };
+  return { pay, tip: Math.round((Math.max(0, tierTip) + (bonus ? BONUS_TIP : 0)) * tipMult), bonus };
 }

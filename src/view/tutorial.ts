@@ -24,13 +24,14 @@ export type Tip = {
   at: { x: number; y: number };
 };
 
-const ORDERS: Rect = { x: 6, y: 40, w: 138, h: 44 };
+const ORDERS: Rect = { x: 6, y: 44, w: 138, h: 44 };
 const HAND: Rect = { x: 100, y: 260, w: 480, h: 90 };
 const SIDE: Rect = { x: 496, y: 40, w: 138, h: 102 };
 const MID_BUTTON: Rect = { x: 270, y: 234, w: 100, h: 20 };
 const END_BUTTON: Rect = { x: 548, y: 234, w: 64, h: 20 };
 const BOOK_BUTTON: Rect = { x: 439, y: 6, w: 78, h: 20 };
 const RIBBON: Rect = { x: 200, y: 2, w: 240, h: 31 };
+const WEATHER: Rect = { x: 6, y: 32, w: 150, h: 12 };
 
 const day1 = (s: RunState) => s.week === 1 && s.day === 1;
 const brewing1 = (s: RunState) => day1(s) && s.phase === 'brewing';
@@ -116,6 +117,12 @@ export const TIPS: Tip[] = [
     text: 'A new day and new orders. Every morning your whole deck is shuffled again, so no card is lost for long.',
     when: (s) => s.week === 1 && s.day === 2 && s.phase === 'morning',
     at: { x: 320, y: 150 },
+  },
+  {
+    id: 'weather',
+    text: 'Each day has weather, shown under the Brews. Rain, Fog and the rest bend the day\'s rules: hover it to read them. The Grimoire\'s Calendar shows the whole month ahead.',
+    when: (s) => s.week === 1 && s.day === 2 && s.phase === 'morning',
+    target: WEATHER, at: { x: 320, y: 150 },
   },
   {
     id: 'night',

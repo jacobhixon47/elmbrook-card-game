@@ -93,7 +93,7 @@ export function guideSections(): { title: string; body: string }[] {
   return [
     {
       title: 'A run',
-      body: `${WEEKS} weeks. Each has ${DAYS_PER_WEEK} days, then a Night Shift. After the Night Shift the Night Market opens and the Guild collects rent: ${RENT.join(', ')} gold. Miss a payment and the run is over; pay all ${WEEKS} and the stall is yours.`,
+      body: `${WEEKS} weeks. Each has ${DAYS_PER_WEEK} days, then a Night Shift. After the Night Shift the Night Market opens and the Guild collects rent: ${RENT.join(', ')} gold. Miss a payment and the run is over; pay all ${WEEKS} and the stall is yours. The Calendar tab shows each day's weather, the week 3 festival and any sky event.`,
     },
     {
       title: 'A day',

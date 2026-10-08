@@ -6,7 +6,7 @@ import { bestOrderFor, previewPotion } from '../src/view/plan';
 import { brewing, slotAll, withHand } from './helpers';
 
 const order = (id: number, pay: number, minTier: 'fine' | 'superb' = 'fine') => ({
-  id, customer: 'old-tobin', request: { kind: 'family' as const, family: 'healing' as const }, minTier, pay, bonus: null, status: 'open' as const,
+  id, customer: 'old-tobin', request: { kind: 'family' as const, family: 'healing' as const }, minTier, pay, bonus: null, status: 'open' as const, quantity: 1, delivered: 0, tagBonus: null,
 });
 
 describe('UI wording', () => {

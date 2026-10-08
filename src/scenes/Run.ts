@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex } from '../codex';
 import {
-  NIGHT_SHIFT_DAY, previewBrew, rentDue, SKIP_GOLD, skyTime, payout,
+  NIGHT_SHIFT_DAY, previewBrew, rentDue, SKIP_GOLD, skyTime, payout, todaysWeather,
   type Action, type CardInstance, type GameEvent, type Order, type Potion, type RunState, type Season, type SkyTime, type Weather,
 } from '../core';
 import { targetsOf } from '../core/effects';
@@ -20,6 +20,7 @@ import {
 import { drawGrimoire, type GrimoireTab } from '../view/grimoire';
 import { stages } from '../view/guide';
 import { bestOrderFor, previewPotion } from '../view/plan';
+import { todayLine, todayRules } from '../view/calendar';
 import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
 import { TIPS, TUTORIAL_SEED, TutorialProgress, type Tip } from '../view/tutorial';
@@ -44,7 +45,7 @@ const PICK_PROMPT: Record<Exclude<Purpose, 'discard'>, string> = {
 
 const HAND_Y = 304;
 const SLOT_Y = 128;
-const ORDERS = { x: 8, y: 42, w: 134 };
+const ORDERS = { x: 8, y: 46, w: 134 };
 const TICKET_H = 40;
 const SIDE = { x: 498, y: 42, w: 134 };
 const SHELF_Y = 146;
@@ -62,6 +63,7 @@ export class Run extends Phaser.Scene {
   private busy = false;
   private dispatching = false;
   private sky: SkyTime = 'afternoon';
+  private weather: Weather = 'clear';
   private cauldronY = 195;
   /** The open Grimoire tab, drawn over any screen; null when closed. */
   private book: GrimoireTab | null = null;
@@ -93,7 +95,11 @@ export class Run extends Phaser.Scene {
       const seed = fixture?.seed ?? params.get('seed') ?? (this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`);
       const season = (fixture?.season as Season | undefined) ?? viewOverrides().season;
       store.dispatch({ type: 'startRun', seed, witch: 'hedge-witch', ...(season ? { season } : {}) });
+      // `today` sets the weather of the day the fixture starts on and of the day its steps end on.
+      const today = () => fixture?.today && store.dispatch({ type: 'debug', op: 'setWeather', weather: fixture.today as Weather });
+      today();
       for (const step of fixture?.steps ?? []) store.dispatch(stepAction(store.getState()!, step));
+      today();
     }
     const state = store.getState()!;
     if (fixture?.ui?.dialog !== undefined) {
@@ -138,10 +144,11 @@ export class Run extends Phaser.Scene {
   private drawShop(state: RunState, fixture?: Fixture | null) {
     const bg = shopBackdrop();
     this.sky = (fixture?.time as SkyTime | undefined) ?? viewOverrides().time ?? skyTime(state);
+    this.weather = todaysWeather(state);
     if (bg.view && bg.window) {
       const season = viewOverrides().season ?? state.season;
-      // Daily weather comes from the seeded Calendar in M3; until then it is clear unless previewed.
-      const weather = (fixture?.weather as Weather | undefined) ?? viewOverrides().weather ?? 'clear';
+      // Daily weather comes from the seeded Calendar unless a fixture or URL previews another.
+      const weather = (fixture?.weather as Weather | undefined) ?? viewOverrides().weather ?? todaysWeather(state);
       this.add.image(0, 0, gradedView(this, bg.view, 'shop', season, this.sky, weather)).setOrigin(0);
       addWeather(this, bg.window, season, this.sky, weather);
     }
@@ -184,9 +191,12 @@ export class Run extends Phaser.Scene {
     return events;
   }
 
-  /** The sky changes with the phase; a new sky means rebuilding the window, so restart the scene. */
+  /** The sky changes with the phase and the weather with the day; either means rebuilding the window, so restart the scene. */
   private afterChange() {
-    if (skyTime(store.getState()!) !== this.sky && !params.get('time')) this.scene.restart({ resume: true });
+    const s = store.getState()!;
+    const newSky = skyTime(s) !== this.sky && !params.get('time');
+    const newWeather = todaysWeather(s) !== this.weather && !params.get('weather');
+    if (newSky || newWeather) this.scene.restart({ resume: true });
     else this.render();
   }
 
@@ -283,6 +293,12 @@ export class Run extends Phaser.Scene {
     this.text(630, 8, `${s.gold} gold`, { size: 12, color: 'y', shadow: true }).setOrigin(1, 0);
     if (s.phase === 'brewing') this.text(10, 24, `Brews ${s.brewsLeft} · Discards ${s.discardsLeft}`, { size: 8, color: 'w', shadow: true });
     else if (s.phase === 'morning') this.text(10, 24, s.day === NIGHT_SHIFT_DAY ? 'The night customers are here' : "Today's orders", { size: 8, color: 'w', shadow: true });
+    if (s.phase === 'morning' || s.phase === 'brewing') {
+      // Today's weather, festival and sky event (GDD §4.2); hover for the rules.
+      const today = this.text(10, 34, todayLine(s), { size: 7, color: 'c', shadow: true });
+      today.setInteractive().on('pointerover', () => this.tip.text('Today', todayRules(s), today.x + today.width / 2, today.y + 10));
+      today.on('pointerout', () => this.tip.hide());
+    }
     this.text(630, 24, `Rent ${rentDue(s.season, s.week)}g after the Night Shift`, { size: 7, color: 'a', shadow: true }).setOrigin(1, 0);
     if (s.phase !== 'game-over' && s.phase !== 'victory') this.drawRibbon(s);
     this.add2(button(this, 478, 16, 'Grimoire (G)', () => this.openBook(this.book ? null : 'recipes'), { w: 74 }));
@@ -322,9 +338,14 @@ export class Run extends Phaser.Scene {
       const hearts = s.hearts[o.customer] ?? 0;
       this.text(ORDERS.x + 5, y + 3, customerName(o.customer), { size: 8, color: 'k' });
       this.text(ORDERS.x + ORDERS.w - 5, y + 3, `${'♥'.repeat(Math.min(hearts, 5))}${hearts > 5 ? '+' : ''}`, { size: 7, color: 'R' }).setOrigin(1, 0);
-      this.text(ORDERS.x + 5, y + 14, requestText(o), { size: 8, color: 'B' });
-      this.text(ORDERS.x + 5, y + 26, orderTerms(o), { size: 7, color: 'r' });
-      if (o.bonus) this.text(ORDERS.x + ORDERS.w - 5, y + 26, '★', { size: 8, color: 'o' }).setOrigin(1, 0);
+      if (s.fog && open) {
+        this.text(ORDERS.x + 5, y + 14, 'Hidden in the fog', { size: 8, color: 'h' });
+        this.text(ORDERS.x + 5, y + 26, 'Brew or Discard to see it', { size: 7, color: 'h' });
+      } else {
+        this.text(ORDERS.x + 5, y + 14, requestText(o), { size: 8, color: 'B' });
+        this.text(ORDERS.x + 5, y + 26, orderTerms(o), { size: 7, color: 'r' });
+      }
+      if (o.bonus && !s.fog) this.text(ORDERS.x + ORDERS.w - 5, y + 26, '★', { size: 8, color: 'o' }).setOrigin(1, 0);
       if (!open) {
         bg.setAlpha(0.6);
         this.text(ORDERS.x + ORDERS.w / 2, y + TICKET_H / 2, o.status === 'filled' ? 'FILLED' : 'DECLINED', { size: 10, font: 'display', color: o.status === 'filled' ? 'G' : 'r', stroke: 'w' })
@@ -332,6 +353,7 @@ export class Run extends Phaser.Scene {
       }
       bg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
         if (this.busy) return;
+        if (s.fog && open) return this.toast('The fog hides this order. Brew or Discard once to see it.');
         this.mode = { kind: 'dialog', order: o.id };
         this.render();
       });

@@ -7,7 +7,7 @@ import {
 import { brewing, no, ofType, ok, slotAll, start, withHand } from './helpers';
 
 const order = (o: Partial<Order> = {}): Order => ({
-  id: 500, customer: 'old-tobin', request: { kind: 'family', family: 'healing' }, minTier: 'fine', pay: 10, bonus: null, status: 'open', ...o,
+  id: 500, customer: 'old-tobin', request: { kind: 'family', family: 'healing' }, minTier: 'fine', pay: 10, bonus: null, status: 'open', quantity: 1, delivered: 0, tagBonus: null, ...o,
 });
 const potion = (p: Partial<Potion> = {}): Potion => ({
   uid: 600, recipe: 'healing-draught', family: 'healing', quality: 14, tier: 'fine', ingredients: ['elmroot', 'creekwater'],

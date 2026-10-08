@@ -1,7 +1,7 @@
 import { codex } from '../codex';
 import type { Action, GameEvent } from './actions';
 import { previewBrew } from './brew';
-import { NIGHT_SHIFT_DAY, type Season } from './calendar';
+import { FESTIVAL_DAY, festivalOn, NIGHT_SHIFT_DAY, rollCalendar, todaysWeather, type Season } from './calendar';
 import { changeGold, draw, drawToHandSize, gainCard, Reject, reject, shuffled, takeFromHand, type Ctx } from './ctx';
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
@@ -9,7 +9,7 @@ import { postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import {
   BREWS_PER_DAY, CAULDRON_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK,
-  rentDue, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, WEEKS,
+  LONGEST_NIGHT, rentDue, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, WEEKS,
 } from './rules';
 import { allCards, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState } from './state';
 
@@ -28,11 +28,12 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   }
 
   const s: RunState = {
-    version: 3,
+    version: 4,
     seed,
     rng: seedRng(seed),
     witch: witch.id,
     season,
+    calendar: rollCalendar(seed, season, WEEKS),
     week: 1,
     day: 1,
     phase: 'morning',
@@ -54,6 +55,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     delivery: { hearts: 0, tip: 0 },
     brewsToday: 0,
     unlocks: [...unlocks],
+    fog: false,
     offer: null,
     skipStreak: 0,
     nextUid: uid,
@@ -72,6 +74,11 @@ function startDay(ctx: Ctx): void {
   const s = ctx.s;
   const night = isNightShift(s);
   s.drawPile = shuffled(ctx, allCards(s));
+  const weather = todaysWeather(s);
+  // Snow: Frost cards are drawn first (GDD §4.2).
+  if (weather === 'snow') s.drawPile = [...s.drawPile.filter(isFrost), ...s.drawPile.filter((c) => !isFrost(c))];
+  // Fog hides the Order Board until the first brew or Discard; it never hides a Night Shift.
+  s.fog = weather === 'fog' && !night;
   s.hand = [];
   s.discardPile = [];
   s.cauldron = [];
@@ -83,9 +90,22 @@ function startDay(ctx: Ctx): void {
   const rules = SEASON_RULES[s.season];
   s.brewsLeft = BREWS_PER_DAY + (night ? 0 : rules.dayBrews);
   s.discardsLeft = DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0);
+  // Longest Night: the festival week's Night Shift is longer.
+  if (night && festivalOn(s, s.week, FESTIVAL_DAY) === 'longest-night') {
+    s.brewsLeft += LONGEST_NIGHT.brews;
+    s.discardsLeft += LONGEST_NIGHT.discards;
+  }
   ctx.ev.push({ type: 'dayStarted', week: s.week, day: s.day, nightShift: night });
   ctx.ev.push({ type: 'deckShuffled', size: s.drawPile.length });
   postOrders(ctx, night);
+}
+
+const isFrost = (c: CardInstance) => codex.ingredients.get(c.card)?.tags.includes('frost') ?? false;
+
+function liftFog(ctx: Ctx): void {
+  if (!ctx.s.fog) return;
+  ctx.s.fog = false;
+  ctx.ev.push({ type: 'fogLifted' });
 }
 
 function requirePhase(ctx: Ctx, ...phases: Phase[]): void {
@@ -107,6 +127,12 @@ function openOrder(ctx: Ctx, id: number): Order {
 }
 
 function fill(ctx: Ctx, order: Order, potion: Potion): void {
+  // A multi-potion order (Harvest Fair) pays when its last potion arrives.
+  order.delivered += 1;
+  if (order.delivered < order.quantity) {
+    ctx.ev.push({ type: 'orderProgress', order: order.id, potion: potion.uid, delivered: order.delivered, quantity: order.quantity });
+    return;
+  }
   const paid = payout(potion, order);
   const { pay, bonus } = paid;
   // A Ribbon or similar boosts the next delivery once (GDD §6.4).
@@ -132,6 +158,7 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
   const s = ctx.s;
   requirePhase(ctx, 'brewing');
   if (s.brewsLeft <= 0) reject('no Brews left today');
+  if (deliverTo !== undefined && s.fog) reject('the fog hides the orders until your first brew or Discard');
   const target = deliverTo === undefined ? null : openOrder(ctx, deliverTo);
   const preview = previewBrew(s, s.cauldron, s.hand);
   if (preview.kind === 'empty') reject('the cauldron needs at least two ingredients');
@@ -141,6 +168,7 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
   s.cauldron = [];
   s.brewsLeft -= 1;
   s.brewsToday += 1;
+  liftFog(ctx);
   s.discardsLeft -= preview.discardCost;
   for (const c of used) delete c.aged;
   s.discardPile.push(...used);
@@ -310,6 +338,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       s.discardPile.push(...thrown);
       s.discardsLeft -= 1;
       ctx.ev.push({ type: 'cardsDiscarded', uids });
+      liftFog(ctx);
       const extra = thrown.reduce((n, c) => n + sumEffect(c.card, 'drawOnDiscard'), 0);
       draw(ctx, Math.max(0, s.handSize - s.hand.length) + extra);
       return;
@@ -329,6 +358,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
 
     case 'deliver': {
       requirePhase(ctx, 'brewing');
+      if (s.fog) reject('the fog hides the orders until your first brew or Discard');
       const order = openOrder(ctx, action.order);
       const i = s.shelf.findIndex((p) => p.uid === action.potion);
       if (i < 0) reject(`potion ${action.potion} is not on the Shelf`);
@@ -450,6 +480,9 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
     case 'debug':
       if (action.op === 'addGold') {
         changeGold(ctx, action.amount, 'debug');
+      } else if (action.op === 'setWeather') {
+        s.calendar.weather[s.week - 1]![s.day - 1] = action.weather;
+        s.fog = action.weather === 'fog' && !isNightShift(s) && s.brewsToday === 0;
       } else if (action.op === 'learnRecipes') {
         for (const r of action.recipes) if (!codex.recipes.has(r)) reject(`no recipe ${r}`);
         for (const r of action.recipes) if (!s.knownRecipes.includes(r)) s.knownRecipes.push(r);

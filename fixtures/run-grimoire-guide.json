@@ -1,1 +1,1 @@
-{ "scene": "Run", "seed": "fixture-hand", "steps": ["openShop"], "ui": { "grimoire": "guide" } }
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop"], "ui": { "grimoire": "guide" } }

@@ -1,5 +1,5 @@
 import type { PotionFamily } from '../codex/schema';
-import type { Season } from './calendar';
+import type { Calendar, Season } from './calendar';
 import type { RngState } from './rng';
 import type { Tier } from './rules';
 
@@ -42,6 +42,11 @@ export type Order = {
   pay: number;
   bonus: OrderBonus | null;
   status: 'open' | 'filled' | 'declined';
+  /** Potions it takes; pay comes with the last one (Harvest Fair). */
+  quantity: number;
+  delivered: number;
+  /** Pay multiplier when the potion has an ingredient with this tag (Bloomtide). */
+  tagBonus: { tag: string; mult: number } | null;
 };
 
 /** Effects queued by Tinctures for the next brew. */
@@ -75,11 +80,13 @@ export type Offer =
 
 /** Plain, JSON-serialisable run state. Fixtures and saves are exactly this shape. */
 export type RunState = {
-  version: 3;
+  version: 4;
   seed: string;
   rng: RngState;
   witch: string;
   season: Season;
+  /** The month's weather and sky events, rolled at run start. */
+  calendar: Calendar;
   week: number; // 1..WEEKS
   day: number; // 1..NIGHT_SHIFT_DAY; the last is the Night Shift
   phase: Phase;
@@ -106,6 +113,8 @@ export type RunState = {
   brewsToday: number;
   /** Unlock-pool content this run may offer (meta-progression, M4). Base-pool content is always on. */
   unlocks: string[];
+  /** Fog hides today's orders until the first brew or Discard. */
+  fog: boolean;
   offer: Offer | null;
   /** Consecutive reward skips, for skip pity. */
   skipStreak: number;
