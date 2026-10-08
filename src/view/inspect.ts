@@ -42,7 +42,7 @@ export function cardInfo(id: string): CardInfo {
     const text = lines.join(' ');
     return {
       title: ing.name,
-      kind: `${cap(ing.rarity)} ingredient · ${cap(ing.origin)}`,
+      kind: `${cap(ing.rarity)} ingredient · ${cap(ing.origin)}${ing.tags.length ? ` · ${ing.tags.map(cap).join(', ')}` : ''}`,
       essences: ing.essences,
       potency: ing.potency,
       text,

@@ -1,4 +1,6 @@
 import type { GameEvent } from './actions';
+import { NIGHT_SHIFT_DAY } from './calendar';
+import { sumEffect } from './effects';
 import { nextFloat, shuffle } from './rng';
 import type { CardInstance, RunState } from './state';
 
@@ -59,6 +61,9 @@ export function draw(ctx: Ctx, n: number): void {
     const top = s.drawPile.shift()!;
     s.hand.push(top);
     ctx.ev.push({ type: 'cardDrawn', uid: top.uid, card: top.card });
+    // Wolfsbane and kin cost Discards when drawn on a Night Shift (GDD §6.1).
+    const cost = s.day === NIGHT_SHIFT_DAY && s.phase === 'brewing' ? sumEffect(top.card, 'nightDrawCost') : 0;
+    if (cost > 0) s.discardsLeft = Math.max(0, s.discardsLeft - cost);
   }
 }
 

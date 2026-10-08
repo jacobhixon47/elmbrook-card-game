@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "steps": ["openShop", { "give": "taste-test" }], "ui": { "target": { "hand": 8, "picked": [1] } } }

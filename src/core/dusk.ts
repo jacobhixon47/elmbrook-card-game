@@ -1,40 +1,53 @@
 import { codex } from '../codex';
-import { pick, pickWeighted, shuffled, type Ctx } from './ctx';
+import type { Pool } from '../codex/schema';
+import { pickWeighted, shuffled, type Ctx } from './ctx';
 import {
   CARD_PRICE, CAULDRON_SLOT_PRICE, FORAGE_CARDS, FORAGE_PICKS, MARKET_CARDS, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS,
   rarityWeights, SHELF_SLOT_PRICE, type ShopRarity,
 } from './rules';
-import type { Errand, StockItem } from './state';
+import type { Errand, RunState, StockItem } from './state';
 
-type PoolCard = { id: string; rarity: ShopRarity; wychwood: boolean };
+type PoolCard = { id: string; rarity: ShopRarity; wychwood: boolean; inSeason: boolean };
 
-/** Cards that rewards and the Market can offer: no Lunar cards (those come from the night, M3). */
-function dayPool(): PoolCard[] {
+/** How much likelier an in-season ingredient is in rewards, the Market and the Forage (GDD §6.1). */
+export const IN_SEASON_WEIGHT = 3;
+
+const inPool = (c: { id: string; pool: Pool }, s: Pick<RunState, 'unlocks'>) =>
+  c.pool === 'base' || (c.pool === 'unlock' && s.unlocks.includes(c.id));
+
+/**
+ * Cards that rewards and the Market can offer: base-pool cards and unlocked ones. No Lunar cards
+ * (those come from the night) and no event cards (those come from their event).
+ */
+export function dayPool(s: Pick<RunState, 'unlocks' | 'season'>): PoolCard[] {
   const out: PoolCard[] = [];
   for (const i of codex.ingredients.values()) {
-    if (!i.nightOnly && i.rarity !== 'lunar') out.push({ id: i.id, rarity: i.rarity, wychwood: i.origin === 'wychwood' });
+    if (i.nightOnly || i.rarity === 'lunar' || !inPool(i, s)) continue;
+    out.push({ id: i.id, rarity: i.rarity, wychwood: i.origin === 'wychwood', inSeason: i.inSeason.includes(s.season) });
   }
   for (const t of codex.tinctures.values()) {
-    if (t.rarity !== 'lunar') out.push({ id: t.id, rarity: t.rarity, wychwood: false });
+    if (t.rarity !== 'lunar' && inPool(t, s)) out.push({ id: t.id, rarity: t.rarity, wychwood: false, inSeason: false });
   }
   return out;
 }
+
+const seasonWeight = (c: PoolCard) => (c.inSeason ? IN_SEASON_WEIGHT : 1);
 
 export function rarityOf(cardId: string): ShopRarity {
   const r = codex.ingredients.get(cardId)?.rarity ?? codex.tinctures.get(cardId)?.rarity ?? 'common';
   return r === 'lunar' ? 'rare' : r;
 }
 
-/** n distinct cards, each rolled by rarity first, then uniformly within that rarity. */
+/** n distinct cards, each rolled by rarity first, then within that rarity (in-season cards weigh more). */
 function rollCards(ctx: Ctx, n: number, weights: [ShopRarity, number][]): string[] {
-  const pool = dayPool();
+  const pool = dayPool(ctx.s);
   const out: string[] = [];
   while (out.length < n && out.length < pool.length) {
     const rarity = pickWeighted(ctx, weights);
     const left = pool.filter((c) => !out.includes(c.id));
     const ofRarity = left.filter((c) => c.rarity === rarity);
     const from = ofRarity.length ? ofRarity : left;
-    out.push(pick(ctx, from).id);
+    out.push(pickWeighted(ctx, from.map((c) => [c.id, seasonWeight(c)] as const)));
   }
   return out;
 }
@@ -67,12 +80,12 @@ export function openErrand(ctx: Ctx, errand: Errand): void {
       return;
     }
     case 'forage': {
-      // Wychwood ingredients are three times as likely; every card is free.
-      const pool = dayPool().filter((c) => codex.ingredients.has(c.id));
+      // Wychwood and in-season ingredients are each three times as likely; every card is free.
+      const pool = dayPool(s).filter((c) => codex.ingredients.has(c.id));
       const cards: string[] = [];
       while (cards.length < FORAGE_CARDS && cards.length < pool.length) {
         const left = pool.filter((c) => !cards.includes(c.id));
-        cards.push(pickWeighted(ctx, left.map((c) => [c.id, c.wychwood ? 3 : 1] as const)));
+        cards.push(pickWeighted(ctx, left.map((c) => [c.id, (c.wychwood ? 3 : 1) * seasonWeight(c)] as const)));
       }
       s.offer = { kind: 'forage', cards, picksLeft: FORAGE_PICKS };
       return;

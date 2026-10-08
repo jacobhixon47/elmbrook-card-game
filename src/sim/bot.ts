@@ -1,8 +1,9 @@
 import { codex } from '../codex';
 import {
-  NIGHT_SHIFT_DAY, payout, previewBrew, rentDue, satisfies,
+  NIGHT_SHIFT_DAY, payout, previewBrew, rentDue, satisfies, tierIndex,
   type Action, type BrewPreview, type CardInstance, type Order, type Potion, type RunState,
 } from '../core';
+import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
 import { nextFloat, type RngState } from '../core/rng';
 
@@ -50,7 +51,7 @@ function brewOptions(s: RunState): Plan[] {
 function asPotion(p: Plan): Potion {
   return {
     uid: 0, recipe: p.preview.recipe, family: p.preview.family, quality: p.preview.quality, tier: p.preview.tier,
-    ingredients: p.cards.map((c) => c.card), experiment: !p.preview.known, costsHeart: false,
+    ingredients: p.cards.map((c) => c.card), experiment: !p.preview.known, heartDelta: 0,
   };
 }
 
@@ -102,10 +103,19 @@ function greedyBrewing(s: RunState): Action {
   }
 
   const tinctures = s.hand.filter((c) => codex.tinctures.has(c.card));
+  const decant = tinctures.find((c) => targetsOf(c.card) === 'shelf-one');
+  const dull = s.shelf.find((p) => tierIndex(p.tier) < tierIndex('superb'));
+  if (decant && dull) return { type: 'playTincture', uid: decant.uid, targets: [dull.uid] };
+  const peek = tinctures.find((c) => targetsOf(c.card) === 'top-3');
+  if (peek) return { type: 'playTincture', uid: peek.uid };
   if (best) {
     // Buff the brew first; Steep and Bottle Spare are worth spending on an order.
-    const buff = tinctures.find((c) => c.card === 'stir' || c.card === 'steep' || c.card === 'bottle-spare');
+    // Any Tincture that needs no target is played before the brew it helps.
+    const buff = tinctures.find((c) => !targetsOf(c.card));
     if (buff && s.cauldron.length === 0) return { type: 'playTincture', uid: buff.uid };
+    const infuse = tinctures.find((c) => targetsOf(c.card) === 'hand-one');
+    const strongest = best.cards[0];
+    if (infuse && strongest && s.cauldron.length === 0) return { type: 'playTincture', uid: infuse.uid, targets: [strongest.uid] };
     return stepToward(s, best);
   }
 

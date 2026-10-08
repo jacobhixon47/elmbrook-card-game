@@ -11,7 +11,9 @@ export type FixtureStep =
   | { errand: Errand }
   | { jump: [number, number] }
   | { gold: number }
-  | { removeAt: number };
+  | { removeAt: number }
+  | { give: string }
+  | { learn: string[] };
 
 export function stepAction(state: RunState, step: FixtureStep): Action {
   if (typeof step === 'string') return { type: step === 'skipReward' ? 'skipReward' : step };
@@ -20,6 +22,8 @@ export function stepAction(state: RunState, step: FixtureStep): Action {
   if ('errand' in step) return { type: 'chooseErrand', errand: step.errand };
   if ('jump' in step) return { type: 'debug', op: 'jumpToDay', week: step.jump[0], day: step.jump[1] };
   if ('gold' in step) return { type: 'debug', op: 'addGold', amount: step.gold };
+  if ('learn' in step) return { type: 'debug', op: 'learnRecipes', recipes: step.learn };
+  if ('give' in step) return { type: 'debug', op: 'giveCard', card: step.give };
   const deck = [...state.drawPile, ...state.hand, ...state.discardPile];
   return { type: 'removeCard', uid: deck[step.removeAt]?.uid ?? -1 };
 }

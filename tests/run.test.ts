@@ -11,7 +11,7 @@ const order = (o: Partial<Order> = {}): Order => ({
 });
 const potion = (p: Partial<Potion> = {}): Potion => ({
   uid: 600, recipe: 'healing-draught', family: 'healing', quality: 14, tier: 'fine', ingredients: ['elmroot', 'creekwater'],
-  experiment: false, costsHeart: false, ...p,
+  experiment: false, heartDelta: 0, ...p,
 });
 
 /** A brewing state with exactly these orders and this hand. */
@@ -101,7 +101,7 @@ describe('orders', () => {
   });
 
   it('Grave Moss potions cost the heart they would have earned', () => {
-    const [s] = setup([order()], [], { shelf: [potion({ costsHeart: true })], hearts: { 'old-tobin': 3 } });
+    const [s] = setup([order()], [], { shelf: [potion({ heartDelta: -1 })], hearts: { 'old-tobin': 3 } });
     const r = ok(s, { type: 'deliver', order: 500, potion: 600 });
     expect(r.state.hearts['old-tobin']).toBe(3);
   });

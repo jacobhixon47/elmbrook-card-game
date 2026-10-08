@@ -1,14 +1,12 @@
 import { codex } from '../codex';
 import type { Ingredient, Recipe } from '../codex/schema';
-import { fillsPattern } from './brew';
-import { pick, pickWeighted, rand, shuffled, type Ctx } from './ctx';
+import { fillsPattern, recipeAvailable } from './brew';
+import { pick, pickWeighted, rand, type Ctx } from './ctx';
 import {
   BONUS_TIP, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, WEEK_PAY_STEP,
 } from './rules';
 import { allCards, type CardInstance, type Order, type OrderBonus, type OrderRequest, type Potion, type RunState } from './state';
 
-const BONUSES: readonly OrderBonus[] = ['no-umbra', 'three-ingredients', 'wychwood-ingredient'];
-const BONUS_CHANCE = 0.25;
 
 /** Distinct ingredients in these cards with how many copies of each. */
 function ingredientCounts(cards: readonly CardInstance[], night: boolean): [Ingredient, number][] {
@@ -55,9 +53,20 @@ export function reachableRecipes(state: RunState, night: boolean): Map<string, n
   const harmonyBonus = owns('stir') ? 1 : 0;
   const out = new Map<string, number>();
   for (const r of codex.recipes.values()) {
-    if (r.pattern.length > state.cauldronSlots) continue;
+    if (r.pattern.length > state.cauldronSlots || !recipeAvailable(r, state)) continue;
     const p = bestPotency(r, counts);
     if (p > 0) out.set(r.id, Math.floor(p * potencyMult) * (r.baseHarmony + harmonyBonus));
+  }
+  return out;
+}
+
+/** Every customer once, in an order drawn by their weights: frequent regulars tend to come first. */
+function weightedOrder<T extends { weight: number }>(ctx: Ctx, items: readonly T[]): T[] {
+  const left = [...items];
+  const out: T[] = [];
+  while (left.length) {
+    const i = pickWeighted(ctx, left.map((x, k) => [k, x.weight] as const));
+    out.push(...left.splice(i, 1));
   }
   return out;
 }
@@ -71,7 +80,7 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
   const reach = reachableRecipes(s, nightShift);
   if (reach.size === 0) return;
   const reachable = [...reach.keys()].map((id) => codex.recipes.get(id)!);
-  const customers = shuffled(ctx, [...codex.regulars.values()].filter((r) => nightShift || !r.nightOnly));
+  const customers = weightedOrder(ctx, [...codex.regulars.values()].filter((r) => nightShift || !r.nightOnly));
   const count = orderCount(s.week, nightShift, rand(ctx));
 
   for (let i = 0; i < count; i++) {
@@ -92,14 +101,14 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
     const cap = tierOf(ceiling);
     if (tierIndex(minTier) > tierIndex(cap)) minTier = cap;
 
-    const scale = (1 + WEEK_PAY_STEP * (s.week - 1)) * (nightShift ? NIGHT_PAY : 1) * SEASON_RULES[s.season].payMult;
+    const scale = (1 + WEEK_PAY_STEP * (s.week - 1)) * (nightShift ? NIGHT_PAY : 1) * SEASON_RULES[s.season].payMult * customer.payMult;
     const order: Order = {
       id: s.nextUid++,
       customer: customer.id,
       request,
       minTier,
       pay: Math.round(ORDER_PAY[minTier] * scale),
-      bonus: rand(ctx) < BONUS_CHANCE ? pick(ctx, BONUSES) : null,
+      bonus: rand(ctx) < customer.bonusChance ? pick(ctx, customer.bonusPool) : null,
       status: 'open',
     };
     s.orders.push(order);
@@ -131,5 +140,6 @@ export function meetsBonus(potion: Pick<Potion, 'ingredients'>, bonus: OrderBonu
 export function payout(potion: Pick<Potion, 'tier' | 'ingredients'>, order: Order): { pay: number; tip: number; bonus: boolean } {
   const bonus = order.bonus !== null && meetsBonus(potion, order.bonus);
   const tierTip = Math.round(order.pay * (TIER_PAY[potion.tier] / TIER_PAY[order.minTier] - 1));
-  return { pay: order.pay, tip: Math.max(0, tierTip) + (bonus ? BONUS_TIP : 0), bonus };
+  const tipMult = codex.regulars.get(order.customer)?.tipMult ?? 1;
+  return { pay: order.pay, tip: Math.round((Math.max(0, tierTip) + (bonus ? BONUS_TIP : 0)) * tipMult), bonus };
 }

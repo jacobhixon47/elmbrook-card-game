@@ -32,6 +32,7 @@ const TINTS: Record<string, [PaletteKey, PaletteKey]> = {
   protection: ['S', 's'],
   secrets: ['P', 'p'],
   fortune: ['l', 'G'],
+  illusion: ['I', 'i'],
   lunar: ['m', 'v'],
 };
 

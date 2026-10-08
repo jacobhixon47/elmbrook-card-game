@@ -3,7 +3,7 @@ import type { Tier } from './rules';
 import type { Errand, Order, Potion } from './state';
 
 export type Action =
-  | { type: 'startRun'; seed: string; witch: string; season?: Season }
+  | { type: 'startRun'; seed: string; witch: string; season?: Season; unlocks?: string[] }
   // Afternoon: read the Order Board, then open the shop to draw a hand.
   | { type: 'openShop' }
   // Sunset: brewing.
@@ -28,9 +28,11 @@ export type Action =
   | { type: 'leaveMarket' }
   // Dev overlay only.
   | { type: 'debug'; op: 'addGold'; amount: number }
-  | { type: 'debug'; op: 'jumpToDay'; week: number; day: number };
+  | { type: 'debug'; op: 'jumpToDay'; week: number; day: number }
+  | { type: 'debug'; op: 'giveCard'; card: string }
+  | { type: 'debug'; op: 'learnRecipes'; recipes: string[] };
 
-export type ScoreSource = 'recipe' | 'ingredient' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
+export type ScoreSource = 'recipe' | 'ingredient' | 'curse' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
 
 export type GameEvent =
   | { type: 'runStarted'; seed: string; witch: string; season: Season }
@@ -43,6 +45,11 @@ export type GameEvent =
   | { type: 'cardUnslotted'; uid: number }
   | { type: 'cardsDiscarded'; uids: number[] }
   | { type: 'tincturePlayed'; uid: number; card: string }
+  | { type: 'cardInfused'; uid: number; bonus: number }
+  | { type: 'drawPileReordered'; uids: number[] }
+  | { type: 'potionUpgraded'; uid: number; tier: Tier }
+  /** A card left the deck by itself (Cobweb after its days, Fallen Star at week's end). */
+  | { type: 'cardExpired'; uid: number; card: string }
   /** One step of the scoring pipeline (GDD §6.3), with the running totals after it. */
   | { type: 'scoreStep'; source: ScoreSource; id: string; potency: number; harmony: number; note?: string }
   | { type: 'brewed'; potion: Potion; copies: number }

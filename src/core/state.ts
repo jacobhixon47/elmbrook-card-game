@@ -9,6 +9,10 @@ export type CardInstance = {
   card: string;
   /** Days spent in the deck since last brewed, for Aged cards (+1 Potency each). */
   aged?: number;
+  /** Permanent Potency added to this copy (Infuse). */
+  bonus?: number;
+  /** Days in the deck, for cards that leave by themselves (Cobweb). */
+  days?: number;
 };
 
 export type Phase = 'morning' | 'brewing' | 'dusk' | 'night-market' | 'game-over' | 'victory';
@@ -22,8 +26,8 @@ export type Potion = {
   /** Card ids that went in, for order bonus conditions and the Fence. */
   ingredients: string[];
   experiment: boolean;
-  /** Brewed with something that costs a heart when delivered (Grave Moss). */
-  costsHeart: boolean;
+  /** Hearts it adds or costs on delivery beyond the usual one (Heartstone +1, Grave Moss -1). */
+  heartDelta: number;
 };
 
 export type OrderRequest = { kind: 'recipe'; recipe: string } | { kind: 'family'; family: PotionFamily };
@@ -41,7 +45,18 @@ export type Order = {
 };
 
 /** Effects queued by Tinctures for the next brew. */
-export type Pending = { harmony: number; potencyMult: number; copies: number };
+export type Pending = {
+  harmony: number;
+  harmonyMult: number;
+  potency: number;
+  potencyMult: number;
+  copies: number;
+  /** The next Experiment brews at its full tier (Grimoire Page). */
+  fullExperiment: boolean;
+};
+
+/** Extras for the next delivery (Charm Sachet). */
+export type DeliveryBoost = { hearts: number; tip: number };
 
 export type Errand = 'market' | 'forage' | 'hearth';
 
@@ -60,7 +75,7 @@ export type Offer =
 
 /** Plain, JSON-serialisable run state. Fixtures and saves are exactly this shape. */
 export type RunState = {
-  version: 2;
+  version: 3;
   seed: string;
   rng: RngState;
   witch: string;
@@ -85,6 +100,12 @@ export type RunState = {
   /** Hearts per customer id, 0..MAX_HEARTS. */
   hearts: Record<string, number>;
   pending: Pending;
+  /** Applied to the next order filled, then cleared. */
+  delivery: DeliveryBoost;
+  /** Brews made today, for first-brew effects. */
+  brewsToday: number;
+  /** Unlock-pool content this run may offer (meta-progression, M4). Base-pool content is always on. */
+  unlocks: string[];
   offer: Offer | null;
   /** Consecutive reward skips, for skip pity. */
   skipStreak: number;
