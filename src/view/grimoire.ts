@@ -1,0 +1,91 @@
+import type Phaser from 'phaser';
+import { hex } from '../art/palette';
+import type { RunState } from '../core';
+import { createCard } from './card';
+import { deckRows, guideSections, recipeRows } from './guide';
+import { pixelText } from './text';
+import type { Tooltip } from './tooltip';
+import { button, panel } from './ui';
+
+export type GrimoireTab = 'recipes' | 'deck' | 'guide';
+export const GRIMOIRE_TABS: GrimoireTab[] = ['recipes', 'deck', 'guide'];
+
+const X = 40;
+const Y = 30;
+const W = 560;
+const H = 304;
+
+/**
+ * The Grimoire (GDD §15.1): known recipes, the deck and a rules guide, drawn over whatever screen
+ * the run is on. Everything is added to `layer`, which the scene clears on its next redraw.
+ */
+export function drawGrimoire(
+  scene: Phaser.Scene, layer: Phaser.GameObjects.Container, s: RunState, tab: GrimoireTab, tip: Tooltip,
+  on: { tab(t: GrimoireTab): void; close(): void },
+) {
+  const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => (layer.add(o), o);
+  const text = (x: number, y: number, str: string, opts: Parameters<typeof pixelText>[4] = {}) => add(pixelText(scene, x, y, str, opts));
+
+  add(scene.add.rectangle(0, 0, 640, 360, hex('K'), 0.6).setOrigin(0).setInteractive()).on('pointerdown', () => on.close());
+  add(panel(scene, X, Y, W, H, 'k', 0.97, 'n').setInteractive());
+  text(X + 12, Y + 8, 'Grimoire', { size: 14, color: 'y' });
+  const labels: Record<GrimoireTab, string> = { recipes: 'Recipes', deck: 'Deck', guide: 'How to play' };
+  GRIMOIRE_TABS.forEach((t, i) => {
+    const b = add(button(scene, 250 + i * 76, Y + 16, labels[t], () => on.tab(t), { w: 70, color: t === tab ? 'Y' : 'W' }));
+    if (t === tab) (b.list[0] as Phaser.GameObjects.Rectangle).setStrokeStyle(1, hex('y'));
+  });
+  add(button(scene, X + W - 40, Y + 16, 'Close', () => on.close(), { w: 56 }));
+  text(X + W - 12, Y + H - 12, 'G or Esc to close', { size: 6, color: 'h' }).setOrigin(1, 0);
+
+  const top = Y + 36;
+  if (tab === 'recipes') {
+    const rows = recipeRows(s);
+    const known = rows.filter((r) => r.known).length;
+    text(X + 12, top, `You know ${known} of ${rows.length} recipes. Match the essence pattern, in any order.`, { size: 7, color: 'a' });
+    rows.forEach((r, i) => {
+      const x = X + 12 + (i >= 6 ? 272 : 0);
+      const y = top + 14 + (i % 6) * 40;
+      text(x, y, r.name, { size: 9, color: r.known ? 'y' : 'h' });
+      if (r.pattern) {
+        r.pattern.forEach((e, j) => (e === 'any'
+          ? text(x + 2 + j * 10, y + 13, '?', { size: 7, color: 'W' })
+          : add(scene.add.image(x + 4 + j * 10, y + 17, `pip/${e}`))));
+        const words = r.pattern.map((e) => e[0]!.toUpperCase() + e.slice(1)).join(' + ');
+        text(x + 4 + r.slots * 10, y + 13, `${words} → ${r.family} · Harmony ${r.harmony}`, { size: 7, color: 'W' });
+      } else {
+        text(x, y + 13, `${r.slots} ingredients`, { size: 7, color: 'h' });
+      }
+      if (r.note) text(x, y + 24, r.note, { size: 6, color: 'a' });
+    });
+    return;
+  }
+
+  if (tab === 'deck') {
+    const total = s.drawPile.length + s.hand.length + s.discardPile.length + s.cauldron.length;
+    text(X + 12, top, `${total} cards. Draw pile ${s.drawPile.length} · hand ${s.hand.length} · discarded ${s.discardPile.length}. Every morning the whole deck is shuffled together.`, { size: 7, color: 'a', wrap: W - 24 });
+    const rows = deckRows(s);
+    const perRow = 8;
+    rows.forEach((r, i) => {
+      const x = X + 48 + (i % perRow) * 66;
+      const y = top + 50 + Math.floor(i / perRow) * 84;
+      const c = add(createCard(scene, x, y, r.card).setScale(0.75));
+      c.setInteractive();
+      c.on('pointerover', () => tip.card(r.card, x, y - 30, y + 30));
+      c.on('pointerout', () => tip.hide());
+      text(x, y + 32, `×${r.total} · ${r.inDraw} to draw`, { size: 7, color: r.inDraw ? 'W' : 'a', align: 'center' }).setOrigin(0.5, 0);
+    });
+    text(X + 12, Y + H - 14, 'Hover a card to read it.', { size: 7, color: 'a' });
+    return;
+  }
+
+  const sections = guideSections();
+  const cols = [sections.slice(0, 3), sections.slice(3)];
+  cols.forEach((col, ci) => {
+    let y = top;
+    for (const sec of col) {
+      text(X + 12 + ci * 276, y, sec.title, { size: 9, color: 'y' });
+      const body = text(X + 12 + ci * 276, y + 12, sec.body, { size: 7, color: 'W', wrap: 260 });
+      y += 16 + body.height + 6;
+    }
+  });
+}

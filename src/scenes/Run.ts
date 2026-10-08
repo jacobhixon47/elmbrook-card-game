@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex } from '../codex';
 import {
-  NIGHT_SHIFT_DAY, previewBrew, rentDue, skyTime, payout,
+  NIGHT_SHIFT_DAY, previewBrew, rentDue, SKIP_GOLD, skyTime, payout,
   type Action, type CardInstance, type GameEvent, type Order, type Potion, type RunState, type Season, type SkyTime, type Weather,
 } from '../core';
 import { fencePrice } from '../core/reduce';
@@ -16,8 +16,13 @@ import { createCard } from '../view/card';
 import {
   BONUS_TEXT, cardText, customerLine, customerName, dayLabel, ERRAND_TEXT, orderTerms, recipeName, requestText, TIER_NAME,
 } from '../view/describe';
+import { drawGrimoire, type GrimoireTab } from '../view/grimoire';
+import { stages } from '../view/guide';
 import { bestOrderFor, previewPotion } from '../view/plan';
 import { pixelText } from '../view/text';
+import { Tooltip } from '../view/tooltip';
+import { TIPS, TUTORIAL_SEED, TutorialProgress, type Tip } from '../view/tutorial';
+import { loadProfile, saveProfile } from '../profile';
 import { button, panel } from '../view/ui';
 import { addWeather } from '../view/weather';
 
@@ -47,6 +52,11 @@ export class Run extends Phaser.Scene {
   private dispatching = false;
   private sky: SkyTime = 'afternoon';
   private cauldronY = 195;
+  /** The open Grimoire tab, drawn over any screen; null when closed. */
+  private book: GrimoireTab | null = null;
+  private tip!: Tooltip;
+  /** The first-run tutorial, while it lasts (GDD §15.1). Kept across restarts for a new sky. */
+  private tutorial: TutorialProgress | null = null;
 
   constructor() {
     super('Run');
@@ -58,14 +68,17 @@ export class Run extends Phaser.Scene {
     this.pinned = null;
     this.confirm = null;
     this.busy = false;
+    this.book = null;
 
     const fixture = data.fixture;
     if (data.resume && store.getState()) {
-      // Coming back after the sky changed: keep the run.
+      // Coming back after the sky changed: keep the run (and the tutorial, unless it was skipped).
+      if (loadProfile().tutorialDone) this.tutorial = null;
     } else if (fixture?.state) {
       store.load(fixture.state as RunState);
     } else {
-      const seed = fixture?.seed ?? params.get('seed') ?? `run-${Math.floor(Math.random() * 1e9)}`;
+      this.tutorial = fixture ? null : wantsTutorial() ? new TutorialProgress() : null;
+      const seed = fixture?.seed ?? params.get('seed') ?? (this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`);
       const season = (fixture?.season as Season | undefined) ?? viewOverrides().season;
       store.dispatch({ type: 'startRun', seed, witch: 'hedge-witch', ...(season ? { season } : {}) });
       for (const step of fixture?.steps ?? []) store.dispatch(stepAction(store.getState()!, step));
@@ -76,10 +89,22 @@ export class Run extends Phaser.Scene {
       if (order) this.mode = { kind: 'dialog', order: order.id };
     }
     if (fixture?.ui?.discard) this.mode = { kind: 'select', purpose: 'discard', picked: fixture.ui.discard.map((i) => state.hand[i]!.uid) };
+    if (fixture?.ui?.grimoire) this.book = fixture.ui.grimoire;
+    if (fixture?.ui?.tutorial) {
+      // Show one tip: everything before it counts as done.
+      const at = TIPS.findIndex((t) => t.id === fixture.ui!.tutorial);
+      this.tutorial = new TutorialProgress(TIPS.slice(0, Math.max(at, 0)).map((t) => t.id));
+    }
 
     this.drawShop(state, fixture);
     this.ui = this.add.container(0, 0);
+    this.tip = new Tooltip(this);
     this.render();
+    const peek = fixture?.ui?.inspect;
+    if (peek !== undefined && state.hand[peek]) {
+      const x = this.handX(peek, state.hand.length);
+      this.tip.card(state.hand[peek]!.card, x, HAND_Y - 40, HAND_Y + 40);
+    }
     // Changes from outside this scene (the dev overlay, Playwright) redraw it too.
     const off = store.subscribe((_, events) => {
       if (this.dispatching || this.busy || events.length === 0) return;
@@ -156,6 +181,7 @@ export class Run extends Phaser.Scene {
 
   private render() {
     this.ui.removeAll(true);
+    this.tip.hide();
     const s = store.getState()!;
     this.drawHud(s);
     if (s.phase === 'morning' || s.phase === 'brewing') {
@@ -168,6 +194,56 @@ export class Run extends Phaser.Scene {
     } else {
       this.drawEvening(s);
     }
+    if (this.book) {
+      drawGrimoire(this, this.ui, s, this.book, this.tip, {
+        tab: (t) => this.openBook(t),
+        close: () => this.openBook(null),
+      });
+    }
+    this.drawTutorial(s);
+  }
+
+  private openBook(tab: GrimoireTab | null) {
+    this.book = tab;
+    this.render();
+  }
+
+  /** Hover help for a card drawn at (x, y) at the given scale (GDD §15.1). */
+  private inspect(card: Phaser.GameObjects.Container, id: string, scale = 1) {
+    card.on('pointerover', () => this.tip.card(id, card.x, card.y - 40 * scale, card.y + 40 * scale));
+    card.on('pointerout', () => this.tip.hide());
+  }
+
+  private drawTutorial(s: RunState) {
+    const t = this.tutorial;
+    if (!t) return;
+    if (t.finished(s)) {
+      saveProfile({ tutorialDone: true });
+      this.tutorial = null;
+      return;
+    }
+    const preview = s.phase === 'brewing' ? previewBrew(s, s.cauldron, s.hand).kind : 'empty';
+    const tip = t.current(s, { dialog: this.mode.kind === 'dialog', book: this.book !== null, preview });
+    if (!tip || (this.book && tip.id !== 'grimoire')) return;
+    this.drawTip(tip, () => {
+      t.dismiss(tip.id);
+      this.render();
+    });
+  }
+
+  private drawTip(tip: Tip, gotIt: () => void) {
+    if (tip.target) {
+      const r = tip.target;
+      this.add2(this.add.rectangle(r.x, r.y, r.w, r.h).setOrigin(0).setStrokeStyle(2, hex('y')));
+    }
+    const w = 230;
+    const x = Math.max(4, Math.min(636 - w, tip.at.x - w / 2));
+    const body = pixelText(this, x + 8, tip.at.y + 18, tip.text, { size: 8, color: 'W', wrap: w - 16 });
+    const h = 18 + body.height + (tip.until ? 8 : 28);
+    this.add2(panel(this, x, tip.at.y, w, h, 'k', 0.97, 'y'));
+    this.text(x + 8, tip.at.y + 5, 'Tutorial', { size: 7, color: 'v' });
+    this.add2(body);
+    if (!tip.until) this.add2(button(this, x + w / 2, tip.at.y + h - 14, 'Got it', gotIt, { w: 56, color: 'Y' }));
   }
 
   private add2<T extends Phaser.GameObjects.GameObject>(o: T): T {
@@ -185,6 +261,29 @@ export class Run extends Phaser.Scene {
     if (s.phase === 'brewing') this.text(10, 24, `Brews ${s.brewsLeft} · Discards ${s.discardsLeft}`, { size: 8, color: 'w', shadow: true });
     else if (s.phase === 'morning') this.text(10, 24, s.day === NIGHT_SHIFT_DAY ? 'The night customers are here' : "Today's orders", { size: 8, color: 'w', shadow: true });
     this.text(630, 24, `Rent ${rentDue(s.season, s.week)}g after the Night Shift`, { size: 7, color: 'a', shadow: true }).setOrigin(1, 0);
+    if (s.phase !== 'game-over' && s.phase !== 'victory') this.drawRibbon(s);
+    this.add2(button(this, 478, 16, 'Grimoire (G)', () => this.openBook(this.book ? null : 'recipes'), { w: 74 }));
+  }
+
+  /** Where am I: this week's days, then today's steps, the current one lit (GDD §15.1). */
+  private drawRibbon(s: RunState) {
+    const { days, steps } = stages(s);
+    const color = { done: 'a', now: 'y', next: 'h' } as const;
+    const row = (items: { label: string; mark: keyof typeof color }[], y: number, sep: string) => {
+      const parts = items.flatMap((it, i) => [
+        ...(i ? [this.text(0, y, sep, { size: 7, color: 'h', shadow: true })] : []),
+        this.text(0, y, it.label, { size: it.mark === 'now' ? 8 : 7, color: color[it.mark], shadow: true }),
+      ]);
+      const width = parts.reduce((w, t) => w + t.width + 4, -4);
+      let x = 320 - width / 2;
+      for (const t of parts) {
+        t.setX(Math.round(x)).setY(y + (t.height < 10 ? 1 : 0));
+        x += t.width + 4;
+      }
+    };
+    this.add2(this.add.rectangle(320, 17, 236, 28, hex('K'), 0.55).setStrokeStyle(1, hex('n'), 0.6));
+    row(days.map((d) => ({ ...d, label: d.label === 'Night' ? 'Night Shift' : `Day ${d.label}` })), 5, '·');
+    row(steps, 17, '›');
   }
 
   private ticketY(i: number) {
@@ -287,6 +386,7 @@ export class Run extends Phaser.Scene {
       }
       const c = this.add2(createCard(this, x, SLOT_Y, card.card).setScale(0.6));
       c.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'unslot', uid: card.uid }));
+      this.inspect(c, card.card, 0.6);
     }
   }
 
@@ -297,7 +397,10 @@ export class Run extends Phaser.Scene {
 
   private drawHand(s: RunState) {
     // Draw pile at the left end of the counter.
-    for (let i = 0; i < 3; i++) this.add2(this.add.image(34 + i, HAND_Y - i, 'card/back'));
+    for (let i = 0; i < 3; i++) {
+      const back = this.add2(this.add.image(34 + i, HAND_Y - i, 'card/back'));
+      back.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.openBook('deck'));
+    }
     this.text(36, HAND_Y + 42, `Draw ${s.drawPile.length}`, { size: 8, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
 
     const picked = this.mode.kind === 'select' ? this.mode.picked : [];
@@ -307,11 +410,12 @@ export class Run extends Phaser.Scene {
       const card = createCard(this, x, lifted ? HAND_Y - 14 : HAND_Y, inst.card);
       if (lifted) card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex('R')), 0);
       this.add2(card);
+      card.setInteractive({ useHandCursor: s.phase === 'brewing' });
+      this.inspect(card, inst.card);
       if (s.phase !== 'brewing') {
         card.setAlpha(0.85);
         return;
       }
-      card.setInteractive({ useHandCursor: true });
       const restY = card.y;
       card.on('pointerover', () => this.tweens.add({ targets: card, y: restY - 8, duration: 90 }));
       card.on('pointerout', () => this.tweens.add({ targets: card, y: restY, duration: 90 }));
@@ -542,7 +646,7 @@ export class Run extends Phaser.Scene {
     const offer = s.offer;
     const title = (t: string, sub: string) => {
       this.text(320, 46, t, { size: 16, color: 'y', stroke: 'k', align: 'center' }).setOrigin(0.5);
-      this.text(320, 66, sub, { size: 8, color: 'a', stroke: 'k', align: 'center' }).setOrigin(0.5);
+      this.text(320, 60, sub, { size: 8, color: 'a', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);
     };
 
     if (s.phase === 'game-over') {
@@ -559,13 +663,13 @@ export class Run extends Phaser.Scene {
 
     switch (offer.kind) {
       case 'reward': {
-        title('Twilight', s.skipStreak > 0 ? `Pick a card for your satchel. Skipped ${s.skipStreak} in a row: rarer cards are coming.` : 'Pick a card for your satchel.');
+        title('Twilight', `The shop is shut. Pick a card to add to your deck, or skip it for ${SKIP_GOLD} gold.${s.skipStreak > 0 ? ` Skipped ${s.skipStreak} in a row: rarer cards are coming.` : ''}`);
         offer.cards.forEach((id, i) => this.offerCard(240 + i * 80, 150, id, () => this.dispatch({ type: 'pickReward', index: i })));
         this.add2(button(this, 320, 250, 'Skip (+2 gold)', () => this.dispatch({ type: 'skipReward' }), { w: 90 }));
         return;
       }
       case 'errands': {
-        title('An errand before bed', 'Choose one.');
+        title('An errand before bed', 'Choose one. Tomorrow the shop opens again with new orders.');
         offer.options.forEach((errand, i) => {
           const x = 220 + i * 200;
           const t = ERRAND_TEXT[errand];
@@ -579,7 +683,7 @@ export class Run extends Phaser.Scene {
         return;
       }
       case 'market': {
-        title('Market Square', `You have ${s.gold} gold.`);
+        title('Market Square', `Buy cards for your deck or upgrades for the shop. You have ${s.gold} gold.`);
         offer.stock.forEach((item, i) => {
           const x = 320 + (i - (offer.stock.length - 1) / 2) * 74;
           const y = 150;
@@ -599,19 +703,21 @@ export class Run extends Phaser.Scene {
         return;
       }
       case 'forage': {
-        title('Wychwood Forage', offer.picksLeft > 0 ? `Take ${offer.picksLeft} more, free.` : 'Your basket is full.');
+        title('Wychwood Forage', offer.picksLeft > 0 ? `Wild ingredients, free. Take ${offer.picksLeft} more for your deck.` : 'Your basket is full.');
         offer.cards.forEach((id, i) => this.offerCard(320 + (i - (offer.cards.length - 1) / 2) * 74, 150, id, () => this.dispatch({ type: 'forage', index: i }), offer.picksLeft <= 0));
         this.add2(button(this, 320, 262, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
         return;
       }
       case 'hearth': {
-        title('The Hearth', offer.removed ? 'Done. The fire crackles.' : 'Burn one card from your deck.');
+        title('The Hearth', offer.removed ? 'Done. The fire crackles.' : 'Burn one card from your deck for good. A thinner deck draws its best cards more often.');
         const deck = [...s.drawPile, ...s.hand, ...s.discardPile].sort((a, b) => a.card.localeCompare(b.card) || a.uid - b.uid);
         const perRow = 12;
         deck.forEach((inst, i) => {
           const x = 320 + ((i % perRow) - (Math.min(deck.length, perRow) - 1) / 2) * 32;
           const y = 112 + Math.floor(i / perRow) * 44;
           const c = this.add2(createCard(this, x, y, inst.card).setScale(0.5));
+          c.setInteractive();
+          this.inspect(c, inst.card, 0.5);
           if (offer.removed) return void c.setAlpha(0.6);
           c.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'removeCard', uid: inst.uid }));
           c.on('pointerover', () => c.setScale(0.6));
@@ -622,7 +728,7 @@ export class Run extends Phaser.Scene {
       }
       case 'fence': {
         const due = rentDue(s.season, s.week);
-        title('The Night Market', `The Fence buys potions. Rent due: ${due}g. You have ${s.gold}g.`);
+        title('The Night Market', `The night's work is done. Sell potions from your Shelf to the Fence, then the Guild collects this week's rent: ${due}g. You have ${s.gold}g.`);
         if (s.shelf.length === 0) this.text(320, 140, 'Your Shelf is empty.', { size: 8, color: 'a', align: 'center' }).setOrigin(0.5);
         s.shelf.forEach((p, i) => {
           const x = 320 + (i - (s.shelf.length - 1) / 2) * 50;
@@ -640,6 +746,8 @@ export class Run extends Phaser.Scene {
   private offerCard(x: number, y: number, id: string, onPick: () => void, dim = false) {
     const c = this.add2(createCard(this, x, y, id));
     this.text(x, y + 42, cardText(id), { size: 6, color: 'w', align: 'center', wrap: 70 }).setOrigin(0.5, 0);
+    c.setInteractive();
+    this.inspect(c, id);
     if (dim) return void c.setAlpha(0.4);
     c.setInteractive({ useHandCursor: true }).on('pointerdown', onPick);
     c.on('pointerover', () => this.tweens.add({ targets: c, y: y - 6, duration: 90 }));
@@ -647,7 +755,8 @@ export class Run extends Phaser.Scene {
   }
 
   private newRun() {
-    store.dispatch({ type: 'startRun', seed: `run-${Math.floor(Math.random() * 1e9)}`, witch: 'hedge-witch' });
+    this.tutorial = wantsTutorial() ? new TutorialProgress() : null;
+    store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, witch: 'hedge-witch' });
     this.scene.restart({ resume: true });
   }
 
@@ -657,6 +766,11 @@ export class Run extends Phaser.Scene {
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
       if (this.busy) return;
       const s = store.getState()!;
+      if (e.key === 'g' || e.key === 'G') return this.openBook(this.book ? null : 'recipes');
+      if (this.book) {
+        if (e.key === 'Escape') this.openBook(null);
+        return;
+      }
       if (e.key === 'Escape') {
         this.mode = { kind: 'idle' };
         this.confirm = null;
@@ -673,4 +787,11 @@ export class Run extends Phaser.Scene {
       }
     });
   }
+}
+
+/** First-time players get the tutorial; ?tutorial=0, a chosen ?seed= or a finished one skip it, ?tutorial=1 forces it. */
+function wantsTutorial(): boolean {
+  const flag = params.get('tutorial');
+  if (flag) return flag === '1';
+  return !params.get('seed') && !loadProfile().tutorialDone;
 }
