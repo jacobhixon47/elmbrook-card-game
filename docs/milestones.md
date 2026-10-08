@@ -8,6 +8,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - **M1** ✅ rules engine (PR #2). Greedy bot wins 29.7% of 2,000 Spring runs, inside the 15-35% band; 99%+ line coverage on `src/core`.
 - **M2** in review (PR #3): the Run scene plays a whole Spring run in the browser, from the Order Board through dusk, errands, the Fence on Night Shift, game over and victory. `pnpm e2e` plays week 1 through the UI in CI.
 - **Built early:** game over and victory screens (listed under M3) and a Fence-only Night Market came with M2.
+- **Next, before M3 (decided Oct 8):** player guidance, pulled forward from M6: card inspect tooltips, the Grimoire, the stage ribbon and the first-run tutorial (GDD §15.1).
 - **Still to come in M3:** the Calendar and its seeded weather and events (weather is shown in the window but has no rules effect yet), patrons and their twists, night customers, the other five Night Market stalls, familiars, Lunar cards, the remaining errands, and resume mid-run.
 
 ## M0 — Scaffold and harness ✅
@@ -44,6 +45,15 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 
 **Accept:** Jacob can play the days of week 1 in the browser with mouse and keyboard and it feels good.
 
+## M2.5 — Player guidance
+
+- Card inspect tooltips with a glossary of game terms.
+- The Grimoire: known and undiscovered recipes, the deck and draw pile, a rules guide.
+- Stage ribbon (days of the week, steps of the day) and a clear line on every evening screen.
+- Mandatory first-run tutorial over week 1 on a fixed seed; `?tutorial=0` and the dev overlay skip it.
+
+**Accept:** someone who has never seen the game finishes week 1 without being told anything outside the game.
+
 ## M3 — Full run
 
 - Calendar scene (run map), seeded at run start: daily weather, town events, the week-3 festival, rare sky events, next patron preview (GDD §4.2).
@@ -76,7 +86,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 
 ## M6 — Ship prep
 
-- Tutorial (first run guided days), tooltips everywhere, settings menu (volume, fullscreen, scale), achievements (10).
+- Tutorial tips for the M3+ systems, tooltips on anything new since M2.5, settings menu (volume, fullscreen, scale), achievements (10).
 - Endless, Daily seed, Challenge runs.
 - itch.io deploy from CI; Tauri desktop build.
 - Optional: Claude Code terminal preview mod.

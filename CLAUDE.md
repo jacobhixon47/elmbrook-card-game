@@ -15,9 +15,9 @@ Read before working: `docs/gdd.md` (what to build), `docs/tech.md` (how), `docs/
 - `pnpm art:import <image> <name> [--grid 2 --panel 0]`: pixelize a painted image into `public/backdrops/<name>.png`
 - `pnpm art:window`: render the shop window in every season, time of day and weather to `.snaps/window-grades.png` and `.snaps/window-weather.png`
 - `pnpm sim --runs <n> [--strategy greedy|random] [--season s]`: headless balance report; `pnpm sim --replay <file>` replays an action log
-- Dev overlay: press backtick in the game for seed, state, +gold, jump to day and action-log export
+- Dev overlay: press backtick in the game for seed, state, +gold, jump to day, action-log export, and skipping or resetting the tutorial
 
-Dev URL params: `?fixture=<name>`, `?seed=<s>`, `?noanim=1`, `?renderer=canvas`, `?backdrops=code` (code-drawn backdrops instead of painted ones), `?season=winter`, `?time=night` and `?weather=snow` (preview the shop window).
+Dev URL params: `?fixture=<name>`, `?seed=<s>`, `?noanim=1`, `?renderer=canvas`, `?backdrops=code` (code-drawn backdrops instead of painted ones), `?season=winter`, `?time=night` and `?weather=snow` (preview the shop window). A first run plays the tutorial; `?tutorial=0` skips it, `?tutorial=1` forces it, and any `?seed=` or fixture skips it unless the fixture sets `ui.tutorial` to a tip id.
 
 ## Rules
 

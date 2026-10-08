@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "tutorial-26", "steps": ["openShop", { "slot": 1 }, { "slot": 4 }], "ui": { "tutorial": "preview" } }

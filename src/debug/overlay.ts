@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { NIGHT_SHIFT_DAY, rentDue, skyTime, WEEKS, type RunState } from '../core';
 import { PALETTE } from '../art/palette';
+import { loadProfile, saveProfile } from '../profile';
 import { store } from '../store';
 
 // Dev overlay (backtick): seed, a state inspector, add gold, jump to any day, export the action log.
@@ -59,6 +60,7 @@ export function installOverlay(game: Phaser.Game, openAtStart = false): void {
     <div class="row"><button data-gold="10">+10 gold</button><button data-gold="100">+100 gold</button></div>
     <div class="row">jump to week <select id="eo-week">${weeks}</select> day <select id="eo-day">${days}</select><button id="eo-jump">go</button></div>
     <div class="row"><button id="eo-export">export action log</button><span id="eo-note" class="dim"></span></div>
+    <div class="row">tutorial <span id="eo-tut"></span><button id="eo-tut-skip">skip</button><button id="eo-tut-reset">reset</button></div>
     <details><summary>state</summary><pre id="eo-state"></pre></details>`;
 
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
@@ -67,6 +69,7 @@ export function installOverlay(game: Phaser.Game, openAtStart = false): void {
     const s = store.getState();
     $('#eo-summary').innerHTML = s ? summary(s) : '<div class="dim">no run in progress</div>';
     $('#eo-state').textContent = s ? JSON.stringify(s, null, 1) : '';
+    $('#eo-tut').textContent = loadProfile().tutorialDone ? 'done' : 'not done';
   };
 
   // Redraw the run from the new state after a debug change (the sky may have changed too).
@@ -76,6 +79,12 @@ export function installOverlay(game: Phaser.Game, openAtStart = false): void {
 
   root.addEventListener('click', (e) => {
     const el = e.target as HTMLElement;
+    if (el.id === 'eo-tut-skip' || el.id === 'eo-tut-reset') {
+      saveProfile({ tutorialDone: el.id === 'eo-tut-skip' });
+      $('#eo-note').textContent = el.id === 'eo-tut-skip' ? 'tutorial skipped' : 'tutorial starts with your next new run';
+      render();
+      return redraw();
+    }
     if (!store.getState()) return;
     if (el.dataset.gold) {
       store.dispatch({ type: 'debug', op: 'addGold', amount: Number(el.dataset.gold) });

@@ -14,7 +14,7 @@ export type Fixture = {
   /** Steps replayed after the run starts, to reach a UI state (see fixture-steps.ts). */
   steps?: FixtureStep[];
   /** Run scene UI state: an open order dialogue, or hand positions picked for a Discard. */
-  ui?: { dialog?: number; discard?: number[] };
+  ui?: { dialog?: number; discard?: number[]; grimoire?: 'recipes' | 'deck' | 'guide'; inspect?: number; tutorial?: string };
 };
 
 const fixtures = import.meta.glob<Fixture>('/fixtures/*.json', { eager: true, import: 'default' });

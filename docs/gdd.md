@@ -389,6 +389,18 @@ Enough for the first playable. Codex IDs are kebab-case.
 - Dialogue lines are short (1-2 sentences). Customers state requests in character, the UI states them plainly.
 - Night characters are stranger and more formal, never horror.
 
+### 15.1 Teaching the player
+
+Decided after the M2 playtest: the rules must explain themselves before M3 adds more of them. Cards stay clean, as in Slay the Spire; the detail lives one hover away.
+
+- **Card inspect.** Hovering any card (hand, cauldron, rewards, Market, Hearth) shows a tooltip: name, kind and rarity, essences by name, Potency, the effect text, and a one-line definition of each game term it mentions (Harmony, Aged, Discard...).
+- **Grimoire** (the G key, or the book button at the top of the screen), open at any time in a run. Three tabs:
+  - *Recipes:* every recipe you know with its essence pattern, base Harmony and family; undiscovered ones show as "???" with their ingredient count. This is Balatro's Run Info, not a rules change.
+  - *Deck:* every card in the run, with what is in the draw pile now. Clicking the draw pile opens it here.
+  - *How to play:* the run and the day, brewing, the scoring formula, quality tiers and the glossary.
+- **Where am I.** A ribbon at the top shows the week's days (four days, then the Night Shift) and the steps of the current one: Orders, Brew, Twilight, then Errand, or on a Night Shift, the Night Market. Every evening screen says in one line what it is for.
+- **Tutorial.** A player's first run is a guided week 1 on a fixed seed, and it can't be skipped. Tips appear as each part of the game first comes up; most wait for the player to do the thing (open an order, slot two cards, brew), the rest have a Got it button. Finishing week 1 marks the tutorial done in the player's profile (browser storage until M4 brings saves). Developers skip it with `?tutorial=0` or the dev overlay; fixtures and `pnpm e2e` never show it unless they ask for a tip. Night Market stalls, patrons and the Calendar add their own tips when M3 brings them.
+
 ## 16. Out of scope for v1
 
 Controller support, localisation, the separate shop-sim game, multiplayer, voice. Keep these possible but don't build them.
