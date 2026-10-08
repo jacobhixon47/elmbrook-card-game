@@ -18,16 +18,18 @@ export type RunRecord = {
   ordersFilled: number;
   ordersDeclined: number;
   rejected: number;
+  /** Times each Tincture was played. */
+  tinctures: Record<string, number>;
   error?: string;
 };
 
-export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; maxActions?: number };
+export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; unlocks?: readonly string[]; maxActions?: number };
 
 /** Play one full run headlessly. Never throws: a crash is recorded with the action log that caused it. */
 export function playRun(seed: string, opts: SimOptions): RunRecord {
   const rec: RunRecord = {
     seed, won: false, lostWeek: null, finished: false, actions: [], quality: [], gold: [],
-    offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0,
+    offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {},
   };
   const max = opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000);
   let rng = seedRng(`bot:${seed}`);
@@ -43,6 +45,9 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
           break;
         case 'rewardOffered':
           rec.offered.push(...e.cards);
+          break;
+        case 'tincturePlayed':
+          rec.tinctures[e.card] = (rec.tinctures[e.card] ?? 0) + 1;
           break;
         case 'rewardPicked':
           rec.picked.push(e.card);
@@ -67,7 +72,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
   };
 
   try {
-    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}) };
+    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}), ...(opts.unlocks ? { unlocks: [...opts.unlocks] } : {}) };
     rec.actions.push(start);
     const first = reduce(null, start);
     let state = first.state;

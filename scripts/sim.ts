@@ -1,6 +1,7 @@
-// pnpm sim --runs 2000 --strategy greedy [--season spring] [--seed prefix]
+// pnpm sim --runs 2000 --strategy greedy [--season spring] [--seed prefix] [--unlocks all]
 // pnpm sim --replay path/to/run.json   (a {seed?, actions[]} log from a crash, the sim or the dev overlay)
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { codex } from '../src/codex';
 import { replay, SEASONS, type Action, type Season } from '../src/core';
 import type { Strategy } from '../src/sim/bot';
 import { report } from '../src/sim/report';
@@ -9,6 +10,11 @@ import { playRun } from '../src/sim/run';
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+function allUnlockIds(): string[] {
+  const tables = [codex.ingredients, codex.tinctures, codex.recipes] as const;
+  return tables.flatMap((t) => [...t.values()].filter((x) => x.pool === 'unlock').map((x) => x.id));
 }
 
 const replayPath = arg('replay');
@@ -26,12 +32,14 @@ const strategy = (arg('strategy') ?? 'greedy') as Strategy;
 const season = arg('season') as Season | undefined;
 if (season && !SEASONS.includes(season)) throw new Error(`unknown season ${season}`);
 const prefix = arg('seed') ?? 'sim';
+// --unlocks all: play as if every heart and Almanac unlock were earned, so unlock-pool cards get tested too.
+const unlocks = arg('unlocks') === 'all' ? allUnlockIds() : undefined;
 
 const t0 = performance.now();
-const records = Array.from({ length: runs }, (_, i) => playRun(`${prefix}-${i}`, { strategy, ...(season ? { season } : {}) }));
+const records = Array.from({ length: runs }, (_, i) => playRun(`${prefix}-${i}`, { strategy, ...(season ? { season } : {}), ...(unlocks ? { unlocks } : {}) }));
 const secs = ((performance.now() - t0) / 1000).toFixed(1);
 
-console.log(report(records, `${strategy}${season ? ` · ${season}` : ''}`));
+console.log(report(records, `${strategy}${season ? ` · ${season}` : ''}${unlocks ? ' · all unlocked' : ''}`));
 console.log(`\n${secs}s`);
 
 const failed = records.filter((r) => r.error);

@@ -1,3 +1,4 @@
+import { codex } from '../codex';
 import { NIGHT_SHIFT_DAY, WEEKS } from '../core';
 import type { RunRecord } from './run';
 
@@ -54,5 +55,13 @@ export function report(runs: RunRecord[], title: string): string {
   lines.push(...rates.slice(0, 5).map(fmt));
   lines.push('least picked rewards');
   lines.push(...rates.slice(-5).map(fmt));
+
+  // Every Tincture in the pool should show up here; one that never gets played is untested.
+  const plays = new Map<string, number>();
+  for (const r of runs) for (const [card, k] of Object.entries(r.tinctures)) plays.set(card, (plays.get(card) ?? 0) + k);
+  const unplayed = [...codex.tinctures.keys()].filter((id) => !plays.has(id));
+  lines.push('', 'tinctures played (per 100 runs)');
+  lines.push(...[...plays].sort((a, b) => b[1] - a[1]).map(([card, k]) => `  ${card.padEnd(16)} ${((100 * k) / n).toFixed(0).padStart(6)}`));
+  if (unplayed.length) lines.push(`  never played: ${unplayed.join(', ')}`);
   return lines.join('\n');
 }
