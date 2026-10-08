@@ -21,6 +21,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - Scoring pipeline with full event stream (GDD §6.3), quality tiers, pay and tips.
 - Shelf, deliver/decline, hearts. Day → dusk reward (with skip pity) → errands (Market, Forage, Hearth only).
 - Week structure and rent; run loss/win.
+- `season` in run state (Spring only for now) and the season twist hook.
 - `pnpm sim` with a greedy bot; prints the report from `tech.md`.
 - Dev overlay (backtick): seed, state inspector, add gold, jump to day.
 
@@ -33,21 +34,24 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - Dusk reward pick and errand choice.
 - Fixtures + snaps for each state.
 
-**Accept:** Jacob can play Days 1-3 of week 1 in the browser with mouse and keyboard and it feels good.
+**Accept:** Jacob can play the days of week 1 in the browser with mouse and keyboard and it feels good.
 
 ## M3 — Full run
 
-- Calendar scene (run map) with weather/events and next patron preview.
+- Calendar scene (run map), seeded at run start: daily weather, town events, the week-3 festival, rare sky events, next patron preview (GDD §4.2).
+- Night customers (GDD §4.1).
 - Night Shifts with patron twists (all 7), Night Satchel, Lunar cards.
 - Night Market with all 6 stalls and their odd currencies.
 - Familiars, cauldrons, card modifiers, tinctures, remaining errands (Creek, Guild Commissions, Events: first 8).
 - Game over and victory screens; resume mid-run.
 
-**Accept:** a full 16-encounter run is playable start to finish; sim win rate for greedy bot within target band; balance report checked in.
+**Accept:** a full 20-encounter run is playable start to finish; sim win rate for greedy bot within target band; balance report checked in.
 
 ## M4 — Meta and story
 
 - Codex screen; persistent save with migrations.
+- The Year: season unlocks (Summer, Autumn, Winter content and twists), Year modifiers.
+- Reputation and Guild Hall perks; Almanac achievements that unlock pool content.
 - Six regulars with hearts, Ink dialogue, heart-milestone beats and unlocks.
 - Witch and cauldron selection; unlock flow.
 
@@ -56,7 +60,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 ## M5 — Art and audio pass
 
 - Author sprite grids for every codex card (`art:check` shows 0 placeholders); portraits for regulars and patrons.
-- Procedural backgrounds for every scene (shop by day, dusk, Night Market street).
+- Backdrops for every scene (painted where possible, see art-pipeline.md): Night Market street, Calendar, Guild Hall. The shop window already regrades by season and time of day.
 - Art sheet reviewed for consistency.
 - SFX and music loops wired in, with volume settings.
 
@@ -70,3 +74,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - Optional: Claude Code terminal preview mod.
 
 **Accept:** a friend can play the itch build without help.
+
+## After launch
+
+- Long Year mode (GDD §13): all four seasons as one run, with mid-run saves.
