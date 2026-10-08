@@ -63,7 +63,7 @@ export function rarityPool(s: Pick<RunState, 'unlocks'>, rarity: 'common' | 'unc
 }
 
 /** n distinct cards from a pool. */
-function draft(ctx: Ctx, pool: readonly string[], n: number): string[] {
+export function draft(ctx: Ctx, pool: readonly string[], n: number): string[] {
   const left = [...pool];
   const out: string[] = [];
   while (out.length < n && left.length) out.push(...left.splice(randInt(ctx, left.length), 1));

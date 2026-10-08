@@ -1,4 +1,4 @@
-import type { PotionFamily } from '../codex/schema';
+import type { Essence, PotionFamily, StallId } from '../codex/schema';
 import type { Calendar, Season } from './calendar';
 import type { RngState } from './rng';
 import type { Tier } from './rules';
@@ -13,6 +13,8 @@ export type CardInstance = {
   bonus?: number;
   /** Days in the deck, for cards that leave by themselves (Cobweb). */
   days?: number;
+  /** An essence the Hollow Tailor sewed in; it replaces the card's second essence, if any. */
+  woven?: Essence;
 };
 
 export type Phase = 'morning' | 'brewing' | 'dusk' | 'night-market' | 'game-over' | 'victory';
@@ -84,8 +86,19 @@ export type Offer =
   | { kind: 'market'; stock: StockItem[] }
   | { kind: 'forage'; cards: string[]; picksLeft: number }
   | { kind: 'hearth'; removed: boolean }
-  | { kind: 'fence' }
+  | { kind: 'night-market'; stalls: StallState[]; at: number | null }
   | Gift;
+
+/** One Night Market stall tonight and what's left of its trade (GDD §9). */
+export type StallState =
+  | { id: 'lantern-seller' | 'wandering-tinker' | 'black-market'; stock: StockItem[] }
+  | { id: 'fence' }
+  /** `cards` is the Rare pick after forgetting a recipe; one trade a night. */
+  | { id: 'moth-broker'; forgot: string | null; cards: string[]; done: boolean }
+  | { id: 'hollow-tailor'; done: boolean }
+  | { id: 'fortune-tent'; drawn: string[] };
+
+export type { StallId };
 
 /** Why a free pick is on offer at night. */
 export type GiftSource = 'first-night' | 'lantern-witch' | 'bog-hag' | 'patron';
@@ -95,7 +108,7 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
 
 /** Plain, JSON-serialisable run state. Fixtures and saves are exactly this shape. */
 export type RunState = {
-  version: 5;
+  version: 6;
   seed: string;
   rng: RngState;
   witch: string;
@@ -136,6 +149,8 @@ export type RunState = {
   delivery: DeliveryBoost;
   /** Brews made today, for first-brew effects. */
   brewsToday: number;
+  /** Fortune Tent twists on a later week (The Hermit, The Tower, The Moon). */
+  fortunes: { week: number; card: string }[];
   /** Unlock-pool content this run may offer (meta-progression, M4). Base-pool content is always on. */
   unlocks: string[];
   /** Fog hides today's orders until the first brew or Discard. */

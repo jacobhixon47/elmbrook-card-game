@@ -145,7 +145,7 @@ export const TIPS: Tip[] = [
   },
   {
     id: 'fence',
-    text: 'The Night Market. Sell potions from your Shelf to the Fence to make rent. Pay it and a new week begins; if you can\'t, the Guild takes your stall.',
+    text: 'The Night Market. Visit the stalls: sell potions to the Fence to make rent, or buy Lunar cards for next Night Shift. Pay rent and a new week begins; if you can\'t, the Guild takes your stall.',
     when: (s) => s.week === 1 && s.phase === 'night-market',
     at: { x: 320, y: 260 },
   },

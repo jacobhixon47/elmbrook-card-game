@@ -1,10 +1,10 @@
 import { codex } from '../codex';
 import {
-  fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentDue, tierIndex,
-  type Action, type BrewPreview, type CardInstance, type Order, type Potion, type RunState,
+  allCards, fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentDue, tierIndex, WEEKS,
+  type Action, type BrewPreview, type CardInstance, type Order, type Potion, type RunState, type StallState,
 } from '../core';
 import { targetsOf } from '../core/effects';
-import { brewBlocked } from '../core/night';
+import { brewBlocked, isSatchelCard } from '../core/night';
 import { fencePrice } from '../core/reduce';
 import { nextFloat, type RngState } from '../core/rng';
 
@@ -223,8 +223,44 @@ function greedyDusk(s: RunState): Action {
       const best = offer.cards.map((card, index) => ({ index, v: cardValue(s, card) })).sort((a, b) => b.v - a.v)[0]!;
       return offer.into === 'satchel' || (deck.length < 24 && best.v >= 5) ? { type: 'takeGift', index: best.index } : { type: 'passGift' };
     }
+    case 'night-market': {
+      // Visit the first stall with something worth doing, do it there, then pay rent.
+      const wants = (stall: StallState): Action | null => stallAction(s, stall);
+      if (offer.at !== null) return wants(offer.stalls[offer.at]!) ?? { type: 'leaveStall' };
+      const next = offer.stalls.findIndex((x) => wants(x) !== null);
+      return next >= 0 ? { type: 'visitStall', index: next } : { type: 'leaveMarket' };
+    }
+  }
+}
+
+/** Satchel cards past this many rarely get drawn on a Night Shift. */
+const SATCHEL_WANT = 4;
+const NEXT_RENT_RESERVE = 0.5;
+
+/** What the greedy bot does at a Night Market stall, or null when it has no use for it. */
+function stallAction(s: RunState, stall: StallState): Action | null {
+  // Keep tonight's rent and half of next week's: rent more than doubles each week.
+  const spare = s.gold - rentDue(s.season, s.week) - (s.week < WEEKS ? Math.round(rentDue(s.season, s.week + 1) * NEXT_RENT_RESERVE) : 0);
+  switch (stall.id) {
     case 'fence':
-      return s.shelf[0] ? { type: 'sellPotion', uid: s.shelf[0].uid } : { type: 'leaveMarket' };
+      return s.shelf[0] ? { type: 'sellPotion', uid: s.shelf[0].uid } : null;
+    case 'lantern-seller': {
+      // Satchel cards only help on later Night Shifts, and only a handful get drawn.
+      if (s.week >= WEEKS || s.satchel.length + allCards(s).filter((c) => isSatchelCard(c.card)).length >= SATCHEL_WANT) return null;
+      const best = stall.stock
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => item.kind === 'card' && !item.sold && item.price <= spare)
+        .map(({ item, index }) => ({ index, v: item.kind === 'card' ? cardValue(s, item.card) : 0 }))
+        .sort((a, b) => b.v - a.v)[0];
+      return best ? { type: 'buy', index: best.index } : null;
+    }
+    case 'wandering-tinker': {
+      const slot = stall.stock.findIndex((i) => i.kind === 'cauldron-slot' && !i.sold && i.price <= spare);
+      return slot >= 0 ? { type: 'buy', index: slot } : null;
+    }
+    default:
+      // The Moth Broker, the Hollow Tailor, the Fortune Tent and the Black Market: the random bot covers them.
+      return null;
   }
 }
 
@@ -256,6 +292,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
   const card = any(hand) ?? 0;
   const order = any(s.orders.map((o) => o.id)) ?? 0;
   const potion = any(s.shelf.map((p) => p.uid)) ?? 0;
+  const deckUids = allCards(s).map((c) => c.uid);
   candidates.push(
     { type: 'slot', uid: card },
     { type: 'slot', uid: card },
@@ -276,6 +313,14 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'forage', index: roll(5) },
     { type: 'removeCard', uid: any([...s.drawPile, ...s.hand, ...s.discardPile].map((c) => c.uid)) ?? 0 },
     { type: 'sellPotion', uid: potion },
+    { type: 'visitStall', index: roll(7) },
+    { type: 'visitStall', index: roll(7) },
+    { type: 'leaveStall' },
+    { type: 'forgetRecipe', recipe: any(s.knownRecipes) ?? '' },
+    { type: 'brokerPick', index: roll(3) },
+    { type: 'weave', from: any(deckUids) ?? 0, into: any(deckUids) ?? 0 },
+    { type: 'drawTarot' },
+    { type: 'swapForCard', index: roll(3), uids: [any(deckUids) ?? 0, any(deckUids) ?? 0] },
   );
   // Weight away from ending the day so random runs actually brew.
   const a = roll(10) === 0 ? candidates[roll(5)]! : candidates[5 + roll(candidates.length - 5)]!;

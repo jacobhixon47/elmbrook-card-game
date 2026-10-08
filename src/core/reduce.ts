@@ -6,6 +6,7 @@ import { changeGold, draw, drawToHandSize, gainCard, Reject, reject, shuffled, t
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
 import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
+import { atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, stallStock, swapForCard, weave } from './market';
 import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import {
@@ -30,7 +31,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   }
 
   const s: RunState = {
-    version: 5,
+    version: 6,
     seed,
     rng: seedRng(seed),
     witch: witch.id,
@@ -62,6 +63,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     delivery: noBoost(),
     brewsToday: 0,
     unlocks: [...unlocks],
+    fortunes: [],
     fog: false,
     offer: null,
     skipStreak: 0,
@@ -302,9 +304,7 @@ function afterReward(ctx: Ctx): void {
       ctx.s.offer = gift;
       return;
     }
-    ctx.s.phase = 'night-market';
-    ctx.s.offer = { kind: 'fence' };
-    ctx.ev.push({ type: 'nightMarketOpened' });
+    openNightMarket(ctx);
   } else {
     offerErrands(ctx);
   }
@@ -465,7 +465,8 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
     }
 
     case 'buy': {
-      const item = offerOf(ctx, 'market').stock[action.index];
+      // The day's Market Square, or the Night Market stall you're standing at.
+      const item = (stallStock(s) ?? offerOf(ctx, 'market').stock)[action.index];
       if (!item) reject(`no stock ${action.index}`);
       if (item.sold) reject('already sold');
       if (s.gold < item.price) reject('not enough gold');
@@ -534,8 +535,41 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       return;
     }
 
+    case 'visitStall': {
+      const m = marketOf(ctx);
+      const stall = m.stalls[action.index];
+      if (!stall) reject(`no stall ${action.index}`);
+      m.at = action.index;
+      ctx.ev.push({ type: 'stallVisited', stall: stall.id });
+      return;
+    }
+
+    case 'leaveStall':
+      marketOf(ctx).at = null;
+      return;
+
+    case 'forgetRecipe':
+      forgetRecipe(ctx, action.recipe);
+      return;
+
+    case 'brokerPick':
+      brokerPick(ctx, action.index);
+      return;
+
+    case 'weave':
+      weave(ctx, action.from, action.into);
+      return;
+
+    case 'drawTarot':
+      drawTarot(ctx);
+      return;
+
+    case 'swapForCard':
+      swapForCard(ctx, action.index, action.uids);
+      return;
+
     case 'sellPotion': {
-      offerOf(ctx, 'fence');
+      atStall(ctx, 'fence');
       const i = s.shelf.findIndex((p) => p.uid === action.uid);
       if (i < 0) reject(`potion ${action.uid} is not on the Shelf`);
       const [potion] = s.shelf.splice(i, 1);
@@ -546,7 +580,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
     }
 
     case 'leaveMarket':
-      offerOf(ctx, 'fence');
+      marketOf(ctx);
       collectRent(ctx);
       return;
 

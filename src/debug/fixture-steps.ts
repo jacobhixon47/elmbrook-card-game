@@ -5,7 +5,7 @@ import type { Action, Errand, RunState } from '../core';
  * card uids, so a fixture reads as "slot the first two cards" and survives rule changes.
  */
 export type FixtureStep =
-  | 'openShop' | 'endDay' | 'skipReward' | 'leaveErrand' | 'leaveMarket' | 'brew' | 'passGift'
+  | 'openShop' | 'endDay' | 'skipReward' | 'leaveErrand' | 'leaveMarket' | 'brew' | 'passGift' | 'leaveStall' | 'drawTarot'
   | { slot: number }
   | { pick: number }
   | { errand: Errand }
@@ -18,7 +18,11 @@ export type FixtureStep =
   /** Brew what's in the cauldron for the order at this index. */
   | { brewFor: number }
   /** Set a week's Night Shift patron (before jumping to it). */
-  | { patron: [number, string] };
+  | { patron: [number, string] }
+  /** Walk up to the Night Market stall at this index. */
+  | { visit: number }
+  /** Forget a recipe at the Moth Broker. */
+  | { forget: string };
 
 export function stepAction(state: RunState, step: FixtureStep): Action {
   if (typeof step === 'string') return { type: step === 'skipReward' ? 'skipReward' : step };
@@ -32,6 +36,8 @@ export function stepAction(state: RunState, step: FixtureStep): Action {
   if ('gift' in step) return { type: 'takeGift', index: step.gift };
   if ('brewFor' in step) return { type: 'brew', deliverTo: state.orders[step.brewFor]?.id ?? -1 };
   if ('patron' in step) return { type: 'debug', op: 'setPatron', week: step.patron[0], patron: step.patron[1] };
+  if ('visit' in step) return { type: 'visitStall', index: step.visit };
+  if ('forget' in step) return { type: 'forgetRecipe', recipe: step.forget };
   const deck = [...state.drawPile, ...state.hand, ...state.discardPile];
   return { type: 'removeCard', uid: deck[step.removeAt]?.uid ?? -1 };
 }

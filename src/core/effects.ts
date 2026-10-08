@@ -53,7 +53,11 @@ export type Effect = {
 const hasEssence = (ing: Ingredient, e: Essence) => ing.essences.includes(e) || ing.effects.includes('wild-essence');
 
 function inHandWith(e: Essence) {
-  return (card: CardInstance) => codex.ingredients.get(card.card)?.essences.includes(e) ?? false;
+  return (card: CardInstance) => {
+    const es = codex.ingredients.get(card.card)?.essences ?? [];
+    // A woven essence (the Hollow Tailor) replaces the second.
+    return card.woven ? es[0] === e || card.woven === e : es.includes(e);
+  };
 }
 
 /** +n Harmony when a condition on the brew holds. */

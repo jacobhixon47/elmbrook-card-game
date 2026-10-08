@@ -199,7 +199,7 @@ describe('the Night Satchel', () => {
     // Not in week 2.
     let w2 = night('pale-courier', 2);
     w2 = ok(ok(w2, { type: 'endDay' }).state, { type: 'skipReward' }).state;
-    expect(w2.offer).toEqual({ kind: 'fence' });
+    expect(w2.offer?.kind).toBe('night-market');
   });
 });
 

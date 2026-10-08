@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
-import { codex } from '../codex';
+import { codex, type Essence } from '../codex';
 import {
-  brewBlocked, FINALE_ORDERS, isPatron, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentDue, SKIP_GOLD, skyTime, payout, todaysWeather, twistNow,
-  type Action, type CardInstance, type GameEvent, type Gift, type Order, type Potion, type RunState, type Season, type SkyTime, type Weather,
+  BLACK_MARKET, brewBlocked, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentDue, SKIP_GOLD,
+  skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS,
+  type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
+  type StockItem, type Weather,
 } from '../core';
 import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
@@ -32,7 +34,9 @@ import { addWeather } from '../view/weather';
 type Mode =
   | { kind: 'idle' }
   | { kind: 'dialog'; order: number }
-  | { kind: 'select'; purpose: Purpose; tincture?: number; picked: number[] };
+  | { kind: 'select'; purpose: Purpose; tincture?: number; picked: number[] }
+  /** Deck cards picked at a Night Market stall: the Hollow Tailor's two, or the Black Market's trade for stock `swap`. */
+  | { kind: 'stall'; picked: number[]; swap?: number };
 
 /** What a selection is for: a Discard, or the targets of a Tincture (see `targetsOf`). */
 type Purpose = 'discard' | 'hand' | 'hand-one' | 'top-3' | 'shelf-one';
@@ -113,6 +117,10 @@ export class Run extends Phaser.Scene {
       const inst = state.hand[t.hand]!;
       const picked = (t.picked ?? []).map((i) => (targetsOf(inst.card) === 'top-3' ? state.drawPile[i]! : state.hand[i]!).uid);
       this.mode = { kind: 'select', purpose: targetsOf(inst.card)!, tincture: inst.uid, picked };
+    }
+    if (fixture?.ui?.stall) {
+      const deck = sortedDeck(stallDeck(state));
+      this.mode = { kind: 'stall', picked: (fixture.ui.stall.picked ?? []).map((i) => deck[i]!.uid), ...(fixture.ui.stall.swap !== undefined ? { swap: fixture.ui.stall.swap } : {}) };
     }
     if (fixture?.ui?.grimoire) this.book = fixture.ui.grimoire;
     if (fixture?.ui?.tutorial) {
@@ -465,7 +473,7 @@ export class Run extends Phaser.Scene {
         this.add2(this.add.rectangle(x, SLOT_Y, 34, 46, hex('k'), 0.35).setStrokeStyle(1, hex('a'), 0.5));
         continue;
       }
-      const c = this.add2(createCard(this, x, SLOT_Y, card.card).setScale(0.6));
+      const c = this.add2(createCard(this, x, SLOT_Y, card.card, card.woven).setScale(0.6));
       c.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'unslot', uid: card.uid }));
       this.inspect(c, card.card, 0.6);
     }
@@ -491,7 +499,7 @@ export class Run extends Phaser.Scene {
     s.hand.forEach((inst, i) => {
       const x = this.handX(i, s.hand.length);
       const lifted = picked.includes(inst.uid) || inst.uid === tincture;
-      const card = createCard(this, x, lifted ? HAND_Y - 14 : HAND_Y, inst.card);
+      const card = createCard(this, x, lifted ? HAND_Y - 14 : HAND_Y, inst.card, inst.woven);
       if (lifted) card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex(inst.uid === tincture ? 'Y' : 'R')), 0);
       this.add2(card);
       card.setInteractive({ useHandCursor: s.phase === 'brewing' });
@@ -601,7 +609,7 @@ export class Run extends Phaser.Scene {
     this.text(320, 122, 'Taste Test: top of your draw pile', { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
     top.forEach((inst, i) => {
       const x = 320 + (i - (top.length - 1) / 2) * 70;
-      const card = this.add2(createCard(this, x, 178, inst.card));
+      const card = this.add2(createCard(this, x, 178, inst.card, inst.woven));
       const at = picked.indexOf(inst.uid);
       if (at >= 0) {
         card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex('Y')), 0);
@@ -707,7 +715,7 @@ export class Run extends Phaser.Scene {
       const layer = this.add.container(0, 0);
       const n = before.cauldronSlots;
       const cards = before.cauldron.map((c, i) => {
-        const card = createCard(this, 320 + (i - (n - 1) / 2) * 40, SLOT_Y, c.card).setScale(0.6);
+        const card = createCard(this, 320 + (i - (n - 1) / 2) * 40, SLOT_Y, c.card, c.woven).setScale(0.6);
         layer.add(card);
         return card;
       });
@@ -828,21 +836,7 @@ export class Run extends Phaser.Scene {
       }
       case 'market': {
         title('Market Square', `Buy cards for your deck or upgrades for the shop. You have ${s.gold} gold.`);
-        offer.stock.forEach((item, i) => {
-          const x = 320 + (i - (offer.stock.length - 1) / 2) * 74;
-          const y = 150;
-          const buy = () => this.dispatch({ type: 'buy', index: i });
-          if (item.kind === 'card') {
-            this.offerCard(x, y, item.card, buy, item.sold);
-          } else {
-            const tile = this.add2(panel(this, x - 28, y - 38, 56, 76, 'k', 0.95, 'n'));
-            this.text(x, y - 24, item.kind === 'cauldron-slot' ? 'Cauldron\nslot' : 'Shelf\nslot', { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
-            this.text(x, y + 4, item.kind === 'cauldron-slot' ? 'Brew with 3 ingredients' : '+1 potion space', { size: 7, color: 'w', align: 'center', wrap: 50 }).setOrigin(0.5, 0);
-            if (item.sold) tile.setAlpha(0.4);
-            else tile.setInteractive({ useHandCursor: true }).on('pointerdown', buy);
-          }
-          this.text(x, y - 54, item.sold ? 'sold' : `${item.price}g`, { size: 8, color: item.sold ? 'h' : item.price > s.gold ? 'R' : 'y', stroke: 'k' }).setOrigin(0.5, 0);
-        });
+        this.drawStock(s, offer.stock);
         this.add2(button(this, 320, 262, 'Leave', () => this.dispatch({ type: 'leaveErrand' }), { w: 60 }));
         return;
       }
@@ -854,19 +848,7 @@ export class Run extends Phaser.Scene {
       }
       case 'hearth': {
         title('The Hearth', offer.removed ? 'Done. The fire crackles.' : 'Burn one card from your deck for good. A thinner deck draws its best cards more often.');
-        const deck = [...s.drawPile, ...s.hand, ...s.discardPile].sort((a, b) => a.card.localeCompare(b.card) || a.uid - b.uid);
-        const perRow = 12;
-        deck.forEach((inst, i) => {
-          const x = 320 + ((i % perRow) - (Math.min(deck.length, perRow) - 1) / 2) * 32;
-          const y = 112 + Math.floor(i / perRow) * 44;
-          const c = this.add2(createCard(this, x, y, inst.card).setScale(0.5));
-          c.setInteractive();
-          this.inspect(c, inst.card, 0.5);
-          if (offer.removed) return void c.setAlpha(0.6);
-          c.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'removeCard', uid: inst.uid }));
-          c.on('pointerover', () => c.setScale(0.6));
-          c.on('pointerout', () => c.setScale(0.5));
-        });
+        this.deckGrid(blackMarketDeck(s), offer.removed ? null : (inst) => this.dispatch({ type: 'removeCard', uid: inst.uid }));
         this.add2(button(this, 320, 262, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
         return;
       }
@@ -877,9 +859,87 @@ export class Run extends Phaser.Scene {
         this.add2(button(this, 320, 250, 'No thanks', () => this.dispatch({ type: 'passGift' }), { w: 72 }));
         return;
       }
+      case 'night-market':
+        return this.drawNightMarket(s, offer, title);
+    }
+  }
+
+  /** Stock on sale: cards, or a cauldron or Shelf slot. The day's Market Square and the Night Market's sellers. */
+  private drawStock(s: RunState, stock: readonly StockItem[], after?: (item: StockItem, i: number, x: number) => void) {
+    stock.forEach((item, i) => {
+      const x = 320 + (i - (stock.length - 1) / 2) * 74;
+      const y = 150;
+      const buy = () => this.dispatch({ type: 'buy', index: i });
+      if (item.kind === 'card') {
+        this.offerCard(x, y, item.card, buy, item.sold);
+      } else {
+        const tile = this.add2(panel(this, x - 28, y - 38, 56, 76, 'k', 0.95, 'n'));
+        this.text(x, y - 24, item.kind === 'cauldron-slot' ? 'Cauldron\nslot' : 'Shelf\nslot', { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
+        this.text(x, y + 4, item.kind === 'cauldron-slot' ? 'Brew with one more ingredient' : '+1 potion space', { size: 7, color: 'w', align: 'center', wrap: 50 }).setOrigin(0.5, 0);
+        if (item.sold) tile.setAlpha(0.4);
+        else tile.setInteractive({ useHandCursor: true }).on('pointerdown', buy);
+      }
+      this.text(x, y - 54, item.sold ? 'sold' : `${item.price}g`, { size: 8, color: item.sold ? 'h' : item.price > s.gold ? 'R' : 'y', stroke: 'k' }).setOrigin(0.5, 0);
+      after?.(item, i, x);
+    });
+  }
+
+  /** Deck cards laid out to pick from, sorted by name (the Hearth, the Hollow Tailor, the Black Market). */
+  private deckGrid(cards: readonly CardInstance[], onPick: ((inst: CardInstance) => void) | null, picked: readonly number[] = [], top = 112) {
+    const deck = sortedDeck(cards);
+    const perRow = 12;
+    deck.forEach((inst, i) => {
+      const x = 320 + ((i % perRow) - (Math.min(deck.length, perRow) - 1) / 2) * 32;
+      const y = top + Math.floor(i / perRow) * 44;
+      const on = picked.includes(inst.uid);
+      const c = this.add2(createCard(this, x, on ? y - 6 : y, inst.card, inst.woven).setScale(0.5));
+      if (on) this.add2(this.add.rectangle(x, y - 6, 29, 41).setStrokeStyle(1, hex('y')));
+      c.setInteractive();
+      this.inspect(c, inst.card, 0.5);
+      if (!onPick) return void c.setAlpha(0.6);
+      c.setInteractive({ useHandCursor: true }).on('pointerdown', () => onPick(inst));
+      c.on('pointerover', () => c.setScale(0.6));
+      c.on('pointerout', () => c.setScale(0.5));
+    });
+  }
+
+  /** The Night Market (GDD §9): a street of stalls, then rent. */
+  private drawNightMarket(s: RunState, offer: Extract<Offer, { kind: 'night-market' }>, title: (t: string, sub: string) => void) {
+    const due = rentDue(s.season, s.week);
+    const stall = offer.at === null ? null : offer.stalls[offer.at]!;
+    const back = () => {
+      this.mode = { kind: 'idle' };
+      void this.dispatch({ type: 'leaveStall' });
+    };
+    const backButton = () => this.add2(button(this, 320, 262, 'Back to the street', back, { w: 110 }));
+    const info = stall ? codex.stalls.get(stall.id)! : null;
+    const head = (sub: string) => title(info!.name, `${sub} You have ${s.gold}g.`);
+
+    if (!stall) {
+      title('The Night Market', `${MOON_LINE[moonOf(s.week)]} Visit any stall, then the Guild collects this week's rent: ${due}g. You have ${s.gold}g.`);
+      const n = offer.stalls.length;
+      const w = Math.min(84, Math.floor(600 / n) - 6);
+      offer.stalls.forEach((st, i) => {
+        const x = 320 + (i - (n - 1) / 2) * (w + 6);
+        const meta = codex.stalls.get(st.id)!;
+        const tile = this.add2(panel(this, x - w / 2, 96, w, 96, 'k', 0.95, 'n'));
+        this.text(x, 102, meta.name, { size: 8, color: 'y', align: 'center', wrap: w - 8 }).setOrigin(0.5, 0);
+        this.text(x, 128, meta.currency, { size: 7, color: 'a', align: 'center', wrap: w - 8 }).setOrigin(0.5, 0);
+        this.text(x, 142, meta.text, { size: 6, color: 'w', align: 'center', wrap: w - 8 }).setOrigin(0.5, 0);
+        const note = stallNote(s, st);
+        if (note) this.text(x, 180, note, { size: 6, color: 'h', align: 'center' }).setOrigin(0.5, 0);
+        tile.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'visitStall', index: i }));
+        tile.on('pointerover', () => tile.setStrokeStyle(2, hex('y')));
+        tile.on('pointerout', () => tile.setStrokeStyle(1, hex('n')));
+      });
+      const short = s.gold < due;
+      this.add2(button(this, 320, 214, short ? `Can't pay ${due}g: leave` : `Pay ${due}g rent and go home`, () => this.dispatch({ type: 'leaveMarket' }), { w: 160, color: short ? 'I' : 'Y' }));
+      return;
+    }
+
+    switch (stall.id) {
       case 'fence': {
-        const due = rentDue(s.season, s.week);
-        title('The Night Market', `The night's work is done. Sell potions from your Shelf to the Fence, then the Guild collects this week's rent: ${due}g. You have ${s.gold}g.`);
+        head('Sells potions from your Shelf. Potions with Umbra or Lunar in them fetch half again.');
         if (s.shelf.length === 0) this.text(320, 140, 'Your Shelf is empty.', { size: 8, color: 'a', align: 'center' }).setOrigin(0.5);
         s.shelf.forEach((p, i) => {
           const x = 320 + (i - (s.shelf.length - 1) / 2) * 50;
@@ -887,11 +947,106 @@ export class Run extends Phaser.Scene {
           this.text(x, 160, `${TIER_NAME[p.tier]}\n${fencePrice(p)}g`, { size: 7, color: 'y', align: 'center' }).setOrigin(0.5, 0);
           img.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'sellPotion', uid: p.uid }));
         });
-        const short = s.gold < due;
-        this.add2(button(this, 320, 230, short ? `Can't pay ${due}g: leave` : `Pay ${due}g rent and go home`, () => this.dispatch({ type: 'leaveMarket' }), { w: 160, color: short ? 'I' : 'Y' }));
-        return;
+        break;
+      }
+      case 'lantern-seller':
+        head('Lunar ingredients and Omens. They go in your Night Satchel, which joins your deck only on Night Shifts.');
+        this.drawStock(s, stall.stock);
+        break;
+      case 'wandering-tinker':
+        head(stall.stock.length ? 'Here only at the full moon, and cheaper than the Market.' : 'Your shop has every slot already. The Tinker shrugs.');
+        this.drawStock(s, stall.stock);
+        break;
+      case 'black-market': {
+        const picking = this.mode.kind === 'stall' && this.mode.swap !== undefined ? this.mode : null;
+        if (picking) {
+          const item = stall.stock[picking.swap!]!;
+          head(`Pick ${BLACK_MARKET.swap} cards from your deck to trade for ${item.kind === 'card' ? cardName(item.card) : 'it'}.`);
+          this.deckGrid(blackMarketDeck(s), (inst) => {
+            const picked = picking.picked.includes(inst.uid) ? picking.picked.filter((u) => u !== inst.uid) : [...picking.picked, inst.uid];
+            if (picked.length < BLACK_MARKET.swap) {
+              this.mode = { ...picking, picked };
+              return this.render();
+            }
+            this.mode = { kind: 'idle' };
+            void this.dispatch({ type: 'swapForCard', index: picking.swap!, uids: picked });
+          }, picking.picked);
+          this.add2(button(this, 320, 262, 'Cancel', () => {
+            this.mode = { kind: 'idle' };
+            this.render();
+          }, { w: 60 }));
+          return;
+        }
+        head(`Rare cards for gold, or for any ${BLACK_MARKET.swap} cards from your deck.`);
+        this.drawStock(s, stall.stock, (item, i, x) => {
+          if (item.sold) return;
+          this.add2(button(this, x, 236, `or ${BLACK_MARKET.swap} cards`, () => {
+            this.mode = { kind: 'stall', picked: [], swap: i };
+            this.render();
+          }, { w: 64 }));
+        });
+        break;
+      }
+      case 'moth-broker': {
+        if (stall.cards.length) {
+          head(`${recipeName(stall.forgot!)} is gone from your Grimoire. Take one Rare card for it.`);
+          stall.cards.forEach((id, i) => this.offerCard(320 + (i - (stall.cards.length - 1) / 2) * 80, 150, id, () => this.dispatch({ type: 'brokerPick', index: i })));
+          break;
+        }
+        if (stall.done) {
+          head('The moths settle back into his coat.');
+          break;
+        }
+        const options = forgettable(s);
+        head(options.length ? 'Forget a recipe you learned this run, and take a Rare card for the memory. You can learn it again by brewing it.' : 'He only takes recipes you learned this run, not the four you started with. You have none yet.');
+        options.forEach((r, i) => {
+          const col = i % 3;
+          const row = Math.floor(i / 3);
+          this.add2(button(this, 320 + (col - 1) * 130, 112 + row * 22, recipeName(r), () => this.dispatch({ type: 'forgetRecipe', recipe: r }), { w: 124 }));
+        });
+        break;
+      }
+      case 'hollow-tailor': {
+        if (stall.done) {
+          head('Snip, stitch, done. The Tailor sews one card a night.');
+          break;
+        }
+        const picked = this.mode.kind === 'stall' ? this.mode.picked : [];
+        const from = picked.length ? tailorCards(s).find((c) => c.uid === picked[0]) : undefined;
+        head(from
+          ? `Now pick the card to sew ${ESSENCE_NAME[essencesOf(from)[0]!]} into. It gains it in place of its second essence, and +${TAILOR_POTENCY} Potency.`
+          : 'Pick a card to give up for good. Its essence (its main one, if it has two) is sewn into another card.');
+        this.deckGrid(tailorCards(s), (inst) => {
+          if (!from) {
+            this.mode = { kind: 'stall', picked: [inst.uid] };
+            return this.render();
+          }
+          if (inst.uid === from.uid) {
+            this.mode = { kind: 'idle' };
+            return this.render();
+          }
+          this.mode = { kind: 'idle' };
+          void this.dispatch({ type: 'weave', from: from.uid, into: inst.uid });
+        }, picked);
+        break;
+      }
+      case 'fortune-tent': {
+        const price = fortunePrice(stall.drawn.length);
+        head(s.week < WEEKS ? 'Draw a tarot. Boons come at once; twists change next week.' : 'Draw a tarot. A boon, or a small curse. Next week is past saving.');
+        stall.drawn.forEach((id, i) => {
+          const t = codex.tarot.get(id)!;
+          const x = 320 + (i - (stall.drawn.length - 1) / 2) * 96;
+          this.add2(panel(this, x - 44, 96, 88, 90, 'k', 0.95, t.kind === 'boon' ? 'y' : 'v'));
+          this.text(x, 104, t.name, { size: 8, color: t.kind === 'boon' ? 'y' : 'v', align: 'center', wrap: 80 }).setOrigin(0.5, 0);
+          this.text(x, 122, t.kind === 'boon' ? 'Boon' : 'Twist', { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
+          this.text(x, 136, t.text, { size: 7, color: 'w', align: 'center', wrap: 80 }).setOrigin(0.5, 0);
+        });
+        if (!stall.drawn.length) this.text(320, 150, 'The cards wait, face-down.', { size: 8, color: 'a', align: 'center' }).setOrigin(0.5);
+        this.add2(button(this, 320, 230, `Draw a card (${price}g)`, () => this.dispatch({ type: 'drawTarot' }), { w: 110, color: price > s.gold ? 'R' : 'Y', enabled: price <= s.gold }));
+        break;
       }
     }
+    backButton();
   }
 
   private offerCard(x: number, y: number, id: string, onPick: () => void, dim = false) {
@@ -939,6 +1094,35 @@ export class Run extends Phaser.Scene {
     });
   }
 }
+
+const MOON_LINE: Record<ReturnType<typeof moonOf>, string> = {
+  quarter: 'A quarter moon: three stalls tonight.',
+  'full-moon': 'The full moon: every stall is out, and the Wandering Tinker is in town.',
+  'new-moon': 'The new moon: every stall, and the Black Market by the well.',
+};
+
+/** What's left to do at a stall, for its sign on the street. */
+function stallNote(s: RunState, st: StallState): string | null {
+  if ('stock' in st) return st.stock.length && st.stock.every((i) => i.sold) ? 'sold out' : null;
+  if (st.id === 'fence') return s.shelf.length ? `${s.shelf.length} on your Shelf` : null;
+  if (st.id === 'moth-broker' || st.id === 'hollow-tailor') return st.done ? 'done' : null;
+  return st.drawn.length ? `drew ${st.drawn.length}` : null;
+}
+
+/** Cards the stall you're at works with, for picking from (fixtures name them by position in this list, sorted). */
+function stallDeck(s: RunState): CardInstance[] {
+  const o = s.offer;
+  const st = o?.kind === 'night-market' && o.at !== null ? o.stalls[o.at] : undefined;
+  return st?.id === 'hollow-tailor' ? tailorCards(s) : blackMarketDeck(s);
+}
+
+const blackMarketDeck = (s: RunState) => [...s.drawPile, ...s.hand, ...s.discardPile];
+
+const sortedDeck = (cards: readonly CardInstance[]) => cards.slice().sort((a, b) => a.card.localeCompare(b.card) || a.uid - b.uid);
+
+const cardName = (id: string) => codex.ingredients.get(id)?.name ?? codex.tinctures.get(id)?.name ?? codex.junk.get(id)?.name ?? id;
+
+const ESSENCE_NAME: Record<Essence, string> = { vital: 'Vital', ember: 'Ember', tide: 'Tide', gale: 'Gale', stone: 'Stone', umbra: 'Umbra', lunar: 'Lunar' };
 
 const GIFT_TITLE: Record<Gift['source'], [string, string]> = {
   'first-night': ['A gift from the night', 'Week 1 is nearly done. Take one Lunar ingredient, free.'],

@@ -227,7 +227,8 @@ describe('weeks, rent and the end of a run', () => {
     expect(s.day).toBe(NIGHT_SHIFT_DAY);
     s = skipDay(s);
     expect(s.phase).toBe('night-market');
-    expect(s.offer).toEqual({ kind: 'fence' });
+    expect(s.offer).toMatchObject({ kind: 'night-market', at: null });
+    s = ok(s, { type: 'visitStall', index: 1 }).state;
 
     s = { ...s, gold: 100, shelf: [potion({ tier: 'superb' }), potion({ uid: 601, ingredients: ['nightshade', 'creekwater'] })] };
     const sold = ok(s, { type: 'sellPotion', uid: 600 });

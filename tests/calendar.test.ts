@@ -194,6 +194,12 @@ describe('Calendar view', () => {
     // Each Night cell names its patron; the HUD line leads with tonight's.
     expect(calendarWeeks(winter).map((w) => w.cells[NIGHT_SHIFT_DAY - 1]!.marks[0])).toEqual(winter.patrons.map((id) => codex.patrons.get(id)!.name.replace(/^The /, '')));
     expect(todayLine({ ...winter, day: NIGHT_SHIFT_DAY })).toMatch(new RegExp(`^${codex.patrons.get(winter.patrons[0]!)!.name} · `));
+    // Fortune Tent twists show on their week's days, but not on its Night Shift; The Moon's fog is already the weather.
+    const told = { ...winter, fortunes: [{ week: 2, card: 'the-hermit' }, { week: 2, card: 'the-moon' }] };
+    expect(dayRules(told, { week: 2, day: 1, weather: 'fog' }).at(-1)).toBe('The Hermit: one order fewer each day, each paying +50%.');
+    expect(dayRules(told, { week: 2, day: 1, weather: 'fog' }).some((r) => r.startsWith('The Moon'))).toBe(false);
+    expect(dayRules(told, { week: 3, day: 1, weather: 'clear' }).some((r) => r.startsWith('The Hermit'))).toBe(false);
+    expect(dayRules(told, { week: 2, day: NIGHT_SHIFT_DAY, weather: 'clear' }).some((r) => r.startsWith('The Hermit'))).toBe(false);
   });
 });
 

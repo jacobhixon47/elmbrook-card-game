@@ -89,6 +89,21 @@ while (steps++ < 400 && !(s.week === 2 && s.day === 2) && s.phase !== 'game-over
     case 'skipReward': await click(320, 250); break;
     case 'takeGift': { const n = (s.offer as { cards: string[] }).cards.length; await click(320 + (a.index - (n - 1) / 2) * 80, 150); break; }
     case 'passGift': await click(320, 250); break;
+    case 'visitStall': {
+      const n = (s.offer as { stalls: unknown[] }).stalls.length;
+      const w = Math.min(84, Math.floor(600 / n) - 6);
+      await click(320 + (a.index - (n - 1) / 2) * (w + 6), 140);
+      break;
+    }
+    case 'leaveStall': await click(320, 262); break;
+    case 'leaveMarket': await click(320, 214); break;
+    case 'sellPotion': { const i = s.shelf.findIndex((p) => p.uid === a.uid); await click(320 + (i - (s.shelf.length - 1) / 2) * 50, 140); break; }
+    case 'buy': {
+      const o = s.offer as { kind: string; stock?: unknown[]; stalls?: { stock?: unknown[] }[]; at?: number };
+      const n = (o.kind === 'night-market' ? o.stalls![o.at!]!.stock : o.stock)!.length;
+      await click(320 + (a.index - (n - 1) / 2) * 74, 150);
+      break;
+    }
     case 'chooseErrand': { const o = s.offer as { options: string[] }; await click(220 + o.options.indexOf(a.errand) * 200, 150); break; }
     default: await hook(a);
   }

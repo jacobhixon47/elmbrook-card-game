@@ -298,6 +298,15 @@ Opens after each Night Shift, before rent. A street of stalls; you can visit the
 
 Phase flavour: First/Last Quarter nights have 3 stalls. Full Moon has all stalls plus a rare visiting vendor. New Moon (finale) has the black-market stock before the final rent.
 
+**In the build (M3 part 4).** The street shows tonight's stalls; walk up to any of them, trade, walk back, and pay rent from the street.
+
+- **Which stalls open.** The Lantern Seller and the Fence open every night. On a quarter moon (weeks 1 and 3) one more is drawn from the Moth Broker, the Hollow Tailor and the Fortune Tent. The full moon (week 2) has all of them plus **the Wandering Tinker**: a cauldron slot for 12 gold and a Shelf slot for 4. The new moon (week 4) has all of them plus **the Black Market**: 3 Rare cards at 14 gold each, or any 2 cards from your deck.
+- **The Lantern Seller** stocks 3 Lunar ingredients at 7 gold and 2 Omens at 6. They go in the Night Satchel.
+- **The Moth Broker** takes one recipe a night, never one of the witch's four starting recipes, for 1 of 3 Rare ingredients. Brewing the recipe again teaches it again. The familiar option comes with familiars (part 5).
+- **The Hollow Tailor** sews one card a night. Give up a day ingredient; its first essence is sewn into another day ingredient, in place of that card's second essence, with +1 Potency. Lunar and Satchel cards stay out of it, so Lunar never reaches the day (the reason Dusk Shard was cut). The deck can't drop below 8.
+- **The Fortune Tent** costs 5 gold, then 3 more for each further draw that night. Its deck is in the codex (`tarot`). Boons happen at once. The Hermit and The Tower change next week's day orders: one fewer a day at +50% pay, or one tier harder at double pay. The Moon fogs next week's four days on the Calendar. Next-week twists aren't drawn in week 4. The Chariot and The World pay 10 and 12 gold until familiars and relics exist, and Wheel of Fortune (the Blessed modifier) joins with modifiers.
+- **Waiting for part 5:** the Name-Taker (curses and relics), the Tinker's familiar and the Black Market's relic. **Waiting for M4's seasons:** the eight seasonal stall variants in the balance tables.
+
 ## 10. Night Shift patrons (bosses)
 
 Each Night Shift has one featured patron with a rule twist, shown on the Calendar a week ahead.

@@ -18,7 +18,9 @@ export type Fixture = {
   /** Run scene UI state: an open order dialogue, or hand positions picked for a Discard. */
   ui?: { dialog?: number; discard?: number[]; grimoire?: 'recipes' | 'deck' | 'calendar' | 'guide'; inspect?: number; tutorial?: string;
     /** A targeting Tincture at this hand index waiting for its targets; `picked` are hand indexes (draw pile indexes for Taste Test). */
-    target?: { hand: number; picked?: number[] } };
+    target?: { hand: number; picked?: number[] };
+    /** At a Night Market stall: deck cards picked (positions in the sorted deck it shows), and the Black Market stock being traded for. */
+    stall?: { picked?: number[]; swap?: number } };
 };
 
 const fixtures = import.meta.glob<Fixture>('/fixtures/*.json', { eager: true, import: 'default' });

@@ -93,7 +93,7 @@ export function guideSections(): { title: string; body: string }[] {
   return [
     {
       title: 'A run',
-      body: `${WEEKS} weeks. Each has ${DAYS_PER_WEEK} days, then a Night Shift with a patron who twists the rules. After it the Night Market opens and the Guild collects rent: ${RENT.join(', ')} gold. Miss a payment and the run is over. Pay all ${WEEKS} and fill ${FINALE_ORDERS === 1 ? 'an order' : FINALE_ORDERS >= 3 ? 'all three orders' : `${FINALE_ORDERS} orders`} for the Moonless Patron, and the stall is yours. The Calendar tab shows the weather, festival, sky events and patrons.`,
+      body: `${WEEKS} weeks. Each has ${DAYS_PER_WEEK} days, then a Night Shift with a patron who twists the rules. After it the Night Market opens and the Guild collects rent: ${RENT.join(', ')} gold. Miss a payment and the run is over. Pay all ${WEEKS} and complete ${FINALE_ORDERS === 1 ? 'an order' : FINALE_ORDERS >= 3 ? 'all three orders' : `${FINALE_ORDERS} orders`} for the Moonless Patron, and the stall is yours. The Calendar tab shows the weather, festival, sky events and patrons.`,
     },
     {
       title: 'A day',
@@ -101,7 +101,11 @@ export function guideSections(): { title: string; body: string }[] {
     },
     {
       title: 'Brewing',
-      body: 'Put ingredients in the cauldron. If their essences match a recipe you know, you get that potion. A match you don\'t know yet is an Experiment: it teaches you the recipe at one tier lower. No match makes Sludge. A potion goes to the order it fills best, or onto the Shelf for later.',
+      body: 'Put ingredients in the cauldron. If their essences match a recipe you know, you get that potion. A match you don\'t know yet is an Experiment: it teaches you the recipe at one tier lower. No match makes Sludge. A potion goes to the order it suits best, or onto the Shelf for later.',
+    },
+    {
+      title: 'The Night Market',
+      body: 'Stalls open after every Night Shift, before rent. The Fence buys Shelf potions and the Lantern Seller sells Lunar cards and Omens. Others trade in memories, cards or luck. More stalls come out at the full moon and the new moon.',
     },
     { title: 'Quality', body: `Potency × Harmony. ${tierLadder()}. An order names the lowest tier it accepts; better tiers pay more.` },
     { title: 'Glossary', body: Object.entries(GLOSSARY).map(([t, d]) => `${t}: ${d}`).join('\n') },
