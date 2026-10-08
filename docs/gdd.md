@@ -33,7 +33,8 @@ Week 4 (Waning Crescent)  Day · Day · Day · Day · Night Shift (NEW MOON fina
 
 - **20 encounters per run** (16 days + 4 nights), about 60-75 minutes, still one sitting. Days per week is a single tuning constant (`DAYS_PER_WEEK` in `src/core/calendar.ts`); 3 vs 4 gets compared in the sim before it is locked.
 - **The Calendar is seeded at run start:** each day's weather, the week's town event, the festival in week 3, and any rare sky event, so you can plan around them.
-- **The Calendar is the run map.** It shows the current week, each day's weather/event icon, and the upcoming Night Shift's patron and rule twist (revealed in advance, like Balatro's boss blind).
+- **The Calendar is the run map.** It shows the current week, each day's weather/event icon, and the upcoming Night Shift's patron and rule twist (revealed in advance, like Balatro's boss blind). In the build it is the Grimoire's Calendar tab: four weeks of five days with each week's moon, every day's weather, the festival and any sky event; hovering a day gives its rules. Today's weather and events also sit under the Brews in the HUD.
+- The Calendar rolls from its own random stream (`seed:calendar`), so the same seed deals the same cards whatever the weather.
 - **Rent** is paid automatically after each Night Shift. Starting values: 20 / 45 / 90 / 160 gold. Can't pay = run over ("the Guild reclaims your stall").
 - **Full Moon** (week 2) is the mid-run boss. **New Moon** (week 4) is the finale.
 
@@ -113,12 +114,14 @@ Four layers, all seeded into the Calendar at run start so they can be planned ar
 | Weather | Seasons | Effect | Window |
 |---|---|---|---|
 | Clear | All | No effect, a breather | Season as normal |
-| Rain | Spring, summer, autumn | Creek ingredients +2 Potency; one fewer customer | Cloud banks, rain streaks |
-| Fog | All | Orders hidden until you start brewing | Thick banks rolling across the valley |
+| Rain | Spring, summer, autumn | Creek ingredients +2 Potency; one fewer order on a busy day (3+ orders) | Cloud banks, rain streaks |
+| Fog | All | Orders hidden until your first brew or Discard; you can't deliver until then. Never on a Night Shift | Thick banks rolling across the valley |
 | Heatwave | Summer | Ember +2 Potency, Tide -2 | Gold haze, shimmer, drifting motes |
 | Snow | Winter | Frost cards are drawn first | Snow clouds, heavy snowfall |
 
-The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; the Calendar only rolls from that list.
+The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; the Calendar only rolls from that list, with the balance tables' weights (`WEATHER_WEIGHTS`). Night Shifts roll weather too.
+
+*Balance note (M3 part 2):* the tables had Rain cost an order on every rainy day. In the sim that halved the greedy win rate (27.6% to 16.1%), because spring rains a third of the time and week 1-3 days only have 1-2 orders. Rain now only keeps a customer home on a busy day (3+ orders), which puts the win rate at 29.1%.
 
 **Town events** (about one per week, a story choice at twilight, replacing that day's errand choice):
 
@@ -133,18 +136,20 @@ The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; th
 
 | Season | Festival | What changes |
 |---|---|---|
-| Spring | Bloomtide | Flower recipes pay double; a petal-crown contest order |
+| Spring | Bloomtide | Potions with a Flower ingredient pay double; a petal-crown contest order |
 | Summer | Firefly Fair | A Night Market on a day, with games |
-| Autumn | Harvest Fair | The biggest orders of the year; a pie contest |
-| Winter | Longest Night | A double-length Night Shift and a gift exchange of cards |
+| Autumn | Harvest Fair | One more order; every order wants two potions and pays ×2.5; a pie contest |
+| Winter | Longest Night | The week's Night Shift gets +2 Brews, +1 Discard and +2 orders; a gift exchange of cards |
 
-**Sky events** (rare, at most one per run, announced on the Calendar):
+As of M3 part 2 the festivals' rule changes are in. The contests (relic rewards), the gift exchange and the Firefly Fair's games arrive with relics and the Night Market stalls.
+
+**Sky events** (rare, at most one per run, announced on the Calendar). Eclipse and Meteor Shower are each in about 6% of runs; Blue Moon and the Fae Ring arrive with patrons and fae bargains:
 
 | Event | Effect |
 |---|---|
-| Eclipse | Day and night ingredients mix for a day (§5.4) |
+| Eclipse | Day and night ingredients mix for a day (§5.4); Eclipse recipes can be brewed only then |
 | Blue Moon | An extra Night Shift with a mystery patron |
-| Meteor Shower | Star essence appears for a week |
+| Meteor Shower | Fallen Star can turn up in rewards, the Market and the Forage for a week |
 | Fae Ring | A forage errand becomes a fae bargain |
 
 Sky events and festivals feed the Almanac ("brew during an Eclipse", "win the Harvest Fair pie contest").

@@ -1,1 +1,1 @@
-{ "scene": "Run", "seed": "fixture-hand", "steps": ["openShop", { "slot": 0 }, { "slot": 1 }] }
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop", { "slot": 0 }, { "slot": 1 }] }

@@ -2,7 +2,8 @@ import { codex } from '../codex';
 import type { Ingredient, PotionFamily, Recipe } from '../codex/schema';
 import type { GameEvent } from './actions';
 import { effectsOf, hasEffect, sumEffect, type ScoreCtx } from './effects';
-import { tierOf, tierStep, type Tier } from './rules';
+import { activeEvents, todaysWeather, type Weather } from './calendar';
+import { HEATWAVE_EMBER_POTENCY, HEATWAVE_TIDE_POTENCY, RAIN_CREEK_POTENCY, tierOf, tierStep, type Tier } from './rules';
 import type { CardInstance, RunState } from './state';
 
 type ScoreStep = Extract<GameEvent, { type: 'scoreStep' }>;
@@ -43,16 +44,28 @@ export function fillsPattern(ings: readonly Ingredient[], pattern: Recipe['patte
   );
 }
 
-export type RecipeAccess = Pick<RunState, 'knownRecipes' | 'unlocks'>;
+export type RecipeAccess = Pick<RunState, 'knownRecipes' | 'unlocks'> & Partial<Pick<RunState, 'calendar' | 'week' | 'day'>>;
 
 /**
  * Whether this run can brew a recipe: base-pool recipes always, unlock-pool ones once unlocked,
- * and anything already in the Grimoire. Eclipse and other event recipes wait for their event (M3 Calendar).
+ * and anything already in the Grimoire. Eclipse and other event recipes only on their Calendar day.
  */
 export function recipeAvailable(r: Recipe, s: RecipeAccess): boolean {
+  const events = activeEvents(s);
+  if (r.eclipseOnly && !events.includes('eclipse')) return false;
   if (s.knownRecipes.includes(r.id)) return true;
-  if (r.eclipseOnly || r.pool === 'event') return false;
+  if (r.pool === 'event') return r.event !== undefined && events.includes(r.event);
   return r.pool === 'base' || s.unlocks.includes(r.id);
+}
+
+/** How much today's weather changes one ingredient's Potency. A card never drops below 0 Potency. */
+export function weatherPotency(ing: Ingredient, weather: Weather): number {
+  if (weather === 'rain') return ing.origin === 'creek' ? RAIN_CREEK_POTENCY : 0;
+  if (weather !== 'heatwave') return 0;
+  let d = 0;
+  if (ing.essences.includes('ember')) d += HEATWAVE_EMBER_POTENCY;
+  if (ing.essences.includes('tide')) d += HEATWAVE_TIDE_POTENCY;
+  return Math.max(d, -ing.potency);
 }
 
 const anySlots = (r: Recipe) => r.pattern.filter((e) => e === 'any').length;
@@ -91,7 +104,7 @@ export function ingredientsOf(cards: readonly CardInstance[]): Ingredient[] | nu
  * What brewing these cards would make, with every scoring step (GDD §6.3). Pure; used by the
  * cauldron preview, the bot and `brew` itself, so the preview is never wrong.
  */
-export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'brewsToday' | 'orders'>;
+export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'>;
 
 export function previewBrew(state: BrewState, cards: readonly CardInstance[], hand: readonly CardInstance[]): BrewPreview {
   const ings = ingredientsOf(cards);
@@ -132,6 +145,14 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     }
     steps.push({ type: 'scoreStep', source: 'ingredient', id: ing.id, potency: c.potency, harmony: c.harmony, ...(notes.length ? { note: notes.join(', ') } : {}) });
   });
+
+  // Today's weather (GDD §4.2): Rain helps Creek ingredients; a Heatwave helps Ember and wilts Tide.
+  const weather = todaysWeather(state);
+  const shift = ings.reduce((n, ing) => n + weatherPotency(ing, weather), 0);
+  if (shift !== 0) {
+    c.potency = Math.max(0, c.potency + shift);
+    steps.push({ type: 'scoreStep', source: 'weather', id: weather, potency: c.potency, harmony: c.harmony, note: `${shift > 0 ? '+' : ''}${shift} Potency` });
+  }
 
   // Junk in hand that drags every brew down (Bad Omen).
   const drag = hand.reduce((n, card) => n + sumEffect(card.card, 'inHandHarmony'), 0);

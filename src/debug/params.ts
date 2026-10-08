@@ -9,12 +9,14 @@ export type Fixture = {
   season?: string;
   time?: string;
   weather?: string;
+  /** Today's weather for the rules (the Calendar's roll), set before `steps` run. `weather` only changes the window. */
+  today?: string;
   /** Open the dev overlay (backtick) at start. */
   overlay?: boolean;
   /** Steps replayed after the run starts, to reach a UI state (see fixture-steps.ts). */
   steps?: FixtureStep[];
   /** Run scene UI state: an open order dialogue, or hand positions picked for a Discard. */
-  ui?: { dialog?: number; discard?: number[]; grimoire?: 'recipes' | 'deck' | 'guide'; inspect?: number; tutorial?: string;
+  ui?: { dialog?: number; discard?: number[]; grimoire?: 'recipes' | 'deck' | 'calendar' | 'guide'; inspect?: number; tutorial?: string;
     /** A targeting Tincture at this hand index waiting for its targets; `picked` are hand indexes (draw pile indexes for Taste Test). */
     target?: { hand: number; picked?: number[] } };
 };

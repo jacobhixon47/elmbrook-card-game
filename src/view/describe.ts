@@ -56,8 +56,11 @@ export function customerName(id: string): string {
   return codex.regulars.get(id)?.name ?? id;
 }
 
-export function requestText(order: Pick<Order, 'request'>): string {
-  return order.request.kind === 'recipe' ? recipeName(order.request.recipe) : `any ${familyName(order.request.family)} potion`;
+export function requestText(order: Pick<Order, 'request'> & Partial<Pick<Order, 'quantity' | 'delivered'>>): string {
+  const what = order.request.kind === 'recipe' ? recipeName(order.request.recipe) : `any ${familyName(order.request.family)} potion`;
+  const n = order.quantity ?? 1;
+  if (n <= 1) return what;
+  return `${n}× ${what}${order.delivered ? ` (${order.delivered}/${n})` : ''}`;
 }
 
 /** The customer's line, in character (GDD §15: customers speak, the UI states it plainly). */
@@ -66,9 +69,12 @@ export function customerLine(order: Pick<Order, 'request'>): string {
   return FAMILY_LINE[order.request.family];
 }
 
-export function orderTerms(order: Pick<Order, 'minTier' | 'pay'>): string {
+export function orderTerms(order: Pick<Order, 'minTier' | 'pay'> & Partial<Pick<Order, 'tagBonus'>>): string {
+  if (order.tagBonus) return `${TIER_NAME[order.minTier]}+ · ${order.pay}g · ×${order.tagBonus.mult} ${cap(order.tagBonus.tag)}`;
   return `${TIER_NAME[order.minTier]} or better · ${order.pay}g`;
 }
+
+const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
 
 export function dayLabel(state: Pick<RunState, 'week' | 'day'>): string {
   return `Week ${state.week} · ${state.day === NIGHT_SHIFT_DAY ? 'Night Shift' : `Day ${state.day}`}`;

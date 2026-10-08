@@ -1,14 +1,19 @@
 import type Phaser from 'phaser';
 import { hex } from '../art/palette';
-import type { RunState } from '../core';
+import { NIGHT_SHIFT_DAY, type RunState, type Weather } from '../core';
+import type { PaletteKey } from '../art/palette';
 import { createCard } from './card';
+import { calendarWeeks, dayRules, WEATHER_NAME } from './calendar';
 import { deckRows, guideSections, recipeRows, undiscoveredLine } from './guide';
 import { pixelText } from './text';
 import type { Tooltip } from './tooltip';
 import { button, panel } from './ui';
 
-export type GrimoireTab = 'recipes' | 'deck' | 'guide';
-export const GRIMOIRE_TABS: GrimoireTab[] = ['recipes', 'deck', 'guide'];
+export type GrimoireTab = 'recipes' | 'deck' | 'calendar' | 'guide';
+export const GRIMOIRE_TABS: GrimoireTab[] = ['recipes', 'deck', 'calendar', 'guide'];
+
+const WEATHER_COLOR: Record<Weather, PaletteKey> = { clear: 'W', rain: 'c', fog: 'a', heatwave: 'o', snow: 'w' };
+const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
 
 const X = 40;
 const Y = 30;
@@ -31,9 +36,9 @@ export function drawGrimoire(
   add(scene.add.rectangle(0, 0, 640, 360, hex('K'), 0.6).setOrigin(0).setInteractive()).on('pointerdown', () => on.close());
   add(panel(scene, X, Y, W, H, 'k', 0.97, 'n').setInteractive());
   text(X + 12, Y + 8, 'Grimoire', { size: 14, color: 'y' });
-  const labels: Record<GrimoireTab, string> = { recipes: 'Recipes', deck: 'Deck', guide: 'How to play' };
+  const labels: Record<GrimoireTab, string> = { recipes: 'Recipes', deck: 'Deck', calendar: 'Calendar', guide: 'How to play' };
   GRIMOIRE_TABS.forEach((t, i) => {
-    const b = add(button(scene, 250 + i * 76, Y + 16, labels[t], () => on.tab(t), { w: 70, color: t === tab ? 'Y' : 'W' }));
+    const b = add(button(scene, 214 + i * 76, Y + 16, labels[t], () => on.tab(t), { w: 70, color: t === tab ? 'Y' : 'W' }));
     if (t === tab) (b.list[0] as Phaser.GameObjects.Rectangle).setStrokeStyle(1, hex('y'));
   });
   add(button(scene, X + W - 40, Y + 16, 'Close', () => on.close(), { w: 56 }));
@@ -80,6 +85,29 @@ export function drawGrimoire(
       text(x, y + 32, `×${r.total} · ${r.inDraw} to draw`, { size: 7, color: r.inDraw ? 'W' : 'a', align: 'center' }).setOrigin(0.5, 0);
     });
     text(X + 12, Y + H - 14, 'Hover a card to read it.', { size: 7, color: 'a' });
+    return;
+  }
+
+  if (tab === 'calendar') {
+    text(X + 12, top, `${cap(s.season)}. The whole month is set when the run starts, so you can plan around it. Hover a day for its rules.`, { size: 7, color: 'a', wrap: W - 24 });
+    const cw = 94;
+    const ch = 52;
+    calendarWeeks(s).forEach((wk, wi) => {
+      const y = top + 16 + wi * (ch + 4);
+      text(X + 12, y + 8, `Week ${wk.week}`, { size: 9, color: wk.week === s.week ? 'y' : 'W' });
+      text(X + 12, y + 22, wk.moon, { size: 7, color: 'a' });
+      wk.cells.forEach((c, di) => {
+        const x = X + 80 + di * (cw + 2);
+        const cell = add(scene.add.rectangle(x, y, cw, ch, hex(c.day === NIGHT_SHIFT_DAY ? 'K' : 'k'), c.mark === 'done' ? 0.4 : 0.95).setOrigin(0));
+        cell.setStrokeStyle(c.mark === 'now' ? 2 : 1, hex(c.mark === 'now' ? 'y' : 'n'), c.mark === 'now' ? 1 : 0.6);
+        text(x + 5, y + 4, c.label, { size: 7, color: c.mark === 'done' ? 'h' : 'a' });
+        text(x + 5, y + 16, WEATHER_NAME[c.weather], { size: 8, color: c.mark === 'done' ? 'h' : WEATHER_COLOR[c.weather] });
+        c.marks.forEach((m, mi) => text(x + 5, y + 29 + mi * 10, m, { size: 7, color: 'y' }));
+        cell.setInteractive();
+        cell.on('pointerover', () => tip.text(`${c.label === 'Night' ? 'Night Shift' : c.label}, week ${c.week}`, dayRules(s, c), x + cw / 2, y, y + ch));
+        cell.on('pointerout', () => tip.hide());
+      });
+    });
     return;
   }
 

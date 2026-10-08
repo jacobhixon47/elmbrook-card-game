@@ -1,5 +1,6 @@
 import { codex } from '../codex';
 import type { Pool } from '../codex/schema';
+import { activeEvents } from './calendar';
 import { pickWeighted, shuffled, type Ctx } from './ctx';
 import {
   CARD_PRICE, CAULDRON_SLOT_PRICE, FORAGE_CARDS, FORAGE_PICKS, MARKET_CARDS, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS,
@@ -17,13 +18,16 @@ const inPool = (c: { id: string; pool: Pool }, s: Pick<RunState, 'unlocks'>) =>
 
 /**
  * Cards that rewards and the Market can offer: base-pool cards and unlocked ones. No Lunar cards
- * (those come from the night) and no event cards (those come from their event).
+ * (those come from the night); event cards only while their event lasts.
  */
-export function dayPool(s: Pick<RunState, 'unlocks' | 'season'>): PoolCard[] {
+export function dayPool(s: Pick<RunState, 'unlocks' | 'season'> & Partial<Pick<RunState, 'calendar' | 'week' | 'day'>>): PoolCard[] {
   const out: PoolCard[] = [];
+  const events = activeEvents(s);
   for (const i of codex.ingredients.values()) {
-    if (i.nightOnly || i.rarity === 'lunar' || !inPool(i, s)) continue;
-    out.push({ id: i.id, rarity: i.rarity, wychwood: i.origin === 'wychwood', inSeason: i.inSeason.includes(s.season) });
+    // Event cards (Fallen Star) join the pool while their Calendar event lasts, Lunar or not.
+    const eventCard = i.pool === 'event' && i.event !== undefined && events.includes(i.event);
+    if (!eventCard && (i.nightOnly || i.rarity === 'lunar' || !inPool(i, s))) continue;
+    out.push({ id: i.id, rarity: rarityOf(i.id), wychwood: i.origin === 'wychwood', inSeason: i.inSeason.includes(s.season) });
   }
   for (const t of codex.tinctures.values()) {
     if (t.rarity !== 'lunar' && inPool(t, s)) out.push({ id: t.id, rarity: t.rarity, wychwood: false, inSeason: false });

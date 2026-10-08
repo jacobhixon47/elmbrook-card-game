@@ -1,4 +1,4 @@
-import type { Season } from './calendar';
+import type { Season, Weather } from './calendar';
 import type { Tier } from './rules';
 import type { Errand, Order, Potion } from './state';
 
@@ -30,9 +30,10 @@ export type Action =
   | { type: 'debug'; op: 'addGold'; amount: number }
   | { type: 'debug'; op: 'jumpToDay'; week: number; day: number }
   | { type: 'debug'; op: 'giveCard'; card: string }
-  | { type: 'debug'; op: 'learnRecipes'; recipes: string[] };
+  | { type: 'debug'; op: 'learnRecipes'; recipes: string[] }
+  | { type: 'debug'; op: 'setWeather'; weather: Weather };
 
-export type ScoreSource = 'recipe' | 'ingredient' | 'curse' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
+export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'curse' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
 
 export type GameEvent =
   | { type: 'runStarted'; seed: string; witch: string; season: Season }
@@ -50,6 +51,8 @@ export type GameEvent =
   | { type: 'potionUpgraded'; uid: number; tier: Tier }
   /** A card left the deck by itself (Cobweb after its days, Fallen Star at week's end). */
   | { type: 'cardExpired'; uid: number; card: string }
+  | { type: 'fogLifted' }
+  | { type: 'orderProgress'; order: number; potion: number; delivered: number; quantity: number }
   /** One step of the scoring pipeline (GDD §6.3), with the running totals after it. */
   | { type: 'scoreStep'; source: ScoreSource; id: string; potency: number; harmony: number; note?: string }
   | { type: 'brewed'; potion: Potion; copies: number }

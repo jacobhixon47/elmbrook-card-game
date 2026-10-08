@@ -1,1 +1,1 @@
-{ "scene": "Run", "seed": "fixture-hand", "steps": ["openShop"], "season": "autumn", "time": "twilight", "weather": "fog" }
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop"], "season": "autumn", "time": "twilight", "weather": "fog" }

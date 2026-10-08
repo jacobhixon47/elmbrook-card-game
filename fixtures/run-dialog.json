@@ -1,1 +1,1 @@
-{ "scene": "Run", "seed": "fixture-hand", "ui": { "dialog": 0 } }
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "ui": { "dialog": 0 } }

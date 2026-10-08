@@ -119,9 +119,11 @@ describe('tutorial', () => {
     expect(tip()).toBe(null);
     act({ type: 'leaveErrand' });
     expect(tip()).toBe('day2');
+    t.dismiss('day2');
+    expect(tip()).toBe('weather');
     act({ type: 'debug', op: 'jumpToDay', week: 1, day: 5 });
     expect(tip()).toBe('night');
-    expect(t.done.has('day2')).toBe(true); // skipped past
+    expect(t.done.has('weather')).toBe(true); // skipped past
     expect(t.finished(s)).toBe(false);
     act({ type: 'openShop' });
     act({ type: 'endDay' });

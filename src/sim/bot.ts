@@ -82,6 +82,15 @@ function cardValue(s: RunState, id: string): number {
 }
 
 function greedyBrewing(s: RunState): Action {
+  // Fog hides the orders: spend one Discard on the weakest card to see them, or brew blind.
+  if (s.fog) {
+    const weakest = [...s.hand].sort((a, b) => cardValue(s, a.card) - cardValue(s, b.card))[0];
+    if (s.discardsLeft > 1 && weakest && s.cauldron.length === 0) return { type: 'discard', uids: [weakest.uid] };
+    const blind = brewOptions(s).filter((p) => p.preview.known).sort((a, b) => b.preview.quality - a.preview.quality)[0];
+    if (blind && s.brewsLeft > 0) return stepToward(s, { ...blind, deliverTo: undefined });
+    if (weakest && s.discardsLeft > 0) return s.cauldron.length ? { type: 'unslot', uid: s.cauldron[0]!.uid } : { type: 'discard', uids: [weakest.uid] };
+    return { type: 'endDay' };
+  }
   const open = s.orders.filter((o) => o.status === 'open');
 
   // Fill from the Shelf first: it costs nothing.

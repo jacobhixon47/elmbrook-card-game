@@ -92,7 +92,7 @@ describe('new ingredient effects', () => {
   });
 
   it('Heartstone potions earn an extra heart; Charm Sachet adds a heart and a tip once', () => {
-    const order: Order = { id: 500, customer: 'old-tobin', request: { kind: 'family', family: 'healing' }, minTier: 'crude', pay: 10, bonus: null, status: 'open' };
+    const order: Order = { id: 500, customer: 'old-tobin', request: { kind: 'family', family: 'healing' }, minTier: 'crude', pay: 10, bonus: null, status: 'open', quantity: 1, delivered: 0, tagBonus: null };
     const potion = { uid: 600, recipe: 'healing-draught', family: 'healing' as const, quality: 14, tier: 'fine' as const, ingredients: ['elmroot', 'creekwater'], experiment: false };
     const base: RunState = { ...brewing(), orders: [order], hearts: { 'old-tobin': 0 } };
     const plain = ok({ ...base, shelf: [{ ...potion, heartDelta: 0 }] }, { type: 'deliver', order: 500, potion: 600 }).state;
@@ -254,7 +254,7 @@ describe('new tinctures', () => {
 describe('customers', () => {
   it('tip multipliers scale the tip, not the pay', () => {
     const potion = { tier: 'superb' as const, ingredients: ['elmroot', 'creekwater'] };
-    const order = (customer: string): Order => ({ id: 1, customer, request: { kind: 'family', family: 'secrets' }, minTier: 'fine', pay: 20, bonus: null, status: 'open' });
+    const order = (customer: string): Order => ({ id: 1, customer, request: { kind: 'family', family: 'secrets' }, minTier: 'fine', pay: 20, bonus: null, status: 'open', quantity: 1, delivered: 0, tagBonus: null });
     const plain = payout(potion, order('old-tobin'));
     const twins = payout(potion, order('pip-and-quill'));
     expect(twins.pay).toBe(plain.pay);

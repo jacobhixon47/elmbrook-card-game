@@ -107,3 +107,18 @@ export function rentDue(season: Season, week: number): number {
   const base = RENT[Math.min(RENT.length, Math.max(1, week)) - 1]!;
   return Math.round(base * SEASON_RULES[season].rentMult);
 }
+
+// ---------------------------------------------------------------- Calendar effects (GDD §4.2)
+
+/** Rain and Heatwave change ingredient Potency by essence or origin. */
+export const RAIN_CREEK_POTENCY = 2;
+/** Rain posts one fewer order, but only when there would be at least this many. */
+export const RAIN_MIN_ORDERS = 3;
+export const HEATWAVE_EMBER_POTENCY = 2;
+export const HEATWAVE_TIDE_POTENCY = -2;
+/** Bloomtide: potions with a Flower ingredient pay this much more. */
+export const BLOOMTIDE_PAY = 2;
+/** Harvest Fair: one more order; each wants this many potions and pays this much more. */
+export const HARVEST_FAIR = { extraOrders: 1, quantity: 2, payMult: 2.5 };
+/** Longest Night: the festival week's Night Shift gets more of everything. */
+export const LONGEST_NIGHT = { brews: 2, discards: 1, extraOrders: 2 };
