@@ -2,19 +2,27 @@
 
 Each milestone ends with something Jacob can open in a browser. "Done" = acceptance criteria met, `pnpm typecheck && pnpm test` green, and snaps of new screens reviewed.
 
+## Where we are
+
+- **M0** ✅ scaffold and art pipeline (PR #1, which also brought the painted backdrops and the season/time/weather shop window).
+- **M1** ✅ rules engine (PR #2). Greedy bot wins 29.7% of 2,000 Spring runs, inside the 15-35% band; 99%+ line coverage on `src/core`.
+- **M2** in review (PR #3): the Run scene plays a whole Spring run in the browser, from the Order Board through dusk, errands, the Fence on Night Shift, game over and victory. `pnpm e2e` plays week 1 through the UI in CI.
+- **Built early:** game over and victory screens (listed under M3) and a Fence-only Night Market came with M2.
+- **Still to come in M3:** the Calendar and its seeded weather and events (weather is shown in the window but has no rules effect yet), patrons and their twists, night customers, the other five Night Market stalls, familiars, Lunar cards, the remaining errands, and resume mid-run.
+
 ## M0 — Scaffold and harness ✅
 
 - Vite + Phaser 4 + TypeScript (strict), 640×360 integer zoom.
 - `src/codex` with zod schemas and the GDD §14 starter content.
-- Seeded RNG; core `reduce` with `startRun` and `drawToHandSize`.
+- Seeded RNG; core `reduce` with `startRun`.
 - Debug harness: `?fixture=`, `?seed=`, `?noanim=1`, `window.__elmbrook`, `markReady`.
 - Art as code: palette, 15 sprite grids, procedural frames/cauldron/backdrop, baked card faces with crisp text.
-- Scenes: Title, Hand (seeded opening hand), ArtSheet.
+- Scenes: Title, Hand (seeded opening hand, since replaced by Run in M2), ArtSheet.
 - `pnpm snap`, `pnpm snap:all`, `pnpm art:check`, `pnpm art:sheet`. ESLint keeps core pure. GitHub Actions CI.
 
 **Accept:** `pnpm dev` shows the title screen; `pnpm snap title` writes a PNG; CI green.
 
-## M1 — Rules engine (headless)
+## M1 — Rules engine (headless) ✅
 
 - Deck: draw, hand size, discard, reshuffle. Orders, Brews/Discards per day.
 - Cauldron slots, recipe matching by essence pattern, Experiments, Sludge.
@@ -27,7 +35,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 
 **Accept:** ≥90% coverage on `src/core`; 2,000 simulated runs finish without errors; a greedy bot wins some but not most runs (target 15-35% to start).
 
-## M2 — Playable day (vertical slice)
+## M2 — Playable day (vertical slice) · in review
 
 - Run scene: Order Board, order dialogue (Fulfill / Decline / Back), hand, cauldron panel with preview, Shelf.
 - Scoring animation playing the event stream, with juice (tweens, number pops, bubbles).
@@ -43,7 +51,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - Night Shifts with patron twists (all 7), Night Satchel, Lunar cards.
 - Night Market with all 6 stalls and their odd currencies.
 - Familiars, cauldrons, card modifiers, tinctures, remaining errands (Creek, Guild Commissions, Events: first 8).
-- Game over and victory screens; resume mid-run.
+- Resume mid-run (game over and victory screens shipped in M2).
 
 **Accept:** a full 20-encounter run is playable start to finish; sim win rate for greedy bot within target band; balance report checked in.
 
