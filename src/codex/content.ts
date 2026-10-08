@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Ingredient, Junk, NightCustomer, Patron, Recipe, Regular, Stall, Tarot, Tincture, Witch } from './schema';
+import type { Familiar, Ingredient, Junk, NightCustomer, Patron, Recipe, Regular, Stall, Tarot, Tincture, Witch } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -164,6 +164,30 @@ export const patrons: In<typeof Patron>[] = [
   { id: 'moonless-patron', name: 'The Moonless Patron', blurb: 'Comes on the new moon. Nobody sees a face.', weeks: [4], twist: 'grimoire-hidden', text: 'Three escalating orders, and your Grimoire is hidden. Fill them all to win the month.', orderCount: 3, ladder: ['superb', 'masterwork', 'masterwork'], reward: { kind: 'win' } },
 ];
 
+// Familiars (GDD §11), from the balance tables. Numbers live with their rules in core/familiars.ts.
+export const familiars: In<typeof Familiar>[] = [
+  { id: 'hearth-toad', name: 'Hearth Toad', rarity: 'common', text: '+1 Harmony for each potion on your Shelf.' },
+  { id: 'barn-owl', name: 'Barn Owl', rarity: 'common', text: 'See the top 3 cards of your draw pile.' },
+  { id: 'hedgehog', name: 'Hedgehog', rarity: 'common', text: 'Stone ingredients +4 Potency.' },
+  { id: 'ferret', name: 'Ferret', rarity: 'common', text: 'Every 3rd Discard draws an extra card.' },
+  { id: 'heron', name: 'Heron', rarity: 'common', text: 'Tide ingredients +3 Potency.' },
+  { id: 'garden-snail', name: 'Garden Snail', rarity: 'common', text: 'Ingredients with two essences +2 Potency.' },
+  { id: 'otter', name: 'Otter', rarity: 'common', text: '+2 Harmony on brews of exactly 2 ingredients.' },
+  { id: 'salamander', name: 'Salamander', rarity: 'common', text: 'Ember ingredients +3 Potency.' },
+  { id: 'black-cat', name: 'Black Cat', rarity: 'uncommon', text: '+3 Harmony per Umbra ingredient.' },
+  { id: 'raven', name: 'Raven', rarity: 'uncommon', text: '+3 gold whenever you decline an order (rude, but practical).' },
+  { id: 'magpie', name: 'Magpie', rarity: 'uncommon', text: '+1 gold for every potion delivered.', pool: 'unlock' },
+  { id: 'firefly', name: 'Firefly', rarity: 'uncommon', text: '+3 Harmony on Night Shifts.' },
+  { id: 'tortoise', name: 'Tortoise', rarity: 'uncommon', text: '+2 gold for each Brew left unused at the end of the day.' },
+  { id: 'fox', name: 'Fox', rarity: 'uncommon', text: 'Tips for beating an order\'s minimum tier are doubled.', pool: 'unlock' },
+  { id: 'frost-hare', name: 'Frost Hare', rarity: 'uncommon', text: '+1 Harmony per Frost ingredient in the brew.' },
+  { id: 'jackdaw', name: 'Jackdaw', rarity: 'uncommon', text: '+1 Harmony per distinct essence in the brew.' },
+  { id: 'moth', name: 'Moth', rarity: 'rare', text: 'Lunar ingredients count as every essence.' },
+  { id: 'will-o-wisp', name: 'Will-o\'-Wisp', rarity: 'rare', text: 'First brew each day: ×2 Harmony.' },
+  { id: 'old-hound', name: 'Old Hound', rarity: 'rare', text: '×1.5 Harmony on brews of 3 ingredients.', pool: 'unlock' },
+  { id: 'hob', name: 'Hob', rarity: 'rare', text: 'The first ingredient\'s Potency counts twice.', pool: 'unlock' },
+];
+
 // The Night Market's stalls (GDD §9). The Name-Taker comes with curses and relics (M3 part 5).
 export const stalls: In<typeof Stall>[] = [
   { id: 'lantern-seller', name: 'The Lantern Seller', currency: 'Gold', text: 'Lunar ingredients and Omens for your Night Satchel.', opens: 'always' },
@@ -182,7 +206,7 @@ export const tarot: In<typeof Tarot>[] = [
   { id: 'the-star', name: 'The Star', kind: 'boon', weight: 10, effect: 'lunar-card', text: 'A random Lunar ingredient for your Night Satchel.' },
   { id: 'the-magician', name: 'The Magician', kind: 'boon', weight: 8, effect: 'learn-recipe', text: 'Learn a random recipe you don\'t know.' },
   { id: 'the-lovers', name: 'The Lovers', kind: 'boon', weight: 8, effect: 'hearts', amount: 2, text: '+2 hearts with a random regular.' },
-  { id: 'the-chariot', name: 'The Chariot', kind: 'boon', weight: 6, effect: 'familiar-stand-in', amount: 10, text: '+10 gold. (A familiar, once they arrive.)' },
+  { id: 'the-chariot', name: 'The Chariot', kind: 'boon', weight: 6, effect: 'familiar', amount: 10, text: 'A random familiar, if you have a free slot. If not, +10 gold.' },
   { id: 'the-world', name: 'The World', kind: 'boon', weight: 3, effect: 'relic-stand-in', amount: 12, text: '+12 gold. (A relic, once they arrive.)' },
   { id: 'the-hermit', name: 'The Hermit', kind: 'twist', weight: 9, effect: 'fewer-orders', nextWeek: true, text: 'Next week: one order fewer each day, each paying +50%.' },
   { id: 'the-tower', name: 'The Tower', kind: 'twist', weight: 9, effect: 'harder-orders', nextWeek: true, text: 'Next week: orders are one tier harder and pay double.' },

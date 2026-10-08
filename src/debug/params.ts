@@ -20,7 +20,9 @@ export type Fixture = {
     /** A targeting Tincture at this hand index waiting for its targets; `picked` are hand indexes (draw pile indexes for Taste Test). */
     target?: { hand: number; picked?: number[] };
     /** At a Night Market stall: deck cards picked (positions in the sorted deck it shows), and the Black Market stock being traded for. */
-    stall?: { picked?: number[]; swap?: number } };
+    stall?: { picked?: number[]; swap?: number };
+    /** The card of the familiar in this slot, open. */
+    familiar?: number };
 };
 
 const fixtures = import.meta.glob<Fixture>('/fixtures/*.json', { eager: true, import: 'default' });

@@ -85,7 +85,7 @@ function PATRON_REWARD_TEXT(r: PatronReward): string {
     case 'card-pick':
       return `pick 1 of ${r.count} ${cap(r.rarity)} cards`;
     case 'familiar-pick':
-      return `+${STAND_IN_GOLD.familiar}g (a familiar, once they arrive)`;
+      return `pick 1 of ${r.count} familiars`;
     case 'relic':
       return `+${STAND_IN_GOLD.relic[r.tier]}g (a relic, once they arrive)`;
     case 'win':

@@ -37,10 +37,16 @@ export type Action =
   | { type: 'drawTarot' }
   | { type: 'swapForCard'; index: number; uids: number[] }
   | { type: 'leaveMarket' }
+  // Familiars, at any time in a run: sell one for half its price, or move it to another slot.
+  | { type: 'sellFamiliar'; index: number }
+  | { type: 'moveFamiliar'; from: number; to: number }
   // Dev overlay only.
   | { type: 'debug'; op: 'addGold'; amount: number }
   | { type: 'debug'; op: 'jumpToDay'; week: number; day: number }
   | { type: 'debug'; op: 'giveCard'; card: string }
+  | { type: 'debug'; op: 'giveFamiliar'; familiar: string }
+  /** Grant a patron's reward as if their order were filled. */
+  | { type: 'debug'; op: 'patronReward'; patron: string }
   | { type: 'debug'; op: 'learnRecipes'; recipes: string[] }
   | { type: 'debug'; op: 'setWeather'; weather: Weather }
   | { type: 'debug'; op: 'setPatron'; week: number; patron: string };
@@ -98,6 +104,10 @@ export type GameEvent =
   | { type: 'cardRemoved'; uid: number; card: string }
   | { type: 'nightMarketOpened'; stalls: StallId[] }
   | { type: 'stallVisited'; stall: StallId }
+  | { type: 'familiarGained'; familiar: string }
+  | { type: 'familiarSold'; familiar: string; price: number }
+  /** A familiar that pays gold or draws a card did so (the Raven, the Ferret). */
+  | { type: 'familiarFired'; familiar: string }
   | { type: 'recipeForgotten'; recipe: string; cards: string[] }
   | { type: 'cardWoven'; from: string; fromUid: number; into: string; intoUid: number; essence: Essence }
   | { type: 'tarotDrawn'; card: string; price: number }

@@ -9,6 +9,6 @@ for (const e of errors) console.error(`✗ ${e}`);
 const status = artStatus();
 const missing = status.filter((s) => !s.done);
 console.log(`Sprites: ${SPRITES.length} authored, ${errors.length} invalid`);
-console.log(`Cards with art: ${status.length - missing.length}/${status.length}`);
+console.log(`Cards and familiars with art: ${status.length - missing.length}/${status.length}`);
 if (missing.length) console.log(`Placeholders: ${missing.map((m) => m.texture).join(', ')}`);
 process.exit(errors.length ? 1 : 0);

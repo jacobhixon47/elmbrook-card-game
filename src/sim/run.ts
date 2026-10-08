@@ -25,6 +25,8 @@ export type RunRecord = {
   /** Patron orders posted and filled, by week. */
   patronPosted: number[];
   patronFilled: number[];
+  /** Familiars held when the run ended, in slot order. */
+  familiars: string[];
   error?: string;
 };
 
@@ -35,7 +37,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
   const rec: RunRecord = {
     seed, won: false, lostWeek: null, finished: false, actions: [], quality: [], gold: [],
     offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {},
-    finaleFailed: false, patronPosted: [], patronFilled: [],
+    finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [],
   };
   const max = opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000);
   let rng = seedRng(`bot:${seed}`);
@@ -101,6 +103,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
       observe(state, r.events);
     }
     rec.finished = isOver(state);
+    rec.familiars = [...state.familiars];
   } catch (e) {
     rec.error = e instanceof Error ? (e.stack ?? e.message) : String(e);
   }

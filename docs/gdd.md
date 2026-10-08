@@ -302,10 +302,10 @@ Phase flavour: First/Last Quarter nights have 3 stalls. Full Moon has all stalls
 
 - **Which stalls open.** The Lantern Seller and the Fence open every night. On a quarter moon (weeks 1 and 3) one more is drawn from the Moth Broker, the Hollow Tailor and the Fortune Tent. The full moon (week 2) has all of them plus **the Wandering Tinker**: a cauldron slot for 12 gold and a Shelf slot for 4. The new moon (week 4) has all of them plus **the Black Market**: 3 Rare cards at 14 gold each, or any 2 cards from your deck.
 - **The Lantern Seller** stocks 3 Lunar ingredients at 7 gold and 2 Omens at 6. They go in the Night Satchel.
-- **The Moth Broker** takes one recipe a night, never one of the witch's four starting recipes, for 1 of 3 Rare ingredients. Brewing the recipe again teaches it again. The familiar option comes with familiars (part 5).
+- **The Moth Broker** takes one recipe a night, never one of the witch's four starting recipes, for 1 of 3 Rare ingredients. Brewing the recipe again teaches it again. After he takes the memory he also offers 2 familiars, so the pick is 1 of 3 Rare cards or 2 familiars.
 - **The Hollow Tailor** sews one card a night. Give up a day ingredient; its first essence is sewn into another day ingredient, in place of that card's second essence, with +1 Potency. Lunar and Satchel cards stay out of it, so Lunar never reaches the day (the reason Dusk Shard was cut). The deck can't drop below 8.
-- **The Fortune Tent** costs 5 gold, then 3 more for each further draw that night. Its deck is in the codex (`tarot`). Boons happen at once. The Hermit and The Tower change next week's day orders: one fewer a day at +50% pay, or one tier harder at double pay. The Moon fogs next week's four days on the Calendar. Next-week twists aren't drawn in week 4. The Chariot and The World pay 10 and 12 gold until familiars and relics exist, and Wheel of Fortune (the Blessed modifier) joins with modifiers.
-- **Waiting for part 5:** the Name-Taker (curses and relics), the Tinker's familiar and the Black Market's relic. **Waiting for M4's seasons:** the eight seasonal stall variants in the balance tables.
+- **The Fortune Tent** costs 5 gold, then 3 more for each further draw that night. Its deck is in the codex (`tarot`). Boons happen at once. The Hermit and The Tower change next week's day orders: one fewer a day at +50% pay, or one tier harder at double pay. The Moon fogs next week's four days on the Calendar. Next-week twists aren't drawn in week 4. The Chariot gives a random familiar, or 10 gold with every slot taken. The World pays 12 gold until relics exist, and Wheel of Fortune (the Blessed modifier) joins with modifiers.
+- **Waiting for part 5:** the Name-Taker (curses and relics), and the Black Market's relic. The Wandering Tinker now sells one Rare familiar at a quarter off. **Waiting for M4's seasons:** the eight seasonal stall variants in the balance tables.
 
 ## 10. Night Shift patrons (bosses)
 
@@ -327,7 +327,7 @@ In the build the whole month's patrons are rolled at run start (on their own see
 | The Pale Courier (Full Moon) | 2 | Needs a Masterwork Lunar potion; ordinary orders pay double. With no way to brew Lunar yet, it asks for your best family at your best tier. | Tier 2 relic |
 | The Moonless Patron (finale) | 4 | Three escalating orders (Superb, Masterwork, Masterwork, capped by reach); your Grimoire is hidden. | The month |
 
-Familiars and relics arrive in M3 part 5. Until then those rewards pay gold instead: 8 for a familiar pick, 8 for a tier 1 relic, 12 for tier 2.
+Familiar picks offer real familiars (M3 part 5). Relics arrive later in part 5; until then a relic reward pays gold instead: 8 for tier 1, 12 for tier 2.
 
 *Balance note (M3 part 3):* requiring all three of the Moonless Patron's orders dropped the greedy bot from about 27% wins to 5% in Spring (two of three: 17%, one of three: 25%), because Masterwork is out of reach without familiars and the Night Market. The build still needs all three, as designed (`FINALE_ORDERS` in `rules.ts`), so expect a low win rate until those systems land.
 
@@ -347,6 +347,19 @@ Up to 4 familiar slots (5 with an upgrade). Passive, order matters.
 | Ferret | Every 3rd discard draws an extra card. |
 
 The full familiar list and rarities are in the balance tables. The Salamander is Common (it matches the Common Heron's +3).
+
+*In the build (M3 part 5):* all 20 familiars from the balance tables are in the codex (`familiars`), with their numbers in `core/familiars.ts`. The Magpie, Fox, Old Hound and Hob are unlock-pool. They cost 8 / 12 / 18 gold by rarity and sell for half (rounded down) from their card, which opens by clicking a slot in the familiar row (bottom right); the card also moves a familiar left or right. A full row refuses a new familiar until you sell one. Familiars come from the Market Square (one a day), patron picks (Mother Hollow, the Firefly Conductor), the Moth Broker, the Wandering Tinker and The Chariot.
+
+Scoring familiars resolve after Tinctures, one step each, in slot order. Choices the tables left open:
+- **Hob:** "retrigger the first ingredient" adds its Potency again (with its Infuse and Aged bonuses). Its text now says "The first ingredient's Potency counts twice."
+- **Moth:** Lunar ingredients count as every essence for recipe matching and essence bonuses, so a Lunar card can fill any slot.
+- **Will-o'-Wisp:** the first brew of the day is the first one brewed, whatever it makes.
+- **Fox:** doubles only the tip for beating an order's minimum tier, not bonus tips.
+- **Ferret:** counts Discards across the whole run, not per day.
+- **Tortoise:** pays at End Day for each Brew left.
+- **Barn Owl:** shows the top 3 draw-pile cards above the deck while you brew.
+
+*Balance note (M3 part 5):* familiars bring the greedy bot back into the 15-35% target band (Spring 4.8% to 25.7%, Summer 2.2% to 23.0%, Autumn 3.9% to 29.2% over 1,000 runs). The bot ends a run holding 2.7 familiars on average and never buys the Barn Owl, Ferret, Raven or Frost Hare on purpose, so those are untested by the sim.
 
 ## 12. Witches and cauldrons (run starts)
 

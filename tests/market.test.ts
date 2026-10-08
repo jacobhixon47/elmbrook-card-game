@@ -77,8 +77,10 @@ describe('the Lantern Seller and the Wandering Tinker', () => {
 
   it('the Tinker sells a cauldron slot and a Shelf slot at the full moon', () => {
     let s = visit(market(2, { gold: 40 }), 'wandering-tinker');
-    expect(at(s, 'wandering-tinker').stock.map((i) => [i.kind, i.price])).toEqual([['cauldron-slot', TINKER_PRICE.cauldronSlot], ['shelf-slot', TINKER_PRICE.shelfSlot]]);
-    s = ok(s, { type: 'buy', index: 0 }).state;
+    const stock = at(s, 'wandering-tinker').stock;
+    expect(stock.map((i) => [i.kind, i.price])).toEqual([['familiar', Math.round(18 * 0.75)], ['cauldron-slot', TINKER_PRICE.cauldronSlot], ['shelf-slot', TINKER_PRICE.shelfSlot]]);
+    expect(stock[0]!.kind === 'familiar' && codex.familiars.get(stock[0]!.familiar)!.rarity).toBe('rare');
+    s = ok(s, { type: 'buy', index: 1 }).state;
     expect(s.cauldronSlots).toBe(CAULDRON_SLOTS + 1);
     expect(s.gold).toBe(40 - TINKER_PRICE.cauldronSlot);
   });
@@ -161,7 +163,8 @@ describe('the Fortune Tent', () => {
       seen.add(drawn!.card);
       const t = codex.tarot.get(drawn!.card)!;
       const gold = r.state.gold - (1000 - drawn!.price);
-      if (t.effect === 'gold' || t.effect === 'familiar-stand-in' || t.effect === 'relic-stand-in') expect(gold).toBe(t.amount);
+      if (t.effect === 'gold' || t.effect === 'relic-stand-in') expect(gold).toBe(t.amount);
+      if (t.effect === 'familiar') expect(r.state.familiars.length > before.familiars.length || gold === t.amount).toBe(true);
       if (t.effect === 'lunar-card') expect(r.state.satchel.length).toBe(before.satchel.length + 1);
       if (t.effect === 'learn-recipe') expect(r.state.knownRecipes.length).toBe(before.knownRecipes.length + 1);
       if (t.effect === 'bad-omen') expect(allCards(r.state).filter((c) => c.card === 'bad-omen').length).toBe(allCards(before).filter((c) => c.card === 'bad-omen').length + 1);

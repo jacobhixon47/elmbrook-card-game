@@ -2,6 +2,7 @@ import { codex } from '../codex';
 import type { Patron, Twist } from '../codex/schema';
 import { NIGHT_SHIFT_DAY, type Season } from './calendar';
 import { changeGold, gainCard, pick, randInt, type Ctx } from './ctx';
+import { rollFamiliars } from './familiars';
 import { nextFloat, seedRng } from './rng';
 import {
   FINALE_ORDERS, FIRST_NIGHT_GIFT, LUNAR_GIFT, RARE_GIFT, STAND_IN_GOLD, TITHE_GOLD, WEEKS,
@@ -113,9 +114,13 @@ export function patronReward(ctx: Ctx, patron: Patron): void {
     case 'card-pick':
       queueGift(ctx, 'patron', rarityPool(ctx.s, r.rarity), r.count, 'deck');
       return;
-    case 'familiar-pick':
-      changeGold(ctx, STAND_IN_GOLD.familiar, 'patron');
+    case 'familiar-pick': {
+      const cards = rollFamiliars(ctx, r.count);
+      if (!cards.length) return;
+      ctx.s.gifts.push({ kind: 'gift', source: 'patron', cards, into: 'familiar' });
+      ctx.ev.push({ type: 'giftQueued', source: 'patron', cards });
       return;
+    }
     case 'relic':
       changeGold(ctx, STAND_IN_GOLD.relic[r.tier] ?? 0, 'patron');
       return;

@@ -6,11 +6,12 @@ import { changeGold, draw, drawToHandSize, gainCard, Reject, reject, shuffled, t
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
 import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
+import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
 import { atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, stallStock, swapForCard, weave } from './market';
 import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import {
-  BREWS_PER_DAY, CAULDRON_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK,
+  BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK,
   LONGEST_NIGHT, rentDue, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, WEEKS,
 } from './rules';
 import { allCards, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState } from './state';
@@ -31,7 +32,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   }
 
   const s: RunState = {
-    version: 6,
+    version: 7,
     seed,
     rng: seedRng(seed),
     witch: witch.id,
@@ -63,6 +64,9 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     delivery: noBoost(),
     brewsToday: 0,
     unlocks: [...unlocks],
+    familiars: [],
+    familiarSlots: FAMILIAR_SLOTS,
+    discardCount: 0,
     fortunes: [],
     fog: false,
     offer: null,
@@ -149,7 +153,7 @@ function fill(ctx: Ctx, order: Order, potion: Potion): void {
     ctx.ev.push({ type: 'orderProgress', order: order.id, potion: potion.uid, delivered: order.delivered, quantity: order.quantity });
     return;
   }
-  const paid = payout(potion, order);
+  const paid = payout(potion, order, ctx.s.familiars);
   const { bonus } = paid;
   // A Ribbon or similar boosts the next delivery once (GDD §6.4).
   const boost = ctx.s.delivery;
@@ -159,6 +163,7 @@ function fill(ctx: Ctx, order: Order, potion: Potion): void {
   order.status = 'filled';
   ctx.ev.push({ type: 'orderFilled', order: order.id, customer: order.customer, potion: potion.uid, tier: potion.tier, pay, tip, bonus });
   changeGold(ctx, pay + tip, 'order');
+  familiarGold(ctx, 'magpie', FAMILIAR_RULES.magpieGold);
   changeHearts(ctx, order.customer, (bonus ? 2 : 1) + potion.heartDelta + boost.hearts);
   ctx.s.lastFamily = potion.family;
   const patron = codex.patrons.get(order.customer);
@@ -250,6 +255,7 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
 function endDay(ctx: Ctx): void {
   const s = ctx.s;
   requirePhase(ctx, 'brewing');
+  familiarGold(ctx, 'tortoise', FAMILIAR_RULES.tortoiseGold * s.brewsLeft);
   s.hand.push(...s.cauldron);
   s.cauldron = [];
   // Unfinished orders count as declined (GDD §4).
@@ -394,7 +400,11 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       s.discardsLeft -= 1;
       ctx.ev.push({ type: 'cardsDiscarded', uids });
       liftFog(ctx);
-      const extra = thrown.reduce((n, c) => n + sumEffect(c.card, 'drawOnDiscard'), 0);
+      s.discardCount += 1;
+      // The Ferret: every third Discard of the run draws one more.
+      const ferret = hasFamiliar(s, 'ferret') && s.discardCount % FAMILIAR_RULES.ferretEvery === 0 ? 1 : 0;
+      if (ferret) ctx.ev.push({ type: 'familiarFired', familiar: 'ferret' });
+      const extra = thrown.reduce((n, c) => n + sumEffect(c.card, 'drawOnDiscard'), 0) + ferret;
       draw(ctx, Math.max(0, s.handSize - s.hand.length) + extra);
       return;
     }
@@ -431,6 +441,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       order.status = 'declined';
       ctx.ev.push({ type: 'orderDeclined', order: order.id, customer: order.customer });
       changeHearts(ctx, order.customer, -1);
+      familiarGold(ctx, 'raven', FAMILIAR_RULES.ravenGold);
       return;
     }
 
@@ -470,11 +481,12 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       if (!item) reject(`no stock ${action.index}`);
       if (item.sold) reject('already sold');
       if (s.gold < item.price) reject('not enough gold');
+      if (item.kind === 'familiar') addFamiliar(ctx, item.familiar);
       item.sold = true;
       changeGold(ctx, -item.price, 'market');
       if (item.kind === 'card') {
         gainCard(ctx, item.card, 'market');
-      } else {
+      } else if (item.kind !== 'familiar') {
         if (item.kind === 'cauldron-slot') s.cauldronSlots += 1;
         else s.shelfSize += 1;
         ctx.ev.push({ type: 'upgradeBought', upgrade: item.kind });
@@ -522,8 +534,13 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       const gift = offerOf(ctx, 'gift');
       const card = gift.cards[action.index];
       if (!card) reject(`no gift ${action.index}`);
-      const inst = gainCard(ctx, card, 'gift');
-      ctx.ev.push({ type: 'giftTaken', source: gift.source, card, uid: inst.uid });
+      if (gift.into === 'familiar') {
+        addFamiliar(ctx, card);
+        ctx.ev.push({ type: 'giftTaken', source: gift.source, card, uid: 0 });
+      } else {
+        const inst = gainCard(ctx, card, 'gift');
+        ctx.ev.push({ type: 'giftTaken', source: gift.source, card, uid: inst.uid });
+      }
       afterReward(ctx);
       return;
     }
@@ -534,6 +551,15 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       afterReward(ctx);
       return;
     }
+
+    case 'sellFamiliar':
+      if (s.phase === 'game-over' || s.phase === 'victory') reject('the run is over');
+      sellFamiliar(ctx, action.index);
+      return;
+
+    case 'moveFamiliar':
+      moveFamiliar(ctx, action.from, action.to);
+      return;
 
     case 'visitStall': {
       const m = marketOf(ctx);
@@ -603,6 +629,12 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
         const inst = { uid: s.nextUid++, card: action.card };
         s.hand.push(inst);
         ctx.ev.push({ type: 'cardDrawn', uid: inst.uid, card: inst.card });
+      } else if (action.op === 'giveFamiliar') {
+        addFamiliar(ctx, action.familiar);
+      } else if (action.op === 'patronReward') {
+        const patron = codex.patrons.get(action.patron);
+        if (!patron) reject(`no patron ${action.patron}`);
+        patronReward(ctx, patron);
       } else {
         if (action.week < 1 || action.week > WEEKS || action.day < 1 || action.day > NIGHT_SHIFT_DAY) reject('no such day');
         s.week = action.week;

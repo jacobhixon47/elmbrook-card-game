@@ -22,7 +22,11 @@ export type FixtureStep =
   /** Walk up to the Night Market stall at this index. */
   | { visit: number }
   /** Forget a recipe at the Moth Broker. */
-  | { forget: string };
+  | { forget: string }
+  /** Put a familiar in the next free slot. */
+  | { familiar: string }
+  /** Grant a patron's reward as if their order were filled. */
+  | { reward: string };
 
 export function stepAction(state: RunState, step: FixtureStep): Action {
   if (typeof step === 'string') return { type: step === 'skipReward' ? 'skipReward' : step };
@@ -37,6 +41,8 @@ export function stepAction(state: RunState, step: FixtureStep): Action {
   if ('brewFor' in step) return { type: 'brew', deliverTo: state.orders[step.brewFor]?.id ?? -1 };
   if ('patron' in step) return { type: 'debug', op: 'setPatron', week: step.patron[0], patron: step.patron[1] };
   if ('visit' in step) return { type: 'visitStall', index: step.visit };
+  if ('reward' in step) return { type: 'debug', op: 'patronReward', patron: step.reward };
+  if ('familiar' in step) return { type: 'debug', op: 'giveFamiliar', familiar: step.familiar };
   if ('forget' in step) return { type: 'forgetRecipe', recipe: step.forget };
   const deck = [...state.drawPile, ...state.hand, ...state.discardPile];
   return { type: 'removeCard', uid: deck[step.removeAt]?.uid ?? -1 };

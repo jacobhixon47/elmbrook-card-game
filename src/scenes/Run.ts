@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence } from '../codex';
 import {
-  BLACK_MARKET, brewBlocked, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentDue, SKIP_GOLD,
+  BLACK_MARKET, brewBlocked, FAMILIAR_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentDue, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
   type StockItem, type Weather,
@@ -36,7 +36,9 @@ type Mode =
   | { kind: 'dialog'; order: number }
   | { kind: 'select'; purpose: Purpose; tincture?: number; picked: number[] }
   /** Deck cards picked at a Night Market stall: the Hollow Tailor's two, or the Black Market's trade for stock `swap`. */
-  | { kind: 'stall'; picked: number[]; swap?: number };
+  | { kind: 'stall'; picked: number[]; swap?: number }
+  /** A familiar's card, to sell it or move it. */
+  | { kind: 'familiar'; index: number };
 
 /** What a selection is for: a Discard, or the targets of a Tincture (see `targetsOf`). */
 type Purpose = 'discard' | 'hand' | 'hand-one' | 'top-3' | 'shelf-one';
@@ -122,6 +124,7 @@ export class Run extends Phaser.Scene {
       const deck = sortedDeck(stallDeck(state));
       this.mode = { kind: 'stall', picked: (fixture.ui.stall.picked ?? []).map((i) => deck[i]!.uid), ...(fixture.ui.stall.swap !== undefined ? { swap: fixture.ui.stall.swap } : {}) };
     }
+    if (fixture?.ui?.familiar !== undefined) this.mode = { kind: 'familiar', index: fixture.ui.familiar };
     if (fixture?.ui?.grimoire) this.book = fixture.ui.grimoire;
     if (fixture?.ui?.tutorial) {
       // Show one tip: everything before it counts as done.
@@ -231,6 +234,8 @@ export class Run extends Phaser.Scene {
     } else {
       this.drawEvening(s);
     }
+    if (s.phase !== 'game-over' && s.phase !== 'victory') this.drawFamiliars(s);
+    if (this.mode.kind === 'familiar') this.drawFamiliarCard(s, this.mode.index);
     if (this.book) {
       drawGrimoire(this, this.ui, s, this.book, this.tip, {
         tab: (t) => this.openBook(t),
@@ -248,6 +253,84 @@ export class Run extends Phaser.Scene {
     if (tab !== this.book) this.bookPage = 0;
     this.book = tab;
     this.render();
+  }
+
+  /** Familiar slots at the right end of the counter (GDD §11): hover for what one does, click to sell or move it. */
+  private drawFamiliars(s: RunState) {
+    const x0 = 590;
+    this.text(x0 + 12, 258, `Familiars ${s.familiars.length}/${s.familiarSlots}`, { size: 7, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
+    for (let i = 0; i < s.familiarSlots; i++) {
+      const x = x0 + (i % 2) * 24;
+      const y = 280 + Math.floor(i / 2) * 24;
+      const id = s.familiars[i];
+      const slot = this.add2(this.add.rectangle(x, y, 20, 20, hex('k'), id ? 0.95 : 0.4).setStrokeStyle(1, hex(id ? RARITY_BORDER[codex.familiars.get(id)!.rarity] : 'n')));
+      if (!id) continue;
+      this.add2(this.add.image(x, y, familiarTexture(this, id)));
+      const f = codex.familiars.get(id)!;
+      slot.setInteractive({ useHandCursor: true });
+      slot.on('pointerover', () => this.tip.text(f.name, [f.text, `Slot ${i + 1}: familiars score left to right. Click to sell or move.`], x, y - 12, y + 12));
+      slot.on('pointerout', () => this.tip.hide());
+      slot.on('pointerdown', () => {
+        this.mode = { kind: 'familiar', index: i };
+        this.render();
+      });
+    }
+    // The Barn Owl: the top of the draw pile, face up, above the deck.
+    if (hasFamiliar(s, 'barn-owl') && s.phase === 'brewing') {
+      const top = s.drawPile.slice(0, FAMILIAR_RULES.owlPeek);
+      this.text(36, 230, 'Next up', { size: 6, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
+      top.forEach((inst, i) => {
+        const c = this.add2(createCard(this, 16 + i * 20, 254, inst.card, inst.woven).setScale(0.35));
+        c.setInteractive();
+        this.inspect(c, inst.card, 0.35);
+      });
+    }
+  }
+
+  private drawFamiliarCard(s: RunState, index: number) {
+    const id = s.familiars[index];
+    if (!id) return;
+    const f = codex.familiars.get(id)!;
+    const close = () => {
+      this.mode = { kind: 'idle' };
+      this.render();
+    };
+    const shade = this.add2(this.add.rectangle(0, 0, 640, 360, hex('K'), 0.55).setOrigin(0).setInteractive());
+    shade.on('pointerdown', close);
+    const x0 = 200;
+    const y0 = 90;
+    const w = 240;
+    this.add2(panel(this, x0, y0, w, 120, 'k', 0.97, RARITY_BORDER[f.rarity]));
+    this.add2(this.add.image(x0 + 24, y0 + 24, familiarTexture(this, id)).setScale(2));
+    this.text(x0 + 46, y0 + 12, f.name, { size: 12, color: 'y' });
+    this.text(x0 + 46, y0 + 28, `${f.rarity[0]!.toUpperCase()}${f.rarity.slice(1)} familiar · slot ${index + 1} of ${s.familiarSlots}`, { size: 7, color: 'a' });
+    this.text(x0 + 12, y0 + 50, f.text, { size: 8, color: 'W', wrap: w - 24 });
+    const by = y0 + 100;
+    this.add2(button(this, x0 + 50, by, `Sell (${sellPrice(id)}g)`, () => {
+      this.mode = { kind: 'idle' };
+      void this.dispatch({ type: 'sellFamiliar', index });
+    }, { w: 72, color: 'I' }));
+    const move = (to: number) => {
+      this.mode = { kind: 'familiar', index: to };
+      void this.dispatch({ type: 'moveFamiliar', from: index, to });
+    };
+    this.add2(button(this, x0 + 112, by, '<', () => move(index - 1), { w: 20, enabled: index > 0 }));
+    this.add2(button(this, x0 + 136, by, '>', () => move(index + 1), { w: 20, enabled: index < s.familiars.length - 1 }));
+    this.add2(button(this, x0 + 196, by, 'Back', close, { w: 56 }));
+  }
+
+  /** A familiar on offer: a tile with its sprite, name and rule. */
+  private offerFamiliar(x: number, y: number, id: string, onPick: () => void, dim = false) {
+    const f = codex.familiars.get(id)!;
+    const tile = this.add2(panel(this, x - 32, y - 38, 64, 80, 'k', 0.95, RARITY_BORDER[f.rarity]));
+    this.add2(this.add.image(x, y - 18, familiarTexture(this, id)).setScale(2));
+    this.text(x, y + 2, f.name, { size: 7, color: 'y', align: 'center', wrap: 60 }).setOrigin(0.5, 0);
+    this.text(x, y + 46, f.text, { size: 6, color: 'w', align: 'center', wrap: 70 }).setOrigin(0.5, 0);
+    this.text(x, y + 22, `${f.rarity[0]!.toUpperCase()}${f.rarity.slice(1)}`, { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
+    if (dim) return void tile.setAlpha(0.4);
+    tile.setInteractive({ useHandCursor: true }).on('pointerdown', onPick);
+    tile.on('pointerover', () => tile.setStrokeStyle(2, hex('y')));
+    tile.on('pointerout', () => tile.setStrokeStyle(1, hex(RARITY_BORDER[f.rarity])));
   }
 
   /** Hover help for a card drawn at (x, y) at the given scale (GDD §15.1). */
@@ -854,8 +937,16 @@ export class Run extends Phaser.Scene {
       }
       case 'gift': {
         const [head, sub] = GIFT_TITLE[offer.source];
-        title(head, `${sub} ${offer.into === 'satchel' ? 'It goes in your Night Satchel, which joins your deck only on Night Shifts.' : 'It goes in your deck.'}`);
-        offer.cards.forEach((id, i) => this.offerCard(320 + (i - (offer.cards.length - 1) / 2) * 80, 150, id, () => this.dispatch({ type: 'takeGift', index: i })));
+        const where = offer.into === 'satchel' ? 'It goes in your Night Satchel, which joins your deck only on Night Shifts.'
+          : offer.into === 'familiar' ? (s.familiars.length < s.familiarSlots ? 'It takes a familiar slot.' : 'Every familiar slot is taken: sell one first (bottom right).')
+            : 'It goes in your deck.';
+        title(head, `${sub} ${where}`);
+        offer.cards.forEach((id, i) => {
+          const x = 320 + (i - (offer.cards.length - 1) / 2) * 80;
+          const take = () => this.dispatch({ type: 'takeGift', index: i });
+          if (offer.into === 'familiar') this.offerFamiliar(x, 150, id, take, s.familiars.length >= s.familiarSlots);
+          else this.offerCard(x, 150, id, take);
+        });
         this.add2(button(this, 320, 250, 'No thanks', () => this.dispatch({ type: 'passGift' }), { w: 72 }));
         return;
       }
@@ -872,6 +963,8 @@ export class Run extends Phaser.Scene {
       const buy = () => this.dispatch({ type: 'buy', index: i });
       if (item.kind === 'card') {
         this.offerCard(x, y, item.card, buy, item.sold);
+      } else if (item.kind === 'familiar') {
+        this.offerFamiliar(x, y, item.familiar, buy, item.sold);
       } else {
         const tile = this.add2(panel(this, x - 28, y - 38, 56, 76, 'k', 0.95, 'n'));
         this.text(x, y - 24, item.kind === 'cauldron-slot' ? 'Cauldron\nslot' : 'Shelf\nslot', { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
@@ -989,8 +1082,11 @@ export class Run extends Phaser.Scene {
       }
       case 'moth-broker': {
         if (stall.cards.length) {
-          head(`${recipeName(stall.forgot!)} is gone from your Grimoire. Take one Rare card for it.`);
-          stall.cards.forEach((id, i) => this.offerCard(320 + (i - (stall.cards.length - 1) / 2) * 80, 150, id, () => this.dispatch({ type: 'brokerPick', index: i })));
+          head(`${recipeName(stall.forgot!)} is gone from your Grimoire. Take a Rare card or a familiar for it.`);
+          const n = stall.cards.length + stall.familiars.length;
+          const at = (i: number) => 320 + (i - (n - 1) / 2) * 76;
+          stall.cards.forEach((id, i) => this.offerCard(at(i), 150, id, () => this.dispatch({ type: 'brokerPick', index: i })));
+          stall.familiars.forEach((id, k) => this.offerFamiliar(at(stall.cards.length + k), 150, id, () => this.dispatch({ type: 'brokerPick', index: stall.cards.length + k }), s.familiars.length >= s.familiarSlots));
           break;
         }
         if (stall.done) {
@@ -998,7 +1094,7 @@ export class Run extends Phaser.Scene {
           break;
         }
         const options = forgettable(s);
-        head(options.length ? 'Forget a recipe you learned this run, and take a Rare card for the memory. You can learn it again by brewing it.' : 'He only takes recipes you learned this run, not the four you started with. You have none yet.');
+        head(options.length ? 'Forget a recipe you learned this run, and take a Rare card or a familiar for the memory. You can learn it again by brewing it.' : 'He only takes recipes you learned this run, not the four you started with. You have none yet.');
         options.forEach((r, i) => {
           const col = i % 3;
           const row = Math.floor(i / 3);
@@ -1093,6 +1189,13 @@ export class Run extends Phaser.Scene {
       }
     });
   }
+}
+
+const RARITY_BORDER: Record<'common' | 'uncommon' | 'rare', PaletteKey> = { common: 'n', uncommon: 'c', rare: 'v' };
+
+/** A familiar's sprite, or the placeholder until its grid is authored (M5). */
+function familiarTexture(scene: Phaser.Scene, id: string): string {
+  return scene.textures.exists(`familiar/${id}`) ? `familiar/${id}` : 'placeholder/16';
 }
 
 const MOON_LINE: Record<ReturnType<typeof moonOf>, string> = {

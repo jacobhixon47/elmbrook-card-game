@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
   allCards, brewBlocked, CLOCKLESS_BREWS, FINALE_ORDERS, finaleMet, fits, isSatchelCard, lunarPool, NIGHT_SHIFT_DAY, omenPool, patronOf, previewBrew, reduce,
-  rollCalendar, rollPatrons, SEASONS, STAND_IN_GOLD, tierIndex, tierStep, TITHE_GOLD, twistNow, WEEKS,
+  rollCalendar, rollPatrons, SEASONS, tierIndex, tierStep, TITHE_GOLD, twistNow, WEEKS,
   type Calendar, type Order, type Potion, type RunState, type Season,
 } from '../src/core';
 import { no, ofType, ok, slotAll, start, withHand } from './helpers';
@@ -147,7 +147,7 @@ describe('patrons', () => {
     expect(no(slotAll({ ...s, gold: 1 }, uids), { type: 'brew' })).toMatch(/Tithe Reeve/);
   });
 
-  it('patrons pay their reward when their order is filled; familiars and relics are gold for now', () => {
+  it('patrons pay their reward when their order is filled; relics are gold for now', () => {
     const [s, uids] = withHand(night('lamplighter'), ['elmroot', 'creekwater']);
     const target = { ...order({ customer: 'lamplighter', minTier: 'crude', pay: 5 }) };
     const r = ok(slotAll({ ...s, orders: [target] }, uids), { type: 'brew', deliverTo: 500 });
@@ -155,7 +155,8 @@ describe('patrons', () => {
     expect(ofType(r.events, 'goldChanged')[1]!.delta).toBe(6);
     const [h, hu] = withHand(night('mother-hollow'), ['elmroot', 'creekwater']);
     const hollow = ok(slotAll({ ...h, orders: [order({ customer: 'mother-hollow', minTier: 'crude' })] }, hu), { type: 'brew', deliverTo: 500 });
-    expect(ofType(hollow.events, 'goldChanged')[1]!.delta).toBe(STAND_IN_GOLD.familiar);
+    expect(hollow.state.gifts[0]).toMatchObject({ source: 'patron', into: 'familiar' });
+    expect(hollow.state.gifts[0]!.cards.every((c) => codex.familiars.has(c))).toBe(true);
     const [o, ou] = withHand(night('twin-owls'), ['elmroot', 'creekwater']);
     const owls = ok(slotAll({ ...o, orders: [order({ customer: 'twin-owls', minTier: 'crude' })] }, ou), { type: 'brew', deliverTo: 500 });
     expect(owls.state.gifts[0]).toMatchObject({ source: 'patron', into: 'deck' });
