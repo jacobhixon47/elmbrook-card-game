@@ -141,7 +141,7 @@ export const FROST_WARDEN_POTENCY = -2;
  */
 export const STAND_IN_GOLD = { familiar: 8, relic: [0, 8, 12, 16] } as const;
 /**
- * The Moonless Patron's orders you must fill to win the month. The GDD's "satisfy the patron" means
- * all three, but without familiars and the Night Market the sim wins 5% that way (1 of 3: 25%).
+ * The Moonless Patron's orders you must fill to win the month: all three, as the GDD says (Jacob's call,
+ * Oct 8). Until familiars and the Night Market land the sim wins about 5% this way (1 of 3: 25%).
  */
-export const FINALE_ORDERS = 1;
+export const FINALE_ORDERS: number = 3;

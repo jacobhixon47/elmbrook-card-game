@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  allCards, brewBlocked, CLOCKLESS_BREWS, finaleMet, fits, isSatchelCard, lunarPool, NIGHT_SHIFT_DAY, omenPool, patronOf, previewBrew, reduce,
+  allCards, brewBlocked, CLOCKLESS_BREWS, FINALE_ORDERS, finaleMet, fits, isSatchelCard, lunarPool, NIGHT_SHIFT_DAY, omenPool, patronOf, previewBrew, reduce,
   rollCalendar, rollPatrons, SEASONS, STAND_IN_GOLD, tierIndex, tierStep, TITHE_GOLD, twistNow, WEEKS,
   type Calendar, type Order, type Potion, type RunState, type Season,
 } from '../src/core';
@@ -79,12 +79,13 @@ describe('patrons', () => {
     expect(tierIndex(lunar.orders[0]!.minTier)).toBeLessThanOrEqual(tierIndex('masterwork'));
   });
 
-  it('the Moonless Patron places every order, escalating, and the finale needs one filled', () => {
+  it('the Moonless Patron places every order, escalating, and the finale needs them all filled', () => {
     const s = night('moonless-patron', 4, { morning: true });
     expect(s.orders).toHaveLength(3);
     expect(s.orders.every((o) => o.customer === 'moonless-patron')).toBe(true);
     expect(finaleMet(s)).toBe(false);
-    expect(finaleMet({ ...s, orders: s.orders.map((o, i) => ({ ...o, status: i === 0 ? 'filled' as const : o.status })) })).toBe(true);
+    expect(finaleMet({ ...s, orders: s.orders.map((o, i) => ({ ...o, status: i === 0 ? 'filled' as const : o.status })) })).toBe(FINALE_ORDERS <= 1);
+    expect(finaleMet({ ...s, orders: s.orders.map((o) => ({ ...o, status: 'filled' as const })) })).toBe(true);
     expect(finaleMet({ ...s, week: 3, patrons: ['lamplighter', 'pale-courier', 'sir-bramble', 'moonless-patron'] })).toBe(true);
   });
 

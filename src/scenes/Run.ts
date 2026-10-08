@@ -789,7 +789,7 @@ export class Run extends Phaser.Scene {
     };
 
     if (s.phase === 'game-over' && s.lostTo === 'finale') {
-      title('The Moonless Patron leaves unhappy', `Rent is paid, but the month is lost. The Moonless Patron wanted ${FINALE_ORDERS === 1 ? 'one of their orders' : `${FINALE_ORDERS} of their orders`} done.`);
+      title('The Moonless Patron leaves unhappy', `Rent is paid, but the month is lost. The Moonless Patron wanted ${FINALE_ORDERS === 1 ? 'one of their orders' : FINALE_ORDERS >= 3 ? 'all three of their orders' : `${FINALE_ORDERS} of their orders`} done.`);
       this.add2(button(this, 320, 180, 'Try again', () => this.newRun(), { w: 80, color: 'Y' }));
       return;
     }

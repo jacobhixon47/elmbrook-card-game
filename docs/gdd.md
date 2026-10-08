@@ -10,7 +10,7 @@ Status: v0.1 design, written to be built from. Numbers are starting points for t
 
 You've inherited a run-down potion stall in Elmbrook. Your deck is your ingredient satchel. Each day, townsfolk bring orders; you draw ingredients, combine them in your cauldron, and try to brew something good enough to sell. Rent is due every week. On moon nights the shop stays open late and the Night Market comes to town, with stranger customers, lunar ingredients, and vendors who don't take coin.
 
-One run = one lunar month (4 weeks) in one season. Survive every rent day and satisfy the Moonless Patron on the final new moon to win. (In the build, satisfying them means filling `FINALE_ORDERS` of their three orders: one for now, see §10.) Winning a season unlocks the next; clearing all four is your first Year in Elmbrook (§13).
+One run = one lunar month (4 weeks) in one season. Survive every rent day and satisfy the Moonless Patron on the final new moon to win. (In the build, satisfying them means filling all three of their orders, `FINALE_ORDERS` in `rules.ts`; see §10.) Winning a season unlocks the next; clearing all four is your first Year in Elmbrook (§13).
 
 Touchstones: Balatro (scoring juice, run structure, jokers), Slay the Spire (deck shaping, map choices), Luck be a Landlord (rent pressure), Stardew Valley (tone, townsfolk).
 
@@ -320,7 +320,7 @@ In the build the whole month's patrons are rolled at run start (on their own see
 
 Familiars and relics arrive in M3 part 5. Until then those rewards pay gold instead: 8 for a familiar pick, 8 for a tier 1 relic, 12 for tier 2.
 
-*Balance note (M3 part 3):* requiring all three of the Moonless Patron's orders dropped the greedy bot from about 27% wins to 5% in Spring (two of three: 17%, one of three: 25%), because Masterwork is out of reach without familiars and the Night Market. The build needs one of three for now (`FINALE_ORDERS` in `rules.ts`); raise it when those systems land.
+*Balance note (M3 part 3):* requiring all three of the Moonless Patron's orders dropped the greedy bot from about 27% wins to 5% in Spring (two of three: 17%, one of three: 25%), because Masterwork is out of reach without familiars and the Night Market. The build still needs all three, as designed (`FINALE_ORDERS` in `rules.ts`), so expect a low win rate until those systems land.
 
 ## 11. Familiars (jokers)
 
