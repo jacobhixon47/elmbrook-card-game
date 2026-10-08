@@ -67,7 +67,9 @@ describe('pools', () => {
 });
 
 describe('recipe tie-break', () => {
-  const single = (e: string) => [...codex.ingredients.values()].find((i) => i.essences.length === 1 && i.essences[0] === e && !i.effects.includes('wild-essence'))!;
+  // No plain single-essence Lunar card is in the codex since Dusk Shard was cut, so the tests make one.
+  const single = (e: string) => [...codex.ingredients.values()].find((i) => i.essences.length === 1 && i.essences[0] === e && !i.effects.includes('wild-essence'))
+    ?? { ...codex.ingredients.get('starlit-dew')!, essences: [e as 'lunar'] };
   const cards = ['lunar', 'tide', 'umbra'].map(single);
 
   it('picks the specific pattern over an "any" slot once it is available', () => {

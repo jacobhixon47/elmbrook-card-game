@@ -98,7 +98,7 @@ export type SeasonRules = {
 
 export const SEASON_RULES: Record<Season, SeasonRules> = {
   spring: { rentMult: 1, payMult: 1, dayBrews: 0, nightDiscards: 0 },
-  summer: { rentMult: 1.15, payMult: 1, dayBrews: 1, nightDiscards: -1 },
+  summer: { rentMult: 1.15, payMult: 1.15, dayBrews: 1, nightDiscards: -1 },
   autumn: { rentMult: 1.32, payMult: 1.25, dayBrews: 0, nightDiscards: 0 },
   winter: { rentMult: 1.52, payMult: 1, dayBrews: 0, nightDiscards: 0 },
 };
@@ -110,12 +110,11 @@ export function rentDue(season: Season, week: number): number {
 
 // ---------------------------------------------------------------- Calendar effects (GDD §4.2)
 
-/** Rain and Heatwave change ingredient Potency by essence or origin. */
-export const RAIN_CREEK_POTENCY = 2;
+/** Rain and Heatwave add Potency by essence or origin. Weather only boosts (balance audit, Oct 8). */
+export const RAIN_POTENCY = 2;
 /** Rain posts one fewer order, but only when there would be at least this many. */
 export const RAIN_MIN_ORDERS = 3;
 export const HEATWAVE_EMBER_POTENCY = 2;
-export const HEATWAVE_TIDE_POTENCY = -2;
 /** Bloomtide: potions with a Flower ingredient pay this much more. */
 export const BLOOMTIDE_PAY = 2;
 /** Harvest Fair: one more order; each wants this many potions and pays this much more. */

@@ -55,7 +55,6 @@ export const ingredients: In<typeof Ingredient>[] = [
   { id: 'lunar-salt', name: 'Lunar Salt', essences: ['lunar', 'stone'], potency: 8, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['aged'], text: 'Aged.', tags: ['mineral'] },
   { id: 'wolfsbane', name: 'Wolfsbane', essences: ['lunar', 'umbra'], potency: 12, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['night-discard-cost'], text: 'Drawing it costs 1 Discard this shift.', tags: ['flower'], inSeason: ['autumn'] },
   { id: 'fae-dust', name: 'Fae Dust', essences: ['lunar'], potency: 6, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['wild-essence', 'on-brew-draw-1'], text: 'Counts as any essence. When brewed, draw 1.', tags: ['dust'], pool: 'unlock' },
-  { id: 'dusk-shard', name: 'Dusk Shard', essences: ['lunar'], potency: 7, rarity: 'lunar', origin: 'night', effects: ['day-usable'], text: 'Can be brewed on Days too.', tags: ['crystal'] },
   { id: 'rime-blossom', name: 'Rime Blossom', essences: ['lunar', 'tide'], potency: 8, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['harmony-per-frost-in-brew'], text: '+1 Harmony per Frost ingredient in the brew.', tags: ['flower', 'frost'], inSeason: ['winter'] },
   { id: 'fallen-star', name: 'Fallen Star', essences: ['lunar', 'gale'], potency: 11, rarity: 'lunar', origin: 'night', effects: ['day-usable', 'gone-at-week-end'], text: 'Can be brewed on Days. Gone when the week ends.', tags: ['star'], pool: 'event', event: 'meteor-shower' },
 ];

@@ -45,7 +45,7 @@ Every run happens in one season. The season is chosen at run start from those yo
 | Season | Ingredient pool | Twist | Feel |
 |---|---|---|---|
 | Spring | Fresh herbs and flowers more common (Vital, Calming) | Gentle: lower rent, the tutorial season | Blossom, rain, new beginnings |
-| Summer | Fruit, honey, Ember ingredients | Long days: +1 Brew on Days, Night Shifts are short (-1 Discard) | Fireflies, festivals |
+| Summer | Fruit, honey, Ember ingredients | Long days: +1 Brew on Days, Night Shifts are short (-1 Discard). Orders pay ×1.15 to match the rent | Fireflies, festivals |
 | Autumn | Roots, mushrooms, Umbra ingredients | Harvest patrons: bigger orders, bigger tips | Falling leaves, lanterns, the Harvest Fair |
 | Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | Frost Night Market: stalls take only odd currencies | Snow, hearth fires, the longest nights |
 
@@ -114,14 +114,16 @@ Four layers, all seeded into the Calendar at run start so they can be planned ar
 | Weather | Seasons | Effect | Window |
 |---|---|---|---|
 | Clear | All | No effect, a breather | Season as normal |
-| Rain | Spring, summer, autumn | Creek ingredients +2 Potency; one fewer order on a busy day (3+ orders) | Cloud banks, rain streaks |
+| Rain | Spring, summer, autumn | Creek and Tide ingredients +2 Potency (once per card); one fewer order on a busy day (3+ orders) | Cloud banks, rain streaks |
 | Fog | All | Orders hidden until your first brew or Discard; you can't deliver until then. Never on a Night Shift | Thick banks rolling across the valley |
-| Heatwave | Summer | Ember +2 Potency, Tide -2 | Gold haze, shimmer, drifting motes |
+| Heatwave | Summer | Ember ingredients +2 Potency | Gold haze, shimmer, drifting motes |
 | Snow | Winter | Frost cards are drawn first | Snow clouds, heavy snowfall |
 
 The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; the Calendar only rolls from that list, with the balance tables' weights (`WEATHER_WEIGHTS`). Night Shifts roll weather too.
 
 *Balance note (M3 part 2):* the tables had Rain cost an order on every rainy day. In the sim that halved the greedy win rate (27.6% to 16.1%), because spring rains a third of the time and week 1-3 days only have 1-2 orders. Rain now only keeps a customer home on a busy day (3+ orders), which puts the win rate at 29.1%.
+
+*Balance note (Oct 8 audit):* weather only boosts. Rain also helps Tide, and a Heatwave no longer weakens Tide. The sim showed Summer far too hard (5% wins) because its rent rises 15% and its pay didn't, so Summer orders now pay ×1.15 too. Dusk Shard (a Lunar card usable by day) was cut: it made Moonmilk a sure Superb in week 1.
 
 **Town events** (about one per week, a story choice at twilight, replacing that day's errand choice):
 
@@ -193,6 +195,7 @@ Some ask for a target: **Infuse** (a hand ingredient gains +2 Potency for the ru
 
 1.0's Night Deck, reworked for a roguelike:
 - A separate small deck (starts empty) built only at the Night Market and from night rewards.
+- **First-night gift:** after the week-1 Night Shift you pick 1 of 2 Lunar ingredients for free, so week 2's Lunar orders are reachable.
 - Shuffled into your draw pile **only on Night Shifts**.
 - Holds **Lunar ingredients** (Lunar essence, high potency, odd effects) and **Omens** (powerful Tinctures with drawbacks).
 - **Eclipse** (rare calendar event): the Night Satchel joins a Day, and day/lunar ingredients form special Eclipse recipes.
@@ -272,7 +275,7 @@ Opens after each Night Shift, before rent. A street of stalls; you can visit the
 
 | Stall | Trades in | Example |
 |---|---|---|
-| The Lantern Seller | Gold | Lunar ingredients, Omens. |
+| The Lantern Seller | Gold | Lunar ingredients (7 gold), Omens (6 gold). Priced so the week-1 Market is affordable. |
 | The Moth Broker | Memories | Forget a known recipe this run → gain a rare card or familiar. |
 | The Hollow Tailor | Cards | Give up a card permanently → its essence is woven into another card (merge). |
 | The Name-Taker | Your name | Take a Curse (persistent run debuff) for a powerful Cursed card or relic. |
@@ -305,10 +308,12 @@ Up to 4 familiar slots (5 with an upgrade). Passive, order matters.
 | Hearth Toad | +1 Harmony for each potion on your Shelf. |
 | Barn Owl | See the top 3 cards of your draw pile. |
 | Moth | Lunar ingredients count as every essence. |
-| Raven | +8 gold whenever you decline an order (rude, but practical). |
+| Raven | +3 gold whenever you decline an order (rude, but practical). |
 | Hedgehog | Stone ingredients +4 Potency. |
 | Will-o'-Wisp | First brew each day: ×2 Harmony. |
 | Ferret | Every 3rd discard draws an extra card. |
+
+The full familiar list and rarities are in the balance tables. The Salamander is Common (it matches the Common Heron's +3).
 
 ## 12. Witches and cauldrons (run starts)
 
