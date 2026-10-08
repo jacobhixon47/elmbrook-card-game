@@ -70,10 +70,18 @@ function stepToward(s: RunState, plan: Plan): Action {
   return plan.deliverTo === undefined ? { type: 'brew' } : { type: 'brew', deliverTo: plan.deliverTo };
 }
 
-const TINCTURE_VALUE: Record<string, number> = { 'bottle-spare': 9, steep: 8, stir: 5, forage: 4, sift: 4 };
+/** What the bot thinks each Tincture is worth when picking rewards and shopping (about an ingredient's Potency). */
+const TINCTURE_VALUE: Record<string, number> = {
+  'second-wind': 10, 'bottle-spare': 9, 'double-boil': 9, steep: 8, infuse: 7, 'pinch-of-salt': 6, 'tidy-up': 6, decant: 6,
+  stir: 5, simmer: 5, 'grimoire-page': 5, 'charm-sachet': 5, forage: 4, sift: 4, 'taste-test': 3,
+};
 
 function cardValue(s: RunState, id: string): number {
-  if (codex.tinctures.has(id)) return TINCTURE_VALUE[id] ?? 3;
+  if (codex.tinctures.has(id)) {
+    // A first copy adds a new trick to the deck; each extra copy is worth less.
+    const owned = [...s.drawPile, ...s.hand, ...s.discardPile].filter((c) => c.card === id).length;
+    return (TINCTURE_VALUE[id] ?? 3) + (owned ? -3 * owned : 3);
+  }
   const ing = codex.ingredients.get(id);
   if (!ing) return -10;
   const known = s.knownRecipes.map((r) => codex.recipes.get(r)!);
