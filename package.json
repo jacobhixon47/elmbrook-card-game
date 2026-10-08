@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "snap": "tsx scripts/snap.ts",
     "snap:all": "tsx scripts/snap.ts --all",
+    "e2e": "tsx scripts/e2e.ts",
     "art:sheet": "tsx scripts/art-sheet.ts",
     "art:check": "tsx scripts/art-check.ts",
     "render-texture": "tsx scripts/render-texture.ts",

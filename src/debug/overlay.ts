@@ -69,9 +69,9 @@ export function installOverlay(game: Phaser.Game, openAtStart = false): void {
     $('#eo-state').textContent = s ? JSON.stringify(s, null, 1) : '';
   };
 
-  // The M1 scenes draw once, so redraw the hand from the new state after a debug change.
+  // Redraw the run from the new state after a debug change (the sky may have changed too).
   const redraw = () => {
-    if (game.scene.isActive('Hand')) game.scene.getScene('Hand').scene.restart({ fixture: { scene: 'Hand', state: store.getState() } });
+    if (game.scene.isActive('Run')) game.scene.getScene('Run').scene.restart({ resume: true });
   };
 
   root.addEventListener('click', (e) => {

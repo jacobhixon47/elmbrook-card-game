@@ -1,3 +1,5 @@
+import type { FixtureStep } from './fixture-steps';
+
 // Dev URL params: ?fixture=<name> ?seed=<s> ?noanim=1 ?renderer=canvas
 
 export type Fixture = {
@@ -9,6 +11,10 @@ export type Fixture = {
   weather?: string;
   /** Open the dev overlay (backtick) at start. */
   overlay?: boolean;
+  /** Steps replayed after the run starts, to reach a UI state (see fixture-steps.ts). */
+  steps?: FixtureStep[];
+  /** Run scene UI state: an open order dialogue, or hand positions picked for a Discard. */
+  ui?: { dialog?: number; discard?: number[] };
 };
 
 const fixtures = import.meta.glob<Fixture>('/fixtures/*.json', { eager: true, import: 'default' });

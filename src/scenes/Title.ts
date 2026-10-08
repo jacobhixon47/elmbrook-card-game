@@ -50,7 +50,7 @@ export class Title extends Phaser.Scene {
     const prompt = pixelText(this, TX, 226, 'press any key', { size: 8, color: 'v', align: 'center' }).setOrigin(0.5);
     if (!noAnim) this.tweens.add({ targets: prompt, alpha: 0.2, duration: 700, yoyo: true, repeat: -1 });
 
-    const go = () => this.scene.start('Hand', {});
+    const go = () => this.scene.start('Run', {});
     this.input.keyboard?.once('keydown', go);
     this.input.once('pointerdown', go);
 

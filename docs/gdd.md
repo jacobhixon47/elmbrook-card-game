@@ -196,7 +196,8 @@ Balatro-style editions applied by events/vendors: **Moonlit** (+Harmony), **Aged
 
 From 1.0, cleaned up for mouse and keyboard:
 - The cauldron sits centre-screen with **2 slots** (a 3rd unlocks via the cauldron upgrade or certain cards; some recipes need 3).
-- Click (or drag) a hand card to drop it in; click a slotted card to return it. Keyboard: number keys select, Enter brews.
+- Click (or drag) a hand card to drop it in; click a slotted card to return it. Keyboard: number keys select, Enter brews, D starts and confirms a Discard, Esc cancels.
+- A brew goes to the best-paying open order it fills (or the one you chose with Fulfill), otherwise onto the Shelf. The preview says which before you brew.
 - As soon as the slots match something, a **preview** shows: the recipe name (if known), its essence pattern, and the projected score.
 
 ### 6.2 Recipes

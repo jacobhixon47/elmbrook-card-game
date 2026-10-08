@@ -1,1 +1,1 @@
-{ "scene": "Hand", "seed": "fixture-hand", "overlay": true }
+{ "scene": "Run", "seed": "fixture-hand", "steps": ["openShop"], "overlay": true }
