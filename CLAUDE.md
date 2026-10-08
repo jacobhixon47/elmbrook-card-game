@@ -29,4 +29,5 @@ Dev URL params: `?fixture=<name>`, `?seed=<s>`, `?noanim=1`, `?renderer=canvas`,
 - After any balance change (M1+): run `pnpm sim` before and after and include both summaries in the PR.
 - Every bug fix gets a regression test or a replay fixture.
 - Done = typecheck, lint, tests and `art:check` green, plus snaps reviewed for UI work.
+- The repo is public: commit messages, PR descriptions and comments carry no Claude session or project links (no `Claude-Session:` trailer, no claude.ai/code session URLs).
 - The GDD is the source of truth for design. If an implementation choice changes design, update the GDD in the same change and say so.
