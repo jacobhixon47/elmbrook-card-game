@@ -8,12 +8,12 @@ import type { RunState } from './state';
 export type AlmanacRun = Pick<RunState, 'season' | 'phase' | 'stats'>;
 
 export const ALMANAC_GOALS: Record<string, (s: AlmanacRun) => boolean> = {
-  'open-for-business': (s) => s.stats.ordersFilled >= 12,
+  'open-for-business': (s) => s.stats.ordersFilled >= 25,
   'paid-up': (s) => s.stats.rentsPaid >= Math.min(3, WEEKS),
   'superb-work': (s) => s.stats.bestTier >= tierIndex('superb'),
   'masterwork': (s) => s.stats.bestTier >= tierIndex('masterwork'),
   'legendary': (s) => s.stats.bestTier >= tierIndex('legendary'),
-  'shopkeeper': (s) => s.stats.potionsSold >= 8,
+  'shopkeeper': (s) => s.stats.potionsSold >= 12,
   'menagerie': (s) => s.stats.mostFamiliars >= 3,
   'collector': (s) => s.stats.mostRelics >= 4,
   'nameless-deal': (s) => s.stats.cursesTaken >= 1,

@@ -340,12 +340,12 @@ export const perks: In<typeof Perk>[] = [
 // The Almanac (GDD §13): goals met in any run, each adding content to the pools for good.
 // Goals are checked in core/almanac.ts. Together they unlock every `pool: 'unlock'` card, recipe, familiar and relic.
 export const almanac: In<typeof AlmanacEntry>[] = [
-  { id: 'open-for-business', name: 'Open for Business', goal: 'Fill 12 orders in one run.', unlocks: ['lavender', 'clover', 'magpie'] },
+  { id: 'open-for-business', name: 'Open for Business', goal: 'Fill 25 orders in one run.', unlocks: ['lavender', 'clover', 'magpie'] },
   { id: 'paid-up', name: 'Paid Up', goal: 'Pay the rent three weeks running.', unlocks: ['ginger-root', 'sea-salt', 'bonfire-cordial'] },
   { id: 'superb-work', name: 'Superb Work', goal: 'Brew a Superb potion.', unlocks: ['mountain-salve', 'decant'] },
   { id: 'masterwork', name: 'A Masterwork', goal: 'Brew a Masterwork potion.', unlocks: ['elmbrook-panacea', 'old-hound'] },
   { id: 'legendary', name: 'The Stuff of Legend', goal: 'Brew a Legendary potion.', unlocks: ['starlight-elixir', 'witchs-hatpin'] },
-  { id: 'shopkeeper', name: 'Shopkeeper', goal: 'Sell 8 potions from your Shelf in one run.', unlocks: ['geode', 'lucky-horseshoe'] },
+  { id: 'shopkeeper', name: 'Shopkeeper', goal: 'Sell 12 potions from your Shelf in one run.', unlocks: ['geode', 'lucky-horseshoe'] },
   { id: 'menagerie', name: 'Menagerie', goal: 'Keep 3 familiars at once.', unlocks: ['fox', 'silver-bell'] },
   { id: 'collector', name: 'Collector', goal: 'Hold 4 relics at once.', unlocks: ['spare-satchel', 'grimoire-page'] },
   { id: 'nameless-deal', name: 'A Nameless Deal', goal: 'Take a Curse at the Name-Taker.', unlocks: ['fae-dust', 'cracked-mirror', 'moth-swarm', 'black-cauldron'] },
