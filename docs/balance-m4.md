@@ -174,3 +174,14 @@ gold at the start of each day (runs still alive)
 
 ```
 
+
+## Years 2 to 5
+
+Greedy, 1,000 runs, with every perk bought and every Almanac entry done (the profile of a player who has looped), no boon. Year 2's hidden patrons don't change the bot, which doesn't plan around the Calendar.
+
+| | Year 1 | Year 2 | Year 3 | Year 4 | Year 5 |
+|---|---|---|---|---|---|
+| Spring | 37.2% | 37.2% | 29.5% | 25.0% | 18.1% |
+| Winter | 32.3% | | 19.1% | | 7.9% |
+
+Spring plain (no perks or unlocks) is 38.3%, unchanged. The random bot in Year 5 with Blessed Hands: 0 errors in 300 runs. Winter in Year 5 is steep at 7.9%; the season-ramp pass tunes Years against an all-perks profile.
