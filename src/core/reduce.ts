@@ -11,7 +11,7 @@ import { commissionsOnBrew, commissionsOnDayEnd, commissionsOnDeliver, takeCommi
 import { addModifier, cantModify, drawOnBrewOf, MODIFIER_RULES, enchant, heartDeltaOf, isAged, temper } from './modifiers';
 import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
 import { atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, stallStock, swapForCard, takeDeal, weave } from './market';
-import { dayAllowance, gainRelic, grantRelic, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
+import { cursePool, dayAllowance, gainRelic, grantRelic, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
 import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import {
@@ -20,7 +20,7 @@ import {
   MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex,
 } from './rules';
 import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState, type RunStats } from './state';
-import { yearDiscards } from './year';
+import { YEAR_RULES, yearDiscards, yearRule } from './year';
 
 export type ReduceResult = { state: RunState; events: GameEvent[] };
 
@@ -88,6 +88,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   applyPerks(s, perks);
   const ctx: Ctx = { s, ev: [{ type: 'runStarted', seed, witch: witch.id, season }] };
   if (boon) applyBoon(ctx, boon);
+  applyYear(ctx);
   startDay(ctx);
   return { state: ctx.s, events: ctx.ev };
 }
@@ -752,6 +753,17 @@ function applyPerks(s: RunState, perks: readonly string[]): void {
     s.familiarSlots = Math.min(MAX_FAMILIAR_SLOTS, s.familiarSlots + (p.familiarSlots ?? 0));
     for (const card of p.cards ?? []) s.drawPile.push({ uid: s.nextUid++, card });
   }
+}
+
+/** The run's Year rules that act at the start (GDD §13): junk in the deck, a Curse, a smaller Shelf. */
+function applyYear(ctx: Ctx): void {
+  const s = ctx.s;
+  if (yearRule(s, 3)) s.drawPile.push({ uid: s.nextUid++, card: YEAR_RULES.startJunk });
+  if (yearRule(s, 7)) {
+    const curses = cursePool(s);
+    if (curses.length) takeCurse(ctx, pick(ctx, curses));
+  }
+  if (yearRule(s, 8)) s.shelfSize = Math.max(1, s.shelfSize - YEAR_RULES.shelf);
 }
 
 /** A loop's boon (GDD §13), applied at the start of every run that Year. */

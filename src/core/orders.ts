@@ -11,7 +11,7 @@ import {
   HERMIT_PAY, PALE_COURIER_PAY, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, TOWER_PAY, WEEK_PAY_STEP, type Tier,
 } from './rules';
 import { allCards, type CardInstance, type Order, type OrderBonus, type OrderRequest, type Potion, type RunState } from './state';
-import { yearPayMult } from './year';
+import { finaleTier, YEAR_RULES, yearRule } from './year';
 
 /** Distinct ingredients in these cards with how many copies of each. */
 function ingredientCounts(cards: readonly CardInstance[], night: boolean): [Ingredient, number][] {
@@ -158,7 +158,7 @@ function postOrder(ctx: Ctx, o: OrderOpts): void {
   ctx.ev.push({ type: 'orderPosted', order });
 }
 
-const weekScale = (s: RunState, night: boolean) => (1 + WEEK_PAY_STEP * (s.week - 1)) * (night ? NIGHT_PAY : 1) * SEASON_RULES[s.season].payMult * yearPayMult(s);
+const weekScale = (s: RunState, night: boolean) => (1 + WEEK_PAY_STEP * (s.week - 1)) * (night ? NIGHT_PAY : 1) * SEASON_RULES[s.season].payMult;
 
 /**
  * Post the day's orders. Customers ask for what they like (GDD §14 regulars) from what your deck can
@@ -188,7 +188,9 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
     const customer = customers[i % customers.length]!;
     const request = requestFor(ctx, r, customer.prefers);
     const ceiling = ceilingOf(r, request);
-    const rolled = pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
+    let rolled = pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
+    // Year 6: week 2 asks for Superb or better.
+    if (yearRule(s, 6) && s.week === 2 && tierIndex(rolled) < tierIndex(YEAR_RULES.weekTwoTier)) rolled = YEAR_RULES.weekTwoTier;
     const minTier = tower ? tierStep(rolled, 1) : rolled;
     postOrder(ctx, {
       customer: customer.id, request, minTier, ceiling,
@@ -220,7 +222,9 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
   const ladder = patron.ladder ?? [];
   for (const tier of ladder) {
     const request = requestFor(ctx, r, ['lunar', 'rare']);
-    postOrder(ctx, { customer: patron.id, request, minTier: tier, ceiling: ceilingOf(r, request), payScale: scale, bonus: null, ...every });
+    // Year 10: the Moonless Patron asks higher (still no higher than the deck can reach).
+    const minTier = finaleTier(s, tier);
+    postOrder(ctx, { customer: patron.id, request, minTier, ceiling: ceilingOf(r, request), payScale: scale, bonus: null, ...every });
   }
   if (!ladder.length) {
     const fixed = patron.fixedOrder;

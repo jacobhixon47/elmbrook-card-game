@@ -11,6 +11,7 @@ import {
   BLACK_MARKET, BLACK_MARKET_RELIC, BROKER_CARDS, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS, MIN_DECK,
   NAME_TAKER_DEALS, QUARTER_DRAWN_STALLS, TAILOR_POTENCY, TINKER_PRICE, WEEKS, WORLD_RELIC_TIER,
 } from './rules';
+import { YEAR_RULES, yearRule } from './year';
 import { allCards, type CardInstance, type NameTakerDeal, type RunState, type StallState, type StockItem } from './state';
 
 // The Night Market (GDD §9): a street of stalls after each Night Shift, before rent. You can visit
@@ -27,11 +28,13 @@ export function rollStalls(ctx: Ctx): StallId[] {
   const all = [...codex.stalls.values()];
   const always = all.filter((x) => x.opens === 'always').map((x) => x.id);
   const drawn = all.filter((x) => x.opens === 'drawn').map((x) => x.id);
-  if (moon === 'quarter') {
-    const keep = new Set(shuffled(ctx, drawn).slice(0, QUARTER_DRAWN_STALLS));
-    return [...always, ...drawn.filter((id) => keep.has(id))];
-  }
-  return [...always, ...drawn, ...all.filter((x) => x.opens === moon).map((x) => x.id)];
+  // Year 4: one fewer drawn stall opens.
+  const fewer = yearRule(ctx.s, 4) ? YEAR_RULES.fewerStalls : 0;
+  const count = Math.max(0, (moon === 'quarter' ? QUARTER_DRAWN_STALLS : drawn.length) - fewer);
+  // Only a night that drops some stalls rolls for which (a Year 1 full or new moon opens them all).
+  const keep = new Set(count < drawn.length ? shuffled(ctx, drawn).slice(0, count) : drawn);
+  const tonight = [...always, ...drawn.filter((id) => keep.has(id))];
+  return moon === 'quarter' ? tonight : [...tonight, ...all.filter((x) => x.opens === moon).map((x) => x.id)];
 }
 
 /** `opened` are tonight's stalls so far, so no relic is offered twice in one night. */

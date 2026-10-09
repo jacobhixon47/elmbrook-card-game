@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
   boonOf, chooseYear, DISCARDS_PER_DAY, LOOP_ALMANAC, loopOpen, MAX_YEAR, SEASONS, seasonsOf, migrateProfile, migrateRun, newProfile, newRun, NIGHT_SHIFT_DAY, patronKnown, pickBoon, recordRun,
-  rentOf, reputationFor, reputationMult, rollBoons, RUN_VERSION, START_GOLD, SHELF_SLOTS, FAMILIAR_SLOTS, newStats, yearModifiers, YEAR_RULES,
-  type Profile,
+  reputationFor, reputationMult, rollBoons, RUN_VERSION, START_GOLD, SHELF_SLOTS, FAMILIAR_SLOTS, newStats, yearModifiers, YEAR_RULES,
+  type Profile, finaleTier, rewardCount, type RunState,
 } from '../src/core';
 import { calendarWeeks, dayRules } from '../src/view/calendar';
-import { brewing } from './helpers';
+import { brewing, ok, start } from './helpers';
 
 
 describe('Year modifiers', () => {
@@ -16,17 +16,40 @@ describe('Year modifiers', () => {
     expect(yearModifiers(MAX_YEAR)).toHaveLength(MAX_YEAR - 1);
   });
 
-  it('Year 3 raises rent, Year 4 lowers pay, Year 5 takes a Discard', () => {
-    const y1 = newRun('year', 'hedge-witch').state;
-    const y5 = newRun('year', 'hedge-witch', 'spring', [], [], 5).state;
-    expect(y5.year).toBe(5);
-    expect(rentOf({ ...y1, week: 2 })).toBeLessThan(rentOf({ ...y5, week: 2 }));
-    expect(rentOf({ ...y1, week: 2, year: 3 })).toBe(Math.round(rentOf({ ...y1, week: 2 }) * YEAR_RULES.rentMult));
-    expect(y5.discardsLeft).toBe(y1.discardsLeft - YEAR_RULES.discards);
+  it('each Year adds its rule: junk, Discards, a harder week 2, a Curse, a smaller Shelf, fewer reward cards', () => {
+    const at = (year: number) => newRun('year', 'hedge-witch', 'spring', [], [], year).state;
+    const y1 = at(1);
+    const deck = (s: RunState) => [...s.drawPile, ...s.hand].map((c) => c.card);
+    expect(deck(y1)).not.toContain('cobweb');
+    expect(deck(at(3))).toContain('cobweb');
+    expect(at(4).discardsLeft).toBe(y1.discardsLeft);
+    expect(at(5).discardsLeft).toBe(y1.discardsLeft - YEAR_RULES.discards);
     expect(y1.discardsLeft).toBeLessThanOrEqual(DISCARDS_PER_DAY + 1);
-    const pay = (s: typeof y1) => s.orders.reduce((n, o) => n + o.pay, 0);
-    const y4 = newRun('year', 'hedge-witch', 'spring', [], [], 4).state;
-    expect(pay(y4)).toBeLessThan(pay(y1));
+    expect(at(6).curses).toEqual([]);
+    expect(at(7).curses).toHaveLength(1);
+    expect(at(8).shelfSize).toBeLessThan(y1.shelfSize);
+    expect(rewardCount({ ...y1, year: 9 })).toBe(rewardCount(y1) - YEAR_RULES.rewardCards);
+    // Year 6: week 2's day orders ask for Superb, unless the deck can't reach it.
+    const superb = (year: number) => Array.from({ length: 20 }, (_, i) => ok({ ...start(`w2-${i}`), year }, { type: 'debug', op: 'jumpToDay', week: 2, day: 1 }).state.orders)
+      .flat().filter((o) => o.minTier === 'superb').length;
+    expect(superb(6)).toBeGreaterThan(superb(1));
+  });
+
+  it('Year 4 opens one fewer Night Market stall', () => {
+    const market = (year: number) => {
+      let s = ok({ ...start('stalls'), year }, { type: 'debug', op: 'jumpToDay', week: 2, day: NIGHT_SHIFT_DAY }).state;
+      s = ok(s, { type: 'debug', op: 'addGold', amount: 500 }).state;
+      for (const a of [{ type: 'openShop' }, { type: 'endDay' }, { type: 'skipReward' }] as const) s = ok(s, a).state;
+      while (s.offer?.kind === 'gift') s = ok(s, { type: 'passGift' }).state;
+      return s.offer?.kind === 'night-market' ? s.offer.stalls.length : -1;
+    };
+    expect(market(4)).toBe(market(1) - YEAR_RULES.fewerStalls);
+  });
+
+  it('Year 10: the Moonless Patron asks one tier higher', () => {
+    expect(finaleTier({ year: 9 }, 'superb')).toBe('superb');
+    expect(finaleTier({ year: 10 }, 'superb')).toBe('masterwork');
+    expect(finaleTier({ year: 10 }, 'legendary')).toBe('legendary');
   });
 
   it('from Year 2 a patron is hidden until the day before their Night Shift', () => {
