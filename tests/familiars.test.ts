@@ -201,11 +201,11 @@ describe('familiars that pay or draw', () => {
 });
 
 describe('getting familiars', () => {
-  /** The Market Square on day 1 of a seed that offers it. */
+  /** The Market Square on day 1. */
   function market(familiars: string[] = []): RunState {
     let s = withFamiliars(familiars, start('fx-3'));
     s = ok(s, { type: 'debug', op: 'addGold', amount: 100 }).state;
-    for (const a of [{ type: 'openShop' }, { type: 'endDay' }, { type: 'skipReward' }, { type: 'chooseErrand', errand: 'market' }] as const) s = ok(s, a).state;
+    for (const a of [{ type: 'openShop' }, { type: 'endDay' }, { type: 'skipReward' }, { type: 'debug', op: 'openErrand', errand: 'market' }] as const) s = ok(s, a).state;
     return s;
   }
   const familiarIndex = (s: RunState) => {

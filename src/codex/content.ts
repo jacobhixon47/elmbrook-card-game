@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Commission, Curse, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch } from './schema';
+import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -281,5 +281,49 @@ export const witches: In<typeof Witch>[] = [
       { card: 'stir', count: 1 },
     ],
     knownRecipes: ['healing-draught', 'hearthwarm-tonic', 'calm-waters', 'sleep-syrup'],
+  },
+];
+
+// Dusk events (GDD §7), the first 8 from the balance tables. Each choice's rule is in core/dusk-events.ts.
+export const duskEvents: In<typeof DuskEvent>[] = [
+  {
+    id: 'shrine-blessing', name: 'A Shrine Blessing', tags: ['town'], weight: 4,
+    text: 'The little shrine by the well glows warm tonight. The keeper smiles at you.',
+    choices: [{ label: 'Kneel', text: 'Leave 3 gold. Blessed on an ingredient of your choice.' }, { label: 'Nod and go', text: 'Nothing happens.' }],
+  },
+  {
+    id: 'moonlit-walk', name: 'A Moonlit Walk', tags: ['fae'], weight: 4,
+    text: 'The lane home is silver under the moon, and something hums along with you.',
+    choices: [{ label: 'Wander', text: 'Moonlit on a random ingredient.' }],
+  },
+  {
+    id: 'kettle-explodes', name: 'The Kettle Explodes', tags: ['mishap'], weight: 4,
+    text: 'BANG. The old kettle is everywhere, and it smells oddly of honey.',
+    choices: [{ label: 'Laugh it off', text: 'A Sludge joins your deck. Aged on a random ingredient.' }],
+  },
+  {
+    id: 'spilled-cauldron', name: 'Spilled Cauldron', tags: ['mishap'], weight: 6,
+    text: 'A cauldron tips over on the way out. The floor is sticky with it.',
+    choices: [{ label: 'Mop up', text: 'A Cobweb joins your deck.' }, { label: 'Pay for help', text: 'Pay 4 gold.' }],
+  },
+  {
+    id: 'found-coin-purse', name: 'A Found Coin Purse', tags: ['town'], weight: 4,
+    text: 'A plump purse lies in the gutter, embroidered with a name you half know.',
+    choices: [{ label: 'Return it', text: '+1 heart with a random regular.' }, { label: 'Keep it', text: '+10 gold. A Bad Omen joins your deck.' }],
+  },
+  {
+    id: 'bargain-bin', name: 'The Bargain Bin', tags: ['market'], weight: 5,
+    text: 'A stall is closing up, and its bargain bin is still out.',
+    choices: [{ label: 'Rummage', text: 'Pay 3 gold for a random Uncommon card.' }, { label: 'Rummage deep', text: 'Pay 7 gold for a random Rare card.' }, { label: 'Walk on', text: 'Nothing happens.' }],
+  },
+  {
+    id: 'mice-in-the-pantry', name: 'Mice in the Pantry', tags: ['mishap'], weight: 5,
+    text: 'Something has been nibbling the herbs. Several somethings.',
+    choices: [{ label: 'Set traps', text: 'Lose a random Common card.' }, { label: 'Adopt them', text: 'A Cobweb joins your deck, and +3 gold from their stash.' }],
+  },
+  {
+    id: 'fairy-ring', name: 'A Fairy Ring', tags: ['fae'], weight: 5,
+    text: 'A ring of toadstools in the meadow, humming faintly.',
+    choices: [{ label: 'Step in', text: 'A random card turns into one of the next rarity up.' }, { label: 'Walk around', text: 'Nothing happens.' }],
   },
 ];

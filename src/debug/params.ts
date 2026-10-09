@@ -25,7 +25,9 @@ export type Fixture = {
     /** The card of the familiar in this slot, open. */
     familiar?: number;
     /** At the Creek Bank, this option picked. */
-    creek?: 'temper' | ModifierId };
+    creek?: 'temper' | ModifierId;
+    /** At a dusk event, choosing the card for the choice at this index. */
+    eventCard?: number };
 };
 
 const fixtures = import.meta.glob<Fixture>('/fixtures/*.json', { eager: true, import: 'default' });

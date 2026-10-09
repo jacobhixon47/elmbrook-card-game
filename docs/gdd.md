@@ -229,7 +229,7 @@ Balatro-style editions applied by events/vendors: **Moonlit** (+Harmony), **Aged
 
 Balance pass (Oct 9, from the balance tables): Aged went from +1 a day for 5g to +2 for 3g because a bot forced to buy it did worse than with the free temper; Moonlit and Blessed stay. Gilded (+gold when brewed, from the balance tables) is cut: forced to buy it every visit, the bot did no better than with the free temper even at +3 gold for 5, so it was a choice that never paid. Forced to buy one modifier every visit, the bot wins more per gold with Blessed than Moonlit, so Blessed isn't overpriced.
 
-Moonlit, Blessed and Cursed score at step 3 (§6.3), after the tinctures and before familiars, in slot order. Modifiers come from the Creek Bank (§7), the Name-Taker's Cursed card (§9) and the Fortune Tent's Wheel of Fortune (§9). The Shrine Blessing and the Moonlit Walk join with dusk events.
+Moonlit, Blessed and Cursed score at step 3 (§6.3), after the tinctures and before familiars, in slot order. Modifiers come from the Creek Bank (§7), the Name-Taker's Cursed card (§9) and the Fortune Tent's Wheel of Fortune (§9). Dusk events also give them: the Shrine Blessing (Blessed, your choice of card, 3 gold), the Moonlit Walk (Moonlit) and the Kettle (Aged, with a Sludge).
 
 ## 6. Brewing
 
@@ -289,7 +289,7 @@ After the reward pick, choose one of two offered errands. This is the run's bran
 | Creek Bank | Upgrade a card's Potency, or add a modifier. In the build: temper an ingredient for +2 Potency for the run, free, or buy it a modifier at its price (§5.5). One card a visit. |
 | Guild Hall | Take a Guild Commission (multi-day quest: "deliver 3 Superb Calming potions by the Full Moon" → relic reward). From 1.0's guild quests. In the build: two of the ten commissions are offered (codex `commissions`, goals in `core/commissions.ts`); take one or none, and hold at most two. Each is due by a Night Shift: this week's when taken by day 2's dusk, otherwise next week's, so there are always two days and a Night Shift to work on it (a longer deadline adds weeks; Full Moon Favour is always due on week 2). Finishing pays gold, a relic or a free card pick; a lapsed commission costs nothing. The Hall isn't offered while you hold two. Progress shows under the rent line. |
 | Hearth (rest) | Remove a card from the deck (one per visit; the deck never drops below 8), or lift a Curse instead. |
-| Event | One of ~20 small events (fae visits, shop mishaps, a festival) with choices. From 1.0's random encounters. |
+| Event | One of ~20 small events (fae visits, shop mishaps, a festival) with choices. From 1.0's random encounters. In the build: the first 8 of the balance tables' 20 (codex `duskEvents`, rules in `core/dusk-events.ts`), rolled by weight. You make one choice, then head home; a choice you can't afford is greyed out with the reason, and you can only leave without choosing when every choice is out of reach. The Bargain Bin gained a free "Walk on" so it never forces a purchase. The errand reads "Something Afoot" until you open it. |
 
 ## 8. Rewards
 

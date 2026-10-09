@@ -1,7 +1,7 @@
 import type { ModifierId } from '../codex/schema';
 import { codex } from '../codex';
 import {
-  allCards, dueWeekOf, fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentOf, tierIndex, WEEKS,
+  allCards, dueWeekOf, EVENT_GOLD, eventChoiceBlocked, eventChoiceCards, eventDone, fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentOf, tierIndex, WEEKS,
   type Action, type BrewPreview, type CardInstance, type Errand, type Order, type Potion, type RunState, type StallState, type StockItem,
 } from '../core';
 import { effectsOf, targetsOf } from '../core/effects';
@@ -265,7 +265,9 @@ function greedyDusk(s: RunState): Action {
     }
     case 'errands': {
       const sludge = deck.some((c) => c.card === 'sludge');
-      const order: Errand[] = sludge ? ['hearth', 'creek', 'guild', 'forage', 'market'] : s.gold - reserve >= 8 ? ['market', 'creek', 'guild', 'forage', 'hearth'] : ['creek', 'guild', 'forage', 'market', 'hearth'];
+      const order: Errand[] = sludge
+        ? ['hearth', 'creek', 'guild', 'forage', 'market', 'event']
+        : s.gold - reserve >= 8 ? ['market', 'creek', 'guild', 'forage', 'event', 'hearth'] : ['creek', 'guild', 'forage', 'event', 'market', 'hearth'];
       return { type: 'chooseErrand', errand: order.find((e) => offer.options.includes(e))! };
     }
     case 'market': {
@@ -305,6 +307,13 @@ function greedyDusk(s: RunState): Action {
       // The commission it's likeliest to finish in time, by how far its goal is from what the deck already does.
       const best = offer.options.map((id, index) => ({ index, v: commissionValue(s, id) })).sort((a, b) => b.v - a.v)[0];
       return best && best.v > 0 ? { type: 'takeCommission', index: best.index } : { type: 'leaveErrand' };
+    }
+    case 'event': {
+      if (offer.chose !== null || eventDone(s, offer)) return { type: 'leaveErrand' };
+      const index = eventPreference(s, offer.event, s.gold - reserve).find((i) => eventChoiceBlocked(s, offer.event, i) === null) ?? 0;
+      const cards = eventChoiceCards(s, offer.event, index);
+      const card = cards?.slice().sort((a, b) => cardPotency(b) - cardPotency(a))[0];
+      return { type: 'chooseEvent', index, ...(card ? { uid: card.uid } : {}) };
     }
     case 'hearth': {
       if (offer.removed) return { type: 'leaveErrand' };
@@ -361,6 +370,26 @@ function cursedCardValue(s: RunState, id: string): number {
 }
 
 /** How much the greedy bot wants a commission: its reward, discounted by how hard the goal looks. */
+/** Dusk event choices in the order the greedy bot likes them, given its spare gold. */
+function eventPreference(s: RunState, event: string, spare: number): number[] {
+  const deck = allCards(s).length;
+  switch (event) {
+    case 'shrine-blessing':
+      return spare >= EVENT_GOLD.shrine ? [0, 1] : [1];
+    case 'spilled-cauldron':
+      return spare >= EVENT_GOLD.spillHelp ? [1, 0] : [0, 1];
+    case 'found-coin-purse':
+      return [1, 0];
+    case 'bargain-bin':
+      if (deck >= 24) return [2];
+      return spare >= EVENT_GOLD.binRare ? [1, 0, 2] : spare >= EVENT_GOLD.binUncommon ? [0, 2] : [2];
+    case 'mice-in-the-pantry':
+      return [1, 0];
+    default:
+      return [0, 1];
+  }
+}
+
 function commissionValue(s: RunState, id: string): number {
   const c = codex.commissions.get(id);
   if (!c) return 0;
@@ -485,9 +514,10 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'pickReward', index: roll(4) },
     { type: 'takeGift', index: roll(4) },
     { type: 'passGift' },
-    { type: 'chooseErrand', errand: any(['market', 'forage', 'creek', 'guild', 'hearth'] as const)! },
+    { type: 'chooseErrand', errand: any(['market', 'forage', 'creek', 'guild', 'hearth', 'event'] as const)! },
     { type: 'buy', index: roll(7) },
     { type: 'forage', index: roll(5) },
+    { type: 'chooseEvent', index: roll(3), uid: any(deckUids) ?? 0 },
     { type: 'removeCard', uid: any([...s.drawPile, ...s.hand, ...s.discardPile].map((c) => c.uid)) ?? 0 },
     { type: 'sellPotion', uid: potion },
     { type: 'sellFamiliar', index: roll(5) },

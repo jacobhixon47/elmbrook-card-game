@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop", "endDay", "skipReward", { "duskEvent": "fairy-ring" }, { "chooseEvent": 0 }] }

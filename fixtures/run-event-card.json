@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{ "gold": 10 }, "openShop", "endDay", "skipReward", { "duskEvent": "shrine-blessing" }], "ui": { "eventCard": 0 } }

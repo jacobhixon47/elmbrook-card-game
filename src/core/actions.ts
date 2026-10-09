@@ -30,6 +30,8 @@ export type Action =
   | { type: 'enchant'; uid: number; modifier: ModifierId }
   /** At the Guild Hall, one a visit. */
   | { type: 'takeCommission'; index: number }
+  /** A dusk event's choice; `uid` is the card it's for when the choice asks for one (the Shrine Blessing). */
+  | { type: 'chooseEvent'; index: number; uid?: number }
   | { type: 'leaveErrand' }
   // After a Night Shift: free picks (the first-night Lunar card, night customers' payments, a patron's reward).
   | { type: 'takeGift'; index: number }
@@ -57,6 +59,10 @@ export type Action =
   | { type: 'debug'; op: 'giveRelic'; relic: string }
   | { type: 'debug'; op: 'giveCurse'; curse: string }
   | { type: 'debug'; op: 'giveCommission'; commission: string }
+  /** Open this errand, whatever the errands on offer. */
+  | { type: 'debug'; op: 'openErrand'; errand: Errand }
+  /** Open the Event errand on this dusk event, whatever the errands on offer. */
+  | { type: 'debug'; op: 'openEvent'; event: string }
   | { type: 'debug'; op: 'setModifier'; uid: number; modifier: ModifierId }
   /** Grant a patron's reward as if their order were filled. */
   | { type: 'debug'; op: 'patronReward'; patron: string }
@@ -67,7 +73,7 @@ export type Action =
 export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'relic' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
 
 /** Where a gained card came from. */
-export type CardSource = 'reward' | 'market' | 'forage' | 'sludge' | 'gift' | 'payment' | 'copy' | 'fortune';
+export type CardSource = 'reward' | 'market' | 'forage' | 'sludge' | 'gift' | 'payment' | 'copy' | 'fortune' | 'event';
 
 export type GameEvent =
   | { type: 'runStarted'; seed: string; witch: string; season: Season }
@@ -125,6 +131,8 @@ export type GameEvent =
   /** A relic that acts on its own did so (the Iron Lid caught a Sludge). */
   | { type: 'relicFired'; relic: string }
   | { type: 'curseTaken'; curse: string }
+  | { type: 'eventChosen'; event: string; choice: number; outcome: string }
+  | { type: 'cardTransformed'; uid: number; from: string; to: string }
   | { type: 'commissionTaken'; commission: string; dueWeek: number }
   | { type: 'commissionProgress'; commission: string; progress: number; target: number }
   | { type: 'commissionDone'; commission: string }

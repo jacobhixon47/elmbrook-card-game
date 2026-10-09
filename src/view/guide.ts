@@ -97,7 +97,7 @@ export function guideSections(): { title: string; body: string }[] {
     },
     {
       title: 'A day',
-      body: `Orders: read what customers want. Brew: you have ${BREWS_PER_DAY} Brews and ${DISCARDS_PER_DAY} Discards for the whole day. Twilight: take a card for your deck, or skip it for gold. Errand: shop at the Market, forage, or burn a card at the Hearth.`,
+      body: `Orders: read what customers want. Brew: you have ${BREWS_PER_DAY} Brews and ${DISCARDS_PER_DAY} Discards for the whole day. Twilight: take a card for your deck, or skip it for gold. Errand: pick one of two: shop at the Market, forage, temper a card at the Creek Bank, take a Guild commission, burn a card at the Hearth, or see what happens on the way home.`,
     },
     {
       title: 'Brewing',

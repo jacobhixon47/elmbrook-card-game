@@ -2,13 +2,13 @@ import { codex } from '../codex';
 import type { StallId, TarotEffect } from '../codex/schema';
 import { essencesOf, recipeAvailable } from './brew';
 import { NIGHT_SHIFT_DAY } from './calendar';
-import { changeGold, gainCard, pick, pickWeighted, reject, shuffled, type Ctx } from './ctx';
+import { addHearts, changeGold, gainCard, pick, pickWeighted, reject, removeCard, shuffled, type Ctx } from './ctx';
 import { addFamiliar, familiarPrice, rollFamiliars } from './familiars';
 import { draft, lunarPool, omenPool, rarityPool } from './night';
 import { addModifier, modifiable } from './modifiers';
 import { cursePool, gainRelic, rollRelic, takeCurse } from './relics';
 import {
-  BLACK_MARKET, BLACK_MARKET_RELIC, BROKER_CARDS, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_HEARTS, MAX_SHELF_SLOTS, MIN_DECK,
+  BLACK_MARKET, BLACK_MARKET_RELIC, BROKER_CARDS, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS, MIN_DECK,
   NAME_TAKER_DEALS, QUARTER_DRAWN_STALLS, TAILOR_POTENCY, TINKER_PRICE, WEEKS, WORLD_RELIC_TIER,
 } from './rules';
 import { allCards, type CardInstance, type NameTakerDeal, type RunState, type StallState, type StockItem } from './state';
@@ -225,10 +225,7 @@ export function drawTarot(ctx: Ctx): void {
       return;
     }
     case 'hearts': {
-      const regular = pick(ctx, [...codex.regulars.values()]).id;
-      const hearts = Math.min(MAX_HEARTS, (s.hearts[regular] ?? 0) + amount);
-      ctx.ev.push({ type: 'heartsChanged', customer: regular, hearts, delta: hearts - (s.hearts[regular] ?? 0) });
-      s.hearts[regular] = hearts;
+      addHearts(ctx, pick(ctx, [...codex.regulars.values()]).id, amount);
       return;
     }
     case 'bad-omen':
@@ -238,12 +235,7 @@ export function drawTarot(ctx: Ctx): void {
     case 'lose-card': {
       const deck = [...s.drawPile, ...s.discardPile, ...s.hand];
       if (deck.length <= MIN_DECK) return;
-      const gone = pick(ctx, deck);
-      for (const pile of [s.drawPile, s.discardPile, s.hand]) {
-        const i = pile.findIndex((c) => c.uid === gone.uid);
-        if (i >= 0) pile.splice(i, 1);
-      }
-      ctx.ev.push({ type: 'cardRemoved', uid: gone.uid, card: gone.card });
+      removeCard(ctx, pick(ctx, deck));
       return;
     }
     case 'fog-week':
