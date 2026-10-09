@@ -1,1 +1,1 @@
-{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{ "gold": 10 }, "openShop", "endDay", "skipReward", { "errand": "creek" }] }
+{ "scene": "Run", "seed": "fx-1", "today": "clear", "steps": [{ "gold": 10 }, "openShop", "endDay", "skipReward", { "errand": "creek" }] }

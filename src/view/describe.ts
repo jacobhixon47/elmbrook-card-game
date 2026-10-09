@@ -17,6 +17,7 @@ export const ERRAND_TEXT: Record<Errand, { name: string; text: string }> = {
   market: { name: 'Market Square', text: 'Spend gold on cards, a third cauldron slot or a bigger Shelf.' },
   forage: { name: 'Wychwood Forage', text: 'Pick 2 of 5 wild ingredients, free.' },
   creek: { name: 'Creek Bank', text: 'Temper a card for +2 Potency, free, or buy it a modifier.' },
+  guild: { name: 'Guild Hall', text: 'Take a commission: a goal by a Night Shift, for gold or a relic.' },
   hearth: { name: 'The Hearth', text: 'Burn one card you no longer want.' },
 };
 
@@ -143,4 +144,17 @@ const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
 
 export function dayLabel(state: Pick<RunState, 'week' | 'day'>): string {
   return `Week ${state.week} · ${state.day === NIGHT_SHIFT_DAY ? 'Night Shift' : `Day ${state.day}`}`;
+}
+
+/** What a Guild Commission pays. */
+export function commissionReward(id: string): string {
+  const r = codex.commissions.get(id)!.reward;
+  if (r.kind === 'gold') return `${r.amount} gold`;
+  if (r.kind === 'relic') return `a tier ${r.tier} relic`;
+  return `pick 1 of ${r.count} ${cap(r.rarity)} cards`;
+}
+
+/** When a commission is due, from the week you're in. */
+export function commissionDue(dueWeek: number, week: number): string {
+  return dueWeek === week ? "by this week's Night Shift" : dueWeek === week + 1 ? "by next week's Night Shift" : `by week ${dueWeek}'s Night Shift`;
 }

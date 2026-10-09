@@ -28,6 +28,8 @@ export type Action =
   /** At the Creek Bank, one a visit: +2 Potency on a card for free, or a modifier for gold. */
   | { type: 'temper'; uid: number }
   | { type: 'enchant'; uid: number; modifier: ModifierId }
+  /** At the Guild Hall, one a visit. */
+  | { type: 'takeCommission'; index: number }
   | { type: 'leaveErrand' }
   // After a Night Shift: free picks (the first-night Lunar card, night customers' payments, a patron's reward).
   | { type: 'takeGift'; index: number }
@@ -54,6 +56,7 @@ export type Action =
   | { type: 'debug'; op: 'giveFamiliar'; familiar: string }
   | { type: 'debug'; op: 'giveRelic'; relic: string }
   | { type: 'debug'; op: 'giveCurse'; curse: string }
+  | { type: 'debug'; op: 'giveCommission'; commission: string }
   | { type: 'debug'; op: 'setModifier'; uid: number; modifier: ModifierId }
   /** Grant a patron's reward as if their order were filled. */
   | { type: 'debug'; op: 'patronReward'; patron: string }
@@ -122,6 +125,11 @@ export type GameEvent =
   /** A relic that acts on its own did so (the Iron Lid caught a Sludge). */
   | { type: 'relicFired'; relic: string }
   | { type: 'curseTaken'; curse: string }
+  | { type: 'commissionTaken'; commission: string; dueWeek: number }
+  | { type: 'commissionProgress'; commission: string; progress: number; target: number }
+  | { type: 'commissionDone'; commission: string }
+  /** Its Night Shift ended before it was done. */
+  | { type: 'commissionFailed'; commission: string }
   | { type: 'cardModified'; uid: number; card: string; modifier: ModifierId; by: string }
   | { type: 'curseLifted'; curse: string; by: string }
   | { type: 'recipeForgotten'; recipe: string; cards: string[] }

@@ -1,7 +1,7 @@
 import type { ModifierId } from '../codex/schema';
 import { codex } from '../codex';
 import {
-  allCards, fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentOf, tierIndex, WEEKS,
+  allCards, dueWeekOf, fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentOf, tierIndex, WEEKS,
   type Action, type BrewPreview, type CardInstance, type Errand, type Order, type Potion, type RunState, type StallState, type StockItem,
 } from '../core';
 import { effectsOf, targetsOf } from '../core/effects';
@@ -265,7 +265,7 @@ function greedyDusk(s: RunState): Action {
     }
     case 'errands': {
       const sludge = deck.some((c) => c.card === 'sludge');
-      const order: Errand[] = sludge ? ['hearth', 'creek', 'forage', 'market'] : s.gold - reserve >= 8 ? ['market', 'creek', 'forage', 'hearth'] : ['creek', 'forage', 'market', 'hearth'];
+      const order: Errand[] = sludge ? ['hearth', 'creek', 'guild', 'forage', 'market'] : s.gold - reserve >= 8 ? ['market', 'creek', 'guild', 'forage', 'hearth'] : ['creek', 'guild', 'forage', 'market', 'hearth'];
       return { type: 'chooseErrand', errand: order.find((e) => offer.options.includes(e))! };
     }
     case 'market': {
@@ -299,6 +299,12 @@ function greedyDusk(s: RunState): Action {
       const pick = forced ? (cantModify(best, forced) ? undefined : forced) : bestModifier(best, s.gold - reserve);
       const price = pick && codex.modifiers.get(pick)!.price;
       return pick && price != null && s.gold - reserve >= price ? { type: 'enchant', uid: best.uid, modifier: pick } : { type: 'temper', uid: best.uid };
+    }
+    case 'guild': {
+      if (offer.taken) return { type: 'leaveErrand' };
+      // The commission it's likeliest to finish in time, by how far its goal is from what the deck already does.
+      const best = offer.options.map((id, index) => ({ index, v: commissionValue(s, id) })).sort((a, b) => b.v - a.v)[0];
+      return best && best.v > 0 ? { type: 'takeCommission', index: best.index } : { type: 'leaveErrand' };
     }
     case 'hearth': {
       if (offer.removed) return { type: 'leaveErrand' };
@@ -352,6 +358,28 @@ export function relicValue(s: RunState, id: string): number {
 function cursedCardValue(s: RunState, id: string): number {
   const deck = allCards(s).length;
   return deck >= 24 ? 0 : Math.round((cardValue(s, id) + (codex.ingredients.get(id)?.potency ?? 0)) / 2);
+}
+
+/** How much the greedy bot wants a commission: its reward, discounted by how hard the goal looks. */
+function commissionValue(s: RunState, id: string): number {
+  const c = codex.commissions.get(id);
+  if (!c) return 0;
+  const reward = c.reward.kind === 'gold' ? c.reward.amount : c.reward.kind === 'relic' ? 6 * c.reward.tier : 8;
+  const daysLeft = dueWeekOf(s, c) * NIGHT_SHIFT_DAY - ((s.week - 1) * NIGHT_SHIFT_DAY + s.day);
+  const knows = (family: string) => s.knownRecipes.some((r) => codex.recipes.get(r)?.family === family);
+  const odds: Record<string, number> = {
+    'calm-the-shrine': knows('calming') ? 0.3 : 0,
+    'full-moon-favour': knows('calming') ? 0.3 : 0,
+    'miners-mend': knows('healing') || knows('protection') ? 0.7 : 0,
+    'bakers-dozen': knows('warming') ? 0.6 : 0,
+    'full-shelf': 0.3,
+    'no-shadows': 0.7,
+    'three-of-a-kind': s.cauldronSlots >= 3 ? 0.7 : 0,
+    'masters-proof': s.week >= 3 ? 0.5 : 0.2,
+    'the-whole-town': 0.8,
+    'night-owl': 0.4,
+  };
+  return reward * (odds[id] ?? 0) * Math.min(1, daysLeft / 4);
 }
 
 /** Rough cost of carrying a Curse for the rest of the run. */
@@ -457,7 +485,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'pickReward', index: roll(4) },
     { type: 'takeGift', index: roll(4) },
     { type: 'passGift' },
-    { type: 'chooseErrand', errand: any(['market', 'forage', 'creek', 'hearth'] as const)! },
+    { type: 'chooseErrand', errand: any(['market', 'forage', 'creek', 'guild', 'hearth'] as const)! },
     { type: 'buy', index: roll(7) },
     { type: 'forage', index: roll(5) },
     { type: 'removeCard', uid: any([...s.drawPile, ...s.hand, ...s.discardPile].map((c) => c.uid)) ?? 0 },
@@ -474,6 +502,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'swapForCard', index: roll(3), uids: [any(deckUids) ?? 0, any(deckUids) ?? 0] },
     { type: 'takeDeal', index: roll(3), take: roll(2) ? 'relic' : 'card' },
     { type: 'temper', uid: any(deckUids) ?? 0 },
+    { type: 'takeCommission', index: roll(3) },
     { type: 'enchant', uid: any(deckUids) ?? 0, modifier: any(['moonlit', 'aged', 'blessed', 'cursed'] as const)! },
     { type: 'liftCurse', curse: any(s.curses) ?? 'nameless' },
   );

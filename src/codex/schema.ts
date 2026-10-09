@@ -265,3 +265,23 @@ export const Modifier = z.object({
   price: z.number().int().positive().nullable(),
 });
 export type Modifier = z.infer<typeof Modifier>;
+
+/** Guild Commissions (GDD §7): goals taken at the Guild Hall, due by a Night Shift. Goals are code, by id, in core/commissions.ts. */
+export const Commission = z.object({
+  id: Id,
+  name: z.string().min(1),
+  goal: z.string().min(1),
+  /** Night Shifts from the week it's taken: 1 is this week's. */
+  deadline: z.number().int().min(1).max(4),
+  /** Due by this week's Night Shift whenever it's taken (Full Moon Favour). */
+  dueWeek: z.number().int().min(1).max(4).optional(),
+  reward: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('gold'), amount: z.number().int().positive() }),
+    z.object({ kind: z.literal('relic'), tier: z.number().int().min(1).max(3) }),
+    z.object({ kind: z.literal('card-pick'), rarity: z.enum(['common', 'uncommon', 'rare']), count: z.number().int().min(1) }),
+  ]),
+  /** Offered only in these weeks. */
+  minWeek: z.number().int().min(1).max(4).default(1),
+  maxWeek: z.number().int().min(1).max(4).default(4),
+});
+export type Commission = z.infer<typeof Commission>;
