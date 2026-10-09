@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence } from '../codex';
 import {
-  BLACK_MARKET, brewBlocked, FAMILIAR_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentDue, SKIP_GOLD,
+  BLACK_MARKET, brewBlocked, FAMILIAR_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
   type StockItem, type Weather,
@@ -190,6 +190,8 @@ export class Run extends Phaser.Scene {
       return events;
     }
     const after = store.getState()!;
+    const note = relicNote(events);
+    if (note) this.toast(note);
     const resky = () => this.afterChange();
     if (events.some((e) => e.type === 'brewed' || e.type === 'sludge') && !noAnim) {
       this.busy = true;
@@ -319,6 +321,36 @@ export class Run extends Phaser.Scene {
     this.add2(button(this, x0 + 196, by, 'Back', close, { w: 56 }));
   }
 
+  /** A relic on offer: a tile with its token, name, tier and rule. */
+  private offerRelic(x: number, y: number, id: string, onPick: () => void, dim = false) {
+    const r = codex.relics.get(id)!;
+    const tile = this.add2(panel(this, x - 32, y - 38, 64, 80, 'k', 0.95, 'y'));
+    this.add2(this.add.image(x, y - 18, `token/relic-${r.tier}`).setScale(2));
+    this.text(x, y + 2, r.name, { size: 7, color: 'y', align: 'center', wrap: 60 }).setOrigin(0.5, 0);
+    this.text(x, y + 22, `Tier ${r.tier} relic`, { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
+    this.text(x, y + 46, r.text, { size: 6, color: 'w', align: 'center', wrap: 70 }).setOrigin(0.5, 0);
+    if (dim) return void tile.setAlpha(0.4);
+    tile.setInteractive({ useHandCursor: true }).on('pointerdown', onPick);
+    tile.on('pointerover', () => tile.setStrokeStyle(2, hex('W')));
+    tile.on('pointerout', () => tile.setStrokeStyle(1, hex('y')));
+  }
+
+  /** One of the Name-Taker's deals: the Curse you take, above the relic it buys. */
+  private drawDeal(x: number, deal: { curse: string; relic: string }, onTake: () => void) {
+    const c = codex.curses.get(deal.curse)!;
+    const r = codex.relics.get(deal.relic)!;
+    const tile = this.add2(panel(this, x - 78, 96, 156, 128, 'k', 0.95, 'v'));
+    this.add2(this.add.image(x - 62, 112, `token/curse-${c.severity}`));
+    this.text(x - 52, 106, c.name, { size: 8, color: 'v' });
+    this.text(x - 70, 122, `Curse, severity ${c.severity}. ${c.text}`, { size: 6, color: 'w', wrap: 140 });
+    this.text(x, 148, 'for', { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
+    this.add2(this.add.image(x - 62, 168, `token/relic-${r.tier}`));
+    this.text(x - 52, 162, r.name, { size: 8, color: 'y' });
+    this.text(x - 70, 178, `Tier ${r.tier} relic. ${r.text}`, { size: 6, color: 'w', wrap: 140 });
+    this.add2(button(this, x, 210, 'Take the deal', onTake, { w: 80, color: 'v' }));
+    tile.setInteractive();
+  }
+
   /** A familiar on offer: a tile with its sprite, name and rule. */
   private offerFamiliar(x: number, y: number, id: string, onPick: () => void, dim = false) {
     const f = codex.familiars.get(id)!;
@@ -391,10 +423,35 @@ export class Run extends Phaser.Scene {
       today.setInteractive().on('pointerover', () => this.tip.text('Today', todayRules(s), today.x + today.width / 2, today.y + 10));
       today.on('pointerout', () => this.tip.hide());
     }
-    this.text(630, 24, `Rent ${rentDue(s.season, s.week)}g after the Night Shift`, { size: 7, color: 'a', shadow: true }).setOrigin(1, 0);
+    this.text(630, 24, `Rent ${rentOf(s)}g after the Night Shift`, { size: 7, color: 'a', shadow: true }).setOrigin(1, 0);
     if (s.phase !== 'game-over' && s.phase !== 'victory') this.drawRibbon(s);
     const hidden = this.grimoireHidden(s);
     this.add2(button(this, 478, 16, hidden ? 'Grimoire hidden' : 'Grimoire (G)', () => this.toggleBook(s), { w: 74, enabled: !hidden }));
+    this.drawRelics(s);
+  }
+
+  /** Relics, then Curses, as tokens between the Grimoire and the gold. Hover one for what it does. */
+  private drawRelics(s: RunState) {
+    const held = [
+      ...s.relics.map((id) => { const r = codex.relics.get(id)!; return { name: r.name, text: r.text, kind: `Tier ${r.tier} relic`, texture: `token/relic-${r.tier}` }; }),
+      ...s.curses.map((id) => { const c = codex.curses.get(id)!; return { name: c.name, text: c.text, kind: `Curse, severity ${c.severity}`, texture: `token/curse-${c.severity}` }; }),
+    ];
+    const room = 4;
+    const shown = held.length > room ? held.slice(0, room - 1) : held;
+    const y = 16;
+    shown.forEach((h, i) => {
+      const x = 524 + i * 13;
+      const img = this.add2(this.add.image(x, y, h.texture)).setInteractive();
+      img.on('pointerover', () => this.tip.text(h.name, [h.kind, h.text], x, y - 8, y + 8));
+      img.on('pointerout', () => this.tip.hide());
+    });
+    if (held.length > room) {
+      const rest = held.slice(room - 1);
+      const x = 524 + (room - 1) * 13;
+      const more = this.text(x, y, `+${rest.length}`, { size: 7, color: 'y', shadow: true }).setOrigin(0.5);
+      more.setInteractive().on('pointerover', () => this.tip.text('Also held', rest.map((h) => `${h.name}: ${h.text}`), x, y - 8, y + 8));
+      more.on('pointerout', () => this.tip.hide());
+    }
   }
 
   /** The Moonless Patron hides the Grimoire for the finale's Night Shift (GDD §10). */
@@ -885,7 +942,7 @@ export class Run extends Phaser.Scene {
       return;
     }
     if (s.phase === 'game-over') {
-      title('The Guild reclaims your stall', `You couldn't make week ${s.week}'s rent of ${rentDue(s.season, s.week)}g.`);
+      title('The Guild reclaims your stall', `You couldn't make week ${s.week}'s rent of ${rentOf(s)}g.`);
       this.add2(button(this, 320, 180, 'Try again', () => this.newRun(), { w: 80, color: 'Y' }));
       return;
     }
@@ -930,8 +987,15 @@ export class Run extends Phaser.Scene {
         return;
       }
       case 'hearth': {
-        title('The Hearth', offer.removed ? 'Done. The fire crackles.' : 'Burn one card from your deck for good. A thinner deck draws its best cards more often.');
+        const lift = !offer.removed && s.curses.length > 0;
+        title('The Hearth', offer.removed ? 'Done. The fire crackles.' : `Burn one card from your deck for good. A thinner deck draws its best cards more often.${lift ? ' Or burn away a Curse instead.' : ''}`);
         this.deckGrid(blackMarketDeck(s), offer.removed ? null : (inst) => this.dispatch({ type: 'removeCard', uid: inst.uid }));
+        if (lift) {
+          s.curses.forEach((id, i) => {
+            const x = 320 + (i - (s.curses.length - 1) / 2) * 96;
+            this.add2(button(this, x, 238, `Lift ${codex.curses.get(id)!.name}`, () => this.dispatch({ type: 'liftCurse', curse: id }), { w: 90, color: 'v' }));
+          });
+        }
         this.add2(button(this, 320, 262, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
         return;
       }
@@ -965,6 +1029,8 @@ export class Run extends Phaser.Scene {
         this.offerCard(x, y, item.card, buy, item.sold);
       } else if (item.kind === 'familiar') {
         this.offerFamiliar(x, y, item.familiar, buy, item.sold);
+      } else if (item.kind === 'relic') {
+        this.offerRelic(x, y, item.relic, buy, item.sold);
       } else {
         const tile = this.add2(panel(this, x - 28, y - 38, 56, 76, 'k', 0.95, 'n'));
         this.text(x, y - 24, item.kind === 'cauldron-slot' ? 'Cauldron\nslot' : 'Shelf\nslot', { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
@@ -998,7 +1064,7 @@ export class Run extends Phaser.Scene {
 
   /** The Night Market (GDD §9): a street of stalls, then rent. */
   private drawNightMarket(s: RunState, offer: Extract<Offer, { kind: 'night-market' }>, title: (t: string, sub: string) => void) {
-    const due = rentDue(s.season, s.week);
+    const due = rentOf(s);
     const stall = offer.at === null ? null : offer.stalls[offer.at]!;
     const back = () => {
       this.mode = { kind: 'idle' };
@@ -1070,9 +1136,9 @@ export class Run extends Phaser.Scene {
           }, { w: 60 }));
           return;
         }
-        head(`Rare cards for gold, or for any ${BLACK_MARKET.swap} cards from your deck.`);
+        head(`Rare cards for gold, or for any ${BLACK_MARKET.swap} cards from your deck. And a relic, for gold only.`);
         this.drawStock(s, stall.stock, (item, i, x) => {
-          if (item.sold) return;
+          if (item.sold || item.kind !== 'card') return;
           this.add2(button(this, x, 236, `or ${BLACK_MARKET.swap} cards`, () => {
             this.mode = { kind: 'stall', picked: [], swap: i };
             this.render();
@@ -1124,6 +1190,19 @@ export class Run extends Phaser.Scene {
           this.mode = { kind: 'idle' };
           void this.dispatch({ type: 'weave', from: from.uid, into: inst.uid });
         }, picked);
+        break;
+      }
+      case 'name-taker': {
+        if (stall.done) {
+          head('He writes something in a little book and smiles. One deal a night.');
+          break;
+        }
+        if (!stall.deals.length) {
+          head('He looks you over and shakes his head. Nothing he wants tonight.');
+          break;
+        }
+        head('Take a Curse for the rest of the run, and a relic for it. The worse the Curse, the better the relic.');
+        stall.deals.forEach((deal, i) => this.drawDeal(320 + (i - (stall.deals.length - 1) / 2) * 170, deal, () => this.dispatch({ type: 'takeDeal', index: i })));
         break;
       }
       case 'fortune-tent': {
@@ -1204,11 +1283,22 @@ const MOON_LINE: Record<ReturnType<typeof moonOf>, string> = {
   'new-moon': 'The new moon: every stall, and the Black Market by the well.',
 };
 
+/** A line for relics gained, Curses lifted or a relic that acted, to toast after an action. */
+function relicNote(events: readonly GameEvent[]): string | null {
+  const lines: string[] = [];
+  for (const e of events) {
+    if (e.type === 'relicGained' && e.source !== 'debug') lines.push(`Relic: ${codex.relics.get(e.relic)!.name}. ${codex.relics.get(e.relic)!.text}`);
+    if (e.type === 'curseLifted') lines.push(`${codex.curses.get(e.curse)!.name} is lifted.`);
+    if (e.type === 'relicFired' && e.relic === 'iron-lid') lines.push('The Iron Lid caught the Sludge.');
+  }
+  return lines.length ? lines.join(' ') : null;
+}
+
 /** What's left to do at a stall, for its sign on the street. */
 function stallNote(s: RunState, st: StallState): string | null {
   if ('stock' in st) return st.stock.length && st.stock.every((i) => i.sold) ? 'sold out' : null;
   if (st.id === 'fence') return s.shelf.length ? `${s.shelf.length} on your Shelf` : null;
-  if (st.id === 'moth-broker' || st.id === 'hollow-tailor') return st.done ? 'done' : null;
+  if (st.id === 'moth-broker' || st.id === 'hollow-tailor' || st.id === 'name-taker') return st.done ? 'done' : null;
   return st.drawn.length ? `drew ${st.drawn.length}` : null;
 }
 

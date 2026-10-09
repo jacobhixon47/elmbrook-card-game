@@ -86,12 +86,15 @@ type Guest = {
 
 const regularGuest = (r: Regular): Guest => ({ id: r.id, prefers: r.prefers, payMult: r.payMult, bonusChance: r.bonusChance, bonusPool: r.bonusPool });
 
-/** Night customers, and the regulars who only come at night (The Gardener). Night customers set no bonus conditions. */
-function nightGuests(): (Guest & { weight: number })[] {
+/**
+ * Night customers, and the regulars who only come at night (The Gardener). Night customers set no bonus conditions.
+ * The Sleepless Miller pays more when you carry no Curse for him to lift.
+ */
+function nightGuests(cursed: boolean): (Guest & { weight: number })[] {
   return [
     ...[...codex.nightCustomers.values()].map((n) => ({
       id: n.id, weight: n.weight, prefers: n.prefers, bonusChance: 0, bonusPool: [] as OrderBonus[], needsUmbra: n.requiresUmbra,
-      payMult: n.paysIn.kind === 'lift-curse' ? n.paysIn.noCurseMult : n.goldMult,
+      payMult: n.paysIn.kind === 'lift-curse' && !cursed ? n.paysIn.noCurseMult : n.goldMult,
     })),
     ...[...codex.regulars.values()].filter((r) => r.nightOnly).map((r) => ({ ...regularGuest(r), weight: r.weight })),
   ];
@@ -238,7 +241,7 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
   }
 
   // Night customers fill the rest.
-  const guests = weightedOrder(ctx, nightGuests());
+  const guests = weightedOrder(ctx, nightGuests(ctx.s.curses.length > 0));
   const extra = twist === 'pale-courier' ? PALE_COURIER_PAY : 1;
   for (let i = 0; i < count - Math.max(1, ladder.length); i++) {
     const guest = guests[i % guests.length]!;

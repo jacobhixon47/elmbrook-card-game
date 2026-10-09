@@ -1,7 +1,7 @@
 import { codex } from '../codex';
 import type { PotionFamily } from '../codex/schema';
 import type { NightPayment, PatronReward } from '../codex/schema';
-import { NIGHT_SHIFT_DAY, STAND_IN_GOLD, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
+import { NIGHT_SHIFT_DAY, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
 
 // Plain words for what the rules engine holds. Pure, so the wording is tested without a browser.
 
@@ -75,7 +75,7 @@ const NIGHT_PAY_TEXT: Record<NightPayment['kind'], string | null> = {
   omen: 'an Omen for your Satchel',
   'lunar-card': 'pick a Lunar card',
   'rare-card': 'pick a Rare card',
-  'lift-curse': null,
+  'lift-curse': 'lifts your oldest Curse',
 };
 
 function PATRON_REWARD_TEXT(r: PatronReward): string {
@@ -87,7 +87,7 @@ function PATRON_REWARD_TEXT(r: PatronReward): string {
     case 'familiar-pick':
       return `pick 1 of ${r.count} familiars`;
     case 'relic':
-      return `+${STAND_IN_GOLD.relic[r.tier]}g (a relic, once they arrive)`;
+      return `a tier ${r.tier} relic`;
     case 'win':
       return 'the month';
   }

@@ -27,6 +27,9 @@ export type RunRecord = {
   patronFilled: number[];
   /** Familiars held when the run ended, in slot order. */
   familiars: string[];
+  /** Relics and curses held when the run ended. */
+  relics: string[];
+  curses: string[];
   error?: string;
 };
 
@@ -37,7 +40,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
   const rec: RunRecord = {
     seed, won: false, lostWeek: null, finished: false, actions: [], quality: [], gold: [],
     offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {},
-    finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [],
+    finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [],
   };
   const max = opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000);
   let rng = seedRng(`bot:${seed}`);
@@ -104,6 +107,8 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
     }
     rec.finished = isOver(state);
     rec.familiars = [...state.familiars];
+    rec.relics = [...state.relics];
+    rec.curses = [...state.curses];
   } catch (e) {
     rec.error = e instanceof Error ? (e.stack ?? e.message) : String(e);
   }

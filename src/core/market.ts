@@ -5,9 +5,10 @@ import { NIGHT_SHIFT_DAY } from './calendar';
 import { changeGold, gainCard, pick, pickWeighted, reject, shuffled, type Ctx } from './ctx';
 import { addFamiliar, familiarPrice, rollFamiliars } from './familiars';
 import { draft, lunarPool, omenPool, rarityPool } from './night';
+import { cursePool, gainRelic, rollRelic, takeCurse } from './relics';
 import {
-  BLACK_MARKET, BROKER_CARDS, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_HEARTS, MAX_SHELF_SLOTS, MIN_DECK,
-  QUARTER_DRAWN_STALLS, TAILOR_POTENCY, TINKER_PRICE, WEEKS,
+  BLACK_MARKET, BLACK_MARKET_RELIC, BROKER_CARDS, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_HEARTS, MAX_SHELF_SLOTS, MIN_DECK,
+  NAME_TAKER_DEALS, QUARTER_DRAWN_STALLS, TAILOR_POTENCY, TINKER_PRICE, WEEKS, WORLD_RELIC_TIER,
 } from './rules';
 import { allCards, type CardInstance, type RunState, type StallState, type StockItem } from './state';
 
@@ -32,7 +33,8 @@ export function rollStalls(ctx: Ctx): StallId[] {
   return [...always, ...drawn, ...all.filter((x) => x.opens === moon).map((x) => x.id)];
 }
 
-function openStall(ctx: Ctx, id: StallId): StallState {
+/** `opened` are tonight's stalls so far, so no relic is offered twice in one night. */
+function openStall(ctx: Ctx, id: StallId, opened: readonly StallState[]): StallState {
   const s = ctx.s;
   switch (id) {
     case 'lantern-seller':
@@ -49,8 +51,14 @@ function openStall(ctx: Ctx, id: StallId): StallState {
       if (s.shelfSize < MAX_SHELF_SLOTS) stock.push({ kind: 'shelf-slot', price: TINKER_PRICE.shelfSlot, sold: false });
       return { id, stock };
     }
-    case 'black-market':
-      return { id, stock: draft(ctx, rarityPool(s, 'rare'), BLACK_MARKET.cards).map((card) => ({ kind: 'card', card, price: BLACK_MARKET.price, sold: false })) };
+    case 'black-market': {
+      const stock: StockItem[] = draft(ctx, rarityPool(s, 'rare'), BLACK_MARKET.cards).map((card) => ({ kind: 'card', card, price: BLACK_MARKET.price, sold: false }));
+      const relic = rollRelic(ctx, BLACK_MARKET_RELIC.tier, relicsOnOffer(opened));
+      if (relic) stock.push({ kind: 'relic', relic, price: BLACK_MARKET_RELIC.price, sold: false });
+      return { id, stock };
+    }
+    case 'name-taker':
+      return { id, deals: rollDeals(ctx, relicsOnOffer(opened)), done: false };
     case 'fence':
       return { id };
     case 'moth-broker':
@@ -63,7 +71,8 @@ function openStall(ctx: Ctx, id: StallId): StallState {
 }
 
 export function openNightMarket(ctx: Ctx): void {
-  const stalls = rollStalls(ctx).map((id) => openStall(ctx, id));
+  const stalls: StallState[] = [];
+  for (const id of rollStalls(ctx)) stalls.push(openStall(ctx, id, stalls));
   ctx.s.phase = 'night-market';
   ctx.s.offer = { kind: 'night-market', stalls, at: null };
   ctx.ev.push({ type: 'nightMarketOpened', stalls: stalls.map((x) => x.id) });
@@ -178,9 +187,15 @@ export function drawTarot(ctx: Ctx): void {
   const amount = card.amount ?? 0;
   switch (card.effect) {
     case 'gold':
-    case 'relic-stand-in':
       changeGold(ctx, amount, 'fortune');
       return;
+    case 'relic': {
+      // The World: a tier 2 relic, or its gold if you hold every one.
+      const relic = rollRelic(ctx, WORLD_RELIC_TIER, relicsOnOffer(marketOf(ctx).stalls));
+      if (relic) gainRelic(ctx, relic, 'fortune');
+      else changeGold(ctx, amount, 'fortune');
+      return;
+    }
     case 'familiar': {
       // A familiar if a slot is free, or its gold.
       const [f] = s.familiars.length < s.familiarSlots ? rollFamiliars(ctx, 1) : [];
@@ -233,6 +248,40 @@ export function drawTarot(ctx: Ctx): void {
       s.fortunes.push({ week: s.week + 1, card: card.id });
       return;
   }
+}
+
+// ------------------------------------------------------------------ the Name-Taker
+
+/** Relics tonight's stalls still offer (the Black Market's, the Name-Taker's deals). */
+function relicsOnOffer(stalls: readonly StallState[]): string[] {
+  return stalls.flatMap((st) => {
+    if (st.id === 'name-taker') return st.done ? [] : st.deals.map((d) => d.relic);
+    if ('stock' in st) return st.stock.flatMap((i) => (i.kind === 'relic' && !i.sold ? [i.relic] : []));
+    return [];
+  });
+}
+
+/** Curses you don't carry, each with the relic it buys: the relic's tier is the Curse's severity. */
+function rollDeals(ctx: Ctx, onOffer: readonly string[]): { curse: string; relic: string }[] {
+  const deals: { curse: string; relic: string }[] = [];
+  for (const curse of shuffled(ctx, cursePool(ctx.s))) {
+    if (deals.length >= NAME_TAKER_DEALS) break;
+    const tier = codex.curses.get(curse)!.severity;
+    const relic = rollRelic(ctx, tier, [...onOffer, ...deals.map((d) => d.relic)]);
+    if (relic) deals.push({ curse, relic });
+  }
+  return deals;
+}
+
+/** Take a Curse for its relic. One deal a night. */
+export function takeDeal(ctx: Ctx, index: number): void {
+  const stall = atStall(ctx, 'name-taker');
+  if (stall.done) reject('the Name-Taker makes one deal a night');
+  const deal = stall.deals[index];
+  if (!deal) reject(`no deal ${index}`);
+  takeCurse(ctx, deal.curse);
+  gainRelic(ctx, deal.relic, 'name-taker');
+  stall.done = true;
 }
 
 // ------------------------------------------------------------------ the Black Market

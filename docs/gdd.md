@@ -101,7 +101,7 @@ A separate cast who only come after dark. Stranger and more formal than the day 
 | lantern-witch | The Lantern Witch | Lights the Night Market's lamps, sharp-tongued | Vigor, Warming | ×0.5 | Pick 1 of 2 Lunar ingredients after the shift |
 | bog-hag | Granny Bogwort | Lives in the fen, surprisingly sweet | Healing, and it must have an Umbra ingredient | ×0.5 | Pick 1 of 3 Rare ingredients after the shift |
 | moth-duchess | The Moth Duchess | Aristocrat of the lamplight | Illusion, Fortune | ×2.5 | Gold, lavishly |
-| sleepless-miller | The Sleepless Miller | Hasn't slept in years | Calming | ×1 | Lifts your oldest Curse, or ×1.5 gold with none (curses arrive with M3 part 5, so always gold for now) |
+| sleepless-miller | The Sleepless Miller | Hasn't slept in years | Calming | ×1 | Lifts your oldest Curse, or ×1.5 gold if you carried none when the order was posted |
 
 The Night Shift patron (§10) is the featured guest; night customers fill the other orders that night, along with the regulars who only come at night (The Gardener). Gold is the order's normal night pay times the multiplier. Picks wait until after the shift's twilight reward, before the Night Market. Granny Bogwort only insists on Umbra when your deck can brew it into her potion.
 
@@ -143,7 +143,7 @@ The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; th
 | Autumn | Harvest Fair | One more order; every order wants two potions and pays ×2.5; a pie contest |
 | Winter | Longest Night | The week's Night Shift gets +2 Brews, +1 Discard and +2 orders; a gift exchange of cards |
 
-As of M3 part 2 the festivals' rule changes are in. The contests (relic rewards), the gift exchange and the Firefly Fair's games arrive with relics and the Night Market stalls.
+As of M3 part 2 the festivals' rule changes are in. The contests (relic rewards), the gift exchange and the Firefly Fair's games arrive with the dusk events in M3 part 6.
 
 **Sky events** (rare, at most one per run, announced on the Calendar). Eclipse and Meteor Shower are each in about 6% of runs; Blue Moon and the Fae Ring arrive with patrons and fae bargains:
 
@@ -244,7 +244,7 @@ A recipe is an essence pattern with a base Harmony and a potion family.
 
 - **Potency** = sum of ingredient Potency + flat bonuses.
 - **Harmony** = recipe base Harmony + bonuses (matching essences, card effects, familiars, cauldron, modifiers), then multipliers.
-- Resolution order (deterministic, animated left to right like Balatro): ingredients in slot order → tinctures → card modifiers → familiars in slot order → cauldron.
+- Resolution order (deterministic, animated left to right like Balatro): ingredients in slot order → relics and curses that touch ingredients (Pressed Flower, Copper Ladle, Moonsick) → tinctures → card modifiers → familiars in slot order → cauldron. Weather and the patron's twist sit with the ingredients.
 - Every step emits an event the UI animates (number pops, cauldron glow, familiar bounce).
 
 ### 6.4 Quality tiers
@@ -275,7 +275,7 @@ After the reward pick, choose one of two offered errands. This is the run's bran
 | Wychwood Forage | Choose 2 of 5 Wychwood ingredients for free. Small chance of a fae encounter. |
 | Creek Bank | Upgrade a card's Potency, or add a modifier. |
 | Guild Hall | Take a Guild Commission (multi-day quest: "deliver 3 Superb Calming potions by the Full Moon" → relic reward). From 1.0's guild quests. |
-| Hearth (rest) | Remove a card from the deck (one per visit; the deck never drops below 8). |
+| Hearth (rest) | Remove a card from the deck (one per visit; the deck never drops below 8), or lift a Curse instead. |
 | Event | One of ~20 small events (fae visits, shop mishaps, a festival) with choices. From 1.0's random encounters. |
 
 ## 8. Rewards
@@ -300,12 +300,47 @@ Phase flavour: First/Last Quarter nights have 3 stalls. Full Moon has all stalls
 
 **In the build (M3 part 4).** The street shows tonight's stalls; walk up to any of them, trade, walk back, and pay rent from the street.
 
-- **Which stalls open.** The Lantern Seller and the Fence open every night. On a quarter moon (weeks 1 and 3) one more is drawn from the Moth Broker, the Hollow Tailor and the Fortune Tent. The full moon (week 2) has all of them plus **the Wandering Tinker**: a cauldron slot for 12 gold and a Shelf slot for 4. The new moon (week 4) has all of them plus **the Black Market**: 3 Rare cards at 14 gold each, or any 2 cards from your deck.
+- **Which stalls open.** The Lantern Seller and the Fence open every night. On a quarter moon (weeks 1 and 3) one more is drawn from the Moth Broker, the Hollow Tailor, the Name-Taker and the Fortune Tent. The full moon (week 2) has all of them plus **the Wandering Tinker**: a cauldron slot for 12 gold and a Shelf slot for 4. The new moon (week 4) has all of them plus **the Black Market**: 3 Rare cards at 14 gold each, or any 2 cards from your deck, and a tier 2 relic at 25 gold.
 - **The Lantern Seller** stocks 3 Lunar ingredients at 7 gold and 2 Omens at 6. They go in the Night Satchel.
 - **The Moth Broker** takes one recipe a night, never one of the witch's four starting recipes, for 1 of 3 Rare ingredients. Brewing the recipe again teaches it again. After he takes the memory he also offers 2 familiars, so the pick is 1 of 3 Rare cards or 2 familiars.
 - **The Hollow Tailor** sews one card a night. Give up a day ingredient; its first essence is sewn into another day ingredient, in place of that card's second essence, with +1 Potency. Lunar and Satchel cards stay out of it, so Lunar never reaches the day (the reason Dusk Shard was cut). The deck can't drop below 8.
-- **The Fortune Tent** costs 5 gold, then 3 more for each further draw that night. Its deck is in the codex (`tarot`). Boons happen at once. The Hermit and The Tower change next week's day orders: one fewer a day at +50% pay, or one tier harder at double pay. The Moon fogs next week's four days on the Calendar. Next-week twists aren't drawn in week 4. The Chariot gives a random familiar, or 10 gold with every slot taken. The World pays 12 gold until relics exist, and Wheel of Fortune (the Blessed modifier) joins with modifiers.
-- **Waiting for part 5:** the Name-Taker (curses and relics), and the Black Market's relic. The Wandering Tinker now sells one Rare familiar at a quarter off. **Waiting for M4's seasons:** the eight seasonal stall variants in the balance tables.
+- **The Fortune Tent** costs 5 gold, then 3 more for each further draw that night. Its deck is in the codex (`tarot`). Boons happen at once. The Hermit and The Tower change next week's day orders: one fewer a day at +50% pay, or one tier harder at double pay. The Moon fogs next week's four days on the Calendar. Next-week twists aren't drawn in week 4. The Chariot gives a random familiar, or 10 gold with every slot taken. The World gives a tier 2 relic, or 12 gold if you hold every relic. Wheel of Fortune (the Blessed modifier) joins with modifiers.
+- **The Name-Taker** offers 2 deals a night and makes one: take a Curse you don't carry for the rest of the run, and a relic for it. The relic's tier is the Curse's severity, so Nameless or Leaky Roof buys a tier 1 relic and Unpaid Debt or Heavy Hands a tier 3. (The balance tables gave tier 2 for any Curse and tier 3 for severity 3. In the sim the mild Curses cost almost nothing, so Spring wins rose from 29% to 47%; matching tiers puts them at 35%.) The Rare card with the Cursed modifier joins with modifiers.
+- No relic is offered twice in one night: the Black Market, the Name-Taker's deals and The World skip each other's.
+- **Relics bought on the new moon** come after the last Night Shift, so only the Guild Seal (cheaper final rent) helps. Worth revisiting with the Long Year mode.
+- The Wandering Tinker sells one Rare familiar at a quarter off. **Waiting for M4's seasons:** the eight seasonal stall variants in the balance tables.
+
+### Relics and curses
+
+Relics are run-long passives with no slot limit, never sold for gold. They come from patron rewards, the Name-Taker, the Black Market and The World (later also Guild Commissions and festival contests). Curses are run debuffs, taken only at the Name-Taker; the Sleepless Miller and the Hearth lift them. Both are in the codex (`relics`, `curses`) with their numbers in `core/relics.ts`, and show as tokens between the Grimoire button and your gold; hover one for what it does.
+
+| Relic | Tier | Effect |
+|---|---|---|
+| Copper Ladle | 1 | +1 Harmony on every brew of 3 ingredients. |
+| Guild Seal | 1 | Rent -10%. |
+| Lucky Horseshoe | 1 | Reward picks offer 4 cards instead of 3. |
+| Pressed Flower | 1 | Flower ingredients +2 Potency. |
+| Apprentice's Ledger | 1 | +1 gold per order filled. |
+| Silver Bell | 1 | +1 heart on every delivery to a regular. |
+| Old Almanac | 2 | +1 Discard on Rain and Fog days. |
+| Spare Satchel | 2 | +1 hand size. |
+| Witch's Hatpin | 2 | Experiments brew at full quality. |
+| Iron Lid | 2 | The first failed brew each day makes no Sludge. |
+| Moon Locket | 3 | +1 Brew on Night Shifts. |
+| Kettle of Plenty | 3 | Potions brewed once every order is resolved go to the Shelf one tier higher. |
+
+| Curse | Severity | Effect |
+|---|---|---|
+| Nameless | 1 | Regulars don't recognise you: no hearts this run, gained or lost. |
+| Leaky Roof | 1 | Shelf -1 slot (given back when lifted). |
+| Sour Luck | 2 | Reward picks offer 2 cards, and skipping no longer improves them. |
+| Moonsick | 2 | Night Satchel cards -2 Potency. |
+| Heavy Hands | 3 | -1 Discard every day. |
+| Unpaid Debt | 3 | Rent +15%. |
+
+*In the build (M3 part 5):* the Kettle of Plenty counts an empty Order Board as every order resolved. The Hearth lifts the Curse you pick; the Miller lifts the oldest. Lifting a Curse undoes it from then on.
+
+*Balance note (M3 part 5):* relics and curses move the greedy bot from 25.7% to 35.1% Spring wins (1,000 runs; Summer 23.0% to 28.1%, Autumn 29.2% to 37.3%). Almost all of it is the Name-Taker: with the bot never taking a deal, Spring sits at 29%. The bot never takes a severity 3 Curse, so the Kettle of Plenty is untested by the sim.
 
 ## 10. Night Shift patrons (bosses)
 
@@ -327,7 +362,7 @@ In the build the whole month's patrons are rolled at run start (on their own see
 | The Pale Courier (Full Moon) | 2 | Needs a Masterwork Lunar potion; ordinary orders pay double. With no way to brew Lunar yet, it asks for your best family at your best tier. | Tier 2 relic |
 | The Moonless Patron (finale) | 4 | Three escalating orders (Superb, Masterwork, Masterwork, capped by reach); your Grimoire is hidden. | The month |
 
-Familiar picks offer real familiars (M3 part 5). Relics arrive later in part 5; until then a relic reward pays gold instead: 8 for tier 1, 12 for tier 2.
+Familiar picks offer real familiars, and a relic reward gives a random relic of that tier you don't hold (the nearest tier if you hold them all, or 8 / 12 / 16 gold once you hold all 12).
 
 *Balance note (M3 part 3):* requiring all three of the Moonless Patron's orders dropped the greedy bot from about 27% wins to 5% in Spring (two of three: 17%, one of three: 25%), because Masterwork is out of reach without familiars and the Night Market. The build still needs all three, as designed (`FINALE_ORDERS` in `rules.ts`), so expect a low win rate until those systems land.
 

@@ -7,12 +7,13 @@ import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
 import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
 import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
-import { atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, stallStock, swapForCard, weave } from './market';
+import { atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, stallStock, swapForCard, takeDeal, weave } from './market';
+import { dayAllowance, gainRelic, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
 import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import {
   BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK,
-  LONGEST_NIGHT, rentDue, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, WEEKS,
+  LONGEST_NIGHT, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
 } from './rules';
 import { allCards, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState } from './state';
 
@@ -32,7 +33,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   }
 
   const s: RunState = {
-    version: 7,
+    version: 8,
     seed,
     rng: seedRng(seed),
     witch: witch.id,
@@ -67,6 +68,9 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     familiars: [],
     familiarSlots: FAMILIAR_SLOTS,
     discardCount: 0,
+    relics: [],
+    curses: [],
+    sludgeToday: 0,
     fortunes: [],
     fog: false,
     offer: null,
@@ -106,10 +110,12 @@ function startDay(ctx: Ctx): void {
   s.lastFamily = null;
   s.pending = freshPending();
   s.brewsToday = 0;
+  s.sludgeToday = 0;
   s.phase = 'morning';
   const rules = SEASON_RULES[s.season];
-  s.brewsLeft = BREWS_PER_DAY + (night ? 0 : rules.dayBrews);
-  s.discardsLeft = DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0);
+  const allowance = dayAllowance(s, { brews: BREWS_PER_DAY + (night ? 0 : rules.dayBrews), discards: DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0) }, night, weather);
+  s.brewsLeft = allowance.brews;
+  s.discardsLeft = allowance.discards;
   // Longest Night: the festival week's Night Shift is longer.
   if (night && festivalOn(s, s.week, FESTIVAL_DAY) === 'longest-night') {
     s.brewsLeft += LONGEST_NIGHT.brews;
@@ -133,6 +139,8 @@ function requirePhase(ctx: Ctx, ...phases: Phase[]): void {
 }
 
 function changeHearts(ctx: Ctx, customer: string, delta: number): void {
+  // Nameless: no regular remembers you, for better or worse.
+  if (hasCurse(ctx.s, 'nameless')) return;
   const before = ctx.s.hearts[customer] ?? 0;
   const after = Math.max(0, Math.min(MAX_HEARTS, before + delta));
   ctx.s.hearts[customer] = after;
@@ -164,7 +172,9 @@ function fill(ctx: Ctx, order: Order, potion: Potion): void {
   ctx.ev.push({ type: 'orderFilled', order: order.id, customer: order.customer, potion: potion.uid, tier: potion.tier, pay, tip, bonus });
   changeGold(ctx, pay + tip, 'order');
   familiarGold(ctx, 'magpie', FAMILIAR_RULES.magpieGold);
-  changeHearts(ctx, order.customer, (bonus ? 2 : 1) + potion.heartDelta + boost.hearts);
+  if (hasRelic(ctx.s, 'apprentice-ledger')) changeGold(ctx, RELIC_RULES.ledgerGold, 'relic');
+  const bell = hasRelic(ctx.s, 'silver-bell') && codex.regulars.has(order.customer) ? RELIC_RULES.bellHearts : 0;
+  changeHearts(ctx, order.customer, (bonus ? 2 : 1) + potion.heartDelta + boost.hearts + bell);
   ctx.s.lastFamily = potion.family;
   const patron = codex.patrons.get(order.customer);
   if (patron) patronReward(ctx, patron);
@@ -208,19 +218,27 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
   s.pending = { ...freshPending(), fullExperiment: s.pending.fullExperiment && !experiment };
 
   if (preview.kind === 'sludge') {
-    const junk = gainCard(ctx, 'sludge', 'sludge');
-    ctx.ev.push({ type: 'sludge', uid: junk.uid });
+    s.sludgeToday += 1;
+    // The Iron Lid catches the first failed brew of the day.
+    if (s.sludgeToday === 1 && hasRelic(s, 'iron-lid')) {
+      ctx.ev.push({ type: 'relicFired', relic: 'iron-lid' });
+    } else {
+      const junk = gainCard(ctx, 'sludge', 'sludge');
+      ctx.ev.push({ type: 'sludge', uid: junk.uid });
+    }
   } else {
     ctx.ev.push(...preview.steps);
     if (!preview.known) {
       s.knownRecipes.push(preview.recipe);
       ctx.ev.push({ type: 'recipeDiscovered', recipe: preview.recipe });
     }
+    // The Kettle of Plenty: once every order is resolved, potions go to the Shelf a tier higher.
+    const spare = hasRelic(s, 'kettle-of-plenty') && s.orders.every((o) => o.status !== 'open');
     const base = {
       recipe: preview.recipe,
       family: preview.family,
       quality: preview.quality,
-      tier: preview.tier,
+      tier: spare ? tierStep(preview.tier, 1) : preview.tier,
       ingredients: used.map((c) => c.card),
       experiment: !preview.known,
       heartDelta: used.reduce((n, c) => n + sumEffect(c.card, 'heartDelta'), 0),
@@ -319,7 +337,7 @@ function afterReward(ctx: Ctx): void {
 /** After the Night Market: pay rent or lose the stall; the fourth rent wins the run. */
 function collectRent(ctx: Ctx): void {
   const s = ctx.s;
-  const due = rentDue(s.season, s.week);
+  const due = rentOf(s);
   s.offer = null;
   if (s.gold < due) {
     ctx.ev.push({ type: 'rentFailed', week: s.week, amount: due, gold: s.gold });
@@ -482,11 +500,12 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       if (item.sold) reject('already sold');
       if (s.gold < item.price) reject('not enough gold');
       if (item.kind === 'familiar') addFamiliar(ctx, item.familiar);
+      if (item.kind === 'relic') gainRelic(ctx, item.relic, 'market');
       item.sold = true;
       changeGold(ctx, -item.price, 'market');
       if (item.kind === 'card') {
         gainCard(ctx, item.card, 'market');
-      } else if (item.kind !== 'familiar') {
+      } else if (item.kind !== 'familiar' && item.kind !== 'relic') {
         if (item.kind === 'cauldron-slot') s.cauldronSlots += 1;
         else s.shelfSize += 1;
         ctx.ev.push({ type: 'upgradeBought', upgrade: item.kind });
@@ -594,6 +613,18 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       swapForCard(ctx, action.index, action.uids);
       return;
 
+    case 'takeDeal':
+      takeDeal(ctx, action.index);
+      return;
+
+    case 'liftCurse': {
+      const offer = offerOf(ctx, 'hearth');
+      if (offer.removed) reject('the Hearth takes one card a night');
+      if (!liftCurse(ctx, 'hearth', action.curse)) reject(`you don't carry ${action.curse}`);
+      offer.removed = true;
+      return;
+    }
+
     case 'sellPotion': {
       atStall(ctx, 'fence');
       const i = s.shelf.findIndex((p) => p.uid === action.uid);
@@ -631,6 +662,10 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
         ctx.ev.push({ type: 'cardDrawn', uid: inst.uid, card: inst.card });
       } else if (action.op === 'giveFamiliar') {
         addFamiliar(ctx, action.familiar);
+      } else if (action.op === 'giveRelic') {
+        gainRelic(ctx, action.relic, 'debug');
+      } else if (action.op === 'giveCurse') {
+        takeCurse(ctx, action.curse);
       } else if (action.op === 'patronReward') {
         const patron = codex.patrons.get(action.patron);
         if (!patron) reject(`no patron ${action.patron}`);

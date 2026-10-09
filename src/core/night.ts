@@ -3,9 +3,10 @@ import type { Patron, Twist } from '../codex/schema';
 import { NIGHT_SHIFT_DAY, type Season } from './calendar';
 import { changeGold, gainCard, pick, randInt, type Ctx } from './ctx';
 import { rollFamiliars } from './familiars';
+import { grantRelic, liftCurse } from './relics';
 import { nextFloat, seedRng } from './rng';
 import {
-  FINALE_ORDERS, FIRST_NIGHT_GIFT, LUNAR_GIFT, RARE_GIFT, STAND_IN_GOLD, TITHE_GOLD, WEEKS,
+  FINALE_ORDERS, FIRST_NIGHT_GIFT, LUNAR_GIFT, RARE_GIFT, TITHE_GOLD, WEEKS,
 } from './rules';
 import type { CardInstance, Gift, GiftSource, Order, RunState } from './state';
 
@@ -122,7 +123,7 @@ export function patronReward(ctx: Ctx, patron: Patron): void {
       return;
     }
     case 'relic':
-      changeGold(ctx, STAND_IN_GOLD.relic[r.tier] ?? 0, 'patron');
+      grantRelic(ctx, r.tier, 'patron');
       return;
     case 'win':
       return;
@@ -146,8 +147,10 @@ export function nightPayment(ctx: Ctx, order: Order): void {
       queueGift(ctx, 'bog-hag', rarityPool(ctx.s, 'rare'), RARE_GIFT, 'deck');
       return;
     case 'gold':
+      return;
     case 'lift-curse':
-      // Curses arrive with M3 part 5; until then the Miller's order already pays the no-curse rate.
+      // The Miller's order paid the no-curse rate if you had none when it was posted.
+      liftCurse(ctx, order.customer);
       return;
   }
 }

@@ -184,7 +184,7 @@ export const Witch = z.object({
 export type Witch = z.infer<typeof Witch>;
 
 /** The Night Market's stalls (GDD §9). Their trades need code, so each id is handled in core/market.ts. */
-export const STALLS = ['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'wandering-tinker', 'black-market'] as const;
+export const STALLS = ['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'name-taker', 'wandering-tinker', 'black-market'] as const;
 export const StallId = z.enum(STALLS);
 export type StallId = z.infer<typeof StallId>;
 
@@ -204,7 +204,7 @@ export const Stall = z.object({
 export type Stall = z.infer<typeof Stall>;
 
 /** What a tarot card does; each is handled by id in core/market.ts. */
-export const TAROT_EFFECTS = ['gold', 'lunar-card', 'learn-recipe', 'hearts', 'familiar', 'relic-stand-in', 'fewer-orders', 'harder-orders', 'fog-week', 'bad-omen', 'lose-card'] as const;
+export const TAROT_EFFECTS = ['gold', 'lunar-card', 'learn-recipe', 'hearts', 'familiar', 'relic', 'fewer-orders', 'harder-orders', 'fog-week', 'bad-omen', 'lose-card'] as const;
 export const TarotEffect = z.enum(TAROT_EFFECTS);
 export type TarotEffect = z.infer<typeof TarotEffect>;
 
@@ -233,3 +233,21 @@ export const Familiar = z.object({
   pool: Pool.default('base'),
 });
 export type Familiar = z.infer<typeof Familiar>;
+
+/** Relics (balance tables): run-long passives with no slot limit, never sold for gold. Rules live in core/relics.ts. */
+export const Relic = z.object({
+  id: Id,
+  name: z.string().min(1),
+  tier: z.number().int().min(1).max(3),
+  text: z.string().min(1),
+});
+export type Relic = z.infer<typeof Relic>;
+
+/** Curses (GDD §9): run debuffs taken at the Name-Taker for a relic. Rules live in core/relics.ts. */
+export const Curse = z.object({
+  id: Id,
+  name: z.string().min(1),
+  severity: z.number().int().min(1).max(3),
+  text: z.string().min(1),
+});
+export type Curse = z.infer<typeof Curse>;

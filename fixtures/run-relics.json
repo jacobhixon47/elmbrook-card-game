@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{ "relic": "spare-satchel" }, { "relic": "pressed-flower" }, { "curse": "moonsick" }, "openShop", { "slot": 0 }, { "slot": 1 }] }

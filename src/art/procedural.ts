@@ -165,6 +165,31 @@ export function bubble(): Pixmap {
   return p;
 }
 
+/** A relic's token until relics get their own sprites (M5): a brass medallion with a gem by tier. */
+export function relicToken(tier: 1 | 2 | 3): Pixmap {
+  const gem: PaletteKey = tier === 1 ? 'G' : tier === 2 ? 'U' : 'R';
+  const p = new Pixmap(12, 12);
+  p.fillEllipse(6, 6, 6, 6, 'k');
+  p.fillEllipse(6, 6, 5, 5, 'n');
+  p.fillEllipse(6.5, 6.5, 3.5, 3.5, 'B');
+  p.fillEllipse(6, 6, 2.5, 2.5, gem);
+  p.set(5, 5, 'W');
+  p.set(3, 2, 'y');
+  p.set(2, 3, 'y');
+  return p;
+}
+
+/** A Curse's token: a violet ward with a pale eye, one red pupil per severity step. */
+export function curseToken(severity: 1 | 2 | 3): Pixmap {
+  const p = new Pixmap(12, 12);
+  p.fillEllipse(6, 6, 6, 6, 'k');
+  p.fillEllipse(6, 6, 5, 5, 'p');
+  p.fillEllipse(6, 6.5, 4, 2, 'm');
+  p.fillRect(6 - severity, 6, severity * 2 - 1 + 1, 1, 'R');
+  p.set(4, 3, 'v');
+  return p;
+}
+
 /** Labelled-by-colour stand-in for any texture that has no art yet. */
 export function placeholder(width: number, height: number): Pixmap {
   const p = new Pixmap(width, height);
@@ -190,6 +215,10 @@ export function proceduralTextures(): Record<string, Pixmap> {
     'fx/fog': fogBank(),
     'placeholder/16': placeholder(16, 16),
   };
+  for (const t of [1, 2, 3] as const) {
+    out[`token/relic-${t}`] = relicToken(t);
+    out[`token/curse-${t}`] = curseToken(t);
+  }
   for (const e of Object.keys(ESSENCE_COLOR) as (keyof typeof ESSENCE_COLOR)[]) out[`pip/${e}`] = essencePip(e);
   return out;
 }

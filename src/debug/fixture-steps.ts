@@ -25,6 +25,8 @@ export type FixtureStep =
   | { forget: string }
   /** Put a familiar in the next free slot. */
   | { familiar: string }
+  | { relic: string }
+  | { curse: string }
   /** Grant a patron's reward as if their order were filled. */
   | { reward: string };
 
@@ -42,6 +44,8 @@ export function stepAction(state: RunState, step: FixtureStep): Action {
   if ('patron' in step) return { type: 'debug', op: 'setPatron', week: step.patron[0], patron: step.patron[1] };
   if ('visit' in step) return { type: 'visitStall', index: step.visit };
   if ('reward' in step) return { type: 'debug', op: 'patronReward', patron: step.reward };
+  if ('relic' in step) return { type: 'debug', op: 'giveRelic', relic: step.relic };
+  if ('curse' in step) return { type: 'debug', op: 'giveCurse', curse: step.curse };
   if ('familiar' in step) return { type: 'debug', op: 'giveFamiliar', familiar: step.familiar };
   if ('forget' in step) return { type: 'forgetRecipe', recipe: step.forget };
   const deck = [...state.drawPile, ...state.hand, ...state.discardPile];

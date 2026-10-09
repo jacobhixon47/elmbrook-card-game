@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Familiar, Ingredient, Junk, NightCustomer, Patron, Recipe, Regular, Stall, Tarot, Tincture, Witch } from './schema';
+import type { Curse, Familiar, Ingredient, Junk, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -188,26 +188,51 @@ export const familiars: In<typeof Familiar>[] = [
   { id: 'hob', name: 'Hob', rarity: 'rare', text: 'The first ingredient\'s Potency counts twice.', pool: 'unlock' },
 ];
 
-// The Night Market's stalls (GDD §9). The Name-Taker comes with curses and relics (M3 part 5).
+// Relics and curses (GDD §9, balance tables). Numbers live with their rules in core/relics.ts.
+export const relics: In<typeof Relic>[] = [
+  { id: 'copper-ladle', name: 'Copper Ladle', tier: 1, text: '+1 Harmony on every brew of 3 ingredients.' },
+  { id: 'guild-seal', name: 'Guild Seal', tier: 1, text: 'Rent -10%.' },
+  { id: 'lucky-horseshoe', name: 'Lucky Horseshoe', tier: 1, text: 'Reward picks offer 4 cards instead of 3.' },
+  { id: 'pressed-flower', name: 'Pressed Flower', tier: 1, text: 'Flower ingredients +2 Potency.' },
+  { id: 'apprentice-ledger', name: 'Apprentice\'s Ledger', tier: 1, text: '+1 gold per order filled.' },
+  { id: 'silver-bell', name: 'Silver Bell', tier: 1, text: '+1 heart on every delivery to a regular.' },
+  { id: 'old-almanac', name: 'Old Almanac', tier: 2, text: '+1 Discard on Rain and Fog days.' },
+  { id: 'spare-satchel', name: 'Spare Satchel', tier: 2, text: '+1 hand size.' },
+  { id: 'witchs-hatpin', name: 'Witch\'s Hatpin', tier: 2, text: 'Experiments brew at full quality.' },
+  { id: 'iron-lid', name: 'Iron Lid', tier: 2, text: 'The first failed brew each day makes no Sludge.' },
+  { id: 'moon-locket', name: 'Moon Locket', tier: 3, text: '+1 Brew on Night Shifts.' },
+  { id: 'kettle-of-plenty', name: 'Kettle of Plenty', tier: 3, text: 'Potions brewed once every order is resolved go to the Shelf one tier higher.' },
+];
+
+export const curses: In<typeof Curse>[] = [
+  { id: 'nameless', name: 'Nameless', severity: 1, text: 'Regulars don\'t recognise you: no hearts this run.' },
+  { id: 'leaky-roof', name: 'Leaky Roof', severity: 1, text: 'Shelf -1 slot.' },
+  { id: 'sour-luck', name: 'Sour Luck', severity: 2, text: 'Reward picks offer 2 cards, and skipping no longer improves them.' },
+  { id: 'moonsick', name: 'Moonsick', severity: 2, text: 'Night Satchel cards -2 Potency.' },
+  { id: 'heavy-hands', name: 'Heavy Hands', severity: 3, text: '-1 Discard every day.' },
+  { id: 'unpaid-debt', name: 'Unpaid Debt', severity: 3, text: 'Rent +15%.' },
+];
+
+// The Night Market's stalls (GDD §9).
 export const stalls: In<typeof Stall>[] = [
   { id: 'lantern-seller', name: 'The Lantern Seller', currency: 'Gold', text: 'Lunar ingredients and Omens for your Night Satchel.', opens: 'always' },
   { id: 'fence', name: 'The Fence', currency: 'Potions', text: 'Buys your Shelf at night prices. Pays more for potions with Umbra or Lunar in them.', opens: 'always' },
   { id: 'moth-broker', name: 'The Moth Broker', currency: 'Memories', text: 'Forget a recipe you learned for a Rare card.', opens: 'drawn' },
   { id: 'hollow-tailor', name: 'The Hollow Tailor', currency: 'Cards', text: 'Give up a card. Its essence is sewn into another, with +1 Potency.', opens: 'drawn' },
   { id: 'fortune-tent', name: 'Fortune Tent', currency: 'Gold, a gamble', text: 'Draw a tarot: a boon, or a twist on next week.', opens: 'drawn' },
+  { id: 'name-taker', name: 'The Name-Taker', currency: 'Your name', text: 'Take a Curse for a relic. A worse Curse buys a better one.', opens: 'drawn' },
   { id: 'wandering-tinker', name: 'The Wandering Tinker', currency: 'Gold', text: 'Here only at the full moon: a cauldron slot and a Shelf slot, cheap.', opens: 'full-moon' },
   { id: 'black-market', name: 'The Black Market', currency: 'Gold or cards', text: 'Here only at the new moon: Rare cards for gold, or for two of yours.', opens: 'new-moon' },
 ];
 
-// The Fortune Tent's tarot deck (GDD §9). Wheel of Fortune (the Blessed modifier) joins with modifiers in M3 part 5;
-// The Chariot and The World pay stand-in gold until familiars and relics do.
+// The Fortune Tent's tarot deck (GDD §9). Wheel of Fortune (the Blessed modifier) joins with modifiers in M3 part 5.
 export const tarot: In<typeof Tarot>[] = [
   { id: 'the-sun', name: 'The Sun', kind: 'boon', weight: 10, effect: 'gold', amount: 15, text: '+15 gold.' },
   { id: 'the-star', name: 'The Star', kind: 'boon', weight: 10, effect: 'lunar-card', text: 'A random Lunar ingredient for your Night Satchel.' },
   { id: 'the-magician', name: 'The Magician', kind: 'boon', weight: 8, effect: 'learn-recipe', text: 'Learn a random recipe you don\'t know.' },
   { id: 'the-lovers', name: 'The Lovers', kind: 'boon', weight: 8, effect: 'hearts', amount: 2, text: '+2 hearts with a random regular.' },
   { id: 'the-chariot', name: 'The Chariot', kind: 'boon', weight: 6, effect: 'familiar', amount: 10, text: 'A random familiar, if you have a free slot. If not, +10 gold.' },
-  { id: 'the-world', name: 'The World', kind: 'boon', weight: 3, effect: 'relic-stand-in', amount: 12, text: '+12 gold. (A relic, once they arrive.)' },
+  { id: 'the-world', name: 'The World', kind: 'boon', weight: 3, effect: 'relic', amount: 12, text: 'A tier 2 relic. If you hold them all, +12 gold.' },
   { id: 'the-hermit', name: 'The Hermit', kind: 'twist', weight: 9, effect: 'fewer-orders', nextWeek: true, text: 'Next week: one order fewer each day, each paying +50%.' },
   { id: 'the-tower', name: 'The Tower', kind: 'twist', weight: 9, effect: 'harder-orders', nextWeek: true, text: 'Next week: orders are one tier harder and pay double.' },
   { id: 'the-moon', name: 'The Moon', kind: 'twist', weight: 9, effect: 'fog-week', nextWeek: true, text: 'Next week: Fog every day.' },

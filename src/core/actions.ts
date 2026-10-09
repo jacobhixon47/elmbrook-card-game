@@ -23,6 +23,8 @@ export type Action =
   | { type: 'buy'; index: number }
   | { type: 'forage'; index: number }
   | { type: 'removeCard'; uid: number }
+  /** At the Hearth, instead of burning a card. */
+  | { type: 'liftCurse'; curse: string }
   | { type: 'leaveErrand' }
   // After a Night Shift: free picks (the first-night Lunar card, night customers' payments, a patron's reward).
   | { type: 'takeGift'; index: number }
@@ -36,6 +38,8 @@ export type Action =
   | { type: 'weave'; from: number; into: number }
   | { type: 'drawTarot' }
   | { type: 'swapForCard'; index: number; uids: number[] }
+  /** The Name-Taker: take this deal's Curse for its relic. */
+  | { type: 'takeDeal'; index: number }
   | { type: 'leaveMarket' }
   // Familiars, at any time in a run: sell one for half its price, or move it to another slot.
   | { type: 'sellFamiliar'; index: number }
@@ -45,13 +49,15 @@ export type Action =
   | { type: 'debug'; op: 'jumpToDay'; week: number; day: number }
   | { type: 'debug'; op: 'giveCard'; card: string }
   | { type: 'debug'; op: 'giveFamiliar'; familiar: string }
+  | { type: 'debug'; op: 'giveRelic'; relic: string }
+  | { type: 'debug'; op: 'giveCurse'; curse: string }
   /** Grant a patron's reward as if their order were filled. */
   | { type: 'debug'; op: 'patronReward'; patron: string }
   | { type: 'debug'; op: 'learnRecipes'; recipes: string[] }
   | { type: 'debug'; op: 'setWeather'; weather: Weather }
   | { type: 'debug'; op: 'setPatron'; week: number; patron: string };
 
-export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
+export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'relic' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
 
 /** Where a gained card came from. */
 export type CardSource = 'reward' | 'market' | 'forage' | 'sludge' | 'gift' | 'payment' | 'copy' | 'fortune';
@@ -108,6 +114,11 @@ export type GameEvent =
   | { type: 'familiarSold'; familiar: string; price: number }
   /** A familiar that pays gold or draws a card did so (the Raven, the Ferret). */
   | { type: 'familiarFired'; familiar: string }
+  | { type: 'relicGained'; relic: string; source: string }
+  /** A relic that acts on its own did so (the Iron Lid caught a Sludge). */
+  | { type: 'relicFired'; relic: string }
+  | { type: 'curseTaken'; curse: string }
+  | { type: 'curseLifted'; curse: string; by: string }
   | { type: 'recipeForgotten'; recipe: string; cards: string[] }
   | { type: 'cardWoven'; from: string; fromUid: number; into: string; intoUid: number; essence: Essence }
   | { type: 'tarotDrawn'; card: string; price: number }

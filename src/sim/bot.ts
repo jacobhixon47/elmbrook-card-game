@@ -1,6 +1,6 @@
 import { codex } from '../codex';
 import {
-  allCards, fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentDue, tierIndex, WEEKS,
+  allCards, fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentOf, tierIndex, WEEKS,
   type Action, type BrewPreview, type CardInstance, type Order, type Potion, type RunState, type StallState, type StockItem,
 } from '../core';
 import { targetsOf } from '../core/effects';
@@ -231,7 +231,7 @@ function greedyBrewing(s: RunState): Action {
 function greedyDusk(s: RunState): Action {
   const offer = s.offer!;
   const deck = [...s.drawPile, ...s.hand, ...s.discardPile];
-  const reserve = Math.round(rentDue(s.season, s.week) * (s.day / NIGHT_SHIFT_DAY));
+  const reserve = Math.round(rentOf(s) * (s.day / NIGHT_SHIFT_DAY));
   switch (offer.kind) {
     case 'reward': {
       const scored = offer.cards.map((card, index) => ({ index, v: cardValue(s, card) }));
@@ -263,7 +263,11 @@ function greedyDusk(s: RunState): Action {
       return best && best.v >= 6 ? { type: 'forage', index: best.index } : { type: 'leaveErrand' };
     }
     case 'hearth': {
-      if (offer.removed || deck.length <= 10) return { type: 'leaveErrand' };
+      if (offer.removed) return { type: 'leaveErrand' };
+      // A Curse costs more than any one card.
+      const worstCurse = s.curses.slice().sort((a, b) => curseCost(s, b) - curseCost(s, a))[0];
+      if (worstCurse) return { type: 'liftCurse', curse: worstCurse };
+      if (deck.length <= 10) return { type: 'leaveErrand' };
       const worst = deck.slice().sort((a, b) => cardValue(s, a.card) - cardValue(s, b.card))[0]!;
       return cardValue(s, worst.card) < 6 ? { type: 'removeCard', uid: worst.uid } : { type: 'leaveErrand' };
     }
@@ -286,6 +290,39 @@ function greedyDusk(s: RunState): Action {
   }
 }
 
+/** Rough worth of a relic to the greedy bot, in gold-ish points. */
+export function relicValue(s: RunState, id: string): number {
+  const weeksLeft = WEEKS - s.week + 1;
+  switch (id) {
+    case 'kettle-of-plenty': return 14;
+    case 'moon-locket': return 4 * weeksLeft;
+    case 'witchs-hatpin': return 8;
+    case 'spare-satchel': return 12;
+    case 'guild-seal': return Math.round(rentOf(s, Math.min(WEEKS, s.week + 1)) * 0.1);
+    case 'copper-ladle': return s.cauldronSlots >= 3 ? 8 : 2;
+    case 'old-almanac': return 4;
+    case 'iron-lid': return 3;
+    case 'lucky-horseshoe': return 5;
+    case 'pressed-flower': return 6;
+    case 'apprentice-ledger': return 2 * weeksLeft;
+    case 'silver-bell': return 2;
+    default: return 0;
+  }
+}
+
+/** Rough cost of carrying a Curse for the rest of the run. */
+export function curseCost(s: RunState, id: string): number {
+  switch (id) {
+    case 'unpaid-debt': return Math.round(rentOf(s, WEEKS) * 0.15);
+    case 'heavy-hands': return 12;
+    case 'sour-luck': return 5;
+    case 'moonsick': return 2 + s.satchel.length;
+    case 'leaky-roof': return s.shelfSize > 3 ? 3 : 8;
+    case 'nameless': return 1;
+    default: return 10;
+  }
+}
+
 /** Satchel cards past this many rarely get drawn on a Night Shift. */
 const SATCHEL_WANT = 4;
 const NEXT_RENT_RESERVE = 0.5;
@@ -293,7 +330,7 @@ const NEXT_RENT_RESERVE = 0.5;
 /** What the greedy bot does at a Night Market stall, or null when it has no use for it. */
 function stallAction(s: RunState, stall: StallState): Action | null {
   // Keep tonight's rent and half of next week's: rent more than doubles each week.
-  const spare = s.gold - rentDue(s.season, s.week) - (s.week < WEEKS ? Math.round(rentDue(s.season, s.week + 1) * NEXT_RENT_RESERVE) : 0);
+  const spare = s.gold - rentOf(s) - (s.week < WEEKS ? Math.round(rentOf(s, s.week + 1) * NEXT_RENT_RESERVE) : 0);
   switch (stall.id) {
     case 'fence':
       return s.shelf[0] ? { type: 'sellPotion', uid: s.shelf[0].uid } : null;
@@ -311,8 +348,17 @@ function stallAction(s: RunState, stall: StallState): Action | null {
       const slot = stall.stock.findIndex((i) => i.kind === 'cauldron-slot' && !i.sold && i.price <= spare);
       return slot >= 0 ? { type: 'buy', index: slot } : buyFamiliar(s, stall.stock, spare);
     }
+    case 'name-taker': {
+      if (stall.done) return null;
+      const best = stall.deals.map((d, index) => ({ index, v: relicValue(s, d.relic) - curseCost(s, d.curse) })).sort((a, b) => b.v - a.v)[0];
+      return best && best.v >= 4 ? { type: 'takeDeal', index: best.index } : null;
+    }
+    case 'black-market': {
+      const i = stall.stock.findIndex((item) => item.kind === 'relic' && !item.sold && item.price <= spare && relicValue(s, item.relic) >= 8);
+      return i >= 0 ? { type: 'buy', index: i } : null;
+    }
     default:
-      // The Moth Broker, the Hollow Tailor, the Fortune Tent and the Black Market: the random bot covers them.
+      // The Moth Broker, the Hollow Tailor and the Fortune Tent: the random bot covers them.
       return null;
   }
 }
@@ -368,14 +414,16 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'sellPotion', uid: potion },
     { type: 'sellFamiliar', index: roll(5) },
     { type: 'moveFamiliar', from: roll(5), to: roll(5) },
-    { type: 'visitStall', index: roll(7) },
-    { type: 'visitStall', index: roll(7) },
+    { type: 'visitStall', index: roll(8) },
+    { type: 'visitStall', index: roll(8) },
     { type: 'leaveStall' },
     { type: 'forgetRecipe', recipe: any(s.knownRecipes) ?? '' },
     { type: 'brokerPick', index: roll(3) },
     { type: 'weave', from: any(deckUids) ?? 0, into: any(deckUids) ?? 0 },
     { type: 'drawTarot' },
     { type: 'swapForCard', index: roll(3), uids: [any(deckUids) ?? 0, any(deckUids) ?? 0] },
+    { type: 'takeDeal', index: roll(3) },
+    { type: 'liftCurse', curse: any(s.curses) ?? 'nameless' },
   );
   // Weight away from ending the day so random runs actually brew.
   const a = roll(10) === 0 ? candidates[roll(5)]! : candidates[5 + roll(candidates.length - 5)]!;
