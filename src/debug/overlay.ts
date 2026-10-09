@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { NIGHT_SHIFT_DAY, rentOf, skyTime, WEEKS, type RunState } from '../core';
+import { NIGHT_SHIFT_DAY, rentOf, SEASONS, skyTime, WEEKS, type RunState } from '../core';
 import { PALETTE } from '../art/palette';
 import { loadProfile, saveProfile } from '../profile';
 import { store } from '../store';
@@ -61,6 +61,7 @@ export function installOverlay(game: Phaser.Game, openAtStart = false): void {
     <div class="row">jump to week <select id="eo-week">${weeks}</select> day <select id="eo-day">${days}</select><button id="eo-jump">go</button></div>
     <div class="row"><button id="eo-export">export action log</button><span id="eo-note" class="dim"></span></div>
     <div class="row">tutorial <span id="eo-tut"></span><button id="eo-tut-skip">skip</button><button id="eo-tut-reset">reset</button></div>
+    <div class="row">seasons <span id="eo-seasons"></span><button id="eo-seasons-all">open all</button><button id="eo-seasons-reset">spring only</button></div>
     <details><summary>state</summary><pre id="eo-state"></pre></details>`;
 
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
@@ -70,6 +71,7 @@ export function installOverlay(game: Phaser.Game, openAtStart = false): void {
     $('#eo-summary').innerHTML = s ? summary(s) : '<div class="dim">no run in progress</div>';
     $('#eo-state').textContent = s ? JSON.stringify(s, null, 1) : '';
     $('#eo-tut').textContent = loadProfile().tutorialDone ? 'done' : 'not done';
+    $('#eo-seasons').textContent = loadProfile().seasons.join(', ');
   };
 
   // Redraw the run from the new state after a debug change (the sky may have changed too).
@@ -84,6 +86,11 @@ export function installOverlay(game: Phaser.Game, openAtStart = false): void {
       $('#eo-note').textContent = el.id === 'eo-tut-skip' ? 'tutorial skipped' : 'tutorial starts with your next new run';
       render();
       return redraw();
+    }
+    if (el.id === 'eo-seasons-all' || el.id === 'eo-seasons-reset') {
+      saveProfile({ seasons: el.id === 'eo-seasons-all' ? [...SEASONS] : ['spring'] });
+      $('#eo-note').textContent = 'seasons changed: the title screen shows them';
+      return render();
     }
     if (!store.getState()) return;
     if (el.dataset.gold) {

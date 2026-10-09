@@ -1,26 +1,37 @@
-// The player's profile: what persists between runs on this browser (GDD §15.1). M4 brings real
-// saves; until then it is one small record in localStorage, which may be missing or blocked.
+// The player's profile: what persists between runs on this browser (GDD §13, tech.md "Persistence").
+// The rules for it, versions and migrations included, are in core/meta.ts; this is the storage,
+// which may be missing or blocked (a private window): then nothing persists and nothing breaks.
 
-export type Profile = { tutorialDone: boolean };
+import { migrateProfile, recordRun, type Profile, type RunOutcome, type RunState } from './core';
 
 const KEY = 'elmbrook.profile';
-const DEFAULT: Profile = { tutorialDone: false };
 
 export function loadProfile(): Profile {
   try {
     const raw = globalThis.localStorage?.getItem(KEY);
-    return raw ? { ...DEFAULT, ...(JSON.parse(raw) as Partial<Profile>) } : { ...DEFAULT };
+    return migrateProfile(raw ? JSON.parse(raw) : null);
   } catch {
-    return { ...DEFAULT };
+    return migrateProfile(null);
   }
 }
 
-export function saveProfile(change: Partial<Profile>): Profile {
-  const next = { ...loadProfile(), ...change };
+function store(p: Profile): Profile {
   try {
-    globalThis.localStorage?.setItem(KEY, JSON.stringify(next));
+    globalThis.localStorage?.setItem(KEY, JSON.stringify(p));
   } catch {
-    // Storage blocked (private window): the tutorial simply shows again next time.
+    // Storage blocked: the profile lasts until the tab closes.
   }
-  return next;
+  return p;
+}
+
+export function saveProfile(change: Partial<Profile>): Profile {
+  return store({ ...loadProfile(), ...change });
+}
+
+/** Count a finished run in the profile: wins open the next season. */
+export function recordFinishedRun(s: RunState): RunOutcome {
+  const before = loadProfile();
+  const out = recordRun(before, s);
+  if (out.profile !== before) store(out.profile);
+  return out;
 }

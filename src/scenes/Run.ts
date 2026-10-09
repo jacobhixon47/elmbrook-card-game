@@ -5,7 +5,7 @@ import {
   allCards, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
-  type NameTakerDeal, type StockItem, type Weather,
+  type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome,
 } from '../core';
 import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
@@ -19,6 +19,7 @@ import { createCard } from '../view/card';
 import {
   BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, orderNeeds, orderTerms, recipeName,
   requestText, TIER_NAME,
+  cap,
 } from '../view/describe';
 import { drawGrimoire, type GrimoireTab } from '../view/grimoire';
 import { stages } from '../view/guide';
@@ -28,7 +29,7 @@ import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
 import type { CardExtras } from '../view/inspect';
 import { TIPS, TUTORIAL_SEED, TutorialProgress, type Tip } from '../view/tutorial';
-import { loadProfile, saveProfile } from '../profile';
+import { loadProfile, recordFinishedRun, saveProfile } from '../profile';
 import { clearRun, saveRun } from '../save';
 import { button, panel } from '../view/ui';
 import { addWeather } from '../view/weather';
@@ -90,12 +91,15 @@ export class Run extends Phaser.Scene {
   private tutorial: TutorialProgress | null = null;
   /** A fixture's run: never saved. */
   private fixtureRun = false;
+  /** What the run that just ended changed in the profile, for the end screen. */
+  private outcome: RunOutcome | null = null;
+  private fixture: Fixture | null = null;
 
   constructor() {
     super('Run');
   }
 
-  create(data: { fixture?: Fixture | null; resume?: boolean; saved?: RunState }) {
+  create(data: { fixture?: Fixture | null; resume?: boolean; saved?: RunState; season?: Season }) {
     pixelCamera(this);
     this.mode = { kind: 'idle' };
     this.pinned = null;
@@ -104,6 +108,8 @@ export class Run extends Phaser.Scene {
     this.book = null;
 
     const fixture = data.fixture;
+    this.fixture = fixture ?? null;
+    this.outcome = null;
     this.fixtureRun = this.fixtureRun || !!fixture;
     if (data.saved) {
       // Continue from the title screen: the run saved in this browser, without the tutorial.
@@ -117,7 +123,7 @@ export class Run extends Phaser.Scene {
     } else {
       this.tutorial = fixture ? null : wantsTutorial() ? new TutorialProgress() : null;
       const seed = fixture?.seed ?? params.get('seed') ?? (this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`);
-      const season = (fixture?.season as Season | undefined) ?? viewOverrides().season;
+      const season = data.season ?? (fixture?.season as Season | undefined) ?? viewOverrides().season;
       store.dispatch({ type: 'startRun', seed, witch: 'hedge-witch', ...(season ? { season } : {}) });
       // `today` sets the weather of the day the fixture starts on and of the day its steps end on.
       const today = () => fixture?.today && store.dispatch({ type: 'debug', op: 'setWeather', weather: fixture.today as Weather });
@@ -1004,17 +1010,24 @@ export class Run extends Phaser.Scene {
 
     if (s.phase === 'game-over' && s.lostTo === 'finale') {
       title('The Moonless Patron leaves unhappy', `Rent is paid, but the month is lost. The Moonless Patron wanted ${FINALE_ORDERS === 1 ? 'one of their orders' : FINALE_ORDERS >= 3 ? 'all three of their orders' : `${FINALE_ORDERS} of their orders`} done.`);
-      this.add2(button(this, 320, 180, 'Try again', () => this.newRun(), { w: 80, color: 'Y' }));
+      this.endButtons(s, 'Try again');
       return;
     }
     if (s.phase === 'game-over') {
       title('The Guild reclaims your stall', `You couldn't make week ${s.week}'s rent of ${rentOf(s)}g.`);
-      this.add2(button(this, 320, 180, 'Try again', () => this.newRun(), { w: 80, color: 'Y' }));
+      this.endButtons(s, 'Try again');
       return;
     }
     if (s.phase === 'victory') {
       title('The month is done', `Rent paid every week and the Moonless Patron served. The stall is yours, with ${s.gold}g to spare.`);
-      this.add2(button(this, 320, 180, 'New run', () => this.newRun(), { w: 80, color: 'Y' }));
+      const out = this.endOutcome(s);
+      const news = out.yearDone
+        ? `That's the whole Year in Elmbrook: Spring to Winter. Year ${out.profile.years} done.`
+        : out.opened
+          ? `${cap(out.opened)} is open: choose it from the title screen.`
+          : null;
+      if (news) this.text(320, 120, news, { size: 10, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5);
+      this.endButtons(s, 'Play again');
       return;
     }
     if (!offer) return;
@@ -1426,10 +1439,24 @@ export class Run extends Phaser.Scene {
     c.on('pointerout', () => this.tweens.add({ targets: c, y, duration: 90 }));
   }
 
-  private newRun() {
+  private newRun(season: Season = 'spring') {
     this.tutorial = wantsTutorial() ? new TutorialProgress() : null;
-    store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, witch: 'hedge-witch' });
+    store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, witch: 'hedge-witch', season });
     this.scene.restart({ resume: true });
+  }
+
+  /** What the run that just ended changed in the profile. A fixture shows it against its own `profile`. */
+  private endOutcome(s: RunState): RunOutcome {
+    if (this.outcome) return this.outcome;
+    const before = this.fixtureRun ? migrateProfile(this.fixture?.profile ?? null) : loadProfile();
+    return recordRun(before, s);
+  }
+
+  /** Play the same season again, or, with more than one open, go back to choose. */
+  private endButtons(s: RunState, again: string) {
+    const open = this.endOutcome(s).profile.seasons;
+    this.add2(button(this, open.length > 1 ? 270 : 320, 180, again, () => this.newRun(s.season), { w: 80, color: 'Y' }));
+    if (open.length > 1) this.add2(button(this, 370, 180, 'Choose season', () => this.scene.start('Title', {}), { w: 88 }));
   }
 
   /**
@@ -1440,6 +1467,8 @@ export class Run extends Phaser.Scene {
     if (this.fixtureRun) return;
     const s = store.getState();
     if (!s) return;
+    // A finished run counts in the profile once: a win opens the next season.
+    if ((s.phase === 'victory' || s.phase === 'game-over') && !this.outcome) this.outcome = recordFinishedRun(s);
     if (this.tutorial) clearRun();
     else saveRun(s);
   }

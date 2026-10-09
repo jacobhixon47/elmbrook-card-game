@@ -83,8 +83,8 @@ Built in M0 and kept working forever.
 
 ## Persistence
 
-- Meta-progression (codex, regulars' hearts, unlocks, settings) in a versioned save object with migrations, stored in `localStorage` on web and a file under Tauri.
-- Mid-run save = current `RunState` (resume after closing the tab). In the build: `src/save.ts` keeps one run in `localStorage` (`elmbrook.run`) after every change, clears it when the run ends, and drops a save whose `version` isn't `RUN_VERSION` (bump it when a state change would break old saves; M4 brings migrations). The title screen offers Continue or New run. Fixture runs and the tutorial are never saved.
+- Meta-progression (codex, regulars' hearts, unlocks, settings) in a versioned save object with migrations, stored in `localStorage` on web and a file under Tauri. In the build: `core/meta.ts` holds the `Profile` (`PROFILE_VERSION`) and `migrateProfile`, which walks `PROFILE_MIGRATIONS` one version at a time and repairs bad fields; an unreadable or newer profile starts fresh. `src/profile.ts` is the storage (`elmbrook.profile`). A Title fixture can set `profile` to show any profile.
+- Mid-run save = current `RunState` (resume after closing the tab). In the build: `src/save.ts` keeps one run in `localStorage` (`elmbrook.run`) after every change, clears it when the run ends, and loads it through `migrateRun`: when a state change would break old saves, bump `RUN_VERSION` and add the step from the old version to `RUN_MIGRATIONS` in `core/meta.ts`. A version with no step, or from a newer build, isn't offered. The title screen offers Continue or New run. Fixture runs and the tutorial are never saved.
 
 ## Preview workflow
 

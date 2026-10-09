@@ -7,6 +7,8 @@ export type Fixture = {
   scene: string;
   seed?: string;
   state?: unknown;
+  /** The profile a Title fixture shows (core/meta.ts), instead of this browser's. */
+  profile?: unknown;
   season?: string;
   time?: string;
   weather?: string;
