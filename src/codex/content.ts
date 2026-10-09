@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Curse, Familiar, Ingredient, Junk, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch } from './schema';
+import type { Curse, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -213,6 +213,15 @@ export const curses: In<typeof Curse>[] = [
   { id: 'unpaid-debt', name: 'Unpaid Debt', severity: 3, text: 'Rent +15%.' },
 ];
 
+// Card modifiers (GDD §5.5), one per ingredient card.
+export const modifiers: In<typeof Modifier>[] = [
+  { id: 'moonlit', name: 'Moonlit', text: '+2 Harmony when brewed.', price: 6 },
+  { id: 'aged', name: 'Aged', text: '+1 Potency for each day in the deck, reset when brewed.', price: 5 },
+  { id: 'gilded', name: 'Gilded', text: '+2 gold when brewed.', price: 6 },
+  { id: 'blessed', name: 'Blessed', text: 'Retrigger: its Potency and effect count twice.', price: 12 },
+  { id: 'cursed', name: 'Cursed', text: 'Potency x2. -1 heart with the customer it is delivered to.', price: null },
+];
+
 // The Night Market's stalls (GDD §9).
 export const stalls: In<typeof Stall>[] = [
   { id: 'lantern-seller', name: 'The Lantern Seller', currency: 'Gold', text: 'Lunar ingredients and Omens for your Night Satchel.', opens: 'always' },
@@ -225,13 +234,14 @@ export const stalls: In<typeof Stall>[] = [
   { id: 'black-market', name: 'The Black Market', currency: 'Gold or cards', text: 'Here only at the new moon: Rare cards for gold, or for two of yours.', opens: 'new-moon' },
 ];
 
-// The Fortune Tent's tarot deck (GDD §9). Wheel of Fortune (the Blessed modifier) joins with modifiers in M3 part 5.
+// The Fortune Tent's tarot deck (GDD §9).
 export const tarot: In<typeof Tarot>[] = [
   { id: 'the-sun', name: 'The Sun', kind: 'boon', weight: 10, effect: 'gold', amount: 15, text: '+15 gold.' },
   { id: 'the-star', name: 'The Star', kind: 'boon', weight: 10, effect: 'lunar-card', text: 'A random Lunar ingredient for your Night Satchel.' },
   { id: 'the-magician', name: 'The Magician', kind: 'boon', weight: 8, effect: 'learn-recipe', text: 'Learn a random recipe you don\'t know.' },
   { id: 'the-lovers', name: 'The Lovers', kind: 'boon', weight: 8, effect: 'hearts', amount: 2, text: '+2 hearts with a random regular.' },
   { id: 'the-chariot', name: 'The Chariot', kind: 'boon', weight: 6, effect: 'familiar', amount: 10, text: 'A random familiar, if you have a free slot. If not, +10 gold.' },
+  { id: 'wheel-of-fortune', name: 'Wheel of Fortune', kind: 'boon', weight: 8, effect: 'bless', amount: 8, text: 'Blessed on a random ingredient in your deck. If none can take it, +8 gold.' },
   { id: 'the-world', name: 'The World', kind: 'boon', weight: 3, effect: 'relic', amount: 12, text: 'A tier 2 relic. If you hold them all, +12 gold.' },
   { id: 'the-hermit', name: 'The Hermit', kind: 'twist', weight: 9, effect: 'fewer-orders', nextWeek: true, text: 'Next week: one order fewer each day, each paying +50%.' },
   { id: 'the-tower', name: 'The Tower', kind: 'twist', weight: 9, effect: 'harder-orders', nextWeek: true, text: 'Next week: orders are one tier harder and pay double.' },

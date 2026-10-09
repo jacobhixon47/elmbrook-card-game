@@ -1,4 +1,5 @@
 import { seedRng } from '../core/rng';
+import { MODIFIERS, type ModifierId } from '../codex/schema';
 import { ESSENCE_COLOR, type PaletteKey } from './palette';
 import { Pixmap } from './pixmap';
 import { shopBackdrop } from './scenes/shop';
@@ -190,6 +191,39 @@ export function curseToken(severity: 1 | 2 | 3): Pixmap {
   return p;
 }
 
+/** Each card modifier's colours: the frame ring, and the badge's ground and glyph (GDD §5.5). */
+export const MODIFIER_LOOK: Record<ModifierId, { ring: PaletteKey; ground: PaletteKey; glyph: PaletteKey; rows: string[] }> = {
+  // A crescent moon.
+  moonlit: { ring: 'v', ground: 'p', glyph: 'm', rows: ['..##.', '.##..', '.##..', '.##..', '..##.'] },
+  // An hourglass.
+  aged: { ring: 'o', ground: 'b', glyph: 'y', rows: ['#####', '.###.', '..#..', '.###.', '#####'] },
+  // A coin.
+  gilded: { ring: 'y', ground: 'n', glyph: 'Y', rows: ['.###.', '##.##', '#.#.#', '##.##', '.###.'] },
+  // A four-point sparkle.
+  blessed: { ring: 'c', ground: 'U', glyph: 'W', rows: ['..#..', '..#..', '#####', '..#..', '..#..'] },
+  // An open eye.
+  cursed: { ring: 'r', ground: 'k', glyph: 'R', rows: ['.....', '.###.', '##.##', '.###.', '.....'] },
+};
+
+/** A modifier's corner badge: 9x9, a dark-edged tile with its glyph. */
+export function modifierBadge(id: ModifierId): Pixmap {
+  const look = MODIFIER_LOOK[id];
+  const p = new Pixmap(9, 9);
+  p.fillRect(1, 1, 7, 7, look.ground);
+  p.strokeRect(0, 0, 9, 9, 'k');
+  look.rows.forEach((row, y) => [...row].forEach((ch, x) => ch === '#' && p.set(x + 2, y + 2, look.glyph)));
+  return p;
+}
+
+/** Recolours a card frame's inner ring for a modifier, and stamps its badge in the top-left corner. */
+export function modifyFrame(face: Pixmap, id: ModifierId): Pixmap {
+  const look = MODIFIER_LOOK[id];
+  face.strokeRect(1, 1, CARD_W - 2, CARD_H - 2, look.ring);
+  face.strokeRect(2, 2, CARD_W - 4, CARD_H - 4, look.ring);
+  for (const [x, y] of [[1, 1], [CARD_W - 2, 1], [1, CARD_H - 2], [CARD_W - 2, CARD_H - 2]] as const) face.set(x, y, 'k');
+  return face.blit(modifierBadge(id), 1, 1);
+}
+
 /** Labelled-by-colour stand-in for any texture that has no art yet. */
 export function placeholder(width: number, height: number): Pixmap {
   const p = new Pixmap(width, height);
@@ -220,5 +254,6 @@ export function proceduralTextures(): Record<string, Pixmap> {
     out[`token/curse-${t}`] = curseToken(t);
   }
   for (const e of Object.keys(ESSENCE_COLOR) as (keyof typeof ESSENCE_COLOR)[]) out[`pip/${e}`] = essencePip(e);
+  for (const m of MODIFIERS) out[`badge/${m}`] = modifierBadge(m);
   return out;
 }

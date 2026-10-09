@@ -1,6 +1,6 @@
 import { cardKind, codex } from '../codex';
 import type { Essence } from '../codex/schema';
-import { BREWS_PER_DAY, DISCARDS_PER_DAY, MAX_DISCARD, TIER_MIN, TIERS } from '../core';
+import { BREWS_PER_DAY, DISCARDS_PER_DAY, MAX_DISCARD, TIER_MIN, TIERS, type CardInstance } from '../core';
 
 // What a hovered card says about itself (GDD §15.1). Pure, so tests can read every card.
 
@@ -33,13 +33,18 @@ export type CardInfo = {
 
 const cap = (s: string) => s[0]!.toUpperCase() + s.slice(1);
 
-export function cardInfo(id: string): CardInfo {
+/** What this copy carries beyond the printed card: a modifier, Infused or tempered Potency. */
+export type CardExtras = Partial<Pick<CardInstance, 'modifier' | 'bonus'>>;
+
+export function cardInfo(id: string, extras: CardExtras = {}): CardInfo {
   const kind = cardKind(id);
   if (kind === 'ingredient') {
     const ing = codex.ingredients.get(id)!;
     const essences = ing.essences.map(cap).join(' and ');
-    const lines = [`${essences} essence${ing.essences.length > 1 ? 's' : ''}. Potency ${ing.potency}.`];
+    const lines = [`${essences} essence${ing.essences.length > 1 ? 's' : ''}. Potency ${ing.potency}${extras.bonus ? ` (+${extras.bonus} on this copy)` : ''}.`];
     if (ing.text) lines.push(ing.text);
+    const mod = extras.modifier && codex.modifiers.get(extras.modifier);
+    if (mod) lines.push(`${mod.name}: ${mod.text}`);
     if (ing.nightOnly) lines.push('Kept in your Night Satchel: Night Shifts only.');
     const text = lines.join(' ');
     return {

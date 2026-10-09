@@ -1,4 +1,4 @@
-import type { Essence, PotionFamily, StallId } from '../codex/schema';
+import type { Essence, ModifierId, PotionFamily, StallId } from '../codex/schema';
 import type { Calendar, Season } from './calendar';
 import type { RngState } from './rng';
 import type { Tier } from './rules';
@@ -15,6 +15,8 @@ export type CardInstance = {
   days?: number;
   /** An essence the Hollow Tailor sewed in; it replaces the card's second essence, if any. */
   woven?: Essence;
+  /** A card modifier (GDD §5.5): ingredients only, one per card. */
+  modifier?: ModifierId;
 };
 
 export type Phase = 'morning' | 'brewing' | 'dusk' | 'night-market' | 'game-over' | 'victory';
@@ -73,7 +75,7 @@ export type Pending = {
 /** Extras for the next delivery (Charm Sachet). */
 export type DeliveryBoost = { hearts: number; tip: number; payMult: number };
 
-export type Errand = 'market' | 'forage' | 'hearth';
+export type Errand = 'market' | 'forage' | 'creek' | 'hearth';
 
 export type StockItem =
   | { kind: 'card'; card: string; price: number; sold: boolean }
@@ -89,6 +91,8 @@ export type Offer =
   | { kind: 'forage'; cards: string[]; picksLeft: number }
   /** `removed` once a card is burned or a Curse lifted: the Hearth does one a night. */
   | { kind: 'hearth'; removed: boolean }
+  /** `done` once a card is tempered or given a modifier: the Creek Bank does one a visit. */
+  | { kind: 'creek'; done: boolean }
   | { kind: 'night-market'; stalls: StallState[]; at: number | null }
   | Gift;
 
@@ -100,8 +104,10 @@ export type StallState =
   | { id: 'moth-broker'; forgot: string | null; cards: string[]; familiars: string[]; done: boolean }
   | { id: 'hollow-tailor'; done: boolean }
   | { id: 'fortune-tent'; drawn: string[] }
-  /** Each deal is a Curse to take and the relic it buys; one deal a night. */
-  | { id: 'name-taker'; deals: { curse: string; relic: string }[]; done: boolean };
+  /** Each deal is a Curse to take for its relic or, instead, its Rare card with the Cursed modifier; one deal a night. */
+  | { id: 'name-taker'; deals: NameTakerDeal[]; done: boolean };
+
+export type NameTakerDeal = { curse: string; relic: string; card: string | null };
 
 export type { StallId };
 
@@ -114,7 +120,7 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
 
 /** Plain, JSON-serialisable run state. Fixtures and saves are exactly this shape. */
 export type RunState = {
-  version: 8;
+  version: 9;
   seed: string;
   rng: RngState;
   witch: string;

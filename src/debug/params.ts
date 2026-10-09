@@ -1,4 +1,5 @@
 import type { FixtureStep } from './fixture-steps';
+import type { ModifierId } from '../codex/schema';
 
 // Dev URL params: ?fixture=<name> ?seed=<s> ?noanim=1 ?renderer=canvas
 
@@ -22,7 +23,9 @@ export type Fixture = {
     /** At a Night Market stall: deck cards picked (positions in the sorted deck it shows), and the Black Market stock being traded for. */
     stall?: { picked?: number[]; swap?: number };
     /** The card of the familiar in this slot, open. */
-    familiar?: number };
+    familiar?: number;
+    /** At the Creek Bank, this option picked. */
+    creek?: 'temper' | ModifierId };
 };
 
 const fixtures = import.meta.glob<Fixture>('/fixtures/*.json', { eager: true, import: 'default' });

@@ -204,7 +204,7 @@ export const Stall = z.object({
 export type Stall = z.infer<typeof Stall>;
 
 /** What a tarot card does; each is handled by id in core/market.ts. */
-export const TAROT_EFFECTS = ['gold', 'lunar-card', 'learn-recipe', 'hearts', 'familiar', 'relic', 'fewer-orders', 'harder-orders', 'fog-week', 'bad-omen', 'lose-card'] as const;
+export const TAROT_EFFECTS = ['gold', 'lunar-card', 'learn-recipe', 'hearts', 'familiar', 'relic', 'bless', 'fewer-orders', 'harder-orders', 'fog-week', 'bad-omen', 'lose-card'] as const;
 export const TarotEffect = z.enum(TAROT_EFFECTS);
 export type TarotEffect = z.infer<typeof TarotEffect>;
 
@@ -251,3 +251,17 @@ export const Curse = z.object({
   text: z.string().min(1),
 });
 export type Curse = z.infer<typeof Curse>;
+
+/** Card modifiers (GDD §5.5): one per ingredient card, for the run. Rules live in core/modifiers.ts. */
+export const MODIFIERS = ['moonlit', 'aged', 'gilded', 'blessed', 'cursed'] as const;
+export const ModifierId = z.enum(MODIFIERS);
+export type ModifierId = z.infer<typeof ModifierId>;
+
+export const Modifier = z.object({
+  id: ModifierId,
+  name: z.string().min(1),
+  text: z.string().min(1),
+  /** Gold at the Creek Bank; null when it isn't sold (Cursed comes from the Name-Taker). */
+  price: z.number().int().positive().nullable(),
+});
+export type Modifier = z.infer<typeof Modifier>;

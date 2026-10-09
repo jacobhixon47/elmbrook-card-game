@@ -10,3 +10,4 @@ export * from './state';
 export * from './market';
 export * from './familiars';
 export * from './relics';
+export * from './modifiers';

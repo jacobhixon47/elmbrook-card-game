@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
-import { codex, type Essence } from '../codex';
+import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  BLACK_MARKET, brewBlocked, FAMILIAR_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, BLACK_MARKET, brewBlocked, cantModify, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
-  type StockItem, type Weather,
+  type NameTakerDeal, type StockItem, type Weather,
 } from '../core';
 import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
@@ -26,6 +26,7 @@ import { bestOrderFor, previewPotion } from '../view/plan';
 import { todayLine, todayRules } from '../view/calendar';
 import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
+import type { CardExtras } from '../view/inspect';
 import { TIPS, TUTORIAL_SEED, TutorialProgress, type Tip } from '../view/tutorial';
 import { loadProfile, saveProfile } from '../profile';
 import { button, panel } from '../view/ui';
@@ -38,7 +39,11 @@ type Mode =
   /** Deck cards picked at a Night Market stall: the Hollow Tailor's two, or the Black Market's trade for stock `swap`. */
   | { kind: 'stall'; picked: number[]; swap?: number }
   /** A familiar's card, to sell it or move it. */
-  | { kind: 'familiar'; index: number };
+  | { kind: 'familiar'; index: number }
+  /** At the Creek Bank: tempering, or which modifier to buy. */
+  | { kind: 'creek'; pick: CreekPick };
+
+type CreekPick = 'temper' | ModifierId;
 
 /** What a selection is for: a Discard, or the targets of a Tincture (see `targetsOf`). */
 type Purpose = 'discard' | 'hand' | 'hand-one' | 'top-3' | 'shelf-one';
@@ -125,6 +130,7 @@ export class Run extends Phaser.Scene {
       this.mode = { kind: 'stall', picked: (fixture.ui.stall.picked ?? []).map((i) => deck[i]!.uid), ...(fixture.ui.stall.swap !== undefined ? { swap: fixture.ui.stall.swap } : {}) };
     }
     if (fixture?.ui?.familiar !== undefined) this.mode = { kind: 'familiar', index: fixture.ui.familiar };
+    if (fixture?.ui?.creek) this.mode = { kind: 'creek', pick: fixture.ui.creek };
     if (fixture?.ui?.grimoire) this.book = fixture.ui.grimoire;
     if (fixture?.ui?.tutorial) {
       // Show one tip: everything before it counts as done.
@@ -139,7 +145,7 @@ export class Run extends Phaser.Scene {
     const peek = fixture?.ui?.inspect;
     if (peek !== undefined && state.hand[peek]) {
       const x = this.handX(peek, state.hand.length);
-      this.tip.card(state.hand[peek]!.card, x, HAND_Y - 40, HAND_Y + 40);
+      this.tip.card(state.hand[peek]!.card, x, HAND_Y - 40, HAND_Y + 40, state.hand[peek]);
     }
     // Changes from outside this scene (the dev overlay, Playwright) redraw it too.
     const off = store.subscribe((_, events) => {
@@ -282,9 +288,9 @@ export class Run extends Phaser.Scene {
       const top = s.drawPile.slice(0, FAMILIAR_RULES.owlPeek);
       this.text(36, 230, 'Next up', { size: 6, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
       top.forEach((inst, i) => {
-        const c = this.add2(createCard(this, 16 + i * 20, 254, inst.card, inst.woven).setScale(0.35));
+        const c = this.add2(createCard(this, 16 + i * 20, 254, inst.card, inst.woven, inst.modifier).setScale(0.35));
         c.setInteractive();
-        this.inspect(c, inst.card, 0.35);
+        this.inspect(c, inst.card, 0.35, inst);
       });
     }
   }
@@ -335,19 +341,29 @@ export class Run extends Phaser.Scene {
     tile.on('pointerout', () => tile.setStrokeStyle(1, hex('y')));
   }
 
-  /** One of the Name-Taker's deals: the Curse you take, above the relic it buys. */
-  private drawDeal(x: number, deal: { curse: string; relic: string }, onTake: () => void) {
+  /** One of the Name-Taker's deals: the Curse you take, above the relic it buys or, instead, a Cursed Rare card. */
+  private drawDeal(x: number, deal: NameTakerDeal, onTake: (take: 'relic' | 'card') => void) {
     const c = codex.curses.get(deal.curse)!;
     const r = codex.relics.get(deal.relic)!;
-    const tile = this.add2(panel(this, x - 78, 96, 156, 128, 'k', 0.95, 'v'));
-    this.add2(this.add.image(x - 62, 112, `token/curse-${c.severity}`));
-    this.text(x - 52, 106, c.name, { size: 8, color: 'v' });
-    this.text(x - 70, 122, `Curse, severity ${c.severity}. ${c.text}`, { size: 6, color: 'w', wrap: 140 });
-    this.text(x, 148, 'for', { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
-    this.add2(this.add.image(x - 62, 168, `token/relic-${r.tier}`));
-    this.text(x - 52, 162, r.name, { size: 8, color: 'y' });
-    this.text(x - 70, 178, `Tier ${r.tier} relic. ${r.text}`, { size: 6, color: 'w', wrap: 140 });
-    this.add2(button(this, x, 210, 'Take the deal', onTake, { w: 80, color: 'v' }));
+    const tile = this.add2(panel(this, x - 80, 86, 160, 164, 'k', 0.95, 'v'));
+    this.add2(this.add.image(x - 64, 102, `token/curse-${c.severity}`));
+    this.text(x - 54, 96, c.name, { size: 8, color: 'v' });
+    this.text(x - 72, 110, `Curse, severity ${c.severity}. ${c.text}`, { size: 6, color: 'w', wrap: 144 });
+    this.text(x, 132, deal.card ? 'for one of' : 'for', { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
+    this.add2(this.add.image(x - 64, 150, `token/relic-${r.tier}`));
+    this.text(x - 54, 144, r.name, { size: 8, color: 'y' });
+    this.text(x - 72, 158, `Tier ${r.tier} relic. ${r.text}`, { size: 6, color: 'w', wrap: 144 });
+    if (deal.card) {
+      const card = this.add2(createCard(this, x - 62, 206, deal.card, undefined, 'cursed').setScale(0.45));
+      card.setInteractive();
+      this.inspect(card, deal.card, 0.45, { modifier: 'cursed' });
+      this.text(x - 46, 190, codex.ingredients.get(deal.card)?.name ?? deal.card, { size: 8, color: 'R' });
+      this.text(x - 46, 202, `Rare card, Cursed: ${codex.modifiers.get('cursed')!.text}`, { size: 6, color: 'w', wrap: 116 });
+      this.add2(button(this, x - 38, 238, 'Take the relic', () => onTake('relic'), { w: 72, color: 'v' }));
+      this.add2(button(this, x + 38, 238, 'Take the card', () => onTake('card'), { w: 72, color: 'v' }));
+    } else {
+      this.add2(button(this, x, 238, 'Take the deal', () => onTake('relic'), { w: 80, color: 'v' }));
+    }
     tile.setInteractive();
   }
 
@@ -366,8 +382,8 @@ export class Run extends Phaser.Scene {
   }
 
   /** Hover help for a card drawn at (x, y) at the given scale (GDD §15.1). */
-  private inspect(card: Phaser.GameObjects.Container, id: string, scale = 1) {
-    card.on('pointerover', () => this.tip.card(id, card.x, card.y - 40 * scale, card.y + 40 * scale));
+  private inspect(card: Phaser.GameObjects.Container, id: string, scale = 1, extras: CardExtras = {}) {
+    card.on('pointerover', () => this.tip.card(id, card.x, card.y - 40 * scale, card.y + 40 * scale, extras));
     card.on('pointerout', () => this.tip.hide());
   }
 
@@ -613,9 +629,9 @@ export class Run extends Phaser.Scene {
         this.add2(this.add.rectangle(x, SLOT_Y, 34, 46, hex('k'), 0.35).setStrokeStyle(1, hex('a'), 0.5));
         continue;
       }
-      const c = this.add2(createCard(this, x, SLOT_Y, card.card, card.woven).setScale(0.6));
+      const c = this.add2(createCard(this, x, SLOT_Y, card.card, card.woven, card.modifier).setScale(0.6));
       c.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'unslot', uid: card.uid }));
-      this.inspect(c, card.card, 0.6);
+      this.inspect(c, card.card, 0.6, card);
     }
   }
 
@@ -639,7 +655,7 @@ export class Run extends Phaser.Scene {
     s.hand.forEach((inst, i) => {
       const x = this.handX(i, s.hand.length);
       const lifted = picked.includes(inst.uid) || inst.uid === tincture;
-      const card = createCard(this, x, lifted ? HAND_Y - 14 : HAND_Y, inst.card, inst.woven);
+      const card = createCard(this, x, lifted ? HAND_Y - 14 : HAND_Y, inst.card, inst.woven, inst.modifier);
       if (lifted) card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex(inst.uid === tincture ? 'Y' : 'R')), 0);
       this.add2(card);
       card.setInteractive({ useHandCursor: s.phase === 'brewing' });
@@ -649,7 +665,7 @@ export class Run extends Phaser.Scene {
         card.on('pointerover', () => back.setVisible(false));
         card.on('pointerout', () => back.setVisible(true));
       }
-      this.inspect(card, inst.card);
+      this.inspect(card, inst.card, 1, inst);
       if (s.phase !== 'brewing') {
         card.setAlpha(0.85);
         return;
@@ -749,14 +765,14 @@ export class Run extends Phaser.Scene {
     this.text(320, 122, 'Taste Test: top of your draw pile', { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
     top.forEach((inst, i) => {
       const x = 320 + (i - (top.length - 1) / 2) * 70;
-      const card = this.add2(createCard(this, x, 178, inst.card, inst.woven));
+      const card = this.add2(createCard(this, x, 178, inst.card, inst.woven, inst.modifier));
       const at = picked.indexOf(inst.uid);
       if (at >= 0) {
         card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex('Y')), 0);
         this.text(x + 24, 140, String(at + 1), { size: 10, color: 'y', stroke: 'k' }).setOrigin(0.5, 0);
       }
       card.setInteractive({ useHandCursor: true });
-      this.inspect(card, inst.card);
+      this.inspect(card, inst.card, 1, inst);
       card.on('pointerdown', () => {
         if (this.mode.kind !== 'select') return;
         this.mode.picked = at >= 0 ? picked.filter((u) => u !== inst.uid) : [...picked, inst.uid];
@@ -855,7 +871,7 @@ export class Run extends Phaser.Scene {
       const layer = this.add.container(0, 0);
       const n = before.cauldronSlots;
       const cards = before.cauldron.map((c, i) => {
-        const card = createCard(this, 320 + (i - (n - 1) / 2) * 40, SLOT_Y, c.card, c.woven).setScale(0.6);
+        const card = createCard(this, 320 + (i - (n - 1) / 2) * 40, SLOT_Y, c.card, c.woven, c.modifier).setScale(0.6);
         layer.add(card);
         return card;
       });
@@ -999,6 +1015,8 @@ export class Run extends Phaser.Scene {
         this.add2(button(this, 320, 262, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
         return;
       }
+      case 'creek':
+        return this.drawCreek(s, offer, title);
       case 'gift': {
         const [head, sub] = GIFT_TITLE[offer.source];
         const where = offer.into === 'satchel' ? 'It goes in your Night Satchel, which joins your deck only on Night Shifts.'
@@ -1017,6 +1035,43 @@ export class Run extends Phaser.Scene {
       case 'night-market':
         return this.drawNightMarket(s, offer, title);
     }
+  }
+
+  /** The Creek Bank (GDD §7): temper a card for free, or buy it a modifier. One card a visit. */
+  private drawCreek(s: RunState, offer: Extract<Offer, { kind: 'creek' }>, title: (t: string, sub: string) => void) {
+    const leave = () => {
+      this.mode = { kind: 'idle' };
+      this.dispatch({ type: 'leaveErrand' });
+    };
+    if (offer.done) {
+      title('Creek Bank', 'Done. The water runs on.');
+      this.deckGrid(allCards(s).filter((c) => codex.ingredients.has(c.card)), null);
+      this.add2(button(this, 320, 262, 'Head home', leave, { w: 72 }));
+      return;
+    }
+    const pick: CreekPick = this.mode.kind === 'creek' ? this.mode.pick : 'temper';
+    title('Creek Bank', `Choose what to do, then the card it's for. One card a visit. You have ${s.gold}g.`);
+    const picks: CreekPick[] = ['temper', ...[...codex.modifiers.values()].filter((m) => m.price !== null).map((m) => m.id)];
+    picks.forEach((p, i) => {
+      const price = p === 'temper' ? 0 : codex.modifiers.get(p)!.price!;
+      const label = p === 'temper' ? 'Temper, free' : `${codex.modifiers.get(p)!.name} ${price}g`;
+      const x = 320 + (i - (picks.length - 1) / 2) * 92;
+      const on = p === pick;
+      if (on) this.add2(this.add.rectangle(x, 90, 88, 20).setStrokeStyle(1, hex('Y')));
+      if (p !== 'temper') this.add2(this.add.image(x - 34, 90, `badge/${p}`));
+      this.add2(button(this, x + (p === 'temper' ? 0 : 6), 90, label, () => {
+        this.mode = { kind: 'creek', pick: p };
+        this.render();
+      }, { w: p === 'temper' ? 80 : 68, color: on ? 'Y' : price > s.gold ? 'R' : 'W', enabled: price <= s.gold }));
+    });
+    const what = pick === 'temper' ? `+${MODIFIER_RULES.temperPotency} Potency on one ingredient for the run.` : `${codex.modifiers.get(pick)!.name}. ${codex.modifiers.get(pick)!.text} One per card.`;
+    this.text(320, 104, what, { size: 8, color: 'w', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);
+    const cards = allCards(s).filter((c) => (pick === 'temper' ? codex.ingredients.has(c.card) : cantModify(c, pick) === null));
+    this.deckGrid(cards, (inst) => {
+      const events = this.dispatch(pick === 'temper' ? { type: 'temper', uid: inst.uid } : { type: 'enchant', uid: inst.uid, modifier: pick });
+      if (!events.some((e) => e.type === 'rejected')) this.mode = { kind: 'idle' };
+    }, [], 136);
+    this.add2(button(this, 320, 262, 'Head home', leave, { w: 72 }));
   }
 
   /** Stock on sale: cards, or a cauldron or Shelf slot. The day's Market Square and the Night Market's sellers. */
@@ -1051,10 +1106,10 @@ export class Run extends Phaser.Scene {
       const x = 320 + ((i % perRow) - (Math.min(deck.length, perRow) - 1) / 2) * 32;
       const y = top + Math.floor(i / perRow) * 44;
       const on = picked.includes(inst.uid);
-      const c = this.add2(createCard(this, x, on ? y - 6 : y, inst.card, inst.woven).setScale(0.5));
+      const c = this.add2(createCard(this, x, on ? y - 6 : y, inst.card, inst.woven, inst.modifier).setScale(0.5));
       if (on) this.add2(this.add.rectangle(x, y - 6, 29, 41).setStrokeStyle(1, hex('y')));
       c.setInteractive();
-      this.inspect(c, inst.card, 0.5);
+      this.inspect(c, inst.card, 0.5, inst);
       if (!onPick) return void c.setAlpha(0.6);
       c.setInteractive({ useHandCursor: true }).on('pointerdown', () => onPick(inst));
       c.on('pointerover', () => c.setScale(0.6));
@@ -1201,8 +1256,8 @@ export class Run extends Phaser.Scene {
           head('He looks you over and shakes his head. Nothing he wants tonight.');
           break;
         }
-        head('Take a Curse for the rest of the run, and a relic for it. The worse the Curse, the better the relic.');
-        stall.deals.forEach((deal, i) => this.drawDeal(320 + (i - (stall.deals.length - 1) / 2) * 170, deal, () => this.dispatch({ type: 'takeDeal', index: i })));
+        head('Take a Curse for the rest of the run, and a relic or a Cursed card for it. The worse the Curse, the better the relic.');
+        stall.deals.forEach((deal, i) => this.drawDeal(320 + (i - (stall.deals.length - 1) / 2) * 176, deal, (take) => this.dispatch({ type: 'takeDeal', index: i, take })));
         break;
       }
       case 'fortune-tent': {
@@ -1290,6 +1345,7 @@ function relicNote(events: readonly GameEvent[]): string | null {
     if (e.type === 'relicGained' && e.source !== 'debug') lines.push(`Relic: ${codex.relics.get(e.relic)!.name}. ${codex.relics.get(e.relic)!.text}`);
     if (e.type === 'curseLifted') lines.push(`${codex.curses.get(e.curse)!.name} is lifted.`);
     if (e.type === 'relicFired' && e.relic === 'iron-lid') lines.push('The Iron Lid caught the Sludge.');
+    if (e.type === 'cardModified' && e.by !== 'debug') lines.push(`${cardName(e.card)} is ${codex.modifiers.get(e.modifier)!.name}.`);
   }
   return lines.length ? lines.join(' ') : null;
 }

@@ -1,31 +1,33 @@
 import Phaser from 'phaser';
-import { CARD_H, CARD_W, cardFrame, essencePip } from '../art/procedural';
+import { CARD_H, CARD_W, cardFrame, essencePip, modifyFrame } from '../art/procedural';
 import { rasterize } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { placeholder } from '../art/procedural';
-import { codex, cardKind, type Essence } from '../codex';
+import { codex, cardKind, type Essence, type ModifierId } from '../codex';
 import { PALETTE, type PaletteKey } from '../art/palette';
 import { FONT_BODY, FONT_DISPLAY } from './text';
 import { ZOOM } from './zoom';
 
 const spriteById = new Map(SPRITES.map((s) => [s.id, s]));
 
-export function cardTextureKey(cardId: string, woven?: Essence): string {
-  return woven ? `card/face/${cardId}~${woven}` : `card/face/${cardId}`;
+export function cardTextureKey(cardId: string, woven?: Essence, modifier?: ModifierId): string {
+  return `card/face/${cardId}${woven ? `~${woven}` : ''}${modifier ? `+${modifier}` : ''}`;
 }
 
 /**
  * Bakes a card face into one texture: frame + 2x icon + pips (Pixmap) + crisp text (canvas).
- * One texture per card id, so a card is a single sprite that rotates and scales cleanly.
+ * One texture per card id (and weave and modifier), so a card is a single sprite that rotates and scales cleanly.
  */
-export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essence): string {
-  const key = cardTextureKey(cardId, woven);
+export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essence, modifier?: ModifierId): string {
+  const key = cardTextureKey(cardId, woven, modifier);
   if (scene.textures.exists(key)) return key;
 
   const kind = cardKind(cardId);
   const face = cardFrame();
   const sprite = spriteById.get(`${kind}/${cardId}`);
   face.blit(sprite ? rasterize(sprite) : placeholder(16, 16), 12, 9, 2);
+  // A modifier recolours the frame and stamps its badge in the corner (GDD §5.5).
+  if (modifier) modifyFrame(face, modifier);
 
   if (kind === 'ingredient') {
     // A woven essence (the Hollow Tailor) takes the second pip.
@@ -99,8 +101,8 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth?: numbe
 }
 
 /** A card in the world. A container so later milestones can add glows, badges and hover states. */
-export function createCard(scene: Phaser.Scene, x: number, y: number, cardId: string, woven?: Essence): Phaser.GameObjects.Container {
-  const c = scene.add.container(x, y, [scene.add.image(0, 0, bakeCardFace(scene, cardId, woven)).setScale(1 / ZOOM)]);
+export function createCard(scene: Phaser.Scene, x: number, y: number, cardId: string, woven?: Essence, modifier?: ModifierId): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y, [scene.add.image(0, 0, bakeCardFace(scene, cardId, woven, modifier)).setScale(1 / ZOOM)]);
   c.setSize(CARD_W, CARD_H);
   return c;
 }

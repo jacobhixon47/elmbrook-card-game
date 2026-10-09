@@ -4,6 +4,7 @@ import type { GameEvent } from './actions';
 import { effectsOf, hasEffect, sumEffect, type ScoreCtx } from './effects';
 import { activeEvents, NIGHT_SHIFT_DAY, todaysWeather, type Weather } from './calendar';
 import { FAMILIAR_SCORE } from './familiars';
+import { cardPotency, isAged, modifierSteps } from './modifiers';
 import { hasRelic, relicSteps } from './relics';
 import { FROST_WARDEN_POTENCY, HEATWAVE_EMBER_POTENCY, RAIN_POTENCY, tierOf, tierStep, type Tier } from './rules';
 import { twistNow } from './night';
@@ -147,7 +148,7 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
       c.potency += card.bonus;
       notes.push(`Infused +${card.bonus}`);
     }
-    if (hasEffect(ing.id, 'aged') && card.aged) {
+    if (isAged(card) && card.aged) {
       c.potency += card.aged;
       notes.push(`Aged +${card.aged}`);
     }
@@ -179,7 +180,7 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     let cut = 0;
     cards.forEach((card, i) => {
       const ing = raw[i]!;
-      if (twist === 'ember-zero' && ing.essences.includes('ember')) cut += ing.potency + (card.bonus ?? 0) + (hasEffect(ing.id, 'aged') ? card.aged ?? 0 : 0) + weatherPotency(ing, weather);
+      if (twist === 'ember-zero' && ing.essences.includes('ember')) cut += cardPotency(card, ing) + weatherPotency(ing, weather);
       if (twist === 'non-frost-minus-2' && !ing.tags.includes('frost')) cut += -FROST_WARDEN_POTENCY;
     });
     if (cut > 0) {
@@ -205,13 +206,14 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     steps.push({ type: 'scoreStep', source: 'tincture', id: 'pending', potency: c.potency, harmony: c.harmony });
   }
 
-  // 3. Card modifiers resolve here once they exist (M3 part 5).
+  // 3. Card modifiers, in slot order (GDD §5.5): Moonlit, Blessed and Cursed.
+  steps.push(...modifierSteps(c, cards, ings));
 
   // 4. Familiars, in slot order (GDD §11): a flat bonus before a multiplier gets multiplied.
   const first = cards[0]!;
   const familiarBrew = {
     ingredients: raw,
-    firstPotency: raw[0]!.potency + (first.bonus ?? 0) + (hasEffect(raw[0]!.id, 'aged') ? first.aged ?? 0 : 0),
+    firstPotency: cardPotency(first, raw[0]!),
     shelf: state.shelf?.length ?? 0,
     night: state.day === NIGHT_SHIFT_DAY,
     firstBrew: c.firstBrew,

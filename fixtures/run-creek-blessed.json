@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{ "gold": 30 }, "openShop", "endDay", "skipReward", { "errand": "creek" }], "ui": { "creek": "blessed" } }

@@ -1,6 +1,6 @@
 import type { Season, Weather } from './calendar';
 import type { Tier } from './rules';
-import type { Essence, StallId } from '../codex/schema';
+import type { Essence, ModifierId, StallId } from '../codex/schema';
 import type { Errand, GiftSource, Order, Potion } from './state';
 
 export type Action =
@@ -25,6 +25,9 @@ export type Action =
   | { type: 'removeCard'; uid: number }
   /** At the Hearth, instead of burning a card. */
   | { type: 'liftCurse'; curse: string }
+  /** At the Creek Bank, one a visit: +2 Potency on a card for free, or a modifier for gold. */
+  | { type: 'temper'; uid: number }
+  | { type: 'enchant'; uid: number; modifier: ModifierId }
   | { type: 'leaveErrand' }
   // After a Night Shift: free picks (the first-night Lunar card, night customers' payments, a patron's reward).
   | { type: 'takeGift'; index: number }
@@ -38,8 +41,8 @@ export type Action =
   | { type: 'weave'; from: number; into: number }
   | { type: 'drawTarot' }
   | { type: 'swapForCard'; index: number; uids: number[] }
-  /** The Name-Taker: take this deal's Curse for its relic. */
-  | { type: 'takeDeal'; index: number }
+  /** The Name-Taker: take this deal's Curse for its relic, or for its Cursed Rare card. */
+  | { type: 'takeDeal'; index: number; take?: 'relic' | 'card' }
   | { type: 'leaveMarket' }
   // Familiars, at any time in a run: sell one for half its price, or move it to another slot.
   | { type: 'sellFamiliar'; index: number }
@@ -51,6 +54,7 @@ export type Action =
   | { type: 'debug'; op: 'giveFamiliar'; familiar: string }
   | { type: 'debug'; op: 'giveRelic'; relic: string }
   | { type: 'debug'; op: 'giveCurse'; curse: string }
+  | { type: 'debug'; op: 'setModifier'; uid: number; modifier: ModifierId }
   /** Grant a patron's reward as if their order were filled. */
   | { type: 'debug'; op: 'patronReward'; patron: string }
   | { type: 'debug'; op: 'learnRecipes'; recipes: string[] }
@@ -118,6 +122,7 @@ export type GameEvent =
   /** A relic that acts on its own did so (the Iron Lid caught a Sludge). */
   | { type: 'relicFired'; relic: string }
   | { type: 'curseTaken'; curse: string }
+  | { type: 'cardModified'; uid: number; card: string; modifier: ModifierId; by: string }
   | { type: 'curseLifted'; curse: string; by: string }
   | { type: 'recipeForgotten'; recipe: string; cards: string[] }
   | { type: 'cardWoven'; from: string; fromUid: number; into: string; intoUid: number; essence: Essence }

@@ -5,12 +5,13 @@ import { NIGHT_SHIFT_DAY } from './calendar';
 import { changeGold, gainCard, pick, pickWeighted, reject, shuffled, type Ctx } from './ctx';
 import { addFamiliar, familiarPrice, rollFamiliars } from './familiars';
 import { draft, lunarPool, omenPool, rarityPool } from './night';
+import { addModifier, modifiable } from './modifiers';
 import { cursePool, gainRelic, rollRelic, takeCurse } from './relics';
 import {
   BLACK_MARKET, BLACK_MARKET_RELIC, BROKER_CARDS, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_HEARTS, MAX_SHELF_SLOTS, MIN_DECK,
   NAME_TAKER_DEALS, QUARTER_DRAWN_STALLS, TAILOR_POTENCY, TINKER_PRICE, WEEKS, WORLD_RELIC_TIER,
 } from './rules';
-import { allCards, type CardInstance, type RunState, type StallState, type StockItem } from './state';
+import { allCards, type CardInstance, type NameTakerDeal, type RunState, type StallState, type StockItem } from './state';
 
 // The Night Market (GDD §9): a street of stalls after each Night Shift, before rent. You can visit
 // every stall that's open; which ones open depends on the moon.
@@ -196,6 +197,13 @@ export function drawTarot(ctx: Ctx): void {
       else changeGold(ctx, amount, 'fortune');
       return;
     }
+    case 'bless': {
+      // Wheel of Fortune: Blessed on a random ingredient that can take it, or its gold.
+      const cards = modifiable(s, 'blessed');
+      if (cards.length) addModifier(ctx, pick(ctx, cards), 'blessed', 'fortune');
+      else changeGold(ctx, amount, 'fortune');
+      return;
+    }
     case 'familiar': {
       // A familiar if a slot is free, or its gold.
       const [f] = s.familiars.length < s.familiarSlots ? rollFamiliars(ctx, 1) : [];
@@ -261,26 +269,33 @@ function relicsOnOffer(stalls: readonly StallState[]): string[] {
   });
 }
 
-/** Curses you don't carry, each with the relic it buys: the relic's tier is the Curse's severity. */
-function rollDeals(ctx: Ctx, onOffer: readonly string[]): { curse: string; relic: string }[] {
-  const deals: { curse: string; relic: string }[] = [];
+/**
+ * Curses you don't carry, each with the relic it buys (the relic's tier is the Curse's severity) or,
+ * instead, a Rare ingredient with the Cursed modifier.
+ */
+function rollDeals(ctx: Ctx, onOffer: readonly string[]): NameTakerDeal[] {
+  const deals: NameTakerDeal[] = [];
   for (const curse of shuffled(ctx, cursePool(ctx.s))) {
     if (deals.length >= NAME_TAKER_DEALS) break;
     const tier = codex.curses.get(curse)!.severity;
     const relic = rollRelic(ctx, tier, [...onOffer, ...deals.map((d) => d.relic)]);
-    if (relic) deals.push({ curse, relic });
+    if (relic) deals.push({ curse, relic, card: null });
   }
+  const cards = draft(ctx, rarityPool(ctx.s, 'rare'), deals.length);
+  deals.forEach((d, i) => (d.card = cards[i] ?? null));
   return deals;
 }
 
-/** Take a Curse for its relic. One deal a night. */
-export function takeDeal(ctx: Ctx, index: number): void {
+/** Take a Curse for its relic or its Cursed card. One deal a night. */
+export function takeDeal(ctx: Ctx, index: number, take: 'relic' | 'card'): void {
   const stall = atStall(ctx, 'name-taker');
   if (stall.done) reject('the Name-Taker makes one deal a night');
   const deal = stall.deals[index];
   if (!deal) reject(`no deal ${index}`);
+  if (take === 'card' && !deal.card) reject('this deal has no card');
   takeCurse(ctx, deal.curse);
-  gainRelic(ctx, deal.relic, 'name-taker');
+  if (take === 'card') addModifier(ctx, gainCard(ctx, deal.card!, 'market'), 'cursed', 'name-taker');
+  else gainRelic(ctx, deal.relic, 'name-taker');
   stall.done = true;
 }
 
