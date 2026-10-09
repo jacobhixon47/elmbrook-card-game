@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  allCards, BLACK_MARKET, CAULDRON_SLOTS, essencesOf, forgettable, fortuneOn, fortunePrice, isSatchelCard, LANTERN_STOCK, MIN_DECK, moonOf,
+  allCards, BLACK_MARKET, BLACK_MARKET_RELIC, CAULDRON_SLOTS, essencesOf, forgettable, fortuneOn, fortunePrice, isSatchelCard, LANTERN_STOCK, MIN_DECK, moonOf,
   NIGHT_SHIFT_DAY, previewBrew, reduce, TINKER_PRICE, tierIndex, WEEKS,
   type RunState, type StallId, type StallState,
 } from '../src/core';
@@ -40,8 +40,8 @@ describe('the Night Market street', () => {
     }
     expect([...drawn].every((id) => codex.stalls.get(id)!.opens === 'drawn')).toBe(true);
     expect(drawn.size).toBeGreaterThan(1);
-    expect(ids(market(2))).toEqual(['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'wandering-tinker']);
-    expect(ids(market(4))).toEqual(['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'black-market']);
+    expect(ids(market(2))).toEqual(['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'name-taker', 'wandering-tinker']);
+    expect(ids(market(4))).toEqual(['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'name-taker', 'black-market']);
   });
 
   it('walks between stalls; each trade needs you at its stall', () => {
@@ -163,7 +163,8 @@ describe('the Fortune Tent', () => {
       seen.add(drawn!.card);
       const t = codex.tarot.get(drawn!.card)!;
       const gold = r.state.gold - (1000 - drawn!.price);
-      if (t.effect === 'gold' || t.effect === 'relic-stand-in') expect(gold).toBe(t.amount);
+      if (t.effect === 'gold') expect(gold).toBe(t.amount);
+      if (t.effect === 'relic') expect(r.state.relics.length > before.relics.length || gold === t.amount).toBe(true);
       if (t.effect === 'familiar') expect(r.state.familiars.length > before.familiars.length || gold === t.amount).toBe(true);
       if (t.effect === 'lunar-card') expect(r.state.satchel.length).toBe(before.satchel.length + 1);
       if (t.effect === 'learn-recipe') expect(r.state.knownRecipes.length).toBe(before.knownRecipes.length + 1);
@@ -205,8 +206,14 @@ describe('the Black Market', () => {
   it('sells Rare cards for gold, or for two cards from the deck', () => {
     let s = visit(market(WEEKS, { gold: 30 }), 'black-market');
     const stock = at(s, 'black-market').stock;
-    expect(stock).toHaveLength(BLACK_MARKET.cards);
-    expect(stock.every((i) => i.kind === 'card' && i.price === BLACK_MARKET.price && codex.ingredients.get(i.card)?.rarity === 'rare')).toBe(true);
+    expect(stock).toHaveLength(BLACK_MARKET.cards + 1);
+    const cards = stock.slice(0, BLACK_MARKET.cards);
+    expect(cards.every((i) => i.kind === 'card' && i.price === BLACK_MARKET.price && codex.ingredients.get(i.card)?.rarity === 'rare')).toBe(true);
+    const relic = stock[BLACK_MARKET.cards]!;
+    if (relic.kind !== 'relic') throw new Error('expected a relic');
+    expect(codex.relics.get(relic.relic)!.tier).toBe(BLACK_MARKET_RELIC.tier);
+    expect(relic.price).toBe(BLACK_MARKET_RELIC.price);
+    expect(no(s, { type: 'swapForCard', index: BLACK_MARKET.cards, uids: [allCards(s)[0]!.uid, allCards(s)[1]!.uid] })).toMatch(/no stock/);
     const deck = allCards(s);
     expect(no(s, { type: 'swapForCard', index: 0, uids: [deck[0]!.uid] })).toMatch(/2 cards/);
     expect(no(s, { type: 'swapForCard', index: 0, uids: [deck[0]!.uid, deck[0]!.uid] })).toMatch(/2 cards/);

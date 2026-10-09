@@ -3,6 +3,7 @@ import type { Pool } from '../codex/schema';
 import { activeEvents } from './calendar';
 import { pickWeighted, shuffled, type Ctx } from './ctx';
 import { familiarPrice, rollFamiliars } from './familiars';
+import { rewardCount, rewardWeights } from './relics';
 import {
   CARD_PRICE, CAULDRON_SLOT_PRICE, FORAGE_CARDS, FORAGE_PICKS, MARKET_CARDS, MARKET_FAMILIARS, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS,
   rarityWeights, SHELF_SLOT_PRICE, type ShopRarity,
@@ -58,7 +59,7 @@ function rollCards(ctx: Ctx, n: number, weights: [ShopRarity, number][]): string
 }
 
 export function offerReward(ctx: Ctx): void {
-  const cards = rollCards(ctx, 3, rarityWeights(ctx.s.skipStreak));
+  const cards = rollCards(ctx, rewardCount(ctx.s), rewardWeights(ctx.s));
   ctx.s.offer = { kind: 'reward', cards };
   ctx.ev.push({ type: 'rewardOffered', cards });
 }

@@ -78,6 +78,7 @@ export type Errand = 'market' | 'forage' | 'hearth';
 export type StockItem =
   | { kind: 'card'; card: string; price: number; sold: boolean }
   | { kind: 'familiar'; familiar: string; price: number; sold: boolean }
+  | { kind: 'relic'; relic: string; price: number; sold: boolean }
   | { kind: 'cauldron-slot' | 'shelf-slot'; price: number; sold: boolean };
 
 /** What the player is choosing between right now outside of brewing. */
@@ -86,6 +87,7 @@ export type Offer =
   | { kind: 'errands'; options: Errand[] }
   | { kind: 'market'; stock: StockItem[] }
   | { kind: 'forage'; cards: string[]; picksLeft: number }
+  /** `removed` once a card is burned or a Curse lifted: the Hearth does one a night. */
   | { kind: 'hearth'; removed: boolean }
   | { kind: 'night-market'; stalls: StallState[]; at: number | null }
   | Gift;
@@ -97,7 +99,9 @@ export type StallState =
   /** `cards` is the Rare pick after forgetting a recipe; one trade a night. */
   | { id: 'moth-broker'; forgot: string | null; cards: string[]; familiars: string[]; done: boolean }
   | { id: 'hollow-tailor'; done: boolean }
-  | { id: 'fortune-tent'; drawn: string[] };
+  | { id: 'fortune-tent'; drawn: string[] }
+  /** Each deal is a Curse to take and the relic it buys; one deal a night. */
+  | { id: 'name-taker'; deals: { curse: string; relic: string }[]; done: boolean };
 
 export type { StallId };
 
@@ -110,7 +114,7 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
 
 /** Plain, JSON-serialisable run state. Fixtures and saves are exactly this shape. */
 export type RunState = {
-  version: 7;
+  version: 8;
   seed: string;
   rng: RngState;
   witch: string;
@@ -156,6 +160,12 @@ export type RunState = {
   familiarSlots: number;
   /** Discards made this run, for the Ferret's every-third. */
   discardCount: number;
+  /** Relics held, in the order gained (GDD §9). No slot limit. */
+  relics: string[];
+  /** Curses taken, oldest first: the Sleepless Miller and the Hearth lift the oldest. */
+  curses: string[];
+  /** Brews today that made Sludge, for the Iron Lid. */
+  sludgeToday: number;
   /** Fortune Tent twists on a later week (The Hermit, The Tower, The Moon). */
   fortunes: { week: number; card: string }[];
   /** Unlock-pool content this run may offer (meta-progression, M4). Base-pool content is always on. */

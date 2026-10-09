@@ -4,6 +4,7 @@ import type { GameEvent } from './actions';
 import { effectsOf, hasEffect, sumEffect, type ScoreCtx } from './effects';
 import { activeEvents, NIGHT_SHIFT_DAY, todaysWeather, type Weather } from './calendar';
 import { FAMILIAR_SCORE } from './familiars';
+import { hasRelic, relicSteps } from './relics';
 import { FROST_WARDEN_POTENCY, HEATWAVE_EMBER_POTENCY, RAIN_POTENCY, tierOf, tierStep, type Tier } from './rules';
 import { twistNow } from './night';
 import type { CardInstance, RunState } from './state';
@@ -111,7 +112,7 @@ export function ingredientsOf(cards: readonly CardInstance[]): Ingredient[] | nu
  * What brewing these cards would make, with every scoring step (GDD §6.3). Pure; used by the
  * cauldron preview, the bot and `brew` itself, so the preview is never wrong.
  */
-export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf'>>;
+export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf' | 'relics' | 'curses'>>;
 
 export function previewBrew(state: BrewState, cards: readonly CardInstance[], hand: readonly CardInstance[]): BrewPreview {
   const raw = ingredientsOf(cards);
@@ -163,6 +164,13 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
   if (shift !== 0) {
     c.potency = Math.max(0, c.potency + shift);
     steps.push({ type: 'scoreStep', source: 'weather', id: weather, potency: c.potency, harmony: c.harmony, note: `${shift > 0 ? '+' : ''}${shift} Potency` });
+  }
+
+  // Relics and curses that change ingredients (the Pressed Flower, the Copper Ladle, Moonsick).
+  for (const { id, source, step } of relicSteps(state, raw)) {
+    c.potency = Math.max(0, c.potency + step.potency);
+    c.harmony += step.harmony;
+    steps.push({ type: 'scoreStep', source, id, potency: c.potency, harmony: c.harmony, note: step.note });
   }
 
   // Tonight's patron (GDD §10): Sir Bramble douses Ember, the Frost Warden chills the rest.
@@ -222,7 +230,7 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
   const quality = Math.floor(c.potency * c.harmony);
   const known = state.knownRecipes.includes(recipe.id);
   // An Experiment discovers the recipe but brews one tier lower (GDD §6.2), unless a Grimoire Page helps.
-  const tier = known || p.fullExperiment ? tierOf(quality) : tierStep(tierOf(quality), -1);
+  const tier = known || p.fullExperiment || hasRelic(state, 'witchs-hatpin') ? tierOf(quality) : tierStep(tierOf(quality), -1);
   const copies = Math.max(p.copies, ...cards.flatMap((card) => effectsOf(card.card).map((e) => e.copies ?? 1)));
   return {
     kind: 'potion',

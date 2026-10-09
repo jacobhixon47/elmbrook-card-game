@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { NIGHT_SHIFT_DAY, rentDue, skyTime, WEEKS, type RunState } from '../core';
+import { NIGHT_SHIFT_DAY, rentOf, skyTime, WEEKS, type RunState } from '../core';
 import { PALETTE } from '../art/palette';
 import { loadProfile, saveProfile } from '../profile';
 import { store } from '../store';
@@ -35,7 +35,7 @@ function summary(s: RunState): string {
   return `
     <div>seed <b>${esc(s.seed)}</b> · ${s.season} · ${s.witch}</div>
     <div>week ${s.week} · ${s.day === NIGHT_SHIFT_DAY ? 'Night Shift' : `day ${s.day}`} · ${s.phase} · sky ${skyTime(s)}</div>
-    <div>gold <b>${s.gold}</b> · rent due ${rentDue(s.season, s.week)}</div>
+    <div>gold <b>${s.gold}</b> · rent due ${rentOf(s)}</div>
     <div>brews ${s.brewsLeft} · discards ${s.discardsLeft} · cauldron ${s.cauldron.length}/${s.cauldronSlots} · shelf ${s.shelf.length}/${s.shelfSize}</div>
     <div>deck ${deck} (draw ${s.drawPile.length}, hand ${s.hand.length}, discard ${s.discardPile.length})</div>
     <div>offer ${s.offer?.kind ?? 'none'}</div>

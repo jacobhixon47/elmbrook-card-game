@@ -150,11 +150,16 @@ export const PALE_COURIER_PAY = 2;
 export const CLOCKLESS_BREWS = 2;
 export const TITHE_GOLD = 2;
 export const FROST_WARDEN_POTENCY = -2;
-/**
- * Familiars and relics arrive in M3 part 5. Until then a patron who would give one pays this much
- * gold instead (about a common familiar's price, and a tier-2 relic a little more).
- */
-export const STAND_IN_GOLD = { relic: [0, 8, 12, 16] } as const;
+/** A relic reward when you already hold every relic pays this much gold instead, by tier. */
+export const RELIC_FALLBACK_GOLD = [0, 8, 12, 16] as const;
+
+// Relics and curses (GDD §9; balance tables, items.json).
+/** The Black Market's tier 2 relic. */
+export const BLACK_MARKET_RELIC = { tier: 2, price: 25 } as const;
+/** The Name-Taker offers this many deals; each Curse buys a relic of its severity's tier. */
+export const NAME_TAKER_DEALS = 2;
+/** The World's relic tier. */
+export const WORLD_RELIC_TIER = 2;
 
 // Familiars (GDD §11; balance tables, items.json).
 
