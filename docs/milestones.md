@@ -68,7 +68,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 
 - Codex screen; ✅ persistent save with migrations (the profile and run migrations, `core/meta.ts`).
 - The Year: ✅ season unlocks (a win opens the next season; choose it on the title screen), Summer, Autumn and Winter content and twists, Year modifiers, and looping into the next Year with a boon (GDD §13).
-- Reputation and cottage perks (the out-of-run home); Almanac achievements that unlock pool content, relics included (about 6 to start).
+- Reputation and cottage perks (✅ the cottage itself: the out-of-run home where you set out for a season); Almanac achievements that unlock pool content, relics included (about 6 to start).
 - Six regulars with hearts, Ink dialogue, heart-milestone beats and unlocks.
 - Witch and cauldron selection; unlock flow.
 - ✅ Winter tuned into the win-rate band: week 1's rent is the same in every season and Winter pays ×1.2 (`docs/balance-m4.md`).

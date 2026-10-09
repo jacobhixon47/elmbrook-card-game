@@ -29,6 +29,11 @@ export function titleBackdrop(): SceneBackdrop {
   return { texture: backdropTexture('title'), lights: b.lights, counterTop: 0 };
 }
 
+export function cottageBackdrop(): SceneBackdrop {
+  const b = BACKDROPS.cottage;
+  return { texture: backdropTexture('cottage'), lights: b.lights, counterTop: 0 };
+}
+
 /** `?season=`, `?time=` and `?weather=` override what the run says, for previewing the window. */
 export function viewOverrides(): { season?: Season; time?: SkyTime; weather?: Weather } {
   const season = params.get('season') as Season | null;

@@ -4,7 +4,7 @@ import { markReady } from '../debug/hook';
 import { titleBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { noAnim, type Fixture } from '../debug/params';
-import { migrateProfile, SEASONS, type RunState, type Season } from '../core';
+import { migrateProfile, type RunState } from '../core';
 import { loadProfile } from '../profile';
 import { clearRun, loadRun } from '../save';
 import { dayLabel } from '../view/describe';
@@ -57,9 +57,8 @@ export class Title extends Phaser.Scene {
     // A run saved in this browser can be continued; a fixture shows one from its `state`, and its `profile`.
     const saved = data.fixture ? ((data.fixture.state as RunState | undefined) ?? null) : loadRun();
     const profile = data.fixture ? migrateProfile(data.fixture.profile ?? null) : loadProfile();
-    const start = (season: Season) => this.scene.start('Run', { season });
-    // With more than Spring open, a new run starts with the season (GDD §13).
-    const fresh = () => (profile.seasons.length > 1 ? this.pickSeason(TX, profile.seasons, start) : start('spring'));
+    // The first run is the tutorial; after that every run starts from the cottage (GDD §13).
+    const fresh = () => (profile.tutorialDone ? this.scene.start('Cottage', {}) : this.scene.start('Run', {}));
     const keys = this.input.keyboard;
     if (saved) {
       const resume = () => this.scene.start('Run', { saved });
@@ -81,8 +80,6 @@ export class Title extends Phaser.Scene {
         if (e.key === 'n') newRun();
       };
       keys?.on('keydown', onKey);
-    } else if (profile.seasons.length > 1) {
-      fresh();
     } else {
       const prompt = pixelText(this, TX, 226, 'press any key', { size: 8, color: 'v', align: 'center' }).setOrigin(0.5);
       if (!noAnim) this.tweens.add({ targets: prompt, alpha: 0.2, duration: 700, yoyo: true, repeat: -1 });
@@ -91,23 +88,5 @@ export class Title extends Phaser.Scene {
     }
 
     markReady(this);
-  }
-
-  /** The four seasons of the Year: the open ones start a run, the rest say how to open them. */
-  private pickSeason(x: number, open: readonly Season[], start: (s: Season) => void) {
-    pixelText(this, x, 214, 'Choose a season', { size: 8, color: 'm', stroke: 'k', align: 'center' }).setOrigin(0.5);
-    SEASONS.forEach((season, i) => {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const b = this.add.existing(button(this, x - 42 + col * 84, 232 + row * 20, `${i + 1} ${cap(season)}`, () => start(season), { w: 78, color: open.includes(season) ? 'y' : 'W' }));
-      if (!open.includes(season)) b.setEnabled(false);
-    });
-    const locked = SEASONS.find((s) => !open.includes(s));
-    const hint = locked ? `Win ${cap(SEASONS[SEASONS.indexOf(locked) - 1]!)} to open ${cap(locked)}` : 'Every season is open';
-    pixelText(this, x, 276, hint, { size: 7, color: 'v', stroke: 'k', align: 'center' }).setOrigin(0.5);
-    this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
-      const season = SEASONS[Number(e.key) - 1];
-      if (season && open.includes(season)) start(season);
-    });
   }
 }
