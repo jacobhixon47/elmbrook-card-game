@@ -1,0 +1,1 @@
+{ "scene": "Cottage", "ui": { "almanac": true }, "profile": { "version": 3, "tutorialDone": true, "seasons": ["spring", "summer"], "runs": 5, "wins": { "spring": 1 }, "reputation": 12, "reputationEarned": 70, "perks": ["deep-shelf"], "almanac": ["superb-work", "paid-up", "spring-won", "open-for-business"] } }

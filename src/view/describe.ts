@@ -143,6 +143,20 @@ const PATRON_LINE: Record<string, string> = {
 
 export const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
 
+/** The name of anything the Almanac can unlock: a card, recipe, familiar or relic. */
+export function unlockName(id: string): string {
+  for (const t of [codex.ingredients, codex.tinctures, codex.recipes, codex.familiars, codex.relics]) {
+    const x = t.get(id);
+    if (x) return x.name;
+  }
+  return id;
+}
+
+/** Names as prose: "A", "A and B", "A, B and C". */
+export function listOf(names: readonly string[]): string {
+  return names.length < 2 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
 export function dayLabel(state: Pick<RunState, 'week' | 'day'>): string {
   return `Week ${state.week} · ${state.day === NIGHT_SHIFT_DAY ? 'Night Shift' : `Day ${state.day}`}`;
 }

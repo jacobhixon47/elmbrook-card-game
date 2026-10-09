@@ -240,6 +240,7 @@ export const Relic = z.object({
   name: z.string().min(1),
   tier: z.number().int().min(1).max(3),
   text: z.string().min(1),
+  pool: Pool.default('base'),
 });
 export type Relic = z.infer<typeof Relic>;
 
@@ -315,3 +316,15 @@ export const Perk = z.object({
   }),
 });
 export type Perk = z.infer<typeof Perk>;
+
+/**
+ * An Almanac entry (GDD §13): a goal met in any run, won or lost, that adds content to the pools for
+ * good. Its goal is code, by id, in core/almanac.ts; `unlocks` are ids of `pool: 'unlock'` content.
+ */
+export const AlmanacEntry = z.object({
+  id: Id,
+  name: z.string().min(1),
+  goal: z.string().min(1),
+  unlocks: z.array(Id).min(1),
+});
+export type AlmanacEntry = z.infer<typeof AlmanacEntry>;

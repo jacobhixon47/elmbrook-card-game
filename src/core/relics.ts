@@ -35,9 +35,11 @@ type Held = Pick<RunState, 'relics' | 'curses'>;
 export const hasRelic = (s: Partial<Held>, id: string) => s.relics?.includes(id) ?? false;
 export const hasCurse = (s: Partial<Held>, id: string) => s.curses?.includes(id) ?? false;
 
-/** Relics you don't hold, of this tier if given. */
-export function relicPool(s: Held, tier?: number): string[] {
-  return [...codex.relics.values()].filter((r) => !s.relics.includes(r.id) && (tier === undefined || r.tier === tier)).map((r) => r.id);
+/** Relics in this run's pool (the starters, plus any the Almanac unlocked) you don't hold, of this tier if given. */
+export function relicPool(s: Held & Pick<RunState, 'unlocks'>, tier?: number): string[] {
+  return [...codex.relics.values()]
+    .filter((r) => (r.pool === 'base' || s.unlocks.includes(r.id)) && !s.relics.includes(r.id) && (tier === undefined || r.tier === tier))
+    .map((r) => r.id);
 }
 
 /** Curses you haven't taken. */

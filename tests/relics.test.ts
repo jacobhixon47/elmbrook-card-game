@@ -31,8 +31,8 @@ function deliver(s: RunState, cards: string[] = ['elmroot', 'creekwater'], o: Pa
 }
 
 /** The Night Market on a week's night, with plenty of gold. */
-function market(week: number, seed = 'relics'): RunState {
-  let s = ok(start(seed), { type: 'debug', op: 'jumpToDay', week, day: NIGHT_SHIFT_DAY }).state;
+function market(week: number, seed = 'relics', unlocks: string[] = []): RunState {
+  let s = ok({ ...start(seed), unlocks }, { type: 'debug', op: 'jumpToDay', week, day: NIGHT_SHIFT_DAY }).state;
   s = ok(s, { type: 'debug', op: 'addGold', amount: 500 }).state;
   for (const a of [{ type: 'openShop' }, { type: 'endDay' }, { type: 'skipReward' }] as const) s = ok(s, a).state;
   while (s.offer?.kind === 'gift') s = ok(s, { type: 'passGift' }).state;
@@ -191,13 +191,16 @@ describe('getting relics', () => {
   });
 
   it('the Black Market and the Name-Taker never offer the same relic in one night', () => {
-    for (let i = 0; i < 20; i++) {
-      const s = market(WEEKS, `bm${i}`);
+    // Every relic unlocked, so the Black Market always has one of its own tier; the starters alone can run short and fall back.
+    const allRelics = [...codex.relics.keys()];
+    for (let i = 0; i < 40; i++) {
+      const s = market(WEEKS, `bm${i % 20}`, i < 20 ? allRelics : []);
       if (s.offer?.kind !== 'night-market') throw new Error('expected the Night Market');
       const offered = s.offer.stalls.flatMap((st) => (st.id === 'name-taker' ? st.deals.map((d) => d.relic) : 'stock' in st ? st.stock.flatMap((x) => (x.kind === 'relic' ? [x.relic] : [])) : []));
       expect(new Set(offered).size).toBe(offered.length);
       const bm = s.offer.stalls.find((st) => st.id === 'black-market');
-      if (bm && 'stock' in bm) expect(bm.stock.filter((x) => x.kind === 'relic').every((x) => x.kind === 'relic' && codex.relics.get(x.relic)!.tier === BLACK_MARKET_RELIC.tier)).toBe(true);
+      if (i < 20 && bm && 'stock' in bm) expect(bm.stock.filter((x) => x.kind === 'relic').every((x) => x.kind === 'relic' && codex.relics.get(x.relic)!.tier === BLACK_MARKET_RELIC.tier)).toBe(true);
+      expect(offered.every((id) => i < 20 || codex.relics.get(id)!.pool === 'base')).toBe(true);
     }
   });
 

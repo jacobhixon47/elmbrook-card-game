@@ -17,9 +17,9 @@ import { seedRng } from './rng';
 import {
   BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK,
   LONGEST_NIGHT, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
-  MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS,
+  MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex,
 } from './rules';
-import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState } from './state';
+import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState, type RunStats } from './state';
 
 export type ReduceResult = { state: RunState; events: GameEvent[] };
 
@@ -39,7 +39,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   const s: RunState = {
     version: RUN_VERSION,
     seed,
-    stats: { ordersFilled: 0, potionsSold: 0 },
+    stats: newStats(),
     rng: seedRng(seed),
     witch: witch.id,
     season,
@@ -762,11 +762,24 @@ export function reduce(state: RunState | null, action: Action): ReduceResult {
     if (e instanceof Reject) return { state, events: [{ type: 'rejected', action: action.type, reason: e.message }] };
     throw e;
   }
-  for (const e of ctx.ev) {
-    if (e.type === 'orderFilled') ctx.s.stats.ordersFilled++;
-    if (e.type === 'potionSold') ctx.s.stats.potionsSold++;
-  }
+  tally(ctx.s, ctx.ev);
   return { state: ctx.s, events: ctx.ev };
+}
+
+export const newStats = (): RunStats => ({ ordersFilled: 0, potionsSold: 0, rentsPaid: 0, bestTier: -1, mostFamiliars: 0, mostRelics: 0, cursesTaken: 0 });
+
+/** Count what an action did into the run's stats. */
+function tally(s: RunState, events: readonly GameEvent[]): void {
+  const st = s.stats;
+  for (const e of events) {
+    if (e.type === 'orderFilled') st.ordersFilled++;
+    if (e.type === 'potionSold') st.potionsSold++;
+    if (e.type === 'rentPaid') st.rentsPaid++;
+    if (e.type === 'curseTaken') st.cursesTaken++;
+    if (e.type === 'brewed') st.bestTier = Math.max(st.bestTier, tierIndex(e.potion.tier));
+  }
+  st.mostFamiliars = Math.max(st.mostFamiliars, s.familiars.length);
+  st.mostRelics = Math.max(st.mostRelics, s.relics.length);
 }
 
 /** Rebuild a run from its action log (the first action must be `startRun`). Bug reports are replay files. */

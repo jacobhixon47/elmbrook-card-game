@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { allCards, buyPerk, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, migrateRun, newProfile, nextSeason, perkBlocked, PROFILE_VERSION, recordRun, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
+import { allCards, almanacMet, almanacUnlocks, ALMANAC_GOALS, buyPerk, newStats, relicPool, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, migrateRun, newProfile, nextSeason, perkBlocked, PROFILE_VERSION, recordRun, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
 import { loadProfile, recordFinishedRun, saveProfile } from '../src/profile';
 import { playRun } from '../src/sim/run';
 import { brewing } from './helpers';
+import { codex } from '../src/codex';
 
 const end = (season: 'spring' | 'summer' | 'autumn' | 'winter', phase: 'victory' | 'game-over' | 'morning', seed = 'r1', week = 4) =>
-  ({ seed, season, phase, week, stats: { ordersFilled: 20, potionsSold: 3 } }) as const;
+  ({ seed, season, phase, week, stats: { ...newStats(), ordersFilled: 20, potionsSold: 3 } });
 
 describe('the profile', () => {
   it('migrates the M2.5 profile, keeping the tutorial', () => {
@@ -66,10 +67,10 @@ describe('the profile', () => {
 
 describe('Reputation and perks', () => {
   it('pays for weeks survived, orders, potions sold and a win', () => {
-    const stats = { ordersFilled: 20, potionsSold: 3 };
+    const stats = { ...newStats(), ordersFilled: 20, potionsSold: 3 };
     expect(reputationFor({ phase: 'victory', week: 4, stats })).toBe(4 * REPUTATION.week + 20 + 3 + REPUTATION.win);
     expect(reputationFor({ phase: 'game-over', week: 3, stats })).toBe(2 * REPUTATION.week + 23);
-    expect(reputationFor({ phase: 'game-over', week: 1, stats: { ordersFilled: 0, potionsSold: 0 } })).toBe(0);
+    expect(reputationFor({ phase: 'game-over', week: 1, stats: newStats() })).toBe(0);
   });
 
   it('a finished run adds its Reputation once, win or lose', () => {
@@ -91,12 +92,14 @@ describe('Reputation and perks', () => {
   });
 
   it('counts orders filled and potions sold as the run goes', () => {
-    expect(newRun('stats', 'hedge-witch').state.stats).toEqual({ ordersFilled: 0, potionsSold: 0 });
+    expect(newRun('stats', 'hedge-witch').state.stats).toEqual(newStats());
     const rec = playRun('stats', { strategy: 'greedy' });
     const { state, events } = replay(rec.actions);
     expect(state.stats.ordersFilled).toBe(rec.ordersFilled);
     expect(state.stats.potionsSold).toBe(events.filter((e) => e.type === 'potionSold').length);
     expect(state.stats.ordersFilled).toBeGreaterThan(0);
+    expect(state.stats.rentsPaid).toBe(events.filter((e) => e.type === 'rentPaid').length);
+    expect(state.stats.bestTier).toBeGreaterThanOrEqual(0);
   });
 
   it('perks cost Reputation, once each', () => {
@@ -110,11 +113,47 @@ describe('Reputation and perks', () => {
   });
 });
 
+describe('the Almanac', () => {
+  it('has a goal for every entry, and unlocks every locked card, recipe, familiar and relic exactly once', () => {
+    expect(Object.keys(ALMANAC_GOALS).sort()).toEqual([...codex.almanac.keys()].sort());
+    const locked = [codex.ingredients, codex.tinctures, codex.recipes, codex.familiars, codex.relics].flatMap((t) => [...t.values()].filter((x) => x.pool === 'unlock').map((x) => x.id));
+    const all = almanacUnlocks([...codex.almanac.keys()]);
+    expect([...all].sort()).toEqual([...locked].sort());
+  });
+
+  it('a first run draws from the starter relics only', () => {
+    const s = newRun('relics', 'hedge-witch').state;
+    expect(relicPool(s)).toHaveLength([...codex.relics.values()].filter((r) => r.pool === 'base').length);
+    expect(relicPool(s)).not.toContain('spare-satchel');
+    expect(relicPool({ ...s, unlocks: ['spare-satchel'] })).toContain('spare-satchel');
+  });
+
+  it('records entries a run meets, won or lost, once each', () => {
+    const lost = recordRun(newProfile(), { ...end('spring', 'game-over', 'r1', 3), stats: { ...newStats(), bestTier: 3, mostFamiliars: 3 } });
+    expect(lost.almanac).toEqual(['superb-work', 'masterwork', 'menagerie']);
+    expect(lost.profile.almanac).toEqual(lost.almanac);
+    const won = recordRun(lost.profile, { ...end('spring', 'victory', 'r2'), stats: { ...newStats(), bestTier: 3, rentsPaid: 4 } });
+    expect(won.almanac).toEqual(['paid-up', 'spring-won']);
+    expect(almanacMet(won.profile.almanac, { season: 'spring', phase: 'victory', stats: { ...newStats(), bestTier: 4 } })).toEqual(['legendary']);
+    expect(almanacUnlocks(['spring-won'])).toEqual(codex.almanac.get('spring-won')!.unlocks);
+  });
+
+  it('migrates a version 2 profile with nothing done, and drops unknown entries', () => {
+    expect(migrateProfile({ version: 2, tutorialDone: true }).almanac).toEqual([]);
+    expect(migrateProfile({ version: PROFILE_VERSION, almanac: ['spring-won', 'nope', 'spring-won', 3] }).almanac).toEqual(['spring-won']);
+  });
+});
+
 describe('saved run migrations', () => {
   it('keeps a current run and refuses junk, newer or unmigratable runs', () => {
     const s = brewing('migrate');
     expect(migrateRun(JSON.parse(JSON.stringify(s)))).toEqual(s);
     for (const raw of [null, 'x', [], { version: 'ten' }, { ...s, version: RUN_VERSION + 1 }, { ...s, version: 9 }]) expect(migrateRun(raw)).toBeNull();
+  });
+
+  it('a version 11 run gains the Almanac stats, from the run so far', () => {
+    const old: Record<string, unknown> = { ...brewing('migrate'), version: 11, week: 3, relics: ['guild-seal'], stats: { ordersFilled: 5, potionsSold: 1 } };
+    expect(migrateRun(old)?.stats).toEqual({ ...newStats(), ordersFilled: 5, potionsSold: 1, rentsPaid: 2, mostRelics: 1 });
   });
 
   it('a version 10 run gains empty stats', () => {
