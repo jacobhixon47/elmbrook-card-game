@@ -15,3 +15,4 @@ export * from './commissions';
 export * from './dusk-events';
 export * from './meta';
 export * from './almanac';
+export * from './year';

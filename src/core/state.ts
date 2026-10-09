@@ -129,7 +129,7 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 13;
+export const RUN_VERSION = 14;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -155,6 +155,8 @@ export type RunState = {
   rng: RngState;
   witch: string;
   season: Season;
+  /** The Year this run is in (GDD §13): 1, or higher after looping, with that Year's modifiers. */
+  year: number;
   /** The month's weather and sky events, rolled at run start. */
   calendar: Calendar;
   week: number; // 1..WEEKS

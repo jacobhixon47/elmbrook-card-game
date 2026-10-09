@@ -11,6 +11,7 @@ import {
   HERMIT_PAY, PALE_COURIER_PAY, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, TOWER_PAY, WEEK_PAY_STEP, type Tier,
 } from './rules';
 import { allCards, type CardInstance, type Order, type OrderBonus, type OrderRequest, type Potion, type RunState } from './state';
+import { yearPayMult } from './year';
 
 /** Distinct ingredients in these cards with how many copies of each. */
 function ingredientCounts(cards: readonly CardInstance[], night: boolean): [Ingredient, number][] {
@@ -157,7 +158,7 @@ function postOrder(ctx: Ctx, o: OrderOpts): void {
   ctx.ev.push({ type: 'orderPosted', order });
 }
 
-const weekScale = (s: RunState, night: boolean) => (1 + WEEK_PAY_STEP * (s.week - 1)) * (night ? NIGHT_PAY : 1) * SEASON_RULES[s.season].payMult;
+const weekScale = (s: RunState, night: boolean) => (1 + WEEK_PAY_STEP * (s.week - 1)) * (night ? NIGHT_PAY : 1) * SEASON_RULES[s.season].payMult * yearPayMult(s);
 
 /**
  * Post the day's orders. Customers ask for what they like (GDD §14 regulars) from what your deck can

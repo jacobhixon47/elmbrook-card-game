@@ -3,10 +3,10 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { CODEX_TABLES, migrateProfile, perkBlocked, SEASONS, type CodexTable, type Profile, type Season } from '../core';
+import { CODEX_TABLES, migrateProfile, perkBlocked, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
 import { CODEX_TABS, codexEntries } from '../view/codex';
 import { unlockName } from '../view/describe';
-import { buyPerkNow, loadProfile } from '../profile';
+import { buyPerkNow, loadProfile, pickBoonNow } from '../profile';
 import { cottageBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { cap } from '../view/describe';
@@ -50,11 +50,18 @@ export class Cottage extends Phaser.Scene {
     const all = Object.values(CODEX_TABLES).reduce((n, t) => n + t.size, 0);
     this.add.existing(button(this, 270, 300, `Codex ${met}/${all}`, () => this.openCodex(profile), { w: 96, color: 'y' }));
     this.add.existing(button(this, 370, 300, `Almanac ${profile.almanac.length}/${codex.almanac.size}`, () => this.openAlmanac(profile), { w: 96, color: 'y' }));
+    this.drawYearRules(profile);
     const ui = data.fixture?.ui;
+    // A new Year's boon is chosen before anything else.
+    if (profile.boonOffer) this.openBoons(profile, data.fixture ? null : (id) => {
+      pickBoonNow(id);
+      this.scene.restart({});
+    });
     if (ui?.almanac) this.openAlmanac(profile);
     if (ui?.codex) this.openCodex(profile, ui.codex as CodexTable, ui.codexPage ?? 0);
 
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
+      if (profile.boonOffer) return; // the boon comes first
       if (e.key === 'Escape') {
         if (this.overlay) this.closeOverlay();
         else this.scene.start('Title', {});
@@ -73,7 +80,7 @@ export class Cottage extends Phaser.Scene {
     const x = 14;
     const y = 52;
     this.add.existing(panel(this, x, y, 176, 228, 'k', 0.9, 'n'));
-    pixelText(this, x + 88, y + 8, p.years ? `Year ${p.years + 1}` : 'The Year', { size: 10, color: 'y', align: 'center' }).setOrigin(0.5, 0);
+    pixelText(this, x + 88, y + 8, `Year ${p.year}`, { size: 10, color: 'y', align: 'center' }).setOrigin(0.5, 0);
     pixelText(this, x + 88, y + 24, 'Set out for a season. A win opens the next.', { size: 7, color: 'a', align: 'center', wrap: 160 }).setOrigin(0.5, 0);
 
     SEASONS.forEach((season, i) => {
@@ -112,6 +119,38 @@ export class Cottage extends Phaser.Scene {
       }
       const b = this.add.existing(button(this, x + 136, ty + 12, `${perk.cost}`, () => buy?.(perk.id), { w: 40, color: 'y' }));
       if (why) b.setEnabled(false);
+    });
+  }
+
+  /** After a loop: the Year's modifiers and boon, under the title. */
+  private drawYearRules(p: Profile) {
+    if (p.year <= 1 && !p.boon) return;
+    const lines = [
+      `Year ${p.year}: Reputation ×${reputationMult(p.year)}`,
+      ...yearModifiers(p.year).map((m) => m.text),
+      ...(p.boon ? [`Boon: ${codex.boons.get(p.boon)!.name}. ${codex.boons.get(p.boon)!.text}`] : []),
+    ];
+    const t = pixelText(this, 320, 44, lines.join('\n'), { size: 7, color: 'w', align: 'center', wrap: 236 }).setOrigin(0.5, 0);
+    this.add.rectangle(320, 40, 248, t.height + 8, hex('k'), 0.8).setOrigin(0.5, 0).setStrokeStyle(1, hex('n'));
+    t.setDepth(1);
+  }
+
+  /** Looping into a new Year: choose one of three boons, kept for the whole Year. */
+  private openBoons(p: Profile, pick: ((id: string) => void) | null) {
+    this.closeOverlay();
+    const c = this.add.container(0, 0);
+    this.overlay = c;
+    c.add(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.6).setOrigin(0).setInteractive());
+    c.add(panel(this, 110, 90, 420, 170, 'k', 0.96, 'n'));
+    c.add(pixelText(this, 320, 100, `Year ${p.year} begins`, { size: 12, color: 'y', align: 'center' }).setOrigin(0.5, 0));
+    c.add(pixelText(this, 320, 118, 'Choose a boon. It lasts every run this Year.', { size: 7, color: 'a', align: 'center' }).setOrigin(0.5, 0));
+    (p.boonOffer ?? []).forEach((id, i) => {
+      const b = codex.boons.get(id)!;
+      const x = 124 + i * 132;
+      c.add(this.add.rectangle(x, 136, 124, 80, hex('b'), 0.6).setOrigin(0));
+      c.add(pixelText(this, x + 62, 142, b.name, { size: 8, color: 'W', align: 'center', wrap: 116 }).setOrigin(0.5, 0));
+      c.add(pixelText(this, x + 62, 160, b.text, { size: 7, color: 'a', align: 'center', wrap: 112 }).setOrigin(0.5, 0));
+      c.add(button(this, x + 62, 236, 'Choose', () => pick?.(id), { w: 64, color: 'y' }));
     });
   }
 

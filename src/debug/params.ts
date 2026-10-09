@@ -10,6 +10,8 @@ export type Fixture = {
   /** The profile a Title fixture shows (core/meta.ts), instead of this browser's. */
   profile?: unknown;
   season?: string;
+  /** The Year a Run fixture plays in (its modifiers), from 2. */
+  year?: number;
   time?: string;
   weather?: string;
   /** Today's weather for the rules (the Calendar's roll), set before `steps` run. `weather` only changes the window. */

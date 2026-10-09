@@ -4,6 +4,7 @@ import { changeGold, pick, reject, type Ctx } from './ctx';
 import { isSatchelCard } from './night';
 import { RELIC_FALLBACK_GOLD, rarityWeights, rentDue, type ShopRarity } from './rules';
 import type { RunState } from './state';
+import { yearRentMult } from './year';
 
 // Relics and curses (GDD §9). Relics are run-long passives with no slot limit, earned from patrons,
 // the Name-Taker, the Black Market and The World. Curses are run debuffs taken at the Name-Taker;
@@ -94,8 +95,8 @@ export function liftCurse(ctx: Ctx, by: string, id?: string): boolean {
 }
 
 /** This week's rent with the Guild Seal and Unpaid Debt. */
-export function rentOf(s: Pick<RunState, 'season' | 'week'> & Partial<Held>, week = s.week): number {
-  const mult = (hasRelic(s, 'guild-seal') ? RELIC_RULES.sealRent : 1) * (hasCurse(s, 'unpaid-debt') ? CURSE_RULES.debtRent : 1);
+export function rentOf(s: Pick<RunState, 'season' | 'week'> & Partial<Held & Pick<RunState, 'year'>>, week = s.week): number {
+  const mult = (hasRelic(s, 'guild-seal') ? RELIC_RULES.sealRent : 1) * (hasCurse(s, 'unpaid-debt') ? CURSE_RULES.debtRent : 1) * yearRentMult(s);
   return Math.round(rentDue(s.season, week) * mult);
 }
 
