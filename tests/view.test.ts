@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { previewBrew, reduce } from '../src/core';
+import { CODEX_TABLES, previewBrew, reduce } from '../src/core';
+import { CODEX_TABS, codexEntries } from '../src/view/codex';
 import { stepAction } from '../src/debug/fixture-steps';
 import { cardText, customerBlurb, customerLine, customerName, dayLabel, extraPay, orderNeeds, orderTerms, requestText } from '../src/view/describe';
 import { cardInfo } from '../src/view/inspect';
@@ -74,5 +75,16 @@ describe('fixture steps', () => {
     expect(stepAction(s, { gold: 5 })).toMatchObject({ op: 'addGold', amount: 5 });
     expect(stepAction(s, { removeAt: 0 })).toMatchObject({ type: 'removeCard' });
     expect(stepAction(s, 'skipReward')).toEqual({ type: 'skipReward' });
+  });
+});
+
+describe('the Codex', () => {
+  it('hides what you have not met and describes what you have', () => {
+    const rows = codexEntries('ingredients', ['creekwater']);
+    expect(rows.find((r) => r.id === 'creekwater')).toMatchObject({ name: 'Creekwater', met: true, sub: expect.stringContaining('Tide') as unknown as string });
+    expect(rows.find((r) => r.id === 'elmroot')).toMatchObject({ name: '???', met: false, text: '' });
+    for (const tab of CODEX_TABS) for (const r of codexEntries(tab.id, [...CODEX_TABLES[tab.id].keys()])) expect(r.name).not.toBe('???');
+    expect(codexEntries('townsfolk', ['lamplighter'])[0]).toBeDefined();
+    expect(codexEntries('townsfolk', ['lamplighter']).find((r) => r.id === 'lamplighter')!.text).toMatch(/face-down/);
   });
 });

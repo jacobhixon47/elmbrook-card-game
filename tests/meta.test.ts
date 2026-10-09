@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { allCards, almanacMet, almanacUnlocks, ALMANAC_GOALS, buyPerk, newStats, relicPool, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, migrateRun, newProfile, nextSeason, perkBlocked, PROFILE_VERSION, recordRun, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
+import { allCards, almanacMet, CODEX_TABLES, codexMet, almanacUnlocks, ALMANAC_GOALS, buyPerk, newStats, relicPool, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, migrateRun, newProfile, nextSeason, perkBlocked, PROFILE_VERSION, recordRun, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
 import { loadProfile, recordFinishedRun, saveProfile } from '../src/profile';
 import { playRun } from '../src/sim/run';
 import { brewing } from './helpers';
@@ -92,7 +92,7 @@ describe('Reputation and perks', () => {
   });
 
   it('counts orders filled and potions sold as the run goes', () => {
-    expect(newRun('stats', 'hedge-witch').state.stats).toEqual(newStats());
+    expect(newRun('stats', 'hedge-witch').state.stats).toEqual({ ...newStats(), met: expect.arrayContaining(['stir']) as unknown as string[] });
     const rec = playRun('stats', { strategy: 'greedy' });
     const { state, events } = replay(rec.actions);
     expect(state.stats.ordersFilled).toBe(rec.ordersFilled);
@@ -110,6 +110,33 @@ describe('Reputation and perks', () => {
     expect(bought).toMatchObject({ reputation: 10, perks: ['deep-shelf'] });
     expect(perkBlocked(bought, 'deep-shelf')).toMatch(/already/);
     expect(() => buyPerk(bought, 'deep-shelf')).toThrow(/already/);
+  });
+});
+
+describe('the Codex', () => {
+  it('a run meets its starting deck and recipes, then what it draws, is offered and serves', () => {
+    const start = newRun('codex', 'hedge-witch').state;
+    expect(start.stats.met).toEqual(expect.arrayContaining([...start.knownRecipes, ...start.drawPile.map((c) => c.card)]));
+    const rec = playRun('codex', { strategy: 'greedy' });
+    const { state, events } = replay(rec.actions);
+    const served = events.flatMap((e) => (e.type === 'orderPosted' ? [e.order.customer] : []));
+    const offered = events.flatMap((e) => (e.type === 'rewardOffered' ? e.cards : []));
+    expect(state.stats.met).toEqual(expect.arrayContaining([...served, ...offered, ...state.familiars, ...state.relics]));
+    expect(new Set(state.stats.met).size).toBe(state.stats.met.length);
+  });
+
+  it('a finished run adds what it met to the profile, once, and only codex ids', () => {
+    const stats = { ...newStats(), met: ['lavender', 'bea-thornwick', 'sludge', 'nope'] };
+    const p = recordRun({ ...newProfile(), codex: ['lavender'] }, { ...end('spring', 'game-over'), stats }).profile;
+    expect(p.codex).toEqual(['lavender', 'bea-thornwick']);
+    expect(codexMet(p.codex, { stats })).toEqual([]);
+    expect(migrateProfile({ ...p, codex: ['lavender', 'nope', 'lavender', 7] }).codex).toEqual(['lavender']);
+    expect(migrateProfile({ version: 3 }).codex).toEqual([]);
+  });
+
+  it('shows every ingredient, tincture, recipe, familiar, relic and customer', () => {
+    const sizes = Object.values(CODEX_TABLES).map((t) => t.size);
+    expect(sizes.reduce((a, b) => a + b)).toBe(codex.ingredients.size + codex.tinctures.size + codex.recipes.size + codex.familiars.size + codex.relics.size + codex.regulars.size + codex.nightCustomers.size + codex.patrons.size);
   });
 });
 
@@ -153,7 +180,15 @@ describe('saved run migrations', () => {
 
   it('a version 11 run gains the Almanac stats, from the run so far', () => {
     const old: Record<string, unknown> = { ...brewing('migrate'), version: 11, week: 3, relics: ['guild-seal'], stats: { ordersFilled: 5, potionsSold: 1 } };
-    expect(migrateRun(old)?.stats).toEqual({ ...newStats(), ordersFilled: 5, potionsSold: 1, rentsPaid: 2, mostRelics: 1 });
+    expect(migrateRun(old)?.stats).toMatchObject({ ...newStats(), ordersFilled: 5, potionsSold: 1, rentsPaid: 2, mostRelics: 1, met: expect.arrayContaining(['guild-seal']) as unknown as string[] });
+  });
+
+  it('a version 12 run gains the Codex ids it has met, from what it holds', () => {
+    const s = brewing('migrate');
+    const old: Record<string, unknown> = { ...s, version: 12, familiars: ['heron'], stats: { ...s.stats, met: undefined } };
+    const met = migrateRun(old)!.stats.met;
+    expect(met).toEqual(expect.arrayContaining(['heron', ...s.knownRecipes, s.hand[0]!.card, s.orders[0]!.customer]));
+    expect(new Set(met).size).toBe(met.length);
   });
 
   it('a version 10 run gains empty stats', () => {

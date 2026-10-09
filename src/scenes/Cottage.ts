@@ -3,7 +3,8 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { migrateProfile, perkBlocked, SEASONS, type Profile, type Season } from '../core';
+import { CODEX_TABLES, migrateProfile, perkBlocked, SEASONS, type CodexTable, type Profile, type Season } from '../core';
+import { CODEX_TABS, codexEntries } from '../view/codex';
 import { unlockName } from '../view/describe';
 import { buyPerkNow, loadProfile } from '../profile';
 import { cottageBackdrop } from '../view/backdrop';
@@ -14,17 +15,18 @@ import { button, panel } from '../view/ui';
 
 /**
  * Your cottage, the home between runs (GDD §13): where you set out for a season, spend Reputation on
- * perks and read the Almanac. Every run starts and ends here once the tutorial is done.
+ * perks, and read the Almanac and the Codex. Every run starts and ends here once the tutorial is done.
  */
 export class Cottage extends Phaser.Scene {
   constructor() {
     super('Cottage');
   }
 
-  private almanac: Phaser.GameObjects.Container | null = null;
+  /** The open Almanac or Codex, drawn over the room. */
+  private overlay: Phaser.GameObjects.Container | null = null;
 
   create(data: { fixture?: Fixture | null } = {}) {
-    this.almanac = null;
+    this.overlay = null;
     pixelCamera(this);
     const bg = cottageBackdrop();
     this.add.image(0, 0, bg.texture).setOrigin(0);
@@ -44,19 +46,24 @@ export class Cottage extends Phaser.Scene {
       this.scene.restart({});
     });
 
-    const done = profile.almanac.length;
-    this.add.existing(button(this, 320, 300, `Almanac ${done}/${codex.almanac.size}`, () => this.toggleAlmanac(profile), { w: 96, color: 'y' }));
-    if (data.fixture?.ui?.almanac) this.toggleAlmanac(profile);
+    const met = profile.codex.length;
+    const all = Object.values(CODEX_TABLES).reduce((n, t) => n + t.size, 0);
+    this.add.existing(button(this, 270, 300, `Codex ${met}/${all}`, () => this.openCodex(profile), { w: 96, color: 'y' }));
+    this.add.existing(button(this, 370, 300, `Almanac ${profile.almanac.length}/${codex.almanac.size}`, () => this.openAlmanac(profile), { w: 96, color: 'y' }));
+    const ui = data.fixture?.ui;
+    if (ui?.almanac) this.openAlmanac(profile);
+    if (ui?.codex) this.openCodex(profile, ui.codex as CodexTable, ui.codexPage ?? 0);
 
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (this.almanac) this.toggleAlmanac(profile);
+        if (this.overlay) this.closeOverlay();
         else this.scene.start('Title', {});
         return;
       }
-      if (e.key === 'a' || e.key === 'A') return this.toggleAlmanac(profile);
+      if (e.key === 'a' || e.key === 'A') return this.overlay ? this.closeOverlay() : this.openAlmanac(profile);
+      if (e.key === 'c' || e.key === 'C') return this.overlay ? this.closeOverlay() : this.openCodex(profile);
       const season = SEASONS[Number(e.key) - 1];
-      if (season && !this.almanac && profile.seasons.includes(season)) start(season);
+      if (season && !this.overlay && profile.seasons.includes(season)) start(season);
     });
     markReady(this);
   }
@@ -108,18 +115,26 @@ export class Cottage extends Phaser.Scene {
     });
   }
 
-  /** The Almanac (GDD §13): every entry's goal and what it adds to the pools, done ones lit. */
-  private toggleAlmanac(p: Profile) {
-    if (this.almanac) {
-      this.almanac.destroy();
-      this.almanac = null;
-      return;
-    }
+  private closeOverlay() {
+    this.overlay?.destroy();
+    this.overlay = null;
+  }
+
+  /** A panel over the room with a title and a Close button. */
+  private openOverlay(title: string): Phaser.GameObjects.Container {
+    this.closeOverlay();
     const c = this.add.container(0, 0);
-    this.almanac = c;
+    this.overlay = c;
     c.add(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.6).setOrigin(0).setInteractive());
     c.add(panel(this, 20, 24, 600, 312, 'k', 0.96, 'n'));
-    c.add(pixelText(this, 320, 32, 'The Almanac', { size: 12, color: 'y', align: 'center' }).setOrigin(0.5, 0));
+    c.add(pixelText(this, 320, 32, title, { size: 12, color: 'y', align: 'center' }).setOrigin(0.5, 0));
+    c.add(button(this, 320, 324, 'Close', () => this.closeOverlay(), { w: 60 }));
+    return c;
+  }
+
+  /** The Almanac (GDD §13): every entry's goal and what it adds to the pools, done ones lit. */
+  private openAlmanac(p: Profile) {
+    const c = this.openOverlay('The Almanac');
     c.add(pixelText(this, 320, 48, `${p.almanac.length} of ${codex.almanac.size} done. Meet a goal in any run, won or lost, and what it adds joins the pools for good.`, { size: 7, color: 'a', align: 'center' }).setOrigin(0.5, 0));
     const rows = Math.ceil(codex.almanac.size / 2);
     [...codex.almanac.values()].forEach((e, i) => {
@@ -131,6 +146,34 @@ export class Cottage extends Phaser.Scene {
       c.add(pixelText(this, x + 280, y + 4, e.goal, { size: 7, color: done ? 'L' : 'a', align: 'right' }).setOrigin(1, 0));
       c.add(pixelText(this, x + 6, y + 18, `Adds ${e.unlocks.map(unlockName).join(', ')}`, { size: 6, color: done ? 'w' : 'S', wrap: 274 }));
     });
-    c.add(button(this, 320, 324, 'Close', () => this.toggleAlmanac(p), { w: 60 }));
+  }
+
+  /** The Codex (GDD §13): every card, recipe, familiar, relic and customer, a tab each, hidden until met in a run. */
+  private openCodex(p: Profile, tab: CodexTable = 'ingredients', page = 0) {
+    const PER_PAGE = 15;
+    const entries = codexEntries(tab, p.codex);
+    const pages = Math.ceil(entries.length / PER_PAGE);
+    page = Math.max(0, Math.min(pages - 1, page));
+    const c = this.openOverlay('The Codex');
+    const met = entries.filter((e) => e.met).length;
+    c.add(pixelText(this, 320, 48, `${met} of ${entries.length} met. Everything you meet in a run is written here.${pages > 1 ? `  Page ${page + 1} of ${pages}` : ''}`, { size: 7, color: 'a', align: 'center' }).setOrigin(0.5, 0));
+    CODEX_TABS.forEach((t, i) => {
+      c.add(button(this, 320 + (i - 2.5) * 96, 66, t.name, () => this.openCodex(p, t.id), { w: 88, color: t.id === tab ? 'y' : 'W' }));
+    });
+    entries.slice(page * PER_PAGE, (page + 1) * PER_PAGE).forEach((e, i) => {
+      const x = 30 + (i % 3) * 196;
+      const y = 82 + Math.floor(i / 3) * 44;
+      c.add(this.add.rectangle(x, y, 192, 40, hex(e.met ? 'b' : 'q'), e.met ? 0.6 : 0.4).setOrigin(0));
+      c.add(pixelText(this, x + 6, y + 3, e.name, { size: 8, color: e.met ? 'W' : 'S' }));
+      c.add(pixelText(this, x + 6, y + 14, e.sub, { size: 6, color: e.met ? 'y' : 'S' }));
+      if (e.text) c.add(pixelText(this, x + 6, y + 23, e.text, { size: 6, color: 'w', wrap: 180 }));
+    });
+    if (pages > 1) {
+      const prev = button(this, 230, 324, 'Prev', () => this.openCodex(p, tab, page - 1), { w: 60 });
+      const next = button(this, 410, 324, 'Next', () => this.openCodex(p, tab, page + 1), { w: 60 });
+      prev.setEnabled(page > 0);
+      next.setEnabled(page < pages - 1);
+      c.add([prev, next]);
+    }
   }
 }
