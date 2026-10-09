@@ -71,6 +71,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - Reputation and cottage perks (the out-of-run home); Almanac achievements that unlock pool content, relics included (about 6 to start).
 - Six regulars with hearts, Ink dialogue, heart-milestone beats and unlocks.
 - Witch and cauldron selection; unlock flow.
+- Winter tuned into the win-rate band (the end-of-M3 bot wins 8.7%; see balance-m3.md).
 
 **Accept:** a second run feels different from the first because of unlocks and regulars' stories.
 
