@@ -1,4 +1,5 @@
 import { codex } from '../codex';
+import { almanacMet } from './almanac';
 import { SEASONS, type Season } from './calendar';
 import { WEEKS } from './rules';
 import { RUN_VERSION, type RunState } from './state';
@@ -6,7 +7,7 @@ import { RUN_VERSION, type RunState } from './state';
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 2;
+export const PROFILE_VERSION = 3;
 
 export type Profile = {
   version: typeof PROFILE_VERSION;
@@ -25,6 +26,8 @@ export type Profile = {
   reputationEarned: number;
   /** Cottage perks bought (codex `perks`). */
   perks: string[];
+  /** Almanac entries done (codex `almanac`), in the order they were met. */
+  almanac: string[];
 };
 
 export function newProfile(): Profile {
@@ -39,6 +42,7 @@ export function newProfile(): Profile {
     reputation: 0,
     reputationEarned: 0,
     perks: [],
+    almanac: [],
   };
 }
 
@@ -52,6 +56,8 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   0: (p) => ({ ...newProfile(), tutorialDone: p.tutorialDone === true }),
   // 1 → 2: Reputation and perks, starting from none.
   1: (p) => ({ ...p, reputation: 0, reputationEarned: 0, perks: [] }),
+  // 2 → 3: the Almanac, with nothing done.
+  2: (p) => ({ ...p, almanac: [] }),
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -85,6 +91,7 @@ function sanitize(p: Raw): Profile {
     reputation: count(p.reputation),
     reputationEarned: count(p.reputationEarned),
     perks: Array.isArray(p.perks) ? [...codex.perks.keys()].filter((id) => (p.perks as unknown[]).includes(id)) : [],
+    almanac: Array.isArray(p.almanac) ? [...new Set(p.almanac)].filter((id): id is string => typeof id === 'string' && codex.almanac.has(id)) : [],
   };
 }
 
@@ -110,25 +117,28 @@ export type RunOutcome = {
   opened: Season | null;
   /** This run completed a Year (a win in Winter). */
   yearDone: boolean;
+  /** Almanac entries this run met for the first time. */
+  almanac: string[];
 };
 
 /** Count a finished run. A run still going, or one already counted, changes nothing. */
 export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'>): RunOutcome {
-  const same = { profile, reputation: 0, opened: null, yearDone: false };
+  const same = { profile, reputation: 0, opened: null, yearDone: false, almanac: [] };
   if ((s.phase !== 'victory' && s.phase !== 'game-over') || profile.lastRun === s.seed) return same;
   const reputation = reputationFor(s);
+  const almanac = almanacMet(profile.almanac, s);
   const p: Profile = {
     ...profile, seasons: [...profile.seasons], wins: { ...profile.wins }, perks: [...profile.perks], runs: profile.runs + 1, lastRun: s.seed,
-    reputation: profile.reputation + reputation, reputationEarned: profile.reputationEarned + reputation,
+    reputation: profile.reputation + reputation, reputationEarned: profile.reputationEarned + reputation, almanac: [...profile.almanac, ...almanac],
   };
-  if (s.phase === 'game-over') return { ...same, profile: p, reputation };
+  if (s.phase === 'game-over') return { ...same, profile: p, reputation, almanac };
   p.wins[s.season]++;
   const next = nextSeason(s.season);
   const opened = next && !p.seasons.includes(next) ? next : null;
   if (opened) p.seasons = SEASONS.filter((x) => x === opened || p.seasons.includes(x));
   const yearDone = s.season === 'winter';
   if (yearDone) p.years++;
-  return { profile: p, reputation, opened, yearDone };
+  return { profile: p, reputation, opened, yearDone, almanac };
 }
 
 /** Why this perk can't be bought now, or null. */
@@ -153,6 +163,13 @@ export function buyPerk(p: Profile, id: string): Profile {
 export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
   // 10 → 11: run stats for Reputation. A run saved before them starts counting from now.
   10: (s) => ({ ...s, stats: { ordersFilled: 0, potionsSold: 0 } }),
+  // 11 → 12: the stats Almanac goals read. Rent paid and holdings come from the run so far; the best brew starts from now.
+  11: (s) => {
+    const stats = (s.stats ?? {}) as Raw;
+    const held = (k: string) => (Array.isArray(s[k]) ? (s[k] as unknown[]).length : 0);
+    const week = typeof s.week === 'number' ? s.week : 1;
+    return { ...s, stats: { ...stats, rentsPaid: Math.max(0, week - 1), bestTier: -1, mostFamiliars: held('familiars'), mostRelics: held('relics'), cursesTaken: held('curses') } };
+  },
 };
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */

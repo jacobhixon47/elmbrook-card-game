@@ -129,10 +129,21 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 11;
+export const RUN_VERSION = 12;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
-export type RunStats = { ordersFilled: number; potionsSold: number };
+/** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
+export type RunStats = {
+  ordersFilled: number;
+  potionsSold: number;
+  rentsPaid: number;
+  /** The best tier brewed, as an index into TIERS; -1 before the first brew. */
+  bestTier: number;
+  /** The most familiars and relics held at once. */
+  mostFamiliars: number;
+  mostRelics: number;
+  cursesTaken: number;
+};
 
 /** Plain, JSON-serialisable run state. Fixtures and saves are exactly this shape. */
 export type RunState = {

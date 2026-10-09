@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk } from './schema';
+import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -189,14 +189,15 @@ export const familiars: In<typeof Familiar>[] = [
 ];
 
 // Relics and curses (GDD §9, balance tables). Numbers live with their rules in core/relics.ts.
+// Relics (GDD §13): a first run draws from the eight starters; the Almanac adds the rest.
 export const relics: In<typeof Relic>[] = [
   { id: 'copper-ladle', name: 'Copper Ladle', tier: 1, text: '+1 Harmony on every brew of 3 ingredients.' },
   { id: 'guild-seal', name: 'Guild Seal', tier: 1, text: 'Rent -10%.' },
-  { id: 'lucky-horseshoe', name: 'Lucky Horseshoe', tier: 1, text: 'Reward picks offer 4 cards instead of 3.' },
-  { id: 'pressed-flower', name: 'Pressed Flower', tier: 1, text: 'Flower ingredients +2 Potency.' },
+  { id: 'lucky-horseshoe', name: 'Lucky Horseshoe', tier: 1, text: 'Reward picks offer 4 cards instead of 3.', pool: 'unlock' },
+  { id: 'pressed-flower', name: 'Pressed Flower', tier: 1, text: 'Flower ingredients +2 Potency.', pool: 'unlock' },
   { id: 'apprentice-ledger', name: 'Apprentice\'s Ledger', tier: 1, text: '+1 gold per order filled.' },
-  { id: 'silver-bell', name: 'Silver Bell', tier: 1, text: '+1 heart on every delivery to a regular.' },
-  { id: 'old-almanac', name: 'Old Almanac', tier: 2, text: '+1 Discard on Rain and Fog days.' },
+  { id: 'silver-bell', name: 'Silver Bell', tier: 1, text: '+1 heart on every delivery to a regular.', pool: 'unlock' },
+  { id: 'old-almanac', name: 'Old Almanac', tier: 2, text: '+1 Discard on Rain and Fog days.', pool: 'unlock' },
   { id: 'spare-satchel', name: 'Spare Satchel', tier: 2, text: '+1 hand size.' },
   { id: 'witchs-hatpin', name: 'Witch\'s Hatpin', tier: 2, text: 'Experiments brew at full quality.' },
   { id: 'iron-lid', name: 'Iron Lid', tier: 2, text: 'The first failed brew each day makes no Sludge.' },
@@ -334,4 +335,22 @@ export const perks: In<typeof Perk>[] = [
   { id: 'deep-shelf', name: 'A Deeper Shelf', text: 'Your Shelf starts with 5 slots instead of 4.', cost: 20, start: { shelf: 1 } },
   { id: 'old-spoon', name: "Gran's Spoon", text: 'Start every run with a Stir in your deck.', cost: 25, start: { cards: ['stir'] } },
   { id: 'spare-perch', name: 'A Spare Perch', text: 'Room for one more familiar.', cost: 35, start: { familiarSlots: 1 } },
+];
+
+// The Almanac (GDD §13): goals met in any run, each adding content to the pools for good.
+// Goals are checked in core/almanac.ts. Together they unlock every `pool: 'unlock'` card, recipe, familiar and relic.
+export const almanac: In<typeof AlmanacEntry>[] = [
+  { id: 'open-for-business', name: 'Open for Business', goal: 'Fill 25 orders in one run.', unlocks: ['lavender', 'clover', 'magpie'] },
+  { id: 'paid-up', name: 'Paid Up', goal: 'Pay the rent three weeks running.', unlocks: ['ginger-root', 'sea-salt', 'bonfire-cordial'] },
+  { id: 'superb-work', name: 'Superb Work', goal: 'Brew a Superb potion.', unlocks: ['mountain-salve', 'decant'] },
+  { id: 'masterwork', name: 'A Masterwork', goal: 'Brew a Masterwork potion.', unlocks: ['elmbrook-panacea', 'old-hound'] },
+  { id: 'legendary', name: 'The Stuff of Legend', goal: 'Brew a Legendary potion.', unlocks: ['starlight-elixir', 'old-almanac'] },
+  { id: 'shopkeeper', name: 'Shopkeeper', goal: 'Sell 12 potions from your Shelf in one run.', unlocks: ['geode', 'lucky-horseshoe'] },
+  { id: 'menagerie', name: 'Menagerie', goal: 'Keep 3 familiars at once.', unlocks: ['fox', 'silver-bell'] },
+  { id: 'collector', name: 'Collector', goal: 'Hold 4 relics at once.', unlocks: ['pressed-flower', 'grimoire-page'] },
+  { id: 'nameless-deal', name: 'A Nameless Deal', goal: 'Take a Curse at the Name-Taker.', unlocks: ['fae-dust', 'cracked-mirror', 'moth-swarm', 'black-cauldron'] },
+  { id: 'spring-won', name: 'Spring in Elmbrook', goal: 'Win Spring.', unlocks: ['kelpie-pearl', 'fetch-draught'] },
+  { id: 'summer-won', name: 'Summer in Elmbrook', goal: 'Win Summer.', unlocks: ['harvest-gourd', 'heartstone'] },
+  { id: 'autumn-won', name: 'Autumn in Elmbrook', goal: 'Win Autumn.', unlocks: ['moonpetal', 'taste-of-memory'] },
+  { id: 'winter-won', name: 'Winter in Elmbrook', goal: 'Win Winter.', unlocks: ['second-wind', 'hob'] },
 ];

@@ -5,7 +5,7 @@ import {
   allCards, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
-  type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome,
+  type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome, almanacUnlocks,
 } from '../core';
 import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
@@ -19,7 +19,7 @@ import { createCard } from '../view/card';
 import {
   BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, orderNeeds, orderTerms, recipeName,
   requestText, TIER_NAME,
-  cap,
+  cap, listOf,
 } from '../view/describe';
 import { drawGrimoire, type GrimoireTab } from '../view/grimoire';
 import { stages } from '../view/guide';
@@ -124,7 +124,7 @@ export class Run extends Phaser.Scene {
       this.tutorial = fixture ? null : wantsTutorial() ? new TutorialProgress() : null;
       const seed = fixture?.seed ?? params.get('seed') ?? (this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`);
       const season = data.season ?? (fixture?.season as Season | undefined) ?? viewOverrides().season;
-      store.dispatch({ type: 'startRun', seed, witch: 'hedge-witch', ...(season ? { season } : {}), ...this.perks(!!fixture) });
+      store.dispatch({ type: 'startRun', seed, witch: 'hedge-witch', ...(season ? { season } : {}), ...this.fromProfile(!!fixture) });
       // `today` sets the weather of the day the fixture starts on and of the day its steps end on.
       const today = () => fixture?.today && store.dispatch({ type: 'debug', op: 'setWeather', weather: fixture.today as Weather });
       today();
@@ -1441,14 +1441,19 @@ export class Run extends Phaser.Scene {
 
   private newRun(season: Season = 'spring') {
     this.tutorial = wantsTutorial() ? new TutorialProgress() : null;
-    store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, witch: 'hedge-witch', season, ...this.perks(this.fixtureRun) });
+    store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, witch: 'hedge-witch', season, ...this.fromProfile(this.fixtureRun) });
     this.scene.restart({ resume: true });
   }
 
-  /** Cottage perks for a new run: none in the tutorial, which plays a fixed deal, or in fixtures. */
-  private perks(fixture: boolean): { perks?: string[] } {
-    const perks = fixture || this.tutorial ? [] : loadProfile().perks;
-    return perks.length ? { perks } : {};
+  /**
+   * What the profile brings to a new run: cottage perks, and what the Almanac added to the pools.
+   * Neither in the tutorial, which plays a fixed deal, or in fixtures.
+   */
+  private fromProfile(fixture: boolean): { perks?: string[]; unlocks?: string[] } {
+    if (fixture || this.tutorial) return {};
+    const p = loadProfile();
+    const unlocks = almanacUnlocks(p.almanac);
+    return { ...(p.perks.length ? { perks: p.perks } : {}), ...(unlocks.length ? { unlocks } : {}) };
   }
 
   /** What the run that just ended changed in the profile. A fixture shows it against its own `profile`. */
@@ -1460,10 +1465,14 @@ export class Run extends Phaser.Scene {
 
   /** Play the same season again, or go home to the cottage to choose another. */
   private endButtons(s: RunState, again: string) {
-    const rep = this.endOutcome(s).reputation;
-    if (rep > 0) this.text(320, 150, `+${rep} Reputation to spend at your cottage`, { size: 8, color: 'Y', stroke: 'k', align: 'center' }).setOrigin(0.5);
-    this.add2(button(this, 270, 180, again, () => this.newRun(s.season), { w: 80, color: 'Y' }));
-    this.add2(button(this, 370, 180, 'Home', () => this.scene.start('Cottage', {}), { w: 80 }));
+    const out = this.endOutcome(s);
+    if (out.reputation > 0) this.text(320, 146, `+${out.reputation} Reputation to spend at your cottage`, { size: 8, color: 'Y', stroke: 'k', align: 'center' }).setOrigin(0.5);
+    if (out.almanac.length) {
+      const names = out.almanac.map((id) => codex.almanac.get(id)!.name);
+      this.text(320, 160, `New in your Almanac: ${listOf(names)}. More joins the pools next run.`, { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);
+    }
+    this.add2(button(this, 270, 190, again, () => this.newRun(s.season), { w: 80, color: 'Y' }));
+    this.add2(button(this, 370, 190, 'Home', () => this.scene.start('Cottage', {}), { w: 80 }));
   }
 
   /**

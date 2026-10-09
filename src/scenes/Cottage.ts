@@ -4,6 +4,7 @@ import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
 import { migrateProfile, perkBlocked, SEASONS, type Profile, type Season } from '../core';
+import { unlockName } from '../view/describe';
 import { buyPerkNow, loadProfile } from '../profile';
 import { cottageBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
@@ -12,15 +13,18 @@ import { pixelText } from '../view/text';
 import { button, panel } from '../view/ui';
 
 /**
- * Your cottage, the home between runs (GDD §13): where you set out for a season, and where
- * Reputation will buy perks. Every run starts and ends here once the tutorial is done.
+ * Your cottage, the home between runs (GDD §13): where you set out for a season, spend Reputation on
+ * perks and read the Almanac. Every run starts and ends here once the tutorial is done.
  */
 export class Cottage extends Phaser.Scene {
   constructor() {
     super('Cottage');
   }
 
+  private almanac: Phaser.GameObjects.Container | null = null;
+
   create(data: { fixture?: Fixture | null } = {}) {
+    this.almanac = null;
     pixelCamera(this);
     const bg = cottageBackdrop();
     this.add.image(0, 0, bg.texture).setOrigin(0);
@@ -40,10 +44,19 @@ export class Cottage extends Phaser.Scene {
       this.scene.restart({});
     });
 
+    const done = profile.almanac.length;
+    this.add.existing(button(this, 320, 300, `Almanac ${done}/${codex.almanac.size}`, () => this.toggleAlmanac(profile), { w: 96, color: 'y' }));
+    if (data.fixture?.ui?.almanac) this.toggleAlmanac(profile);
+
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (this.almanac) this.toggleAlmanac(profile);
+        else this.scene.start('Title', {});
+        return;
+      }
+      if (e.key === 'a' || e.key === 'A') return this.toggleAlmanac(profile);
       const season = SEASONS[Number(e.key) - 1];
-      if (season && profile.seasons.includes(season)) start(season);
-      if (e.key === 'Escape') this.scene.start('Title', {});
+      if (season && !this.almanac && profile.seasons.includes(season)) start(season);
     });
     markReady(this);
   }
@@ -93,5 +106,31 @@ export class Cottage extends Phaser.Scene {
       const b = this.add.existing(button(this, x + 136, ty + 12, `${perk.cost}`, () => buy?.(perk.id), { w: 40, color: 'y' }));
       if (why) b.setEnabled(false);
     });
+  }
+
+  /** The Almanac (GDD §13): every entry's goal and what it adds to the pools, done ones lit. */
+  private toggleAlmanac(p: Profile) {
+    if (this.almanac) {
+      this.almanac.destroy();
+      this.almanac = null;
+      return;
+    }
+    const c = this.add.container(0, 0);
+    this.almanac = c;
+    c.add(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.6).setOrigin(0).setInteractive());
+    c.add(panel(this, 20, 24, 600, 312, 'k', 0.96, 'n'));
+    c.add(pixelText(this, 320, 32, 'The Almanac', { size: 12, color: 'y', align: 'center' }).setOrigin(0.5, 0));
+    c.add(pixelText(this, 320, 48, `${p.almanac.length} of ${codex.almanac.size} done. Meet a goal in any run, won or lost, and what it adds joins the pools for good.`, { size: 7, color: 'a', align: 'center' }).setOrigin(0.5, 0));
+    const rows = Math.ceil(codex.almanac.size / 2);
+    [...codex.almanac.values()].forEach((e, i) => {
+      const x = 30 + Math.floor(i / rows) * 292;
+      const y = 64 + (i % rows) * 36;
+      const done = p.almanac.includes(e.id);
+      c.add(this.add.rectangle(x, y, 286, 33, hex(done ? 'g' : 'b'), done ? 0.6 : 0.4).setOrigin(0));
+      c.add(pixelText(this, x + 6, y + 3, done ? `${e.name} · done` : e.name, { size: 8, color: done ? 'L' : 'W' }));
+      c.add(pixelText(this, x + 280, y + 4, e.goal, { size: 7, color: done ? 'L' : 'a', align: 'right' }).setOrigin(1, 0));
+      c.add(pixelText(this, x + 6, y + 18, `Adds ${e.unlocks.map(unlockName).join(', ')}`, { size: 6, color: done ? 'w' : 'S', wrap: 274 }));
+    });
+    c.add(button(this, 320, 324, 'Close', () => this.toggleAlmanac(p), { w: 60 }));
   }
 }

@@ -48,6 +48,21 @@ Perks don't change a run without them: Spring and Winter sim the same as before 
 
 Random bot with all perks: 0 errors in 300 runs. A won Spring run earns about 55 Reputation and a run lost in week 4 about 35, so all four perks (95) take two or three runs. That is quick on purpose for now; the descending season targets (milestones, M4) will be tuned with perks in.
 
+## Almanac relic pool
+
+A first run now draws from eight starter relics; Lucky Horseshoe, Silver Bell, Pressed Flower and Old Almanac join through the Almanac. Locking Spare Satchel and Witch's Hatpin instead was tried first and cost Spring 9 points (36.1% to 27.5%), so the strongest relics stay starters: unlocks add variety, perks add power. Greedy, 1,000 runs a season, no perks or unlocks:
+
+| | main | starters only |
+|---|---|---|
+| Spring | 36.1% | 38.3% |
+| Summer | 30.0% | 33.1% |
+| Autumn | 32.3% | 36.4% |
+| Winter | 26.6% | 31.2% |
+
+A smaller pool hands out the strong relics more often (2.3 to 2.8 relics held per run), so every season gains 2 to 5 points. With every Almanac entry done (`--unlocks all`, which now also unlocks the four familiars and four relics) Spring is 35.9%. The random bot had 0 errors in 300 runs. The season-ramp pass retunes all of this with the unlocks and perks a player carries.
+
+How often the greedy bot meets each goal in one run (300 runs a season, before the order and Shelf goals were raised to 25 and 12): Superb 100%, Masterwork about 88%, Legendary about 41%, rent three weeks about 80%, a Name-Taker Curse about 69%, 3 familiars about 27%, 4 relics about 11%, a win 19 to 30%. The bot is a strong brewer, so a person's first run should meet fewer; pacing gets a human playtest.
+
 ## winter, after
 
 ```
