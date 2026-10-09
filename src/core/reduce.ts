@@ -6,7 +6,7 @@ import { changeGold, draw, drawToHandSize, gainCard, Reject, reject, shuffled, t
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
 import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
-import { addModifier, drawOnBrewOf, MODIFIER_RULES, enchant, heartDeltaOf, isAged, payGilded, temper } from './modifiers';
+import { addModifier, drawOnBrewOf, MODIFIER_RULES, enchant, heartDeltaOf, isAged, temper } from './modifiers';
 import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
 import { atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, stallStock, swapForCard, takeDeal, weave } from './market';
 import { dayAllowance, gainRelic, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
@@ -214,7 +214,6 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
   for (const c of used) delete c.aged;
   s.discardPile.push(...used);
   s.lastBrew = used.map((c) => c.card);
-  payGilded(ctx, used);
   // A Grimoire Page waits for the next Experiment; every other tincture lasts one brew.
   const experiment = preview.kind === 'potion' && !preview.known;
   s.pending = { ...freshPending(), fullExperiment: s.pending.fullExperiment && !experiment };

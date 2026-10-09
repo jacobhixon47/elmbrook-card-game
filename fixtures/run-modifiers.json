@@ -1,1 +1,1 @@
-{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop", { "modify": [0, "moonlit"] }, { "modify": [1, "aged"] }, { "modify": [2, "gilded"] }, { "modify": [3, "blessed"] }, { "modify": [5, "cursed"] }], "ui": { "inspect": 3 } }
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop", { "modify": [0, "moonlit"] }, { "modify": [1, "aged"] }, { "modify": [3, "blessed"] }, { "modify": [5, "cursed"] }], "ui": { "inspect": 3 } }

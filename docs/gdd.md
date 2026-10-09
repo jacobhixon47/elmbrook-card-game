@@ -218,17 +218,16 @@ Some ask for a target: **Infuse** (a hand ingredient gains +2 Potency for the ru
 
 Balatro-style editions applied by events/vendors: **Moonlit** (+Harmony), **Aged** (+Potency each day it's in the deck, resets on brew), **Blessed** (retrigger), **Cursed** (big effect + drawback, from Night Market deals).
 
-*In the build (M3 part 5):* the five modifiers from the balance tables are in the codex (`modifiers`), with their numbers in `core/modifiers.ts`. A card holds one, and only ingredients take them (a Tincture has no Potency to double). Each shows as a coloured frame and a corner badge on the card, and its hover text says what it does.
+*In the build (M3 part 5):* four of the balance tables' five modifiers are in the codex (`modifiers`), with their numbers in `core/modifiers.ts`. A card holds one, and only ingredients take them (a Tincture has no Potency to double). Each shows as a coloured frame and a corner badge on the card, and its hover text says what it does.
 
 | Modifier | In the build | Creek Bank price |
 |---|---|---|
 | Moonlit | +2 Harmony when brewed. | 6g |
 | Aged | +2 Potency each day in the deck, reset when brewed. Not offered for a card that is already Aged (Amber Sap, Lunar Salt, whose own Aged gains 1 a day). | 3g |
-| Gilded | +3 gold when brewed, Sludge included. | 5g |
 | Blessed | Retrigger: the card's own Potency (printed, Infused or tempered, and Aged days) counts again and its scoring effect runs again. Its hearts and draws on brewing count twice too. | 12g |
 | Cursed | The card's own Potency counts again. -1 heart with the customer it's delivered to. | not sold |
 
-Balance pass (Oct 9, from the balance tables): Aged went from +1 a day for 5g to +2 for 3g and Gilded from +2 gold for 6g to +3 for 5g, because the sim bot never chose them; Moonlit and Blessed stay. Forced to buy one modifier every visit, the bot wins more per gold with Blessed than Moonlit, so Blessed isn't overpriced.
+Balance pass (Oct 9, from the balance tables): Aged went from +1 a day for 5g to +2 for 3g because a bot forced to buy it did worse than with the free temper; Moonlit and Blessed stay. Gilded (+gold when brewed, from the balance tables) is cut: forced to buy it every visit, the bot did no better than with the free temper even at +3 gold for 5, so it was a choice that never paid. Forced to buy one modifier every visit, the bot wins more per gold with Blessed than Moonlit, so Blessed isn't overpriced.
 
 Moonlit, Blessed and Cursed score at step 3 (§6.3), after the tinctures and before familiars, in slot order. Modifiers come from the Creek Bank (§7), the Name-Taker's Cursed card (§9) and the Fortune Tent's Wheel of Fortune (§9). The Shrine Blessing and the Moonlit Walk join with dusk events.
 

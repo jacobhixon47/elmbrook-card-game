@@ -144,14 +144,12 @@ function cardValue(s: RunState, id: string): number {
 // Rough quality one brew gains from each Creek option, with a typical brew of Potency 14 and Harmony 4.
 const BREW_POTENCY = 14;
 const BREW_HARMONY = 4;
-const GOLD_QUALITY = 3;
 function creekGain(card: CardInstance, mod: ModifierId | 'temper'): number {
   switch (mod) {
     case 'temper': return MODIFIER_RULES.temperPotency * BREW_HARMONY;
     case 'moonlit': return MODIFIER_RULES.moonlitHarmony * BREW_POTENCY;
     case 'blessed': return cardPotency(card) * BREW_HARMONY + (effectsOf(card.card).length ? 2 * BREW_POTENCY : 0);
     case 'aged': return 2 * 2 * BREW_HARMONY; // about two days between brews
-    case 'gilded': return MODIFIER_RULES.gildedGold * GOLD_QUALITY;
     default: return 0;
   }
 }
@@ -476,7 +474,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'swapForCard', index: roll(3), uids: [any(deckUids) ?? 0, any(deckUids) ?? 0] },
     { type: 'takeDeal', index: roll(3), take: roll(2) ? 'relic' : 'card' },
     { type: 'temper', uid: any(deckUids) ?? 0 },
-    { type: 'enchant', uid: any(deckUids) ?? 0, modifier: any(['moonlit', 'aged', 'gilded', 'blessed', 'cursed'] as const)! },
+    { type: 'enchant', uid: any(deckUids) ?? 0, modifier: any(['moonlit', 'aged', 'blessed', 'cursed'] as const)! },
     { type: 'liftCurse', curse: any(s.curses) ?? 'nameless' },
   );
   // Weight away from ending the day so random runs actually brew.

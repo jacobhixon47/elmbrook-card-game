@@ -55,9 +55,9 @@ function visit(s: RunState, stall: string): RunState {
 }
 
 describe('modifiers in the codex', () => {
-  it('has the five modifiers from the balance tables, Cursed not for sale', () => {
+  it('has the four modifiers from the balance tables, Cursed not for sale', () => {
     expect([...codex.modifiers.values()].map((m) => [m.id, m.price])).toEqual([
-      ['moonlit', 6], ['aged', 3], ['gilded', 5], ['blessed', 12], ['cursed', null],
+      ['moonlit', 6], ['aged', 3], ['blessed', 12], ['cursed', null],
     ]);
   });
 
@@ -105,11 +105,6 @@ describe('scoring with modifiers', () => {
     expect(drawOnBrewOf([card('stormseed', 'blessed'), card('fae-dust')])).toBe(5);
   });
 
-  it('Gilded pays 2 gold when brewed', () => {
-    const r = deliver(brewing('modifiers'), ['elmroot', 'creekwater'], ['gilded', 'gilded']);
-    expect(ofType(r.events, 'goldChanged').filter((e) => e.reason === 'modifier').map((e) => e.delta)).toEqual([2 * MODIFIER_RULES.gildedGold]);
-  });
-
   it('Aged gains 2 Potency each day in the deck (Amber Sap\'s own Aged, 1) and resets when brewed', () => {
     let k = brewing('modifiers');
     const target = k.drawPile.find((c) => c.card === 'elmroot')!;
@@ -129,7 +124,7 @@ describe('who can take a modifier', () => {
     expect(no(s, { type: 'debug', op: 'setModifier', uid: stir!, modifier: 'moonlit' })).toMatch(/only ingredients/);
     const r = ok(s, { type: 'debug', op: 'setModifier', uid: sap!, modifier: 'blessed' });
     expect(ofType(r.events, 'cardModified')).toEqual([{ type: 'cardModified', uid: sap, card: 'amber-sap', modifier: 'blessed', by: 'debug' }]);
-    expect(no(r.state, { type: 'debug', op: 'setModifier', uid: sap!, modifier: 'gilded' })).toMatch(/already Blessed/);
+    expect(no(r.state, { type: 'debug', op: 'setModifier', uid: sap!, modifier: 'moonlit' })).toMatch(/already Blessed/);
   });
 });
 
@@ -218,7 +213,7 @@ describe('Wheel of Fortune', () => {
 
   it('pays its gold when no card can take it', () => {
     const s = visit(market(2, 'modifiers', 20000), 'fortune-tent');
-    for (const c of allCards(s)) if (codex.ingredients.has(c.card)) c.modifier = 'gilded';
+    for (const c of allCards(s)) if (codex.ingredients.has(c.card)) c.modifier = 'moonlit';
     const r = spin(s);
     expect(ofType(r.events, 'cardModified')).toEqual([]);
     expect(ofType(r.events, 'goldChanged').at(-1)).toMatchObject({ delta: 8, reason: 'fortune' });
