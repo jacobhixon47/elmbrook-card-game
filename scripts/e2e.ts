@@ -3,6 +3,7 @@
 // error, or if the run gets stuck.   pnpm e2e   (TRACE=1 prints each action)
 import { createServer } from 'vite';
 import type { Action, RunState } from '../src/core';
+import { codex } from '../src/codex';
 import { greedyAction } from '../src/sim/bot';
 import { launchBrowser } from './browser';
 const server = await createServer({ server: { port: 0 }, logLevel: 'error' });
@@ -105,6 +106,14 @@ while (steps++ < 400 && !(s.week === 2 && s.day === 2) && s.phase !== 'game-over
       break;
     }
     case 'chooseErrand': { const o = s.offer as { options: string[] }; await click(220 + o.options.indexOf(a.errand) * 200, 150); break; }
+    case 'chooseEvent': {
+      // A choice that asks for a card goes through the hook; the rest are tile clicks.
+      const o = s.offer as { event: string };
+      const n = codex.duskEvents.get(o.event)!.choices.length;
+      if (a.uid === undefined) await click(320 + (a.index - (n - 1) / 2) * 150, 134);
+      else await hook(a);
+      break;
+    }
     default: await hook(a);
   }
   // Give the action time to land before calling the run stuck.

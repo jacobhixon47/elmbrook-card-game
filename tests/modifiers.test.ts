@@ -136,7 +136,7 @@ describe('the Creek Bank', () => {
       for (const a of [{ type: 'endDay' }, { type: 'skipReward' }] as const) s = ok(s, a).state;
       if (s.offer?.kind === 'errands') s.offer.options.forEach((o) => seen.add(o));
     }
-    expect([...seen].sort()).toEqual(['creek', 'forage', 'guild', 'hearth', 'market']);
+    expect([...seen].sort()).toEqual(['creek', 'event', 'forage', 'guild', 'hearth', 'market']);
   });
 
   it('opens from the errand pick and lets you leave', () => {

@@ -2,6 +2,7 @@ import { codex } from '../codex';
 import type { Pool } from '../codex/schema';
 import { activeEvents } from './calendar';
 import { guildOpen, offerCommissions } from './commissions';
+import { openEvent, rollEvent } from './dusk-events';
 import { pickWeighted, shuffled, type Ctx } from './ctx';
 import { familiarPrice, rollFamiliars } from './familiars';
 import { rewardCount, rewardWeights } from './relics';
@@ -65,7 +66,7 @@ export function offerReward(ctx: Ctx): void {
   ctx.ev.push({ type: 'rewardOffered', cards });
 }
 
-const ERRANDS: readonly Errand[] = ['market', 'forage', 'creek', 'guild', 'hearth'];
+const ERRANDS: readonly Errand[] = ['market', 'forage', 'creek', 'guild', 'hearth', 'event'];
 
 export function offerErrands(ctx: Ctx): void {
   // The Guild Hall only comes up with a commission to give and room to take it.
@@ -107,6 +108,9 @@ export function openErrand(ctx: Ctx, errand: Errand): void {
       return;
     case 'hearth':
       s.offer = { kind: 'hearth', removed: false };
+      return;
+    case 'event':
+      openEvent(ctx, rollEvent(ctx));
       return;
   }
 }

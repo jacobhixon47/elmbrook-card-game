@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, BLACK_MARKET, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
   type NameTakerDeal, type StockItem, type Weather,
@@ -41,7 +41,9 @@ type Mode =
   /** A familiar's card, to sell it or move it. */
   | { kind: 'familiar'; index: number }
   /** At the Creek Bank: tempering, or which modifier to buy. */
-  | { kind: 'creek'; pick: CreekPick };
+  | { kind: 'creek'; pick: CreekPick }
+  /** At a dusk event, choosing the card for this choice (the Shrine Blessing). */
+  | { kind: 'event-card'; choice: number };
 
 type CreekPick = 'temper' | ModifierId;
 
@@ -131,6 +133,7 @@ export class Run extends Phaser.Scene {
     }
     if (fixture?.ui?.familiar !== undefined) this.mode = { kind: 'familiar', index: fixture.ui.familiar };
     if (fixture?.ui?.creek) this.mode = { kind: 'creek', pick: fixture.ui.creek };
+    if (fixture?.ui?.eventCard !== undefined) this.mode = { kind: 'event-card', choice: fixture.ui.eventCard };
     if (fixture?.ui?.grimoire) this.book = fixture.ui.grimoire;
     if (fixture?.ui?.tutorial) {
       // Show one tip: everything before it counts as done.
@@ -1032,6 +1035,8 @@ export class Run extends Phaser.Scene {
         return this.drawCreek(s, offer, title);
       case 'guild':
         return this.drawGuild(s, offer, title);
+      case 'event':
+        return this.drawEvent(s, offer, title);
       case 'gift': {
         const [head, sub] = GIFT_TITLE[offer.source];
         const where = offer.into === 'satchel' ? 'It goes in your Night Satchel, which joins your deck only on Night Shifts.'
@@ -1050,6 +1055,54 @@ export class Run extends Phaser.Scene {
       case 'night-market':
         return this.drawNightMarket(s, offer, title);
     }
+  }
+
+  /** A dusk event (GDD §7): one choice, then home. */
+  private drawEvent(s: RunState, offer: Extract<Offer, { kind: 'event' }>, title: (t: string, sub: string) => void) {
+    const ev = codex.duskEvents.get(offer.event)!;
+    const home = () => {
+      this.mode = { kind: 'idle' };
+      this.dispatch({ type: 'leaveErrand' });
+    };
+    if (this.mode.kind === 'event-card' && offer.chose === null) {
+      const choice = this.mode.choice;
+      title(ev.name, `${ev.choices[choice]!.text} Choose the card.`);
+      this.deckGrid(eventChoiceCards(s, offer.event, choice) ?? [], (inst) => {
+        const events = this.dispatch({ type: 'chooseEvent', index: choice, uid: inst.uid });
+        if (!events.some((e) => e.type === 'rejected')) this.mode = { kind: 'idle' };
+      });
+      this.add2(button(this, 320, 262, 'Back', () => {
+        this.mode = { kind: 'idle' };
+        this.render();
+      }, { w: 72 }));
+      return;
+    }
+    title(ev.name, ev.text);
+    ev.choices.forEach((c, i) => {
+      const x = 320 + (i - (ev.choices.length - 1) / 2) * 150;
+      const blocked = offer.chose === null ? eventChoiceBlocked(s, offer.event, i) : null;
+      const tile = this.add2(panel(this, x - 68, 96, 136, 76, 'k', 0.95, 'n'));
+      this.text(x, 104, c.label, { size: 10, color: 'y', align: 'center' }).setOrigin(0.5, 0);
+      this.text(x, 122, c.text, { size: 8, color: 'w', align: 'center', wrap: 124 }).setOrigin(0.5, 0);
+      if (offer.chose === i) return void tile.setStrokeStyle(2, hex('l'));
+      if (offer.chose !== null || blocked) {
+        if (blocked) this.text(x, 158, `Can't: ${blocked}`, { size: 7, color: 'R', align: 'center', wrap: 124 }).setOrigin(0.5, 0);
+        return void tile.setAlpha(0.4);
+      }
+      tile.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+        if (eventChoiceCards(s, offer.event, i)) {
+          this.mode = { kind: 'event-card', choice: i };
+          this.render();
+        } else this.dispatch({ type: 'chooseEvent', index: i });
+      });
+      tile.on('pointerover', () => tile.setStrokeStyle(2, hex('y')));
+      tile.on('pointerout', () => tile.setStrokeStyle(1, hex('n')));
+    });
+    if (offer.outcome) {
+      this.add2(panel(this, 170, 186, 300, 30, 'k', 0.85, 'n'));
+      this.text(320, 195, offer.outcome, { size: 8, color: 'l', align: 'center', wrap: 290 }).setOrigin(0.5, 0);
+    }
+    if (eventDone(s, offer)) this.add2(button(this, 320, 262, 'Head home', home, { w: 72 }));
   }
 
   /** The Guild Hall (GDD §7): take one of two commissions, due by a Night Shift. */
@@ -1396,7 +1449,7 @@ function relicNote(events: readonly GameEvent[]): string | null {
     if (e.type === 'relicFired' && e.relic === 'iron-lid') lines.push('The Iron Lid caught the Sludge.');
     if (e.type === 'commissionDone') lines.push(`Commission done: ${codex.commissions.get(e.commission)!.name}.`);
     if (e.type === 'commissionFailed') lines.push(`${codex.commissions.get(e.commission)!.name} ran out of time.`);
-    if (e.type === 'cardModified' && e.by !== 'debug') lines.push(`${cardName(e.card)} is ${codex.modifiers.get(e.modifier)!.name}.`);
+    if (e.type === 'cardModified' && e.by !== 'debug' && e.by !== 'event') lines.push(`${cardName(e.card)} is ${codex.modifiers.get(e.modifier)!.name}.`);
   }
   return lines.length ? lines.join(' ') : null;
 }

@@ -285,3 +285,16 @@ export const Commission = z.object({
   maxWeek: z.number().int().min(1).max(4).default(4),
 });
 export type Commission = z.infer<typeof Commission>;
+
+/** Dusk events (GDD §7): the Event errand. Each choice's rule is code, by event id and choice, in core/dusk-events.ts. */
+export const DuskEvent = z.object({
+  id: Id,
+  name: z.string().min(1),
+  tags: z.array(z.enum(['fae', 'mishap', 'market', 'town'])).min(1),
+  /** Roll chance, relative to the others. */
+  weight: z.number().positive(),
+  /** What you come across, in a line or two. */
+  text: z.string().min(1),
+  choices: z.array(z.object({ label: z.string().min(1), text: z.string().min(1) })).min(1).max(3),
+});
+export type DuskEvent = z.infer<typeof DuskEvent>;

@@ -75,7 +75,7 @@ export type Pending = {
 /** Extras for the next delivery (Charm Sachet). */
 export type DeliveryBoost = { hearts: number; tip: number; payMult: number };
 
-export type Errand = 'market' | 'forage' | 'creek' | 'guild' | 'hearth';
+export type Errand = 'market' | 'forage' | 'creek' | 'guild' | 'hearth' | 'event';
 
 export type StockItem =
   | { kind: 'card'; card: string; price: number; sold: boolean }
@@ -95,6 +95,8 @@ export type Offer =
   | { kind: 'creek'; done: boolean }
   /** Guild Commissions on offer; one taken a visit. */
   | { kind: 'guild'; options: string[]; taken: boolean }
+  /** A dusk event: `chose` is the choice made (one per event) and `outcome` what came of it. */
+  | { kind: 'event'; event: string; chose: number | null; outcome: string | null }
   | { kind: 'night-market'; stalls: StallState[]; at: number | null }
   | Gift;
 

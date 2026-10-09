@@ -63,7 +63,13 @@ describe('fixture steps', () => {
     s = reduce(s, stepAction(s, 'openShop')).state;
     expect(stepAction(s, { slot: 0 })).toEqual({ type: 'slot', uid: s.hand[0]!.uid });
     expect(stepAction(s, { pick: 2 })).toEqual({ type: 'pickReward', index: 2 });
-    expect(stepAction(s, { errand: 'hearth' })).toEqual({ type: 'chooseErrand', errand: 'hearth' });
+    // Not at the errand pick: the step opens the errand anyway.
+    expect(stepAction(s, { errand: 'hearth' })).toEqual({ type: 'debug', op: 'openErrand', errand: 'hearth' });
+    const picking = { ...s, offer: { kind: 'errands' as const, options: ['hearth' as const, 'market' as const] } };
+    expect(stepAction(picking, { errand: 'hearth' })).toEqual({ type: 'chooseErrand', errand: 'hearth' });
+    expect(stepAction(s, { duskEvent: 'fairy-ring' })).toEqual({ type: 'debug', op: 'openEvent', event: 'fairy-ring' });
+    expect(stepAction(s, { chooseEvent: 1 })).toEqual({ type: 'chooseEvent', index: 1 });
+    expect(stepAction(s, { takeCommission: 0 })).toEqual({ type: 'takeCommission', index: 0 });
     expect(stepAction(s, { jump: [2, 5] })).toMatchObject({ op: 'jumpToDay', week: 2, day: 5 });
     expect(stepAction(s, { gold: 5 })).toMatchObject({ op: 'addGold', amount: 5 });
     expect(stepAction(s, { removeAt: 0 })).toMatchObject({ type: 'removeCard' });

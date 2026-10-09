@@ -35,13 +35,21 @@ export type FixtureStep =
   /** Hold a Guild Commission. */
   | { commission: string }
   /** Take the Guild Hall commission at this index. */
-  | { takeCommission: number };
+  | { takeCommission: number }
+  /** Open the Event errand on this dusk event. */
+  | { duskEvent: string }
+  /** Make the dusk event choice at this index (not one that asks for a card). */
+  | { chooseEvent: number };
 
 export function stepAction(state: RunState, step: FixtureStep): Action {
   if (typeof step === 'string') return { type: step === 'skipReward' ? 'skipReward' : step };
   if ('slot' in step) return { type: 'slot', uid: state.hand[step.slot]?.uid ?? -1 };
   if ('pick' in step) return { type: 'pickReward', index: step.pick };
-  if ('errand' in step) return { type: 'chooseErrand', errand: step.errand };
+  // Fixtures name the errand they want; when the seed didn't offer it, open it anyway.
+  if ('errand' in step) {
+    const offered = state.offer?.kind === 'errands' && state.offer.options.includes(step.errand);
+    return offered ? { type: 'chooseErrand', errand: step.errand } : { type: 'debug', op: 'openErrand', errand: step.errand };
+  }
   if ('jump' in step) return { type: 'debug', op: 'jumpToDay', week: step.jump[0], day: step.jump[1] };
   if ('gold' in step) return { type: 'debug', op: 'addGold', amount: step.gold };
   if ('learn' in step) return { type: 'debug', op: 'learnRecipes', recipes: step.learn };
@@ -54,6 +62,8 @@ export function stepAction(state: RunState, step: FixtureStep): Action {
   if ('relic' in step) return { type: 'debug', op: 'giveRelic', relic: step.relic };
   if ('curse' in step) return { type: 'debug', op: 'giveCurse', curse: step.curse };
   if ('familiar' in step) return { type: 'debug', op: 'giveFamiliar', familiar: step.familiar };
+  if ('duskEvent' in step) return { type: 'debug', op: 'openEvent', event: step.duskEvent };
+  if ('chooseEvent' in step) return { type: 'chooseEvent', index: step.chooseEvent };
   if ('takeCommission' in step) return { type: 'takeCommission', index: step.takeCommission };
   if ('commission' in step) return { type: 'debug', op: 'giveCommission', commission: step.commission };
   if ('modify' in step) return { type: 'debug', op: 'setModifier', uid: state.hand[step.modify[0]]?.uid ?? -1, modifier: step.modify[1] };

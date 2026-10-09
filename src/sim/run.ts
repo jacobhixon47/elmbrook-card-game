@@ -1,3 +1,4 @@
+import { codex } from '../codex';
 import { allCards, isPatron, reduce, type Action, type GameEvent, type RunState, type Season } from '../core';
 import { seedRng } from '../core/rng';
 import { greedyAction, isOver, randomAction, type Strategy } from './bot';
@@ -22,6 +23,8 @@ export type RunRecord = {
   tinctures: Record<string, number>;
   /** Guild Commissions by id: how many were taken, done and failed. */
   commissions: Record<string, { taken: number; done: number; failed: number }>;
+  /** Dusk event choices made, as `event: label`. */
+  events: Record<string, number>;
   /** Rent was paid in week 4 but the Moonless Patron's orders weren't all filled. */
   finaleFailed: boolean;
   /** Patron orders posted and filled, by week. */
@@ -43,7 +46,7 @@ export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; 
 export function playRun(seed: string, opts: SimOptions): RunRecord {
   const rec: RunRecord = {
     seed, won: false, lostWeek: null, finished: false, actions: [], quality: [], gold: [],
-    offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {}, commissions: {},
+    offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {}, commissions: {}, events: {},
     finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [], modifiers: [],
   };
   const max = opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000);
@@ -74,6 +77,11 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
         case 'commissionFailed': {
           const c = (rec.commissions[e.commission] ??= { taken: 0, done: 0, failed: 0 });
           c[e.type === 'commissionTaken' ? 'taken' : e.type === 'commissionDone' ? 'done' : 'failed']++;
+          break;
+        }
+        case 'eventChosen': {
+          const key = `${e.event}: ${codex.duskEvents.get(e.event)!.choices[e.choice]!.label}`;
+          rec.events[key] = (rec.events[key] ?? 0) + 1;
           break;
         }
         case 'tincturePlayed':

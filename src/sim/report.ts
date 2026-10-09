@@ -83,6 +83,12 @@ export function report(runs: RunRecord[], title: string): string {
   lines.push('', 'guild commissions (taken per 100 runs, done of taken)');
   lines.push(...[...comm].sort((a, b) => b[1].taken - a[1].taken).map(([id, c]) => `  ${id.padEnd(18)} ${((100 * c.taken) / n).toFixed(0).padStart(6)} ${pct(c.done, c.taken).padStart(6)}`));
 
+  // Dusk events: which choices the bot makes.
+  const chosen = new Map<string, number>();
+  for (const r of runs) for (const [key, k] of Object.entries(r.events)) chosen.set(key, (chosen.get(key) ?? 0) + k);
+  lines.push('', 'dusk event choices (per 100 runs)');
+  lines.push(...[...chosen].sort((a, b) => b[1] - a[1]).map(([key, k]) => `  ${key.padEnd(32)} ${((100 * k) / n).toFixed(0).padStart(6)}`));
+
   // Which familiars, relics, curses and modifiers the bot ends up with, and how runs that had them did.
   const held = (title: string, ids: readonly string[], of: (r: RunRecord) => readonly string[]) => {
     const seen = new Map<string, { runs: number; wins: number }>();

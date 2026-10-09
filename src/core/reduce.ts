@@ -6,6 +6,7 @@ import { changeGold, draw, drawToHandSize, gainCard, Reject, reject, shuffled, t
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
 import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
+import { chooseEvent, eventDone, openEvent } from './dusk-events';
 import { commissionsOnBrew, commissionsOnDayEnd, commissionsOnDeliver, takeCommission } from './commissions';
 import { addModifier, drawOnBrewOf, MODIFIER_RULES, enchant, heartDeltaOf, isAged, temper } from './modifiers';
 import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
@@ -556,10 +557,15 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       takeCommission(ctx, action.index);
       return;
 
+    case 'chooseEvent':
+      chooseEvent(ctx, action.index, action.uid);
+      return;
+
     case 'leaveErrand': {
       requirePhase(ctx, 'dusk');
       const kind = s.offer?.kind;
-      if (kind !== 'market' && kind !== 'forage' && kind !== 'creek' && kind !== 'guild' && kind !== 'hearth') reject('choose an errand first');
+      if (kind !== 'market' && kind !== 'forage' && kind !== 'creek' && kind !== 'guild' && kind !== 'hearth' && kind !== 'event') reject('choose an errand first');
+      if (s.offer?.kind === 'event' && !eventDone(s, s.offer)) reject('choose what to do first');
       s.day += 1;
       startDay(ctx);
       return;
@@ -687,6 +693,12 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
         if (!c) reject(`no commission ${action.commission}`);
         if (s.commissions.some((a) => a.id === c.id)) reject(`you already hold ${c.name}`);
         s.commissions.push({ id: c.id, progress: 0, dueWeek: c.dueWeek ?? s.week + c.deadline - 1, customers: [] });
+      } else if (action.op === 'openErrand') {
+        offerOf(ctx, 'errands');
+        openErrand(ctx, action.errand);
+      } else if (action.op === 'openEvent') {
+        requirePhase(ctx, 'dusk');
+        openEvent(ctx, action.event);
       } else if (action.op === 'setModifier') {
         const card = [...allCards(s), ...s.satchel].find((c) => c.uid === action.uid);
         if (!card) reject(`no card ${action.uid}`);

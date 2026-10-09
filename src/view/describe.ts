@@ -19,6 +19,7 @@ export const ERRAND_TEXT: Record<Errand, { name: string; text: string }> = {
   creek: { name: 'Creek Bank', text: 'Temper a card for +2 Potency, free, or buy it a modifier.' },
   guild: { name: 'Guild Hall', text: 'Take a commission: a goal by a Night Shift, for gold or a relic.' },
   hearth: { name: 'The Hearth', text: 'Burn one card you no longer want.' },
+  event: { name: 'Something Afoot', text: 'A chance encounter on the way home. Who knows?' },
 };
 
 const FAMILY_LINE: Record<PotionFamily, string> = {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import * as raw from './content';
-import { Commission, Curse, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch } from './schema';
+import { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch } from './schema';
 
 export * from './schema';
 
@@ -28,6 +28,7 @@ export const codex = {
   modifiers: table(Modifier, raw.modifiers, 'modifier'),
   stalls: table(Stall, raw.stalls, 'stall'),
   commissions: table(Commission, raw.commissions, 'commission'),
+  duskEvents: table(DuskEvent, raw.duskEvents, 'dusk event'),
   tarot: table(Tarot, raw.tarot, 'tarot card'),
   witches: table(Witch, raw.witches, 'witch'),
 };

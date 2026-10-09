@@ -3,6 +3,7 @@ import { NIGHT_SHIFT_DAY } from './calendar';
 import { sumEffect } from './effects';
 import { isSatchelCard } from './night';
 import { nextFloat, shuffle } from './rng';
+import { MAX_HEARTS } from './rules';
 import type { CardInstance, RunState } from './state';
 
 /**
@@ -90,4 +91,21 @@ export function takeFromHand(ctx: Ctx, uid: number): CardInstance {
   const i = ctx.s.hand.findIndex((c) => c.uid === uid);
   if (i < 0) reject(`card ${uid} is not in hand`);
   return ctx.s.hand.splice(i, 1)[0]!;
+}
+
+/** Hearts with a regular, up to the cap. */
+export function addHearts(ctx: Ctx, regular: string, n: number): void {
+  const before = ctx.s.hearts[regular] ?? 0;
+  const hearts = Math.min(MAX_HEARTS, before + n);
+  ctx.ev.push({ type: 'heartsChanged', customer: regular, hearts, delta: hearts - before });
+  ctx.s.hearts[regular] = hearts;
+}
+
+/** Take a card out of the deck (draw pile, hand or discard) for good. */
+export function removeCard(ctx: Ctx, card: CardInstance): void {
+  for (const pile of [ctx.s.drawPile, ctx.s.hand, ctx.s.discardPile]) {
+    const i = pile.findIndex((c) => c.uid === card.uid);
+    if (i >= 0) pile.splice(i, 1);
+  }
+  ctx.ev.push({ type: 'cardRemoved', uid: card.uid, card: card.card });
 }
