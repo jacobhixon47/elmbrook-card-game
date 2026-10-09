@@ -67,7 +67,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 ## M4 — Meta and story
 
 - ✅ Codex screen (lore lines still to write); ✅ persistent save with migrations (the profile and run migrations, `core/meta.ts`).
-- The Year: ✅ season unlocks (a win opens the next season; choose it at the cottage), Summer, Autumn and Winter content and twists, ✅ the ending, ✅ Year modifiers for Years 2 to 5 (6 to 10 with the season-ramp pass), and ✅ looping into the next Year with a boon (GDD §13).
+- The Year: ✅ season unlocks (a win opens the next season; choose it at the cottage), Summer, Autumn and Winter content and twists, ✅ the ending, ✅ a rule per Year for Years 2 to 10, and ✅ a Year picker at the cottage with a boon per Year (GDD §13).
 - ✅ Reputation and cottage perks (the cottage: the out-of-run home where you set out for a season and buy perks); ✅ Almanac achievements that unlock pool content, relics included (eight starter relics).
 - A tiered perk board for the long game: more perks opening with Years reached and Almanac milestones, about 12 to 15 in all (GDD §13).
 - Six regulars with hearts, Ink dialogue, heart-milestone beats and unlocks.
