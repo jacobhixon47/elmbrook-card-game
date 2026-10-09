@@ -44,9 +44,11 @@ describe('the saved run', () => {
     expect(loadRun()).toBeNull();
   });
 
-  it('drops a save from another version or one it cannot read', () => {
+  it('migrates an older save, and drops one it cannot migrate or read', () => {
     const storage = g.localStorage as ReturnType<typeof fakeStorage>;
-    storage.data.set('elmbrook.run', JSON.stringify({ ...brewing('save'), version: RUN_VERSION - 1 }));
+    storage.data.set('elmbrook.run', JSON.stringify({ ...brewing('save'), version: 10 }));
+    expect(loadRun()?.version).toBe(RUN_VERSION);
+    storage.data.set('elmbrook.run', JSON.stringify({ ...brewing('save'), version: 9 }));
     expect(loadRun()).toBeNull();
     storage.data.set('elmbrook.run', '{not json');
     expect(loadRun()).toBeNull();

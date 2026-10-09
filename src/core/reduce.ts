@@ -17,6 +17,7 @@ import { seedRng } from './rng';
 import {
   BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK,
   LONGEST_NIGHT, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
+  MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS,
 } from './rules';
 import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState } from './state';
 
@@ -25,7 +26,7 @@ export type ReduceResult = { state: RunState; events: GameEvent[] };
 const freshPending = (): Pending => ({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false });
 const noBoost = () => ({ hearts: 0, tip: 0, payMult: 1 });
 
-export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = []): ReduceResult {
+export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = []): ReduceResult {
   const witch = codex.witches.get(witchId);
   if (!witch) throw new Error(`unknown witch: ${witchId}`);
 
@@ -38,6 +39,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   const s: RunState = {
     version: RUN_VERSION,
     seed,
+    stats: { ordersFilled: 0, potionsSold: 0 },
     rng: seedRng(seed),
     witch: witch.id,
     season,
@@ -81,6 +83,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     skipStreak: 0,
     nextUid: uid,
   };
+  applyPerks(s, perks);
   const ctx: Ctx = { s, ev: [{ type: 'runStarted', seed, witch: witch.id, season }] };
   startDay(ctx);
   return { state: ctx.s, events: ctx.ev };
@@ -735,9 +738,22 @@ export function fencePrice(potion: Pick<Potion, 'tier' | 'ingredients'>): number
   return Math.round(FENCE_PRICE[potion.tier] * (shadowy ? FENCE_SHADOW_BONUS : 1));
 }
 
+/** Cottage perks change how a run starts (GDD §13): more gold, Shelf and familiar slots, extra cards. */
+function applyPerks(s: RunState, perks: readonly string[]): void {
+  for (const id of perks) {
+    const perk = codex.perks.get(id);
+    if (!perk) throw new Error(`unknown perk: ${id}`);
+    const p = perk.start;
+    s.gold += p.gold ?? 0;
+    s.shelfSize = Math.min(MAX_SHELF_SLOTS, s.shelfSize + (p.shelf ?? 0));
+    s.familiarSlots = Math.min(MAX_FAMILIAR_SLOTS, s.familiarSlots + (p.familiarSlots ?? 0));
+    for (const card of p.cards ?? []) s.drawPile.push({ uid: s.nextUid++, card });
+  }
+}
+
 /** The single entry point for game rules. Pure: same input, same output. A broken rule returns the old state and a `rejected` event. */
 export function reduce(state: RunState | null, action: Action): ReduceResult {
-  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks);
+  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks);
   if (!state) throw new Error('no run in progress');
   const ctx: Ctx = { s: structuredClone(state), ev: [] };
   try {
@@ -745,6 +761,10 @@ export function reduce(state: RunState | null, action: Action): ReduceResult {
   } catch (e) {
     if (e instanceof Reject) return { state, events: [{ type: 'rejected', action: action.type, reason: e.message }] };
     throw e;
+  }
+  for (const e of ctx.ev) {
+    if (e.type === 'orderFilled') ctx.s.stats.ordersFilled++;
+    if (e.type === 'potionSold') ctx.s.stats.potionsSold++;
   }
   return { state: ctx.s, events: ctx.ev };
 }

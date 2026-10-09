@@ -2,7 +2,7 @@
 // The rules for it, versions and migrations included, are in core/meta.ts; this is the storage,
 // which may be missing or blocked (a private window): then nothing persists and nothing breaks.
 
-import { migrateProfile, recordRun, type Profile, type RunOutcome, type RunState } from './core';
+import { buyPerk, migrateProfile, recordRun, type Profile, type RunOutcome, type RunState } from './core';
 
 const KEY = 'elmbrook.profile';
 
@@ -34,4 +34,9 @@ export function recordFinishedRun(s: RunState): RunOutcome {
   const out = recordRun(before, s);
   if (out.profile !== before) store(out.profile);
   return out;
+}
+
+/** Buy a cottage perk with Reputation (throws when it can't be bought; check `perkBlocked` first). */
+export function buyPerkNow(id: string): Profile {
+  return store(buyPerk(loadProfile(), id));
 }

@@ -40,7 +40,7 @@ export type RunRecord = {
   error?: string;
 };
 
-export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; unlocks?: readonly string[]; maxActions?: number };
+export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; unlocks?: readonly string[]; perks?: readonly string[]; maxActions?: number };
 
 /** Play one full run headlessly. Never throws: a crash is recorded with the action log that caused it. */
 export function playRun(seed: string, opts: SimOptions): RunRecord {
@@ -117,7 +117,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
   };
 
   try {
-    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}), ...(opts.unlocks ? { unlocks: [...opts.unlocks] } : {}) };
+    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}), ...(opts.unlocks ? { unlocks: [...opts.unlocks] } : {}), ...(opts.perks ? { perks: [...opts.perks] } : {}) };
     rec.actions.push(start);
     const first = reduce(null, start);
     let state = first.state;

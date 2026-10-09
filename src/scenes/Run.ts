@@ -124,7 +124,7 @@ export class Run extends Phaser.Scene {
       this.tutorial = fixture ? null : wantsTutorial() ? new TutorialProgress() : null;
       const seed = fixture?.seed ?? params.get('seed') ?? (this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`);
       const season = data.season ?? (fixture?.season as Season | undefined) ?? viewOverrides().season;
-      store.dispatch({ type: 'startRun', seed, witch: 'hedge-witch', ...(season ? { season } : {}) });
+      store.dispatch({ type: 'startRun', seed, witch: 'hedge-witch', ...(season ? { season } : {}), ...this.perks(!!fixture) });
       // `today` sets the weather of the day the fixture starts on and of the day its steps end on.
       const today = () => fixture?.today && store.dispatch({ type: 'debug', op: 'setWeather', weather: fixture.today as Weather });
       today();
@@ -1441,8 +1441,14 @@ export class Run extends Phaser.Scene {
 
   private newRun(season: Season = 'spring') {
     this.tutorial = wantsTutorial() ? new TutorialProgress() : null;
-    store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, witch: 'hedge-witch', season });
+    store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, witch: 'hedge-witch', season, ...this.perks(this.fixtureRun) });
     this.scene.restart({ resume: true });
+  }
+
+  /** Cottage perks for a new run: none in the tutorial, which plays a fixed deal, or in fixtures. */
+  private perks(fixture: boolean): { perks?: string[] } {
+    const perks = fixture || this.tutorial ? [] : loadProfile().perks;
+    return perks.length ? { perks } : {};
   }
 
   /** What the run that just ended changed in the profile. A fixture shows it against its own `profile`. */
@@ -1454,6 +1460,8 @@ export class Run extends Phaser.Scene {
 
   /** Play the same season again, or go home to the cottage to choose another. */
   private endButtons(s: RunState, again: string) {
+    const rep = this.endOutcome(s).reputation;
+    if (rep > 0) this.text(320, 150, `+${rep} Reputation to spend at your cottage`, { size: 8, color: 'Y', stroke: 'k', align: 'center' }).setOrigin(0.5);
     this.add2(button(this, 270, 180, again, () => this.newRun(s.season), { w: 80, color: 'Y' }));
     this.add2(button(this, 370, 180, 'Home', () => this.scene.start('Cottage', {}), { w: 80 }));
   }

@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch } from './schema';
+import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -326,4 +326,12 @@ export const duskEvents: In<typeof DuskEvent>[] = [
     text: 'A ring of toadstools in the meadow, humming faintly.',
     choices: [{ label: 'Step in', text: 'A random card turns into one of the next rarity up.' }, { label: 'Walk around', text: 'Nothing happens.' }],
   },
+];
+
+// Cottage perks (GDD §13): a short list bought once each with Reputation. Starting values for tuning.
+export const perks: In<typeof Perk>[] = [
+  { id: 'nest-egg', name: 'Nest Egg', text: 'Start every run with 5 more gold.', cost: 15, start: { gold: 5 } },
+  { id: 'deep-shelf', name: 'A Deeper Shelf', text: 'Your Shelf starts with 5 slots instead of 4.', cost: 20, start: { shelf: 1 } },
+  { id: 'old-spoon', name: "Gran's Spoon", text: 'Start every run with a Stir in your deck.', cost: 25, start: { cards: ['stir'] } },
+  { id: 'spare-perch', name: 'A Spare Perch', text: 'Room for one more familiar.', cost: 35, start: { familiarSlots: 1 } },
 ];
