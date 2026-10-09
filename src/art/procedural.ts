@@ -197,8 +197,6 @@ export const MODIFIER_LOOK: Record<ModifierId, { ring: PaletteKey; ground: Palet
   moonlit: { ring: 'v', ground: 'p', glyph: 'm', rows: ['..##.', '.##..', '.##..', '.##..', '..##.'] },
   // An hourglass.
   aged: { ring: 'o', ground: 'b', glyph: 'y', rows: ['#####', '.###.', '..#..', '.###.', '#####'] },
-  // A coin.
-  gilded: { ring: 'y', ground: 'n', glyph: 'Y', rows: ['.###.', '##.##', '#.#.#', '##.##', '.###.'] },
   // A four-point sparkle.
   blessed: { ring: 'c', ground: 'U', glyph: 'W', rows: ['..#..', '..#..', '#####', '..#..', '..#..'] },
   // An open eye.

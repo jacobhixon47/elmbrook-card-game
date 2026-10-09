@@ -11,7 +11,8 @@ import { allCards, type CardInstance, type RunState } from './state';
 
 export const MODIFIER_RULES = {
   moonlitHarmony: 2,
-  gildedGold: 2,
+  /** Potency an Aged-modifier card gains each day; Amber Sap's own Aged effect gains 1. */
+  agedPerDay: 2,
   cursedHearts: -1,
   /** The Creek Bank's free option: permanent Potency on one card. */
   temperPotency: 2,
@@ -80,7 +81,7 @@ export function modifierSteps(c: ScoreCtx, cards: readonly CardInstance[], ings:
         break;
       }
       default:
-        // Aged and Gilded don't touch the score here: Aged counts with the ingredient, Gilded pays on brewing.
+        // Aged doesn't touch the score here: it counts with the ingredient.
         return;
     }
     steps.push({ type: 'scoreStep', source: 'modifier', id: card.modifier, potency: c.potency, harmony: c.harmony, note: `${ing.name}: ${note}` });
@@ -99,12 +100,6 @@ export function heartDeltaOf(cards: readonly CardInstance[]): number {
 /** Cards drawn after a brew, from its cards. */
 export function drawOnBrewOf(cards: readonly CardInstance[]): number {
   return cards.reduce((n, c) => n + sumEffect(c.card, 'drawOnBrew') * times(c), 0);
-}
-
-/** Gilded cards pay when brewed, Sludge or not. */
-export function payGilded(ctx: Ctx, cards: readonly CardInstance[]): void {
-  const n = cards.filter((c) => c.modifier === 'gilded').length * MODIFIER_RULES.gildedGold;
-  if (n) changeGold(ctx, n, 'modifier');
 }
 
 // ------------------------------------------------------------------ the Creek Bank

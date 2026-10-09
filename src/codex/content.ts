@@ -216,8 +216,7 @@ export const curses: In<typeof Curse>[] = [
 // Card modifiers (GDD §5.5), one per ingredient card.
 export const modifiers: In<typeof Modifier>[] = [
   { id: 'moonlit', name: 'Moonlit', text: '+2 Harmony when brewed.', price: 6 },
-  { id: 'aged', name: 'Aged', text: '+1 Potency for each day in the deck, reset when brewed.', price: 5 },
-  { id: 'gilded', name: 'Gilded', text: '+2 gold when brewed.', price: 6 },
+  { id: 'aged', name: 'Aged', text: '+2 Potency for each day in the deck, reset when brewed.', price: 3 },
   { id: 'blessed', name: 'Blessed', text: 'Retrigger: its Potency and effect count twice.', price: 12 },
   { id: 'cursed', name: 'Cursed', text: 'Potency x2. -1 heart with the customer it is delivered to.', price: null },
 ];

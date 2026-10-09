@@ -253,7 +253,7 @@ export const Curse = z.object({
 export type Curse = z.infer<typeof Curse>;
 
 /** Card modifiers (GDD §5.5): one per ingredient card, for the run. Rules live in core/modifiers.ts. */
-export const MODIFIERS = ['moonlit', 'aged', 'gilded', 'blessed', 'cursed'] as const;
+export const MODIFIERS = ['moonlit', 'aged', 'blessed', 'cursed'] as const;
 export const ModifierId = z.enum(MODIFIERS);
 export type ModifierId = z.infer<typeof ModifierId>;
 
