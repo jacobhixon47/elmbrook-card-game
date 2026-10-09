@@ -39,7 +39,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   const s: RunState = {
     version: RUN_VERSION,
     seed,
-    stats: newStats(),
+    stats: { ...newStats(), met: [...new Set([...deck.map((c) => c.card), ...witch.knownRecipes])] },
     rng: seedRng(seed),
     witch: witch.id,
     season,
@@ -766,7 +766,20 @@ export function reduce(state: RunState | null, action: Action): ReduceResult {
   return { state: ctx.s, events: ctx.ev };
 }
 
-export const newStats = (): RunStats => ({ ordersFilled: 0, potionsSold: 0, rentsPaid: 0, bestTier: -1, mostFamiliars: 0, mostRelics: 0, cursesTaken: 0 });
+export const newStats = (): RunStats => ({ ordersFilled: 0, potionsSold: 0, rentsPaid: 0, bestTier: -1, mostFamiliars: 0, mostRelics: 0, cursesTaken: 0, met: [] });
+
+/** Codex ids an event shows the player. */
+function metBy(e: GameEvent): string[] {
+  switch (e.type) {
+    case 'cardDrawn': case 'cardGained': case 'giftTaken': return [e.card];
+    case 'rewardOffered': case 'giftQueued': return e.cards;
+    case 'recipeDiscovered': return [e.recipe];
+    case 'familiarGained': return [e.familiar];
+    case 'relicGained': return [e.relic];
+    case 'orderPosted': return [e.order.customer];
+    default: return [];
+  }
+}
 
 /** Count what an action did into the run's stats. */
 function tally(s: RunState, events: readonly GameEvent[]): void {
@@ -777,6 +790,7 @@ function tally(s: RunState, events: readonly GameEvent[]): void {
     if (e.type === 'rentPaid') st.rentsPaid++;
     if (e.type === 'curseTaken') st.cursesTaken++;
     if (e.type === 'brewed') st.bestTier = Math.max(st.bestTier, tierIndex(e.potion.tier));
+    for (const id of metBy(e)) if (!st.met.includes(id)) st.met.push(id);
   }
   st.mostFamiliars = Math.max(st.mostFamiliars, s.familiars.length);
   st.mostRelics = Math.max(st.mostRelics, s.relics.length);

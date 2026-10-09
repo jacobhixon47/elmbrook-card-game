@@ -7,7 +7,7 @@ import { RUN_VERSION, type RunState } from './state';
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 3;
+export const PROFILE_VERSION = 4;
 
 export type Profile = {
   version: typeof PROFILE_VERSION;
@@ -28,6 +28,8 @@ export type Profile = {
   perks: string[];
   /** Almanac entries done (codex `almanac`), in the order they were met. */
   almanac: string[];
+  /** Codex entries met in any run (cards, recipes, familiars, relics, customers), in the order first met. */
+  codex: string[];
 };
 
 export function newProfile(): Profile {
@@ -43,6 +45,7 @@ export function newProfile(): Profile {
     reputationEarned: 0,
     perks: [],
     almanac: [],
+    codex: [],
   };
 }
 
@@ -58,6 +61,8 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   1: (p) => ({ ...p, reputation: 0, reputationEarned: 0, perks: [] }),
   // 2 → 3: the Almanac, with nothing done.
   2: (p) => ({ ...p, almanac: [] }),
+  // 3 → 4: the Codex, with nothing met yet.
+  3: (p) => ({ ...p, codex: [] }),
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -92,7 +97,26 @@ function sanitize(p: Raw): Profile {
     reputationEarned: count(p.reputationEarned),
     perks: Array.isArray(p.perks) ? [...codex.perks.keys()].filter((id) => (p.perks as unknown[]).includes(id)) : [],
     almanac: Array.isArray(p.almanac) ? [...new Set(p.almanac)].filter((id): id is string => typeof id === 'string' && codex.almanac.has(id)) : [],
+    codex: Array.isArray(p.codex) ? [...new Set(p.codex)].filter((id): id is string => typeof id === 'string' && inCodex(id)) : [],
   };
+}
+
+/** The tables the cottage's Codex shows, in its order (GDD §13). */
+export const CODEX_TABLES = {
+  ingredients: codex.ingredients,
+  tinctures: codex.tinctures,
+  recipes: codex.recipes,
+  familiars: codex.familiars,
+  relics: codex.relics,
+  townsfolk: new Map([...codex.regulars, ...codex.nightCustomers, ...codex.patrons].map(([id, c]) => [id, c] as const)),
+} as const;
+export type CodexTable = keyof typeof CODEX_TABLES;
+
+export const inCodex = (id: string) => Object.values(CODEX_TABLES).some((t) => t.has(id));
+
+/** Ids this run met that the Codex hasn't recorded yet, in Codex order of first meeting. */
+export function codexMet(known: readonly string[], s: Pick<RunState, 'stats'>): string[] {
+  return s.stats.met.filter((id) => inCodex(id) && !known.includes(id));
 }
 
 /** The season a win in this one opens, or null after Winter. */
@@ -130,6 +154,7 @@ export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' 
   const p: Profile = {
     ...profile, seasons: [...profile.seasons], wins: { ...profile.wins }, perks: [...profile.perks], runs: profile.runs + 1, lastRun: s.seed,
     reputation: profile.reputation + reputation, reputationEarned: profile.reputationEarned + reputation, almanac: [...profile.almanac, ...almanac],
+    codex: [...profile.codex, ...codexMet(profile.codex, s)],
   };
   if (s.phase === 'game-over') return { ...same, profile: p, reputation, almanac };
   p.wins[s.season]++;
@@ -169,6 +194,14 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
     const held = (k: string) => (Array.isArray(s[k]) ? (s[k] as unknown[]).length : 0);
     const week = typeof s.week === 'number' ? s.week : 1;
     return { ...s, stats: { ...stats, rentsPaid: Math.max(0, week - 1), bestTier: -1, mostFamiliars: held('familiars'), mostRelics: held('relics'), cursesTaken: held('curses') } };
+  },
+  // 12 → 13: Codex ids met, from what the run holds now.
+  12: (s) => {
+    const ids = (k: string) => (Array.isArray(s[k]) ? (s[k] as unknown[]) : []);
+    const cards = ['drawPile', 'hand', 'cauldron', 'discardPile'].flatMap(ids).map((c) => (c as { card?: unknown }).card);
+    const customers = ids('orders').map((o) => (o as { customer?: unknown }).customer);
+    const met = [...new Set([...cards, ...ids('knownRecipes'), ...ids('familiars'), ...ids('relics'), ...customers])].filter((x): x is string => typeof x === 'string');
+    return { ...s, stats: { ...(s.stats as Raw), met } };
   },
 };
 

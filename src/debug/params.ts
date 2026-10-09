@@ -35,7 +35,10 @@ export type Fixture = {
     /** At a dusk event, choosing the card for the choice at this index. */
     eventCard?: number;
     /** The cottage's Almanac, open. */
-    almanac?: boolean };
+    almanac?: boolean;
+    /** The cottage's Codex, open at this tab and page. */
+    codex?: string;
+    codexPage?: number };
 };
 
 const fixtures = import.meta.glob<Fixture>('/fixtures/*.json', { eager: true, import: 'default' });
