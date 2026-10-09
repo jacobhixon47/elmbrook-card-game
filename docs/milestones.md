@@ -79,8 +79,8 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 ## M4.5 — The walkable cottage
 
 Once Reputation, the Almanac, the Codex and witch selection exist, the cottage becomes a small top-down home you walk around (GDD §13, decided with Jacob):
-- A simple wizard-robed sprite that walks between rooms.
-- Each system has its place: perks, Codex and recipes, Almanac, regulars' letters, witch and cauldron.
+- A simple wizard-robed sprite that walks around one open-plan room.
+- Each system has its own corner: perks, Codex and recipes, Almanac, regulars' letters, witch and cauldron.
 - The front door leads to choosing the next season.
 - The house is dressed for the season you're about to play: light, colours, window views and props.
 
