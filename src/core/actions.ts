@@ -4,7 +4,7 @@ import type { Essence, ModifierId, StallId } from '../codex/schema';
 import type { Errand, GiftSource, Order, Potion } from './state';
 
 export type Action =
-  | { type: 'startRun'; seed: string; witch: string; season?: Season; unlocks?: string[]; perks?: string[] }
+  | { type: 'startRun'; seed: string; witch: string; season?: Season; unlocks?: string[]; perks?: string[]; year?: number; boon?: string }
   // Afternoon: read the Order Board, then open the shop to draw a hand.
   | { type: 'openShop' }
   // Sunset: brewing.

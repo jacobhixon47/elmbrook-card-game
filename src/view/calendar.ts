@@ -1,6 +1,6 @@
 import { codex } from '../codex';
 import {
-  patronOf, FESTIVAL_WEEK, festivalOn, MOON_NAME, NIGHT_SHIFT_DAY, SEASON_FESTIVAL, todaysWeather, WEATHER_RULE, weatherOn,
+  patronOf, patronKnown, FESTIVAL_WEEK, festivalOn, MOON_NAME, NIGHT_SHIFT_DAY, SEASON_FESTIVAL, todaysWeather, WEATHER_RULE, weatherOn,
   WEEK_MOONS, WEEKS, type Festival, type RunState, type SkyEvent, type Weather,
 } from '../core';
 
@@ -35,11 +35,15 @@ export const SKY_RULE: Record<SkyEvent, string> = {
   'meteor-shower': 'Fallen Stars can turn up in rewards, the Market and the Forage all week.',
 };
 
-type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'> & Partial<Pick<RunState, 'patrons' | 'fortunes'>>;
+type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'> & Partial<Pick<RunState, 'patrons' | 'fortunes' | 'year'>>;
 
-/** The patron of a week's Night Shift (GDD §10). */
+/** From Year 2 a patron stays a stranger until the day before their Night Shift (GDD §13). */
+const HIDDEN_PATRON = { name: 'A patron', text: 'Who, and what they want, you learn the day before.' };
+
+/** The patron of a week's Night Shift (GDD §10), as far as you know yet. */
 function patronFor(s: When, week: number) {
-  return s.patrons ? patronOf({ patrons: s.patrons, week }) : null;
+  const patron = s.patrons ? patronOf({ patrons: s.patrons, week }) : null;
+  return patron && !patronKnown(s, week) ? HIDDEN_PATRON : patron;
 }
 
 /** The sky event on this day, if any (a Meteor Shower covers its whole week). */

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { allCards, almanacMet, CODEX_TABLES, codexMet, almanacUnlocks, ALMANAC_GOALS, buyPerk, newStats, relicPool, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, migrateRun, newProfile, nextSeason, perkBlocked, PROFILE_VERSION, recordRun, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
+import { SEASONS, type Season, allCards, almanacMet, CODEX_TABLES, codexMet, almanacUnlocks, ALMANAC_GOALS, buyPerk, newStats, relicPool, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, migrateRun, newProfile, nextSeason, perkBlocked, PROFILE_VERSION, recordRun, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
 import { loadProfile, recordFinishedRun, saveProfile } from '../src/profile';
 import { playRun } from '../src/sim/run';
 import { brewing } from './helpers';
@@ -21,14 +21,14 @@ describe('the profile', () => {
 
   it('migrates a version 1 profile, adding Reputation and perks', () => {
     const p = migrateProfile({ version: 1, tutorialDone: true, seasons: ['spring', 'summer'], runs: 4, wins: { spring: 2 }, years: 0, lastRun: 'x' });
-    expect(p).toMatchObject({ version: PROFILE_VERSION, seasons: ['spring', 'summer'], runs: 4, reputation: 0, reputationEarned: 0, perks: [] });
+    expect(p).toMatchObject({ version: PROFILE_VERSION, yearSeasons: [['spring', 'summer']], runs: 4, reputation: 0, reputationEarned: 0, perks: [] });
   });
 
   it('repairs a current profile with bad fields', () => {
-    const p = migrateProfile({ version: PROFILE_VERSION, seasons: ['winter', 'nope'], runs: -3, wins: { summer: 2.7, autumn: 'x' }, years: 1, lastRun: 4, perks: ['nest-egg', 'nope'], reputation: 'lots' });
+    const p = migrateProfile({ version: PROFILE_VERSION, yearSeasons: [['winter', 'nope']], runs: -3, wins: { summer: 2.7, autumn: 'x' }, years: 1, lastRun: 4, perks: ['nest-egg', 'nope'], reputation: 'lots' });
     expect(p.perks).toEqual(['nest-egg']);
     expect(p.reputation).toBe(0);
-    expect(p.seasons).toEqual(['spring', 'winter']);
+    expect(p.yearSeasons).toEqual([['spring', 'winter']]);
     expect(p.runs).toBe(0);
     expect(p.wins).toEqual({ spring: 0, summer: 2, autumn: 0, winter: 0 });
     expect(p.years).toBe(1);
@@ -38,7 +38,7 @@ describe('the profile', () => {
   it('a win opens the next season, once', () => {
     const won = recordRun(newProfile(), end('spring', 'victory'));
     expect(won.opened).toBe('summer');
-    expect(won.profile).toMatchObject({ seasons: ['spring', 'summer'], runs: 1, wins: { spring: 1 }, lastRun: 'r1' });
+    expect(won.profile).toMatchObject({ yearSeasons: [['spring', 'summer']], runs: 1, wins: { spring: 1 }, lastRun: 'r1' });
     // The same run again changes nothing; another win in Spring opens nothing new.
     expect(recordRun(won.profile, end('spring', 'victory')).profile).toBe(won.profile);
     expect(recordRun(won.profile, end('spring', 'victory', 'r2')).opened).toBeNull();
@@ -46,22 +46,22 @@ describe('the profile', () => {
 
   it('a loss counts the run and opens nothing; a run still going is not counted', () => {
     const lost = recordRun(newProfile(), end('spring', 'game-over'));
-    expect(lost).toMatchObject({ opened: null, yearDone: false, profile: { runs: 1, seasons: ['spring'] } });
+    expect(lost).toMatchObject({ opened: null, yearDone: false, profile: { runs: 1, yearSeasons: [['spring']] } });
     const p = newProfile();
     expect(recordRun(p, end('spring', 'morning')).profile).toBe(p);
   });
 
   it('winning Winter completes a Year', () => {
-    const p = { ...newProfile(), seasons: ['spring', 'summer', 'autumn', 'winter'] as const };
-    const out = recordRun({ ...p, seasons: [...p.seasons] }, end('winter', 'victory'));
+    const p = { ...newProfile(), yearSeasons: [[...SEASONS]] };
+    const out = recordRun(p, end('winter', 'victory'));
     expect(out).toMatchObject({ opened: null, yearDone: true, profile: { years: 1 } });
     expect(nextSeason('autumn')).toBe('winter');
     expect(nextSeason('winter')).toBeNull();
   });
 
   it('keeps seasons in Year order when one opens out of turn', () => {
-    const p = { ...newProfile(), seasons: ['spring', 'winter'] as ('spring' | 'winter')[] };
-    expect(recordRun(p, end('spring', 'victory')).profile.seasons).toEqual(['spring', 'summer', 'winter']);
+    const p = { ...newProfile(), yearSeasons: [['spring', 'winter'] as Season[]] };
+    expect(recordRun(p, end('spring', 'victory')).profile.yearSeasons).toEqual([['spring', 'summer', 'winter']]);
   });
 });
 
@@ -223,7 +223,7 @@ describe('the stored profile', () => {
 
   it('migrates what an older build stored', () => {
     data.set('elmbrook.profile', JSON.stringify({ tutorialDone: true }));
-    expect(loadProfile()).toMatchObject({ version: PROFILE_VERSION, tutorialDone: true, seasons: ['spring'] });
+    expect(loadProfile()).toMatchObject({ version: PROFILE_VERSION, tutorialDone: true, yearSeasons: [['spring']] });
     data.set('elmbrook.profile', '{not json');
     expect(loadProfile()).toEqual(newProfile());
   });
@@ -233,7 +233,7 @@ describe('the stored profile', () => {
     const s = { ...brewing('rec'), phase: 'victory' as const, week: 4 };
     expect(recordFinishedRun(s).opened).toBe('summer');
     expect(recordFinishedRun(s).opened).toBeNull();
-    expect(loadProfile()).toMatchObject({ tutorialDone: true, runs: 1, seasons: ['spring', 'summer'] });
+    expect(loadProfile()).toMatchObject({ tutorialDone: true, runs: 1, yearSeasons: [['spring', 'summer']] });
   });
 
   it('works without storage', () => {

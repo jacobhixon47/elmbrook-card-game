@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry } from './schema';
+import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -353,4 +353,13 @@ export const almanac: In<typeof AlmanacEntry>[] = [
   { id: 'summer-won', name: 'Summer in Elmbrook', goal: 'Win Summer.', unlocks: ['harvest-gourd', 'heartstone'] },
   { id: 'autumn-won', name: 'Autumn in Elmbrook', goal: 'Win Autumn.', unlocks: ['moonpetal', 'taste-of-memory'] },
   { id: 'winter-won', name: 'Winter in Elmbrook', goal: 'Win Winter.', unlocks: ['second-wind', 'hob'] },
+];
+
+// Boons (GDD §13): three are offered when you loop into the next Year; the one you pick lasts the Year.
+export const boons: In<typeof Boon>[] = [
+  { id: 'lucky-find', name: 'A Lucky Find', text: 'Start every run with a random tier 1 relic.', start: { relicTier: 1 } },
+  { id: 'blessed-start', name: 'Blessed Hands', text: 'A random card in your starting deck is Blessed.', start: { blessed: 1 } },
+  { id: 'another-perch', name: 'Another Perch', text: 'Room for one more familiar.', start: { familiarSlots: 1 } },
+  { id: 'winter-savings', name: 'Winter Savings', text: 'Start every run with 15 more gold.', start: { gold: 15 } },
+  { id: 'tall-shelf', name: 'A Taller Shelf', text: 'One more Shelf slot.', start: { shelf: 1 } },
 ];

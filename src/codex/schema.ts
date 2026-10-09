@@ -328,3 +328,19 @@ export const AlmanacEntry = z.object({
   unlocks: z.array(Id).min(1),
 });
 export type AlmanacEntry = z.infer<typeof AlmanacEntry>;
+
+/** A boon (GDD §13): picked from three when you loop into the next Year, it lasts that whole Year. */
+export const Boon = z.object({
+  id: Id,
+  name: z.string().min(1),
+  text: z.string().min(1),
+  /** What it does at run start: as a perk, or a random relic of a tier, or Blessed cards in the starting deck. */
+  start: z.object({
+    gold: z.number().int().positive().optional(),
+    shelf: z.number().int().positive().optional(),
+    familiarSlots: z.number().int().positive().optional(),
+    relicTier: z.number().int().min(1).max(3).optional(),
+    blessed: z.number().int().positive().optional(),
+  }),
+});
+export type Boon = z.infer<typeof Boon>;

@@ -2,16 +2,16 @@ import { codex } from '../codex';
 import type { Action, GameEvent } from './actions';
 import { previewBrew } from './brew';
 import { activeEvents, FESTIVAL_DAY, festivalOn, NIGHT_SHIFT_DAY, rollCalendar, todaysWeather, type Season } from './calendar';
-import { changeGold, draw, drawToHandSize, gainCard, Reject, reject, shuffled, takeFromHand, type Ctx } from './ctx';
+import { changeGold, draw, drawToHandSize, gainCard, pick, Reject, reject, shuffled, takeFromHand, type Ctx } from './ctx';
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
 import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
 import { chooseEvent, eventDone, openEvent } from './dusk-events';
 import { commissionsOnBrew, commissionsOnDayEnd, commissionsOnDeliver, takeCommission } from './commissions';
-import { addModifier, drawOnBrewOf, MODIFIER_RULES, enchant, heartDeltaOf, isAged, temper } from './modifiers';
+import { addModifier, cantModify, drawOnBrewOf, MODIFIER_RULES, enchant, heartDeltaOf, isAged, temper } from './modifiers';
 import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
 import { atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, stallStock, swapForCard, takeDeal, weave } from './market';
-import { dayAllowance, gainRelic, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
+import { cursePool, dayAllowance, gainRelic, grantRelic, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
 import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import {
@@ -20,13 +20,14 @@ import {
   MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex,
 } from './rules';
 import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState, type RunStats } from './state';
+import { YEAR_RULES, yearDiscards, yearRule } from './year';
 
 export type ReduceResult = { state: RunState; events: GameEvent[] };
 
 const freshPending = (): Pending => ({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false });
 const noBoost = () => ({ hearts: 0, tip: 0, payMult: 1 });
 
-export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = []): ReduceResult {
+export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string): ReduceResult {
   const witch = codex.witches.get(witchId);
   if (!witch) throw new Error(`unknown witch: ${witchId}`);
 
@@ -43,6 +44,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     rng: seedRng(seed),
     witch: witch.id,
     season,
+    year: Math.max(1, Math.floor(year)),
     calendar: rollCalendar(seed, season, WEEKS),
     week: 1,
     day: 1,
@@ -85,6 +87,8 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   };
   applyPerks(s, perks);
   const ctx: Ctx = { s, ev: [{ type: 'runStarted', seed, witch: witch.id, season }] };
+  if (boon) applyBoon(ctx, boon);
+  applyYear(ctx);
   startDay(ctx);
   return { state: ctx.s, events: ctx.ev };
 }
@@ -120,7 +124,7 @@ function startDay(ctx: Ctx): void {
   s.sludgeToday = 0;
   s.phase = 'morning';
   const rules = SEASON_RULES[s.season];
-  const allowance = dayAllowance(s, { brews: BREWS_PER_DAY + (night ? 0 : rules.dayBrews), discards: DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0) }, night, weather);
+  const allowance = dayAllowance(s, { brews: BREWS_PER_DAY + (night ? 0 : rules.dayBrews), discards: Math.max(0, DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0) - yearDiscards(s)) }, night, weather);
   s.brewsLeft = allowance.brews;
   s.discardsLeft = allowance.discards;
   // Longest Night: the festival week's Night Shift is longer.
@@ -751,9 +755,36 @@ function applyPerks(s: RunState, perks: readonly string[]): void {
   }
 }
 
+/** The run's Year rules that act at the start (GDD §13): junk in the deck, a Curse, a smaller Shelf. */
+function applyYear(ctx: Ctx): void {
+  const s = ctx.s;
+  if (yearRule(s, 3)) s.drawPile.push({ uid: s.nextUid++, card: YEAR_RULES.startJunk });
+  if (yearRule(s, 7)) {
+    const curses = cursePool(s);
+    if (curses.length) takeCurse(ctx, pick(ctx, curses));
+  }
+  if (yearRule(s, 8)) s.shelfSize = Math.max(1, s.shelfSize - YEAR_RULES.shelf);
+}
+
+/** A loop's boon (GDD §13), applied at the start of every run that Year. */
+function applyBoon(ctx: Ctx, id: string): void {
+  const s = ctx.s;
+  const boon = codex.boons.get(id);
+  if (!boon) throw new Error(`unknown boon: ${id}`);
+  const b = boon.start;
+  s.gold += b.gold ?? 0;
+  s.shelfSize = Math.min(MAX_SHELF_SLOTS, s.shelfSize + (b.shelf ?? 0));
+  s.familiarSlots = Math.min(MAX_FAMILIAR_SLOTS, s.familiarSlots + (b.familiarSlots ?? 0));
+  if (b.relicTier) grantRelic(ctx, b.relicTier, 'boon');
+  for (let i = 0; i < (b.blessed ?? 0); i++) {
+    const open = s.drawPile.filter((c) => !cantModify(c, 'blessed'));
+    if (open.length) addModifier(ctx, pick(ctx, open), 'blessed', 'boon');
+  }
+}
+
 /** The single entry point for game rules. Pure: same input, same output. A broken rule returns the old state and a `rejected` event. */
 export function reduce(state: RunState | null, action: Action): ReduceResult {
-  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks);
+  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks, action.year, action.boon);
   if (!state) throw new Error('no run in progress');
   const ctx: Ctx = { s: structuredClone(state), ev: [] };
   try {

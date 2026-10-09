@@ -1,4 +1,4 @@
-// pnpm sim --runs 2000 --strategy greedy [--season spring] [--seed prefix] [--unlocks all] [--perks all]
+// pnpm sim --runs 2000 --strategy greedy [--season spring] [--seed prefix] [--unlocks all] [--perks all] [--year 2] [--boon id]
 // pnpm sim --replay path/to/run.json   (a {seed?, actions[]} log from a crash, the sim or the dev overlay)
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { codex } from '../src/codex';
@@ -31,12 +31,15 @@ const prefix = arg('seed') ?? 'sim';
 const unlocks = arg('unlocks') === 'all' ? almanacUnlocks([...codex.almanac.keys()]) : undefined;
 // --perks all: every cottage perk bought.
 const perks = arg('perks') === 'all' ? [...codex.perks.keys()] : undefined;
+// --year n: play under Year n's modifiers; --boon id: with that Year's boon.
+const year = arg('year') ? Number(arg('year')) : undefined;
+const boon = arg('boon');
 
 const t0 = performance.now();
-const records = Array.from({ length: runs }, (_, i) => playRun(`${prefix}-${i}`, { strategy, ...(season ? { season } : {}), ...(unlocks ? { unlocks } : {}), ...(perks ? { perks } : {}) }));
+const records = Array.from({ length: runs }, (_, i) => playRun(`${prefix}-${i}`, { strategy, ...(season ? { season } : {}), ...(unlocks ? { unlocks } : {}), ...(perks ? { perks } : {}), ...(year ? { year } : {}), ...(boon ? { boon } : {}) }));
 const secs = ((performance.now() - t0) / 1000).toFixed(1);
 
-console.log(report(records, `${strategy}${season ? ` · ${season}` : ''}${unlocks ? ' · all unlocked' : ''}${perks ? ' · all perks' : ''}`));
+console.log(report(records, `${strategy}${season ? ` · ${season}` : ''}${unlocks ? ' · all unlocked' : ''}${perks ? ' · all perks' : ''}${year ? ` · Year ${year}` : ''}${boon ? ` · ${boon}` : ''}`));
 console.log(`\n${secs}s`);
 
 const failed = records.filter((r) => r.error);
