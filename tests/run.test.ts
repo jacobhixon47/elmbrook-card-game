@@ -267,6 +267,9 @@ describe('weeks, rent and the end of a run', () => {
   it('seasons scale the rent and twist the day', () => {
     expect([1, 2, 3, 4].map((w) => rentDue('spring', w))).toEqual([20, 45, 90, 160]);
     expect(rentDue('winter', 4)).toBeGreaterThan(rentDue('autumn', 4));
+    // Week 1's rent is the same in every season (M4 Winter tuning).
+    expect((['summer', 'autumn', 'winter'] as const).map((se) => rentDue(se, 1))).toEqual([20, 20, 20]);
+    expect(rentDue('winter', 2)).toBe(Math.round(45 * 1.52));
     const summer = start('sun', 'summer');
     expect(summer.brewsLeft).toBe(5);
     const night = ok(summer, { type: 'debug', op: 'jumpToDay', week: 1, day: NIGHT_SHIFT_DAY }).state;

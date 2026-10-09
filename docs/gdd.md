@@ -47,9 +47,9 @@ Every run happens in one season. The season is chosen at run start from those yo
 | Spring | Fresh herbs and flowers more common (Vital, Calming) | Gentle: lower rent, the tutorial season | Blossom, rain, new beginnings |
 | Summer | Fruit, honey, Ember ingredients | Long days: +1 Brew on Days, Night Shifts are short (-1 Discard). Orders pay ×1.15 to match the rent | Fireflies, festivals |
 | Autumn | Roots, mushrooms, Umbra ingredients | Harvest patrons: bigger orders, bigger tips | Falling leaves, lanterns, the Harvest Fair |
-| Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | Frost Night Market: stalls take only odd currencies | Snow, hearth fires, the longest nights |
+| Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | Frost Night Market: stalls take only odd currencies. Orders pay ×1.2 against rent ×1.52 | Snow, hearth fires, the longest nights |
 
-Seasons scale in difficulty in that order (rent and order targets rise about 15% per season). Numbers are tuning starting points. Each season adds its own ingredients, patrons, events and two Night Market variants to the pools, so later seasons also feel new, not only harder.
+Seasons scale in difficulty in that order (rent and order targets rise about 15% per season, from week 2: week 1's rent is 20 gold in every season). Numbers are tuning starting points. Each season adds its own ingredients, patrons, events and two Night Market variants to the pools, so later seasons also feel new, not only harder.
 
 ### Time of day
 
@@ -124,6 +124,8 @@ The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; th
 *Balance note (M3 part 2):* the tables had Rain cost an order on every rainy day. In the sim that halved the greedy win rate (27.6% to 16.1%), because spring rains a third of the time and week 1-3 days only have 1-2 orders. Rain now only keeps a customer home on a busy day (3+ orders), which puts the win rate at 29.1%.
 
 *Balance note (Oct 8 audit):* weather only boosts. Rain also helps Tide, and a Heatwave no longer weakens Tide. The sim showed Summer far too hard (5% wins) because its rent rises 15% and its pay didn't, so Summer orders now pay ×1.15 too. Dusk Shard (a Lunar card usable by day) was cut: it made Moonmilk a sure Superb in week 1.
+
+*Balance note (M4 Winter tuning):* Winter won 8% of bot runs. Its rent was ×1.52 but its orders paid ×1, and week 1's rent of 30 sank about 7% of seeds whatever the bot did. Week 1's rent is now the same 20 gold in every season, so a run can't be lost to a cold deal before the deck has grown, and Winter orders pay ×1.2. The flat week 1 lifted Autumn to 40%, so Autumn orders pay ×1.15 instead of ×1.25. See `docs/balance-m4.md`.
 
 **Town events** (about one per week, a story choice at twilight, replacing that day's errand choice):
 

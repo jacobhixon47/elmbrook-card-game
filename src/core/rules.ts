@@ -114,13 +114,14 @@ export type SeasonRules = {
 export const SEASON_RULES: Record<Season, SeasonRules> = {
   spring: { rentMult: 1, payMult: 1, dayBrews: 0, nightDiscards: 0 },
   summer: { rentMult: 1.15, payMult: 1.15, dayBrews: 1, nightDiscards: -1 },
-  autumn: { rentMult: 1.32, payMult: 1.25, dayBrews: 0, nightDiscards: 0 },
-  winter: { rentMult: 1.52, payMult: 1, dayBrews: 0, nightDiscards: 0 },
+  autumn: { rentMult: 1.32, payMult: 1.15, dayBrews: 0, nightDiscards: 0 },
+  winter: { rentMult: 1.52, payMult: 1.2, dayBrews: 0, nightDiscards: 0 },
 };
 
 export function rentDue(season: Season, week: number): number {
   const base = RENT[Math.min(RENT.length, Math.max(1, week)) - 1]!;
-  return Math.round(base * SEASON_RULES[season].rentMult);
+  // Week 1's rent is the same in every season, so a cold start can't sink a run before the deck grows.
+  return week <= 1 ? base : Math.round(base * SEASON_RULES[season].rentMult);
 }
 
 // ---------------------------------------------------------------- Calendar effects (GDD §4.2)
