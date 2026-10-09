@@ -229,7 +229,7 @@ Balatro-style editions applied by events/vendors: **Moonlit** (+Harmony), **Aged
 
 Balance pass (Oct 9, from the balance tables): Aged went from +1 a day for 5g to +2 for 3g because a bot forced to buy it did worse than with the free temper; Moonlit and Blessed stay. Gilded (+gold when brewed, from the balance tables) is cut: forced to buy it every visit, the bot did no better than with the free temper even at +3 gold for 5, so it was a choice that never paid. Forced to buy one modifier every visit, the bot wins more per gold with Blessed than Moonlit, so Blessed isn't overpriced.
 
-Moonlit, Blessed and Cursed score at step 3 (§6.3), after the tinctures and before familiars, in slot order. Modifiers come from the Creek Bank (§7), the Name-Taker's Cursed card (§9) and the Fortune Tent's Wheel of Fortune (§9). Dusk events also give them: the Shrine Blessing (Blessed, your choice of card, 3 gold), the Moonlit Walk (Moonlit) and the Kettle (Aged, with a Sludge).
+Moonlit, Blessed and Cursed score at step 3 (§6.3), after the tinctures and before familiars, in slot order. Modifiers come from the Creek Bank (§7), the Name-Taker's Cursed card (§9) and the Fortune Tent's Wheel of Fortune (§9). Dusk events also give them: the Shrine Blessing (Blessed, your choice of card, 6 gold), the Moonlit Walk (Moonlit) and the Kettle (Aged, with a Sludge).
 
 ## 6. Brewing
 

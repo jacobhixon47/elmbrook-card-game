@@ -8,7 +8,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - **M1** ✅ rules engine (PR #2). Greedy bot wins 29.7% of 2,000 Spring runs, inside the 15-35% band; 99%+ line coverage on `src/core`.
 - **M2** ✅ playable day (PR #3): the Run scene plays a whole Spring run in the browser. `pnpm e2e` plays week 1 through the UI in CI.
 - **M2.5** ✅ player guidance (PR #4): card inspect tooltips, the Grimoire, the stage ribbon and the first-run tutorial (GDD §15.1).
-- **M3** in progress, one PR per part: (1) content from the balance tables ✅ (PR #5), (2) Calendar ✅ (PR #6), (3) Night Shifts, patrons, Satchel and Lunar cards ✅ (PR #8), (4) Night Market stalls ✅ (PR #9), (5) familiars, relics and curses, card modifiers (cauldrons move to M4's run starts), (6) Creek, Guild Commissions, dusk events and resuming a run. Part 5 lands in three PRs: familiars ✅ (PR #10), relics, curses and the Name-Taker ✅ (PR #11), then card modifiers with the Creek Bank errand ✅ (PR #12, priced in PR #13). Part 6 lands in three PRs too: Guild Commissions (PR #14), the first 8 dusk events (PR #15), then resuming a run (in review).
+- **M3** ✅ full run, one PR per part: content from the balance tables (PR #5), Calendar (PR #6), Night Shifts, patrons, Satchel and Lunar cards (PR #8), Night Market stalls (PR #9), familiars (PR #10), relics, curses and the Name-Taker (PR #11), card modifiers and the Creek Bank (PRs #12, #13), Guild Commissions (PR #17), the first 8 dusk events (PR #15), resuming a run (PR #16), and the closing balance pass (`docs/balance-m3.md`). Cauldrons moved to M4's run starts.
 
 ## M0 — Scaffold and harness ✅
 
@@ -53,7 +53,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 
 **Accept:** someone who has never seen the game finishes week 1 without being told anything outside the game.
 
-## M3 — Full run
+## M3 — Full run ✅
 
 - Calendar scene (run map), seeded at run start: daily weather, town events, the week-3 festival, rare sky events, next patron preview (GDD §4.2).
 - Night customers (GDD §4.1).

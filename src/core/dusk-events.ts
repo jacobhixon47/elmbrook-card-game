@@ -11,7 +11,7 @@ import { allCards, type CardInstance, type RunState } from './state';
 
 /** Gold the events ask for or give. */
 export const EVENT_GOLD = {
-  shrine: 3,
+  shrine: 6,
   spillHelp: 4,
   purse: 10,
   binUncommon: 3,

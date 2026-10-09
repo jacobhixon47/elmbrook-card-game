@@ -23,14 +23,14 @@ const atLeast = (tier: Potion['tier'], min: Potion['tier']) => tierIndex(tier) >
 const hasUmbra = (p: Pick<Potion, 'ingredients'>) => p.ingredients.some((id) => codex.ingredients.get(id)?.essences.includes('umbra'));
 
 export const COMMISSION_GOALS: Record<string, Goal> = {
-  'calm-the-shrine': { target: 3, on: 'deliver', counts: ({ potion }) => potion.family === 'calming' && atLeast(potion.tier, 'superb') },
+  'calm-the-shrine': { target: 2, on: 'deliver', counts: ({ potion }) => potion.family === 'calming' },
   'miners-mend': { target: 3, on: 'deliver', counts: ({ potion }) => potion.family === 'healing' || potion.family === 'protection' },
-  'bakers-dozen': { target: 6, on: 'brew', counts: ({ potion, copies }) => (potion.family === 'warming' ? copies : 0) },
+  'bakers-dozen': { target: 3, on: 'brew', counts: ({ potion, copies }) => (potion.family === 'warming' ? copies : 0) },
   'full-shelf': { target: 1, on: 'day-end', met: (s) => s.shelf.length >= s.shelfSize },
   'no-shadows': { target: 5, on: 'deliver', counts: ({ potion }) => !hasUmbra(potion) },
   'three-of-a-kind': { target: 4, on: 'brew', counts: ({ potion }) => (potion.ingredients.length === 3 ? 1 : 0) },
   'masters-proof': { target: 1, on: 'brew', counts: ({ potion }) => (atLeast(potion.tier, 'masterwork') ? 1 : 0) },
-  'full-moon-favour': { target: 3, on: 'deliver', counts: ({ potion }) => potion.family === 'calming' && atLeast(potion.tier, 'superb') },
+  'full-moon-favour': { target: 2, on: 'deliver', counts: ({ potion }) => potion.family === 'calming' && atLeast(potion.tier, 'superb') },
   // Counted by the customers list, not a test.
   'the-whole-town': { target: 5, on: 'deliver', counts: () => false },
   'night-owl': { target: 1, on: 'day-end', met: (s) => s.day === NIGHT_SHIFT_DAY && s.orders.length > 0 && s.orders.every((o) => o.status === 'filled') },
