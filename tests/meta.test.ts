@@ -124,8 +124,8 @@ describe('the Almanac', () => {
   it('a first run draws from the starter relics only', () => {
     const s = newRun('relics', 'hedge-witch').state;
     expect(relicPool(s)).toHaveLength([...codex.relics.values()].filter((r) => r.pool === 'base').length);
-    expect(relicPool(s)).not.toContain('spare-satchel');
-    expect(relicPool({ ...s, unlocks: ['spare-satchel'] })).toContain('spare-satchel');
+    expect(relicPool(s)).not.toContain('lucky-horseshoe');
+    expect(relicPool({ ...s, unlocks: ['lucky-horseshoe'] })).toContain('lucky-horseshoe');
   });
 
   it('records entries a run meets, won or lost, once each', () => {
