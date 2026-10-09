@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { NIGHT_SHIFT_DAY, rentOf, SEASONS, skyTime, WEEKS, type RunState } from '../core';
+import { MAX_YEAR, NIGHT_SHIFT_DAY, rentOf, SEASONS, seasonsOf, skyTime, WEEKS, type RunState } from '../core';
 import { PALETTE } from '../art/palette';
 import { loadProfile, saveProfile } from '../profile';
 import { store } from '../store';
@@ -61,7 +61,7 @@ export function installOverlay(game: Phaser.Game, openAtStart = false): void {
     <div class="row">jump to week <select id="eo-week">${weeks}</select> day <select id="eo-day">${days}</select><button id="eo-jump">go</button></div>
     <div class="row"><button id="eo-export">export action log</button><span id="eo-note" class="dim"></span></div>
     <div class="row">tutorial <span id="eo-tut"></span><button id="eo-tut-skip">skip</button><button id="eo-tut-reset">reset</button></div>
-    <div class="row">seasons <span id="eo-seasons"></span><button id="eo-seasons-all">open all</button><button id="eo-seasons-reset">spring only</button></div>
+    <div class="row">seasons <span id="eo-seasons"></span><button id="eo-seasons-all">open all</button><button id="eo-seasons-reset">spring only</button><button id="eo-year-add">+Year</button></div>
     <details><summary>state</summary><pre id="eo-state"></pre></details>`;
 
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
@@ -71,7 +71,8 @@ export function installOverlay(game: Phaser.Game, openAtStart = false): void {
     $('#eo-summary').innerHTML = s ? summary(s) : '<div class="dim">no run in progress</div>';
     $('#eo-state').textContent = s ? JSON.stringify(s, null, 1) : '';
     $('#eo-tut').textContent = loadProfile().tutorialDone ? 'done' : 'not done';
-    $('#eo-seasons').textContent = loadProfile().seasons.join(', ');
+    const p = loadProfile();
+    $('#eo-seasons').textContent = `Year ${p.year} of ${p.yearSeasons.length}: ${seasonsOf(p).join(', ')}`;
   };
 
   // Redraw the run from the new state after a debug change (the sky may have changed too).
@@ -87,8 +88,16 @@ export function installOverlay(game: Phaser.Game, openAtStart = false): void {
       render();
       return redraw();
     }
+    if (el.id === 'eo-year-add') {
+      const p = loadProfile();
+      if (p.yearSeasons.length < MAX_YEAR) saveProfile({ yearSeasons: [...p.yearSeasons, ['spring']], boons: [...p.boons, null] });
+      $('#eo-note').textContent = 'a Year opened: choose it at the cottage';
+      return render();
+    }
     if (el.id === 'eo-seasons-all' || el.id === 'eo-seasons-reset') {
-      saveProfile({ seasons: el.id === 'eo-seasons-all' ? [...SEASONS] : ['spring'] });
+      const p = loadProfile();
+      const all = el.id === 'eo-seasons-all';
+      saveProfile(all ? { yearSeasons: p.yearSeasons.map((_, i) => (i === p.year - 1 ? [...SEASONS] : p.yearSeasons[i]!)) } : { yearSeasons: [['spring']], year: 1, boons: [null], boonOffer: null });
       $('#eo-note').textContent = 'seasons changed: the title screen shows them';
       return render();
     }

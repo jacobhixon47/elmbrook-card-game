@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  DISCARDS_PER_DAY, LOOP_ALMANAC, loopOpen, loopYear, MAX_YEAR, migrateProfile, migrateRun, newProfile, newRun, NIGHT_SHIFT_DAY, patronKnown, pickBoon, recordRun,
+  boonOf, chooseYear, DISCARDS_PER_DAY, LOOP_ALMANAC, loopOpen, MAX_YEAR, SEASONS, seasonsOf, migrateProfile, migrateRun, newProfile, newRun, NIGHT_SHIFT_DAY, patronKnown, pickBoon, recordRun,
   rentOf, reputationFor, reputationMult, rollBoons, RUN_VERSION, START_GOLD, SHELF_SLOTS, FAMILIAR_SLOTS, newStats, yearModifiers, YEAR_RULES,
+  type Profile,
 } from '../src/core';
 import { calendarWeeks, dayRules } from '../src/view/calendar';
 import { brewing } from './helpers';
 
-const winterWin = (seed: string) => ({ seed, season: 'winter' as const, phase: 'victory' as const, week: 4, stats: newStats() });
 
 describe('Year modifiers', () => {
   it('stack: each Year carries every modifier up to it', () => {
@@ -66,32 +66,46 @@ describe('boons', () => {
   });
 });
 
-describe('looping the Year', () => {
-  it('Year 1 always ends; the loop opens from the second Year won, or a quarter of the Almanac', () => {
+describe('choosing a Year', () => {
+  const winterWin = (seed: string, year = 1) => ({ seed, season: 'winter' as const, phase: 'victory' as const, week: 4, stats: newStats(), year });
+
+  it('Year 1 always just ends; the next Year opens from the second Year won, or a quarter of the Almanac', () => {
     const first = recordRun(newProfile(), winterWin('w1'));
-    expect(first).toMatchObject({ yearDone: true, canLoop: false, profile: { years: 1, year: 1 } });
+    expect(first).toMatchObject({ yearDone: true, newYear: null, profile: { years: 1, yearSeasons: [['spring']] } });
     const second = recordRun(first.profile, winterWin('w2'));
-    expect(second).toMatchObject({ yearDone: true, canLoop: true, profile: { years: 2 } });
+    expect(second).toMatchObject({ yearDone: true, newYear: 2, profile: { years: 2, year: 1, yearSeasons: [['spring'], ['spring']], boons: [null, null] } });
     const almanac = [...codex.almanac.keys()].slice(0, LOOP_ALMANAC);
-    expect(recordRun({ ...newProfile(), almanac }, winterWin('w3')).canLoop).toBe(true);
-    expect(loopOpen({ years: 9, year: MAX_YEAR, almanac })).toBe(false);
+    expect(recordRun({ ...newProfile(), almanac }, winterWin('w3')).newYear).toBe(2);
+    expect(loopOpen({ years: 9, yearSeasons: Array.from({ length: MAX_YEAR }, () => [...SEASONS]), almanac })).toBe(false);
   });
 
-  it('a loop goes back to Spring in the next Year, with three boons to choose from', () => {
-    const p = { ...newProfile(), years: 2, seasons: ['spring', 'summer', 'autumn', 'winter'] as ('spring' | 'summer' | 'autumn' | 'winter')[] };
-    const looped = loopYear(p);
-    expect(looped).toMatchObject({ year: 2, seasons: ['spring'], boon: null });
-    expect(looped.boonOffer).toHaveLength(3);
-    expect(looped.boonOffer).toEqual(rollBoons(2, 2));
-    const picked = pickBoon(looped, looped.boonOffer![0]!);
-    expect(picked).toMatchObject({ boon: looped.boonOffer![0], boonOffer: null });
+  it('only a win in your top Year opens the next, and seasons open in the Year they were won in', () => {
+    const p: Profile = { ...newProfile(), years: 3, yearSeasons: [[...SEASONS], [...SEASONS]], boons: [null, 'tall-shelf'] };
+    expect(recordRun(p, winterWin('w1', 1)).newYear).toBeNull();
+    expect(recordRun(p, winterWin('w2', 2)).newYear).toBe(3);
+    const springWin = recordRun({ ...p, yearSeasons: [[...SEASONS], ['spring']] }, { ...winterWin('s', 2), season: 'spring' as const });
+    expect(springWin.profile.yearSeasons).toEqual([[...SEASONS], ['spring', 'summer']]);
+  });
+
+  it('choosing a Year without a boon offers three; its pick lasts that Year', () => {
+    const p: Profile = { ...newProfile(), years: 2, yearSeasons: [[...SEASONS], ['spring']], boons: [null, null] };
+    const chosen = chooseYear(p, 2);
+    expect(chosen).toMatchObject({ year: 2 });
+    expect(seasonsOf(chosen)).toEqual(['spring']);
+    expect(chosen.boonOffer).toEqual(rollBoons(2, 2));
+    const picked = pickBoon(chosen, chosen.boonOffer![0]!);
+    expect(boonOf(picked)).toBe(chosen.boonOffer![0]);
+    expect(picked.boonOffer).toBeNull();
     expect(() => pickBoon(picked, 'tall-shelf')).toThrow(/not on offer/);
-    expect(() => loopYear(newProfile())).toThrow(/not open/);
+    // Back to Year 1 and up again: no boon to pick twice.
+    expect(chooseYear(chooseYear(picked, 1), 2)).toMatchObject({ year: 2, boonOffer: null });
+    expect(boonOf(chooseYear(picked, 1))).toBeNull();
+    expect(() => chooseYear(p, 3)).toThrow(/not open/);
   });
 
   it('the profile and saved runs migrate to Year 1', () => {
-    expect(migrateProfile({ version: 4, tutorialDone: true })).toMatchObject({ year: 1, boon: null, boonOffer: null });
-    expect(migrateProfile({ ...newProfile(), year: 99, boon: 'nope', boonOffer: ['tall-shelf', 7] })).toMatchObject({ year: MAX_YEAR, boon: null, boonOffer: null });
+    expect(migrateProfile({ version: 4, tutorialDone: true, seasons: ['spring', 'summer'] })).toMatchObject({ yearSeasons: [['spring', 'summer']], year: 1, boons: [null], boonOffer: null });
+    expect(migrateProfile({ ...newProfile(), year: 99, boons: ['tall-shelf', 'nope'], boonOffer: ['tall-shelf', 7] })).toMatchObject({ year: 1, boons: [null], boonOffer: null });
     const old: Record<string, unknown> = { ...brewing('migrate'), version: 13 };
     delete old.year;
     expect(migrateRun(old)).toMatchObject({ version: RUN_VERSION, year: 1 });

@@ -5,7 +5,7 @@ import {
   allCards, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
-  type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome, almanacUnlocks, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
+  type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome, almanacUnlocks, boonOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
 } from '../core';
 import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
@@ -29,7 +29,7 @@ import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
 import type { CardExtras } from '../view/inspect';
 import { TIPS, TUTORIAL_SEED, TutorialProgress, type Tip } from '../view/tutorial';
-import { loadProfile, loopYearNow, recordFinishedRun, saveProfile } from '../profile';
+import { loadProfile, recordFinishedRun, saveProfile } from '../profile';
 import { clearRun, saveRun } from '../save';
 import { button, panel } from '../view/ui';
 import { addWeather } from '../view/weather';
@@ -1460,7 +1460,7 @@ export class Run extends Phaser.Scene {
       ...(p.perks.length ? { perks: p.perks } : {}),
       ...(unlocks.length ? { unlocks } : {}),
       ...(p.year > 1 ? { year: p.year } : {}),
-      ...(p.boon ? { boon: p.boon } : {}),
+      ...(boonOf(p) ? { boon: boonOf(p)! } : {}),
     };
   }
 
@@ -1472,33 +1472,27 @@ export class Run extends Phaser.Scene {
   }
 
   /**
-   * A Winter win: the "year in Elmbrook" ending (GDD §13), then home, or, once looping is open, on
-   * into the next Year. Going home retires: you stay in this Year with every season open.
+   * A Winter win: the "year in Elmbrook" ending (GDD §13). Winning your top Year's Winter, once
+   * looping is open, opens the next Year: you choose it at the cottage, like an Ascension level.
    */
   private yearEnding(s: RunState, out: RunOutcome) {
     this.add2(panel(this, 100, 28, 440, 300, 'k', 0.94, 'n'));
     this.text(320, 40, `A Year in Elmbrook`, { size: 16, color: 'y', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
     this.text(320, 62, YEAR_ENDING, { size: 8, color: 'w', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
-    const year = out.profile.year;
+    const year = s.year;
     const done = `Year ${year} done${out.profile.years > 1 ? `, ${out.profile.years} Years in all` : ''}. The stall is yours, with ${s.gold}g to spare.`;
     this.text(320, 168, done, { size: 8, color: 'L', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
     if (out.reputation > 0) this.text(320, 184, `+${out.reputation} Reputation to spend at your cottage`, { size: 8, color: 'Y', align: 'center' }).setOrigin(0.5, 0);
     if (out.almanac.length) this.text(320, 198, `New in your Almanac: ${listOf(out.almanac.map((id) => codex.almanac.get(id)!.name))}.`, { size: 8, color: 'L', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
-    if (!out.canLoop) {
-      const why = year >= MAX_YEAR ? `Year ${MAX_YEAR} is the last Year, for now.` : `Win another Year, or finish ${LOOP_ALMANAC} Almanac entries, and the next Winter win can carry you into Year ${year + 1}.`;
-      this.text(320, 226, why, { size: 7, color: 'a', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
-      this.add2(button(this, 320, 296, 'Home', () => this.scene.start('Cottage', {}), { w: 80, color: 'Y' }));
-      return;
-    }
-    const next = yearModifiers(year + 1).at(-1)!;
-    this.text(320, 220, `Year ${year + 1} is open. Loop back to Spring with a boon, under a new rule: ${next.text} Reputation ×${reputationMult(year + 1)}.`, { size: 7, color: 'a', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
-    this.add2(button(this, 260, 296, `Begin Year ${year + 1}`, () => this.loopYear(), { w: 100, color: 'Y' }));
-    this.add2(button(this, 380, 296, `Stay in Year ${year}`, () => this.scene.start('Cottage', {}), { w: 100 }));
-  }
-
-  private loopYear() {
-    if (!this.fixtureRun) loopYearNow();
-    this.scene.start('Cottage', {});
+    const top = out.profile.yearSeasons.length;
+    const news = out.newYear
+      ? `Year ${out.newYear} is open: choose it at your cottage, with a boon, under a new rule. ${yearModifiers(out.newYear).at(-1)!.text} Reputation ×${reputationMult(out.newYear)}.`
+      : year < top || top >= MAX_YEAR
+        ? null
+        : `Win another Year, or finish ${LOOP_ALMANAC} Almanac entries, and your next Winter win opens Year ${top + 1}.`;
+    if (news) this.text(320, 222, news, { size: 7, color: out.newYear ? 'L' : 'a', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
+    this.add2(button(this, 270, 296, 'Play again', () => this.newRun(s.season), { w: 80 }));
+    this.add2(button(this, 370, 296, 'Home', () => this.scene.start('Cottage', {}), { w: 80, color: 'Y' }));
   }
 
   /** Play the same season again, or go home to the cottage to choose another. */

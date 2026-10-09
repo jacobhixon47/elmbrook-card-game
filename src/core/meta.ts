@@ -14,17 +14,20 @@ export const PROFILE_VERSION = 5;
 export type Profile = {
   version: typeof PROFILE_VERSION;
   tutorialDone: boolean;
-  /** Seasons you can start a run in, in Year order. Spring is always open; winning a season opens the next. */
-  seasons: Season[];
+  /**
+   * Each Year you've reached (index 0 is Year 1) and the seasons open in it, in Year order. Spring is
+   * always open; winning a season opens the next. A Year opens at Spring once the one before it is won.
+   */
+  yearSeasons: Season[][];
   /** Runs finished, and runs won by season. */
   runs: number;
   wins: Record<Season, number>;
   /** Years completed: each win in Winter. */
   years: number;
-  /** The Year you're playing (GDD §13): 1, or higher once you loop. Its modifiers apply to every run. */
+  /** The Year you've chosen to play at the cottage (GDD §13). Its modifiers apply to every run. */
   year: number;
-  /** The boon picked for this Year, and the three on offer while one is still to pick. */
-  boon: string | null;
+  /** The boon picked for each Year (index 0 is Year 1, which has none), and the three on offer while the chosen Year's is still to pick. */
+  boons: (string | null)[];
   boonOffer: string[] | null;
   /** The seed of the last run counted, so a run is never counted twice. */
   lastRun: string | null;
@@ -43,12 +46,12 @@ export function newProfile(): Profile {
   return {
     version: PROFILE_VERSION,
     tutorialDone: false,
-    seasons: ['spring'],
+    yearSeasons: [['spring']],
     runs: 0,
     wins: { spring: 0, summer: 0, autumn: 0, winter: 0 },
     years: 0,
     year: 1,
-    boon: null,
+    boons: [null],
     boonOffer: null,
     lastRun: null,
     reputation: 0,
@@ -73,8 +76,8 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   2: (p) => ({ ...p, almanac: [] }),
   // 3 → 4: the Codex, with nothing met yet.
   3: (p) => ({ ...p, codex: [] }),
-  // 4 → 5: the Year you're in, Year 1 with no boon.
-  4: (p) => ({ ...p, year: 1, boon: null, boonOffer: null }),
+  // 4 → 5: Years, each with its own seasons. Everything so far was Year 1.
+  4: (p) => ({ ...p, yearSeasons: p.yearSeasons ?? [p.seasons ?? ['spring']], year: 1, boons: [null], boonOffer: null }),
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -94,19 +97,25 @@ export function migrateProfile(raw: unknown): Profile {
 /** A current-version profile with every field present and sane, whatever the stored copy held. */
 function sanitize(p: Raw): Profile {
   const fresh = newProfile();
-  const seasons = Array.isArray(p.seasons) ? SEASONS.filter((s) => (p.seasons as unknown[]).includes(s)) : [];
+  const openIn = (list: unknown): Season[] => {
+    const open = Array.isArray(list) ? SEASONS.filter((s) => list.includes(s)) : [];
+    return open.includes('spring') ? open : ['spring', ...open];
+  };
+  const yearSeasons = (Array.isArray(p.yearSeasons) && p.yearSeasons.length ? p.yearSeasons : [[]]).slice(0, MAX_YEAR).map(openIn);
+  const boons = Array.isArray(p.boons) ? p.boons : [];
+  const offer = p.boonOffer;
   const wins = (p.wins && typeof p.wins === 'object' ? p.wins : {}) as Partial<Record<Season, unknown>>;
   const count = (n: unknown) => (typeof n === 'number' && n >= 0 ? Math.floor(n) : 0);
   return {
     version: PROFILE_VERSION,
     tutorialDone: p.tutorialDone === true,
-    seasons: seasons.includes('spring') ? seasons : ['spring', ...seasons],
+    yearSeasons,
     runs: count(p.runs),
     wins: Object.fromEntries(SEASONS.map((s) => [s, count(wins[s])])) as Record<Season, number>,
     years: count(p.years),
-    year: Math.min(MAX_YEAR, Math.max(1, count(p.year))),
-    boon: typeof p.boon === 'string' && codex.boons.has(p.boon) ? p.boon : null,
-    boonOffer: Array.isArray(p.boonOffer) && p.boonOffer.length && p.boonOffer.every((id) => typeof id === 'string' && codex.boons.has(id)) ? (p.boonOffer as string[]) : null,
+    year: Math.min(yearSeasons.length, Math.max(1, count(p.year))),
+    boons: yearSeasons.map((_, i) => (i > 0 && typeof boons[i] === 'string' && codex.boons.has(boons[i]) ? boons[i] : null)),
+    boonOffer: Array.isArray(offer) && offer.length && offer.every((id) => typeof id === 'string' && codex.boons.has(id)) ? (offer as string[]) : null,
     lastRun: typeof p.lastRun === 'string' ? p.lastRun : fresh.lastRun,
     reputation: count(p.reputation),
     reputationEarned: count(p.reputationEarned),
@@ -158,60 +167,76 @@ export type RunOutcome = {
   opened: Season | null;
   /** This run completed a Year (a win in Winter). */
   yearDone: boolean;
-  /** The Year just completed can loop into the next. */
-  canLoop: boolean;
+  /** The Year this Winter win opened, if any. */
+  newYear: number | null;
   /** Almanac entries this run met for the first time. */
   almanac: string[];
 };
 
 /** Count a finished run. A run still going, or one already counted, changes nothing. */
 export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year'>>): RunOutcome {
-  const same = { profile, reputation: 0, opened: null, yearDone: false, canLoop: false, almanac: [] };
+  const same = { profile, reputation: 0, opened: null, yearDone: false, newYear: null, almanac: [] };
   if ((s.phase !== 'victory' && s.phase !== 'game-over') || profile.lastRun === s.seed) return same;
   const reputation = reputationFor(s);
   const almanac = almanacMet(profile.almanac, s);
   const p: Profile = {
-    ...profile, seasons: [...profile.seasons], wins: { ...profile.wins }, perks: [...profile.perks], runs: profile.runs + 1, lastRun: s.seed,
+    ...profile, yearSeasons: profile.yearSeasons.map((y) => [...y]), boons: [...profile.boons], wins: { ...profile.wins }, perks: [...profile.perks], runs: profile.runs + 1, lastRun: s.seed,
     reputation: profile.reputation + reputation, reputationEarned: profile.reputationEarned + reputation, almanac: [...profile.almanac, ...almanac],
     codex: [...profile.codex, ...codexMet(profile.codex, s)],
   };
   if (s.phase === 'game-over') return { ...same, profile: p, reputation, almanac };
   p.wins[s.season]++;
+  const year = Math.min(p.yearSeasons.length, s.year ?? 1);
+  const open = p.yearSeasons[year - 1]!;
   const next = nextSeason(s.season);
-  const opened = next && !p.seasons.includes(next) ? next : null;
-  if (opened) p.seasons = SEASONS.filter((x) => x === opened || p.seasons.includes(x));
+  const opened = next && !open.includes(next) ? next : null;
+  if (opened) p.yearSeasons[year - 1] = SEASONS.filter((x) => x === opened || open.includes(x));
   const yearDone = s.season === 'winter';
   if (yearDone) p.years++;
-  return { profile: p, reputation, opened, yearDone, canLoop: yearDone && loopOpen(p), almanac };
+  // Winning the top Year's Winter opens the next Year, once looping is open.
+  const newYear = yearDone && year === p.yearSeasons.length && loopOpen(p) ? year + 1 : null;
+  if (newYear) {
+    p.yearSeasons.push(['spring']);
+    p.boons.push(null);
+  }
+  return { profile: p, reputation, opened, yearDone, newYear, almanac };
 }
 
 /** Almanac entries done that open looping before a second Year is won (GDD §13: a quarter of the Almanac). */
 export const LOOP_ALMANAC = Math.ceil(codex.almanac.size / 4);
 
 /**
- * Whether a Winter win now offers to loop into the next Year: Year 1 always ends with the ending, so
+ * Whether winning Winter in your top Year opens the next: Year 1 always just ends with the ending, so
  * from the second Year completed on, or once a quarter of the Almanac is done. Never past MAX_YEAR.
  */
-export function loopOpen(p: Pick<Profile, 'years' | 'year' | 'almanac'>): boolean {
-  return p.year < MAX_YEAR && (p.years >= 2 || p.almanac.length >= LOOP_ALMANAC);
+export function loopOpen(p: Pick<Profile, 'years' | 'yearSeasons' | 'almanac'>): boolean {
+  return p.yearSeasons.length < MAX_YEAR && (p.years >= 2 || p.almanac.length >= LOOP_ALMANAC);
 }
+
+/** The seasons open in a Year (the chosen one by default). */
+export const seasonsOf = (p: Pick<Profile, 'yearSeasons' | 'year'>, year = p.year): Season[] => p.yearSeasons[year - 1] ?? [];
+
+/** The boon of the chosen Year, if it has one. */
+export const boonOf = (p: Pick<Profile, 'boons' | 'year'>): string | null => p.boons[p.year - 1] ?? null;
 
 /** Three boons to choose from for a new Year, the same for the same profile. */
 export function rollBoons(year: number, years: number): string[] {
   return shuffle([...codex.boons.keys()], seedRng(`boons-${year}-${years}`))[0].slice(0, 3);
 }
 
-/** Loop into the next Year: back to Spring, under the next Year's modifier, with a boon to pick at the cottage. */
-export function loopYear(p: Profile): Profile {
-  if (!loopOpen(p)) throw new Error('the next Year is not open');
-  const year = p.year + 1;
-  return { ...p, year, seasons: ['spring'], boon: null, boonOffer: rollBoons(year, p.years) };
+/** Play a Year you've reached. A Year after the first with no boon yet offers three to choose from. */
+export function chooseYear(p: Profile, year: number): Profile {
+  if (year < 1 || year > p.yearSeasons.length) throw new Error(`Year ${year} is not open`);
+  const offer = year > 1 && !p.boons[year - 1] ? rollBoons(year, p.years) : null;
+  return { ...p, year, boonOffer: offer };
 }
 
-/** Choose this Year's boon from the three on offer. */
+/** Choose the chosen Year's boon from the three on offer; it lasts every run in that Year. */
 export function pickBoon(p: Profile, id: string): Profile {
   if (!p.boonOffer?.includes(id)) throw new Error(`${id} is not on offer`);
-  return { ...p, boon: id, boonOffer: null };
+  const boons = [...p.boons];
+  boons[p.year - 1] = id;
+  return { ...p, boons, boonOffer: null };
 }
 
 /** Why this perk can't be bought now, or null. */

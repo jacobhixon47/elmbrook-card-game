@@ -2,7 +2,7 @@
 // The rules for it, versions and migrations included, are in core/meta.ts; this is the storage,
 // which may be missing or blocked (a private window): then nothing persists and nothing breaks.
 
-import { buyPerk, loopYear, migrateProfile, pickBoon, recordRun, type Profile, type RunOutcome, type RunState } from './core';
+import { buyPerk, chooseYear, migrateProfile, pickBoon, recordRun, type Profile, type RunOutcome, type RunState } from './core';
 
 const KEY = 'elmbrook.profile';
 
@@ -41,9 +41,9 @@ export function buyPerkNow(id: string): Profile {
   return store(buyPerk(loadProfile(), id));
 }
 
-/** Loop into the next Year from a Winter win (throws when looping isn't open; check `loopOpen` first). */
-export function loopYearNow(): Profile {
-  return store(loopYear(loadProfile()));
+/** Play another Year you've reached, at the cottage. */
+export function chooseYearNow(year: number): Profile {
+  return store(chooseYear(loadProfile(), year));
 }
 
 /** Choose this Year's boon at the cottage. */
