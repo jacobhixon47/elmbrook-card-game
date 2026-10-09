@@ -647,6 +647,15 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       return;
     }
 
+    case 'pourOut': {
+      if (s.phase === 'game-over' || s.phase === 'victory') reject('the run is over');
+      const i = s.shelf.findIndex((p) => p.uid === action.uid);
+      if (i < 0) reject(`potion ${action.uid} is not on the Shelf`);
+      s.shelf.splice(i, 1);
+      ctx.ev.push({ type: 'potionPoured', uid: action.uid });
+      return;
+    }
+
     case 'sellPotion': {
       atStall(ctx, 'fence');
       const i = s.shelf.findIndex((p) => p.uid === action.uid);

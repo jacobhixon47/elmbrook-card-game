@@ -22,7 +22,7 @@ import {
 } from '../view/describe';
 import { drawGrimoire, type GrimoireTab } from '../view/grimoire';
 import { stages } from '../view/guide';
-import { bestOrderFor, previewPotion } from '../view/plan';
+import { bestOrderFor, potionLines, previewPotion } from '../view/plan';
 import { todayLine, todayRules } from '../view/calendar';
 import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
@@ -43,6 +43,8 @@ type Mode =
   | { kind: 'familiar'; index: number }
   /** At the Creek Bank: tempering, or which modifier to buy. */
   | { kind: 'creek'; pick: CreekPick }
+  /** Pouring out: the next Shelf potion clicked is poured away. */
+  | { kind: 'pour' }
   /** At a dusk event, choosing the card for this choice (the Shrine Blessing). */
   | { kind: 'event-card'; choice: number };
 
@@ -142,6 +144,7 @@ export class Run extends Phaser.Scene {
     }
     if (fixture?.ui?.familiar !== undefined) this.mode = { kind: 'familiar', index: fixture.ui.familiar };
     if (fixture?.ui?.creek) this.mode = { kind: 'creek', pick: fixture.ui.creek };
+    if (fixture?.ui?.pour) this.mode = { kind: 'pour' };
     if (fixture?.ui?.eventCard !== undefined) this.mode = { kind: 'event-card', choice: fixture.ui.eventCard };
     if (fixture?.ui?.grimoire) this.book = fixture.ui.grimoire;
     if (fixture?.ui?.tutorial) {
@@ -159,6 +162,13 @@ export class Run extends Phaser.Scene {
       const x = this.handX(peek, state.hand.length);
       this.tip.card(state.hand[peek]!.card, x, HAND_Y - 40, HAND_Y + 40, state.hand[peek]);
     }
+    const shelfTip = fixture?.ui?.shelfTip;
+    const potion = shelfTip !== undefined ? state.shelf[shelfTip] : undefined;
+    if (potion) {
+      const px = SIDE.x + 6 + 10 + (shelfTip! % 6) * 21;
+      const py = SHELF_Y + 30 + Math.floor(shelfTip! / 6) * 22;
+      this.tip.text(recipeName(potion.recipe), potionLines(state, potion, this.pinned), px, py - 10, py + 10);
+    }
     // Changes from outside this scene (the dev overlay, Playwright) redraw it too.
     const off = store.subscribe((_, events) => {
       // Every change is saved, whoever made it.
@@ -167,6 +177,7 @@ export class Run extends Phaser.Scene {
       this.afterChange();
     });
     this.events.once('shutdown', off);
+    this.input.mouse?.disableContextMenu();
     this.bindKeys();
     this.time.delayedCall(noAnim ? 0 : 400, () => markReady(this));
   }
@@ -614,15 +625,29 @@ export class Run extends Phaser.Scene {
     // The Shelf (GDD §6.5).
     this.add2(panel(this, SIDE.x, SHELF_Y, SIDE.w, 70));
     this.text(x, SHELF_Y + 4, `Shelf ${s.shelf.length}/${s.shelfSize}`, { size: 8, color: 'y' });
+    const pouring = this.mode.kind === 'pour';
+    if (s.shelf.length) {
+      const pour = this.add2(button(this, SIDE.x + SIDE.w - 30, SHELF_Y + 9, pouring ? 'Cancel' : 'Pour out', () => {
+        this.mode = pouring ? { kind: 'idle' } : { kind: 'pour' };
+        this.render();
+      }, { w: 52, color: pouring ? 'Y' : 'W' }));
+      pour.setScale(0.85);
+    }
     s.shelf.forEach((p, i) => {
       const px = x + 10 + (i % 6) * 21;
       const py = SHELF_Y + 30 + Math.floor(i / 6) * 22;
       const img = this.add2(this.add.image(px, py, `potion/${p.family}`));
       this.text(px, py + 9, TIER_NAME[p.tier][0]!, { size: 6, color: TIER_COLOR[p.tier]!, stroke: 'k' }).setOrigin(0.5, 0);
       img.setInteractive({ useHandCursor: true });
-      img.on('pointerover', () => this.shelfHint?.setText(`${recipeName(p.recipe)} · ${TIER_NAME[p.tier]} ${p.quality}`));
-      img.on('pointerout', () => this.shelfHint?.setText('Click a potion to deliver it.'));
-      img.on('pointerdown', () => {
+      img.on('pointerover', () => this.tip.text(recipeName(p.recipe), potionLines(s, p, this.pinned), px, py - 10, py + 10));
+      img.on('pointerout', () => this.tip.hide());
+      img.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        // Right-click, or a click while pouring, pours it away.
+        if (pointer.rightButtonDown() || this.mode.kind === 'pour') {
+          this.mode = { kind: 'idle' };
+          this.tip.hide();
+          return void this.dispatch({ type: 'pourOut', uid: p.uid });
+        }
         if (this.mode.kind === 'select' && this.mode.purpose === 'shelf-one') {
           const tincture = this.mode.tincture!;
           this.mode = { kind: 'idle' };
@@ -632,12 +657,10 @@ export class Run extends Phaser.Scene {
       });
     });
     const decanting = this.mode.kind === 'select' && this.mode.purpose === 'shelf-one';
-    if (decanting) this.add2(this.add.rectangle(SIDE.x, SHELF_Y, SIDE.w, 70).setOrigin(0).setStrokeStyle(2, hex('Y')));
-    const hint = decanting ? 'Click a potion to Decant it.' : s.shelf.length ? 'Click a potion to deliver it.' : 'Potions you keep wait here.';
-    this.shelfHint = this.text(x, SHELF_Y + 56, hint, { size: 7, color: decanting ? 'y' : 'a' });
+    if (decanting || pouring) this.add2(this.add.rectangle(SIDE.x, SHELF_Y, SIDE.w, 70).setOrigin(0).setStrokeStyle(2, hex('Y')));
+    const hint = decanting ? 'Click a potion to Decant it.' : pouring ? 'Click a potion to pour it away.' : s.shelf.length ? 'Click a potion to deliver it.' : 'Potions you keep wait here.';
+    this.text(x, SHELF_Y + 56, hint, { size: 7, color: decanting || pouring ? 'y' : 'a' });
   }
-
-  private shelfHint?: Phaser.GameObjects.Text;
 
   private deliverShelf(s: RunState, p: Potion) {
     if (s.phase !== 'brewing') return this.toast('Open the shop first.');

@@ -276,7 +276,7 @@ Pay, tips, Fence prices and shop prices live in `src/core/rules.ts` and are tune
 
 ### 6.5 The Shelf
 
-Brewed potions not delivered go to the Shelf (4 slots, upgradable). Shelf potions can fill later orders (from 1.0's "fulfil from inventory"), carry between days, and sell at the Night Market. Potions on the Shelf at rent time are not worth anything unless sold.
+Brewed potions not delivered go to the Shelf (4 slots, upgradable). Shelf potions can fill later orders (from 1.0's "fulfil from inventory"), carry between days, and sell at the Night Market. Potions on the Shelf at rent time are not worth anything unless sold. A Shelf potion can be poured away for free at any time (the Pour out button, or right-click it), so a full Shelf never wastes a brew; hovering one shows its quality, ingredients, the order it would fill and what the Fence pays (decided with Jacob).
 
 ## 7. Dusk errands
 
