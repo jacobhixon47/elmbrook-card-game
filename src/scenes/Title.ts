@@ -3,15 +3,21 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { titleBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
-import { noAnim } from '../debug/params';
+import { noAnim, type Fixture } from '../debug/params';
+import type { RunState } from '../core';
+import { clearRun, loadRun } from '../save';
+import { dayLabel } from '../view/describe';
+import { button } from '../view/ui';
 import { pixelText } from '../view/text';
+
+const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
 
 export class Title extends Phaser.Scene {
   constructor() {
     super('Title');
   }
 
-  create() {
+  create(data: { fixture?: Fixture | null } = {}) {
     pixelCamera(this);
     const bg = titleBackdrop();
     this.add.image(0, 0, bg.texture).setOrigin(0);
@@ -47,12 +53,32 @@ export class Title extends Phaser.Scene {
       });
     }
 
-    const prompt = pixelText(this, TX, 226, 'press any key', { size: 8, color: 'v', align: 'center' }).setOrigin(0.5);
-    if (!noAnim) this.tweens.add({ targets: prompt, alpha: 0.2, duration: 700, yoyo: true, repeat: -1 });
-
-    const go = () => this.scene.start('Run', {});
-    this.input.keyboard?.once('keydown', go);
-    this.input.once('pointerdown', go);
+    // A run saved in this browser can be continued; a fixture shows one from its `state`.
+    const saved = data.fixture ? ((data.fixture.state as RunState | undefined) ?? null) : loadRun();
+    const fresh = () => this.scene.start('Run', {});
+    if (saved) {
+      const resume = () => this.scene.start('Run', { saved });
+      const line = `${dayLabel(saved)} · ${cap(saved.season)} · ${saved.gold} gold`;
+      this.add.existing(button(this, TX, 222, 'Continue', resume, { w: 96, color: 'y' }));
+      pixelText(this, TX, 236, line, { size: 7, color: 'm', stroke: 'k', align: 'center' }).setOrigin(0.5);
+      this.add.existing(button(this, TX, 256, 'New run', () => {
+        clearRun();
+        fresh();
+      }, { w: 96 }));
+      pixelText(this, TX, 274, 'Enter to continue · N for a new run', { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
+      this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'c') resume();
+        if (e.key === 'n') {
+          clearRun();
+          fresh();
+        }
+      });
+    } else {
+      const prompt = pixelText(this, TX, 226, 'press any key', { size: 8, color: 'v', align: 'center' }).setOrigin(0.5);
+      if (!noAnim) this.tweens.add({ targets: prompt, alpha: 0.2, duration: 700, yoyo: true, repeat: -1 });
+      this.input.keyboard?.once('keydown', fresh);
+      this.input.once('pointerdown', fresh);
+    }
 
     markReady(this);
   }

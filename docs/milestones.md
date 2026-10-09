@@ -8,7 +8,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - **M1** ✅ rules engine (PR #2). Greedy bot wins 29.7% of 2,000 Spring runs, inside the 15-35% band; 99%+ line coverage on `src/core`.
 - **M2** ✅ playable day (PR #3): the Run scene plays a whole Spring run in the browser. `pnpm e2e` plays week 1 through the UI in CI.
 - **M2.5** ✅ player guidance (PR #4): card inspect tooltips, the Grimoire, the stage ribbon and the first-run tutorial (GDD §15.1).
-- **M3** in progress, one PR per part: (1) content from the balance tables ✅ (PR #5), (2) Calendar ✅ (PR #6), (3) Night Shifts, patrons, Satchel and Lunar cards ✅ (PR #8), (4) Night Market stalls ✅ (PR #9), (5) familiars, relics and curses, card modifiers (cauldrons move to M4's run starts), (6) Creek, Guild Commissions, dusk events and resuming a run. Part 5 lands in three PRs: familiars ✅ (PR #10), relics, curses and the Name-Taker ✅ (PR #11), then card modifiers with the Creek Bank errand ✅ (PR #12, priced in PR #13). Part 6 lands in three PRs too: Guild Commissions (PR #14), the first 8 dusk events (in review), then resuming a run.
+- **M3** in progress, one PR per part: (1) content from the balance tables ✅ (PR #5), (2) Calendar ✅ (PR #6), (3) Night Shifts, patrons, Satchel and Lunar cards ✅ (PR #8), (4) Night Market stalls ✅ (PR #9), (5) familiars, relics and curses, card modifiers (cauldrons move to M4's run starts), (6) Creek, Guild Commissions, dusk events and resuming a run. Part 5 lands in three PRs: familiars ✅ (PR #10), relics, curses and the Name-Taker ✅ (PR #11), then card modifiers with the Creek Bank errand ✅ (PR #12, priced in PR #13). Part 6 lands in three PRs too: Guild Commissions (PR #14), the first 8 dusk events (PR #15), then resuming a run (in review).
 
 ## M0 — Scaffold and harness ✅
 
@@ -67,8 +67,8 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 ## M4 — Meta and story
 
 - Codex screen; persistent save with migrations.
-- The Year: season unlocks (Summer, Autumn, Winter content and twists), Year modifiers.
-- Reputation and Guild Hall perks; Almanac achievements that unlock pool content.
+- The Year: season unlocks (Summer, Autumn, Winter content and twists), Year modifiers, and looping into the next Year with a boon (GDD §13).
+- Reputation and cottage perks (the out-of-run home); Almanac achievements that unlock pool content, relics included (about 6 to start).
 - Six regulars with hearts, Ink dialogue, heart-milestone beats and unlocks.
 - Witch and cauldron selection; unlock flow.
 
@@ -77,7 +77,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 ## M5 — Art and audio pass
 
 - Author sprite grids for every codex card (`art:check` shows 0 placeholders); portraits for regulars and patrons.
-- Backdrops for every scene (painted where possible, see art-pipeline.md): Night Market street, Calendar, Guild Hall. The shop window already regrades by season and time of day.
+- Backdrops for every scene (painted where possible, see art-pipeline.md): Night Market street, Calendar, Guild Hall, the cottage. The shop window already regrades by season and time of day.
 - Art sheet reviewed for consistency.
 - SFX and music loops wired in, with volume settings.
 
@@ -87,10 +87,10 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 
 - Tutorial tips for the M3+ systems, tooltips on anything new since M2.5, settings menu (volume, fullscreen, scale), achievements (10).
 - Endless, Daily seed, Challenge runs.
-- itch.io deploy from CI; Tauri desktop build.
+- Tauri desktop builds (Windows, Mac, Linux) from CI, ready for Steam; the game is sold on Steam, with no free public or browser version. Private builds for friends come from CI as a download link. The GitHub repo goes private before release.
 - Optional: Claude Code terminal preview mod.
 
-**Accept:** a friend can play the itch build without help.
+**Accept:** a friend can play a private desktop build without help.
 
 ## After launch
 

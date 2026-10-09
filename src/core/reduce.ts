@@ -18,7 +18,7 @@ import {
   BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK,
   LONGEST_NIGHT, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
 } from './rules';
-import { allCards, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState } from './state';
+import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState } from './state';
 
 export type ReduceResult = { state: RunState; events: GameEvent[] };
 
@@ -36,7 +36,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   }
 
   const s: RunState = {
-    version: 10,
+    version: RUN_VERSION,
     seed,
     rng: seedRng(seed),
     witch: witch.id,

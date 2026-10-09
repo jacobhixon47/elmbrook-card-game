@@ -125,9 +125,15 @@ export type GiftSource = 'first-night' | 'lantern-witch' | 'bog-hag' | 'patron' 
 /** `cards` are familiar ids when it goes `into` your familiar slots. */
 export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'deck' | 'satchel' | 'familiar' };
 
+/**
+ * The run state's shape version. A saved run with another version is dropped rather than loaded
+ * (until M4 brings migrations), so bump it whenever a change would break an older save.
+ */
+export const RUN_VERSION = 10;
+
 /** Plain, JSON-serialisable run state. Fixtures and saves are exactly this shape. */
 export type RunState = {
-  version: 10;
+  version: typeof RUN_VERSION;
   seed: string;
   rng: RngState;
   witch: string;

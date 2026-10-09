@@ -84,7 +84,7 @@ Built in M0 and kept working forever.
 ## Persistence
 
 - Meta-progression (codex, regulars' hearts, unlocks, settings) in a versioned save object with migrations, stored in `localStorage` on web and a file under Tauri.
-- Mid-run save = current `RunState` (resume after closing the tab).
+- Mid-run save = current `RunState` (resume after closing the tab). In the build: `src/save.ts` keeps one run in `localStorage` (`elmbrook.run`) after every change, clears it when the run ends, and drops a save whose `version` isn't `RUN_VERSION` (bump it when a state change would break old saves; M4 brings migrations). The title screen offers Continue or New run. Fixture runs and the tutorial are never saved.
 
 ## Preview workflow
 

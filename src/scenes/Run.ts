@@ -29,6 +29,7 @@ import { Tooltip } from '../view/tooltip';
 import type { CardExtras } from '../view/inspect';
 import { TIPS, TUTORIAL_SEED, TutorialProgress, type Tip } from '../view/tutorial';
 import { loadProfile, saveProfile } from '../profile';
+import { clearRun, saveRun } from '../save';
 import { button, panel } from '../view/ui';
 import { addWeather } from '../view/weather';
 
@@ -85,12 +86,14 @@ export class Run extends Phaser.Scene {
   private tip!: Tooltip;
   /** The first-run tutorial, while it lasts (GDD §15.1). Kept across restarts for a new sky. */
   private tutorial: TutorialProgress | null = null;
+  /** A fixture's run: never saved. */
+  private fixtureRun = false;
 
   constructor() {
     super('Run');
   }
 
-  create(data: { fixture?: Fixture | null; resume?: boolean }) {
+  create(data: { fixture?: Fixture | null; resume?: boolean; saved?: RunState }) {
     pixelCamera(this);
     this.mode = { kind: 'idle' };
     this.pinned = null;
@@ -99,7 +102,12 @@ export class Run extends Phaser.Scene {
     this.book = null;
 
     const fixture = data.fixture;
-    if (data.resume && store.getState()) {
+    this.fixtureRun = this.fixtureRun || !!fixture;
+    if (data.saved) {
+      // Continue from the title screen: the run saved in this browser, without the tutorial.
+      store.load(data.saved);
+      this.tutorial = null;
+    } else if (data.resume && store.getState()) {
       // Coming back after the sky changed: keep the run (and the tutorial, unless it was skipped).
       if (loadProfile().tutorialDone) this.tutorial = null;
     } else if (fixture?.state) {
@@ -115,6 +123,7 @@ export class Run extends Phaser.Scene {
       for (const step of fixture?.steps ?? []) store.dispatch(stepAction(store.getState()!, step));
       today();
     }
+    this.save();
     const state = store.getState()!;
     if (fixture?.ui?.dialog !== undefined) {
       const order = state.orders[fixture.ui.dialog];
@@ -152,6 +161,8 @@ export class Run extends Phaser.Scene {
     }
     // Changes from outside this scene (the dev overlay, Playwright) redraw it too.
     const off = store.subscribe((_, events) => {
+      // Every change is saved, whoever made it.
+      this.save();
       if (this.dispatching || this.busy || events.length === 0) return;
       this.afterChange();
     });
@@ -1396,6 +1407,18 @@ export class Run extends Phaser.Scene {
     this.tutorial = wantsTutorial() ? new TutorialProgress() : null;
     store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, witch: 'hedge-witch' });
     this.scene.restart({ resume: true });
+  }
+
+  /**
+   * Keep the run in this browser so the title screen can continue it. Fixtures and the tutorial
+   * aren't saved: a fixture would overwrite a real run, and the tutorial can't pick up halfway.
+   */
+  private save() {
+    if (this.fixtureRun) return;
+    const s = store.getState();
+    if (!s) return;
+    if (this.tutorial) clearRun();
+    else saveRun(s);
   }
 
   // ---------------------------------------------------------------- keyboard
