@@ -11,7 +11,9 @@ import { allCards, type CardInstance, type RunState } from './state';
 
 export const MODIFIER_RULES = {
   moonlitHarmony: 2,
-  gildedGold: 2,
+  gildedGold: 3,
+  /** Potency an Aged-modifier card gains each day; Amber Sap's own Aged effect gains 1. */
+  agedPerDay: 2,
   cursedHearts: -1,
   /** The Creek Bank's free option: permanent Potency on one card. */
   temperPotency: 2,

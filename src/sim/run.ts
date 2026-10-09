@@ -59,6 +59,14 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
         case 'rewardOffered':
           rec.offered.push(...e.cards);
           break;
+        case 'cardModified':
+          if (e.by === 'creek') rec.tinctures[`mod:${e.modifier}`] = (rec.tinctures[`mod:${e.modifier}`] ?? 0) + 1;
+          break;
+        case 'cardInfused':
+          // Infuse (a Tincture) sends this too; only the Creek Bank's temper counts here.
+          if (s.offer?.kind !== 'creek') break;
+          rec.tinctures['mod:temper'] = (rec.tinctures['mod:temper'] ?? 0) + 1;
+          break;
         case 'tincturePlayed':
           rec.tinctures[e.card] = (rec.tinctures[e.card] ?? 0) + 1;
           break;

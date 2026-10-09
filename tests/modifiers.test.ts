@@ -57,7 +57,7 @@ function visit(s: RunState, stall: string): RunState {
 describe('modifiers in the codex', () => {
   it('has the five modifiers from the balance tables, Cursed not for sale', () => {
     expect([...codex.modifiers.values()].map((m) => [m.id, m.price])).toEqual([
-      ['moonlit', 6], ['aged', 5], ['gilded', 6], ['blessed', 12], ['cursed', null],
+      ['moonlit', 6], ['aged', 3], ['gilded', 5], ['blessed', 12], ['cursed', null],
     ]);
   });
 
@@ -110,14 +110,14 @@ describe('scoring with modifiers', () => {
     expect(ofType(r.events, 'goldChanged').filter((e) => e.reason === 'modifier').map((e) => e.delta)).toEqual([2 * MODIFIER_RULES.gildedGold]);
   });
 
-  it('Aged gains Potency each day in the deck and resets when brewed', () => {
+  it('Aged gains 2 Potency each day in the deck (Amber Sap\'s own Aged, 1) and resets when brewed', () => {
     let k = brewing('modifiers');
     const target = k.drawPile.find((c) => c.card === 'elmroot')!;
     k = ok(k, { type: 'debug', op: 'setModifier', uid: target.uid, modifier: 'aged' }).state;
     k = ok(k, { type: 'endDay' }).state;
     const aged = allCards(k).find((c) => c.uid === target.uid)!;
-    expect(aged.aged).toBe(1);
-    expect(cardPotency(aged)).toBe(codex.ingredients.get('elmroot')!.potency + 1);
+    expect(aged.aged).toBe(MODIFIER_RULES.agedPerDay);
+    expect(cardPotency(aged)).toBe(codex.ingredients.get('elmroot')!.potency + MODIFIER_RULES.agedPerDay);
     expect(no(k, { type: 'debug', op: 'setModifier', uid: target.uid, modifier: 'moonlit' })).toMatch(/already Aged/);
   });
 });

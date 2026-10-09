@@ -1,10 +1,11 @@
+import type { ModifierId } from '../codex/schema';
 import { codex } from '../codex';
 import {
   allCards, fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentOf, tierIndex, WEEKS,
   type Action, type BrewPreview, type CardInstance, type Errand, type Order, type Potion, type RunState, type StallState, type StockItem,
 } from '../core';
-import { targetsOf } from '../core/effects';
-import { cardPotency } from '../core/modifiers';
+import { effectsOf, targetsOf } from '../core/effects';
+import { cantModify, cardPotency, MODIFIER_RULES } from '../core/modifiers';
 import { brewBlocked, isSatchelCard } from '../core/night';
 import { fencePrice } from '../core/reduce';
 import { nextFloat, type RngState } from '../core/rng';
@@ -140,6 +141,31 @@ function cardValue(s: RunState, id: string): number {
   return ing.potency + 2 * fits;
 }
 
+// Rough quality one brew gains from each Creek option, with a typical brew of Potency 14 and Harmony 4.
+const BREW_POTENCY = 14;
+const BREW_HARMONY = 4;
+const GOLD_QUALITY = 3;
+function creekGain(card: CardInstance, mod: ModifierId | 'temper'): number {
+  switch (mod) {
+    case 'temper': return MODIFIER_RULES.temperPotency * BREW_HARMONY;
+    case 'moonlit': return MODIFIER_RULES.moonlitHarmony * BREW_POTENCY;
+    case 'blessed': return cardPotency(card) * BREW_HARMONY + (effectsOf(card.card).length ? 2 * BREW_POTENCY : 0);
+    case 'aged': return 2 * 2 * BREW_HARMONY; // about two days between brews
+    case 'gilded': return MODIFIER_RULES.gildedGold * GOLD_QUALITY;
+    default: return 0;
+  }
+}
+
+/** The sold modifier with the best gain over a free temper per gold, or undefined to temper. */
+function bestModifier(card: CardInstance, spare: number): ModifierId | undefined {
+  const temper = creekGain(card, 'temper');
+  return [...codex.modifiers.values()]
+    .filter((m) => m.price != null && m.price <= spare && !cantModify(card, m.id))
+    .map((m) => ({ id: m.id, v: (creekGain(card, m.id) - temper) / m.price! }))
+    .filter((m) => m.v > 1)
+    .sort((a, b) => b.v - a.v)[0]?.id;
+}
+
 function greedyBrewing(s: RunState): Action {
   // Fog hides the orders: spend one Discard on the weakest card to see them, or brew blind.
   if (s.fog) {
@@ -265,13 +291,16 @@ function greedyDusk(s: RunState): Action {
     }
     case 'creek': {
       if (offer.done) return { type: 'leaveErrand' };
-      // Moonlit on the strongest ingredient if gold allows, else temper it for free.
+      // The modifier worth the most per gold on the strongest ingredient, else temper it for free.
       const best = deck
         .filter((c) => codex.ingredients.has(c.card) && !c.modifier)
         .sort((a, b) => cardPotency(b) - cardPotency(a))[0];
       if (!best) return { type: 'leaveErrand' };
-      const price = codex.modifiers.get('moonlit')!.price!;
-      return s.gold - reserve >= price ? { type: 'enchant', uid: best.uid, modifier: 'moonlit' } : { type: 'temper', uid: best.uid };
+      const forced = process.env.SIM_MOD as ModifierId | 'temper' | undefined;
+      if (forced === 'temper') return { type: 'temper', uid: best.uid };
+      const pick = forced ? (cantModify(best, forced) ? undefined : forced) : bestModifier(best, s.gold - reserve);
+      const price = pick && codex.modifiers.get(pick)!.price;
+      return pick && price != null && s.gold - reserve >= price ? { type: 'enchant', uid: best.uid, modifier: pick } : { type: 'temper', uid: best.uid };
     }
     case 'hearth': {
       if (offer.removed) return { type: 'leaveErrand' };

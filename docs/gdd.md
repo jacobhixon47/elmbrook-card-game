@@ -223,10 +223,12 @@ Balatro-style editions applied by events/vendors: **Moonlit** (+Harmony), **Aged
 | Modifier | In the build | Creek Bank price |
 |---|---|---|
 | Moonlit | +2 Harmony when brewed. | 6g |
-| Aged | +1 Potency each day in the deck, reset when brewed. Not offered for a card that is already Aged (Amber Sap, Lunar Salt). | 5g |
-| Gilded | +2 gold when brewed, Sludge included. | 6g |
+| Aged | +2 Potency each day in the deck, reset when brewed. Not offered for a card that is already Aged (Amber Sap, Lunar Salt, whose own Aged gains 1 a day). | 3g |
+| Gilded | +3 gold when brewed, Sludge included. | 5g |
 | Blessed | Retrigger: the card's own Potency (printed, Infused or tempered, and Aged days) counts again and its scoring effect runs again. Its hearts and draws on brewing count twice too. | 12g |
 | Cursed | The card's own Potency counts again. -1 heart with the customer it's delivered to. | not sold |
+
+Balance pass (Oct 9, from the balance tables): Aged went from +1 a day for 5g to +2 for 3g and Gilded from +2 gold for 6g to +3 for 5g, because the sim bot never chose them; Moonlit and Blessed stay. Forced to buy one modifier every visit, the bot wins more per gold with Blessed than Moonlit, so Blessed isn't overpriced.
 
 Moonlit, Blessed and Cursed score at step 3 (§6.3), after the tinctures and before familiars, in slot order. Modifiers come from the Creek Bank (§7), the Name-Taker's Cursed card (§9) and the Fortune Tent's Wheel of Fortune (§9). The Shrine Blessing and the Moonlit Walk join with dusk events.
 
