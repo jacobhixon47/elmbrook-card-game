@@ -16,6 +16,7 @@ export const BONUS_TEXT: Record<OrderBonus, string> = {
 export const ERRAND_TEXT: Record<Errand, { name: string; text: string }> = {
   market: { name: 'Market Square', text: 'Spend gold on cards, a third cauldron slot or a bigger Shelf.' },
   forage: { name: 'Wychwood Forage', text: 'Pick 2 of 5 wild ingredients, free.' },
+  creek: { name: 'Creek Bank', text: 'Temper a card for +2 Potency, free, or buy it a modifier.' },
   hearth: { name: 'The Hearth', text: 'Burn one card you no longer want.' },
 };
 

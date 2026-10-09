@@ -6,6 +6,7 @@ import { changeGold, draw, drawToHandSize, gainCard, Reject, reject, shuffled, t
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
 import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
+import { addModifier, drawOnBrewOf, enchant, heartDeltaOf, isAged, payGilded, temper } from './modifiers';
 import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
 import { atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, stallStock, swapForCard, takeDeal, weave } from './market';
 import { dayAllowance, gainRelic, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
@@ -33,7 +34,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   }
 
   const s: RunState = {
-    version: 8,
+    version: 9,
     seed,
     rng: seedRng(seed),
     witch: witch.id,
@@ -213,6 +214,7 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
   for (const c of used) delete c.aged;
   s.discardPile.push(...used);
   s.lastBrew = used.map((c) => c.card);
+  payGilded(ctx, used);
   // A Grimoire Page waits for the next Experiment; every other tincture lasts one brew.
   const experiment = preview.kind === 'potion' && !preview.known;
   s.pending = { ...freshPending(), fullExperiment: s.pending.fullExperiment && !experiment };
@@ -241,7 +243,7 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
       tier: spare ? tierStep(preview.tier, 1) : preview.tier,
       ingredients: used.map((c) => c.card),
       experiment: !preview.known,
-      heartDelta: used.reduce((n, c) => n + sumEffect(c.card, 'heartDelta'), 0),
+      heartDelta: heartDeltaOf(used),
     };
     for (let i = 0; i < preview.copies; i++) {
       const potion: Potion = { uid: s.nextUid++, ...base };
@@ -266,7 +268,7 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
     ctx.ev.push({ type: 'cardsDiscarded', uids });
   }
   drawToHandSize(ctx);
-  const extra = used.reduce((n, c) => n + sumEffect(c.card, 'drawOnBrew'), 0);
+  const extra = drawOnBrewOf(used);
   if (extra > 0) draw(ctx, extra);
 }
 
@@ -283,7 +285,7 @@ function endDay(ctx: Ctx): void {
     ctx.ev.push({ type: 'orderDeclined', order: o.id, customer: o.customer });
     changeHearts(ctx, o.customer, -1);
   }
-  for (const c of allCards(s)) if (hasEffect(c.card, 'aged')) c.aged = (c.aged ?? 0) + 1;
+  for (const c of allCards(s)) if (isAged(c)) c.aged = (c.aged ?? 0) + 1;
   expireCards(ctx);
   if (isNightShift(s)) queueFirstNightGift(ctx);
   ctx.ev.push({ type: 'dayEnded', week: s.week, day: s.day });
@@ -540,10 +542,18 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       return;
     }
 
+    case 'temper':
+      temper(ctx, action.uid);
+      return;
+
+    case 'enchant':
+      enchant(ctx, action.uid, action.modifier);
+      return;
+
     case 'leaveErrand': {
       requirePhase(ctx, 'dusk');
       const kind = s.offer?.kind;
-      if (kind !== 'market' && kind !== 'forage' && kind !== 'hearth') reject('choose an errand first');
+      if (kind !== 'market' && kind !== 'forage' && kind !== 'creek' && kind !== 'hearth') reject('choose an errand first');
       s.day += 1;
       startDay(ctx);
       return;
@@ -614,7 +624,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       return;
 
     case 'takeDeal':
-      takeDeal(ctx, action.index);
+      takeDeal(ctx, action.index, action.take ?? 'relic');
       return;
 
     case 'liftCurse': {
@@ -666,6 +676,10 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
         gainRelic(ctx, action.relic, 'debug');
       } else if (action.op === 'giveCurse') {
         takeCurse(ctx, action.curse);
+      } else if (action.op === 'setModifier') {
+        const card = [...allCards(s), ...s.satchel].find((c) => c.uid === action.uid);
+        if (!card) reject(`no card ${action.uid}`);
+        addModifier(ctx, card, action.modifier, 'debug');
       } else if (action.op === 'patronReward') {
         const patron = codex.patrons.get(action.patron);
         if (!patron) reject(`no patron ${action.patron}`);

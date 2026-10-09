@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { PaletteKey } from '../art/palette';
-import { cardInfo } from './inspect';
+import { cardInfo, type CardExtras } from './inspect';
 import { pixelText } from './text';
 import { panel } from './ui';
 
@@ -19,8 +19,8 @@ export class Tooltip {
   }
 
   /** A card's details, placed above (or below) the point given. */
-  card(id: string, x: number, top: number, bottom = top) {
-    const info = cardInfo(id);
+  card(id: string, x: number, top: number, bottom = top, extras: CardExtras = {}) {
+    const info = cardInfo(id, extras);
     const rows: Row[] = [
       { text: info.title, size: 10, color: 'y' },
       { text: info.kind, size: 7, color: 'h' },

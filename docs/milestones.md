@@ -8,7 +8,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - **M1** ✅ rules engine (PR #2). Greedy bot wins 29.7% of 2,000 Spring runs, inside the 15-35% band; 99%+ line coverage on `src/core`.
 - **M2** ✅ playable day (PR #3): the Run scene plays a whole Spring run in the browser. `pnpm e2e` plays week 1 through the UI in CI.
 - **M2.5** ✅ player guidance (PR #4): card inspect tooltips, the Grimoire, the stage ribbon and the first-run tutorial (GDD §15.1).
-- **M3** in progress, one PR per part: (1) content from the balance tables ✅ (PR #5), (2) Calendar ✅ (PR #6), (3) Night Shifts, patrons, Satchel and Lunar cards ✅ (PR #8), (4) Night Market stalls ✅ (PR #9), (5) familiars, relics and curses, card modifiers (cauldrons move to M4's run starts), (6) Creek, Guild Commissions, dusk events and resuming a run. Part 5 lands in three PRs: familiars ✅ (PR #10), then relics, curses and the Name-Taker (in review), then card modifiers.
+- **M3** in progress, one PR per part: (1) content from the balance tables ✅ (PR #5), (2) Calendar ✅ (PR #6), (3) Night Shifts, patrons, Satchel and Lunar cards ✅ (PR #8), (4) Night Market stalls ✅ (PR #9), (5) familiars, relics and curses, card modifiers (cauldrons move to M4's run starts), (6) Creek, Guild Commissions, dusk events and resuming a run. Part 5 lands in three PRs: familiars ✅ (PR #10), relics, curses and the Name-Taker ✅ (PR #11), then card modifiers with the Creek Bank errand (in review). Part 6 is then Guild Commissions, dusk events and resuming a run.
 
 ## M0 — Scaffold and harness ✅
 

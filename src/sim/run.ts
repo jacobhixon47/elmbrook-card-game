@@ -1,4 +1,4 @@
-import { isPatron, reduce, type Action, type GameEvent, type RunState, type Season } from '../core';
+import { allCards, isPatron, reduce, type Action, type GameEvent, type RunState, type Season } from '../core';
 import { seedRng } from '../core/rng';
 import { greedyAction, isOver, randomAction, type Strategy } from './bot';
 
@@ -30,6 +30,8 @@ export type RunRecord = {
   /** Relics and curses held when the run ended. */
   relics: string[];
   curses: string[];
+  /** The modifier on each modified card at the end, one entry per card. */
+  modifiers: string[];
   error?: string;
 };
 
@@ -40,7 +42,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
   const rec: RunRecord = {
     seed, won: false, lostWeek: null, finished: false, actions: [], quality: [], gold: [],
     offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {},
-    finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [],
+    finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [], modifiers: [],
   };
   const max = opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000);
   let rng = seedRng(`bot:${seed}`);
@@ -109,6 +111,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
     rec.familiars = [...state.familiars];
     rec.relics = [...state.relics];
     rec.curses = [...state.curses];
+    rec.modifiers = [...allCards(state), ...state.satchel].flatMap((c) => (c.modifier ? [c.modifier] : []));
   } catch (e) {
     rec.error = e instanceof Error ? (e.stack ?? e.message) : String(e);
   }

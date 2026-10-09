@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop", { "modify": [0, "moonlit"] }, { "modify": [2, "blessed"] }, { "slot": 0 }, { "slot": 1 }] }

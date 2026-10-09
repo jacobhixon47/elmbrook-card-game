@@ -74,10 +74,10 @@ export function report(runs: RunRecord[], title: string): string {
   lines.push(...[...plays].sort((a, b) => b[1] - a[1]).map(([card, k]) => `  ${card.padEnd(16)} ${((100 * k) / n).toFixed(0).padStart(6)}`));
   if (unplayed.length) lines.push(`  never played: ${unplayed.join(', ')}`);
 
-  // Which familiars, relics and curses the bot ends up with, and how runs that had them did.
+  // Which familiars, relics, curses and modifiers the bot ends up with, and how runs that had them did.
   const held = (title: string, ids: readonly string[], of: (r: RunRecord) => readonly string[]) => {
     const seen = new Map<string, { runs: number; wins: number }>();
-    for (const r of runs) for (const id of of(r)) {
+    for (const r of runs) for (const id of new Set(of(r))) {
       const h = seen.get(id) ?? { runs: 0, wins: 0 };
       seen.set(id, { runs: h.runs + 1, wins: h.wins + (r.won ? 1 : 0) });
     }
@@ -89,5 +89,6 @@ export function report(runs: RunRecord[], title: string): string {
   held('familiars', [...codex.familiars.keys()], (r) => r.familiars);
   held('relics', [...codex.relics.keys()], (r) => r.relics);
   held('curses', [...codex.curses.keys()], (r) => r.curses);
+  held('modified cards', [...codex.modifiers.keys()], (r) => r.modifiers);
   return lines.join('\n');
 }

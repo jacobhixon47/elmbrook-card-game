@@ -64,7 +64,7 @@ export function offerReward(ctx: Ctx): void {
   ctx.ev.push({ type: 'rewardOffered', cards });
 }
 
-const ERRANDS: readonly Errand[] = ['market', 'forage', 'hearth'];
+const ERRANDS: readonly Errand[] = ['market', 'forage', 'creek', 'hearth'];
 
 export function offerErrands(ctx: Ctx): void {
   const options = shuffled(ctx, ERRANDS).slice(0, 2);
@@ -97,6 +97,9 @@ export function openErrand(ctx: Ctx, errand: Errand): void {
       s.offer = { kind: 'forage', cards, picksLeft: FORAGE_PICKS };
       return;
     }
+    case 'creek':
+      s.offer = { kind: 'creek', done: false };
+      return;
     case 'hearth':
       s.offer = { kind: 'hearth', removed: false };
       return;

@@ -1,3 +1,4 @@
+import type { ModifierId } from '../codex/schema';
 import type { Action, Errand, RunState } from '../core';
 
 /**
@@ -28,7 +29,9 @@ export type FixtureStep =
   | { relic: string }
   | { curse: string }
   /** Grant a patron's reward as if their order were filled. */
-  | { reward: string };
+  | { reward: string }
+  /** Give the hand card at this index a modifier. */
+  | { modify: [number, ModifierId] };
 
 export function stepAction(state: RunState, step: FixtureStep): Action {
   if (typeof step === 'string') return { type: step === 'skipReward' ? 'skipReward' : step };
@@ -47,6 +50,7 @@ export function stepAction(state: RunState, step: FixtureStep): Action {
   if ('relic' in step) return { type: 'debug', op: 'giveRelic', relic: step.relic };
   if ('curse' in step) return { type: 'debug', op: 'giveCurse', curse: step.curse };
   if ('familiar' in step) return { type: 'debug', op: 'giveFamiliar', familiar: step.familiar };
+  if ('modify' in step) return { type: 'debug', op: 'setModifier', uid: state.hand[step.modify[0]]?.uid ?? -1, modifier: step.modify[1] };
   if ('forget' in step) return { type: 'forgetRecipe', recipe: step.forget };
   const deck = [...state.drawPile, ...state.hand, ...state.discardPile];
   return { type: 'removeCard', uid: deck[step.removeAt]?.uid ?? -1 };

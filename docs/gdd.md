@@ -218,6 +218,18 @@ Some ask for a target: **Infuse** (a hand ingredient gains +2 Potency for the ru
 
 Balatro-style editions applied by events/vendors: **Moonlit** (+Harmony), **Aged** (+Potency each day it's in the deck, resets on brew), **Blessed** (retrigger), **Cursed** (big effect + drawback, from Night Market deals).
 
+*In the build (M3 part 5):* the five modifiers from the balance tables are in the codex (`modifiers`), with their numbers in `core/modifiers.ts`. A card holds one, and only ingredients take them (a Tincture has no Potency to double). Each shows as a coloured frame and a corner badge on the card, and its hover text says what it does.
+
+| Modifier | In the build | Creek Bank price |
+|---|---|---|
+| Moonlit | +2 Harmony when brewed. | 6g |
+| Aged | +1 Potency each day in the deck, reset when brewed. Not offered for a card that is already Aged (Amber Sap, Lunar Salt). | 5g |
+| Gilded | +2 gold when brewed, Sludge included. | 6g |
+| Blessed | Retrigger: the card's own Potency (printed, Infused or tempered, and Aged days) counts again and its scoring effect runs again. Its hearts and draws on brewing count twice too. | 12g |
+| Cursed | The card's own Potency counts again. -1 heart with the customer it's delivered to. | not sold |
+
+Moonlit, Blessed and Cursed score at step 3 (§6.3), after the tinctures and before familiars, in slot order. Modifiers come from the Creek Bank (§7), the Name-Taker's Cursed card (§9) and the Fortune Tent's Wheel of Fortune (§9). The Shrine Blessing and the Moonlit Walk join with dusk events.
+
 ## 6. Brewing
 
 ### 6.1 The cauldron panel
@@ -273,7 +285,7 @@ After the reward pick, choose one of two offered errands. This is the run's bran
 |---|---|
 | Market Square | Coin shop: ingredients, tinctures, a familiar or two, Shelf upgrade. |
 | Wychwood Forage | Choose 2 of 5 Wychwood ingredients for free. Small chance of a fae encounter. |
-| Creek Bank | Upgrade a card's Potency, or add a modifier. |
+| Creek Bank | Upgrade a card's Potency, or add a modifier. In the build: temper an ingredient for +2 Potency for the run, free, or buy it a modifier at its price (§5.5). One card a visit. |
 | Guild Hall | Take a Guild Commission (multi-day quest: "deliver 3 Superb Calming potions by the Full Moon" → relic reward). From 1.0's guild quests. |
 | Hearth (rest) | Remove a card from the deck (one per visit; the deck never drops below 8), or lift a Curse instead. |
 | Event | One of ~20 small events (fae visits, shop mishaps, a festival) with choices. From 1.0's random encounters. |
@@ -304,8 +316,8 @@ Phase flavour: First/Last Quarter nights have 3 stalls. Full Moon has all stalls
 - **The Lantern Seller** stocks 3 Lunar ingredients at 7 gold and 2 Omens at 6. They go in the Night Satchel.
 - **The Moth Broker** takes one recipe a night, never one of the witch's four starting recipes, for 1 of 3 Rare ingredients. Brewing the recipe again teaches it again. After he takes the memory he also offers 2 familiars, so the pick is 1 of 3 Rare cards or 2 familiars.
 - **The Hollow Tailor** sews one card a night. Give up a day ingredient; its first essence is sewn into another day ingredient, in place of that card's second essence, with +1 Potency. Lunar and Satchel cards stay out of it, so Lunar never reaches the day (the reason Dusk Shard was cut). The deck can't drop below 8.
-- **The Fortune Tent** costs 5 gold, then 3 more for each further draw that night. Its deck is in the codex (`tarot`). Boons happen at once. The Hermit and The Tower change next week's day orders: one fewer a day at +50% pay, or one tier harder at double pay. The Moon fogs next week's four days on the Calendar. Next-week twists aren't drawn in week 4. The Chariot gives a random familiar, or 10 gold with every slot taken. The World gives a tier 2 relic, or 12 gold if you hold every relic. Wheel of Fortune (the Blessed modifier) joins with modifiers.
-- **The Name-Taker** offers 2 deals a night and makes one: take a Curse you don't carry for the rest of the run, and a relic for it. The relic's tier is the Curse's severity, so Nameless or Leaky Roof buys a tier 1 relic and Unpaid Debt or Heavy Hands a tier 3. (The balance tables gave tier 2 for any Curse and tier 3 for severity 3. In the sim the mild Curses cost almost nothing, so Spring wins rose from 29% to 47%; matching tiers puts them at 35%.) The Rare card with the Cursed modifier joins with modifiers.
+- **The Fortune Tent** costs 5 gold, then 3 more for each further draw that night. Its deck is in the codex (`tarot`). Boons happen at once. The Hermit and The Tower change next week's day orders: one fewer a day at +50% pay, or one tier harder at double pay. The Moon fogs next week's four days on the Calendar. Next-week twists aren't drawn in week 4. The Chariot gives a random familiar, or 10 gold with every slot taken. The World gives a tier 2 relic, or 12 gold if you hold every relic. Wheel of Fortune blesses a random ingredient in your deck that can take it, or gives 8 gold if none can.
+- **The Name-Taker** offers 2 deals a night and makes one: take a Curse you don't carry for the rest of the run, and a relic for it. The relic's tier is the Curse's severity, so Nameless or Leaky Roof buys a tier 1 relic and Unpaid Debt or Heavy Hands a tier 3. (The balance tables gave tier 2 for any Curse and tier 3 for severity 3. In the sim the mild Curses cost almost nothing, so Spring wins rose from 29% to 47%; matching tiers puts them at 35%.) Each deal also offers a Rare ingredient with the Cursed modifier: take the Curse for the relic or for the card, not both.
 - No relic is offered twice in one night: the Black Market, the Name-Taker's deals and The World skip each other's.
 - **Relics bought on the new moon** come after the last Night Shift, so only the Guild Seal (cheaper final rent) helps. Worth revisiting with the Long Year mode.
 - The Wandering Tinker sells one Rare familiar at a quarter off. **Waiting for M4's seasons:** the eight seasonal stall variants in the balance tables.

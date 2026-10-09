@@ -1,9 +1,10 @@
 import { codex } from '../codex';
 import {
   allCards, fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentOf, tierIndex, WEEKS,
-  type Action, type BrewPreview, type CardInstance, type Order, type Potion, type RunState, type StallState, type StockItem,
+  type Action, type BrewPreview, type CardInstance, type Errand, type Order, type Potion, type RunState, type StallState, type StockItem,
 } from '../core';
 import { targetsOf } from '../core/effects';
+import { cardPotency } from '../core/modifiers';
 import { brewBlocked, isSatchelCard } from '../core/night';
 import { fencePrice } from '../core/reduce';
 import { nextFloat, type RngState } from '../core/rng';
@@ -29,7 +30,7 @@ function combos<T>(items: readonly T[], min: number, max: number): T[][] {
   return out;
 }
 
-const keyOf = (cards: readonly CardInstance[]) => cards.map((c) => `${c.card}:${c.aged ?? 0}`).sort().join('|');
+const keyOf = (cards: readonly CardInstance[]) => cards.map((c) => `${c.card}:${c.aged ?? 0}:${c.bonus ?? 0}:${c.modifier ?? ''}`).sort().join('|');
 
 /** Every distinct brew the hand and cauldron could make right now, scored. */
 function brewOptions(s: RunState): Plan[] {
@@ -240,7 +241,7 @@ function greedyDusk(s: RunState): Action {
     }
     case 'errands': {
       const sludge = deck.some((c) => c.card === 'sludge');
-      const order: ('hearth' | 'market' | 'forage')[] = sludge ? ['hearth', 'forage', 'market'] : s.gold - reserve >= 8 ? ['market', 'forage', 'hearth'] : ['forage', 'market', 'hearth'];
+      const order: Errand[] = sludge ? ['hearth', 'creek', 'forage', 'market'] : s.gold - reserve >= 8 ? ['market', 'creek', 'forage', 'hearth'] : ['creek', 'forage', 'market', 'hearth'];
       return { type: 'chooseErrand', errand: order.find((e) => offer.options.includes(e))! };
     }
     case 'market': {
@@ -261,6 +262,16 @@ function greedyDusk(s: RunState): Action {
       if (offer.picksLeft <= 0 || deck.length >= 24) return { type: 'leaveErrand' };
       const best = offer.cards.map((card, index) => ({ index, v: cardValue(s, card) })).sort((a, b) => b.v - a.v)[0];
       return best && best.v >= 6 ? { type: 'forage', index: best.index } : { type: 'leaveErrand' };
+    }
+    case 'creek': {
+      if (offer.done) return { type: 'leaveErrand' };
+      // Moonlit on the strongest ingredient if gold allows, else temper it for free.
+      const best = deck
+        .filter((c) => codex.ingredients.has(c.card) && !c.modifier)
+        .sort((a, b) => cardPotency(b) - cardPotency(a))[0];
+      if (!best) return { type: 'leaveErrand' };
+      const price = codex.modifiers.get('moonlit')!.price!;
+      return s.gold - reserve >= price ? { type: 'enchant', uid: best.uid, modifier: 'moonlit' } : { type: 'temper', uid: best.uid };
     }
     case 'hearth': {
       if (offer.removed) return { type: 'leaveErrand' };
@@ -310,6 +321,12 @@ export function relicValue(s: RunState, id: string): number {
   }
 }
 
+/** A Rare card with the Cursed modifier: its Potency counts twice, but deliveries cost a heart. */
+function cursedCardValue(s: RunState, id: string): number {
+  const deck = allCards(s).length;
+  return deck >= 24 ? 0 : Math.round((cardValue(s, id) + (codex.ingredients.get(id)?.potency ?? 0)) / 2);
+}
+
 /** Rough cost of carrying a Curse for the rest of the run. */
 export function curseCost(s: RunState, id: string): number {
   switch (id) {
@@ -350,8 +367,14 @@ function stallAction(s: RunState, stall: StallState): Action | null {
     }
     case 'name-taker': {
       if (stall.done) return null;
-      const best = stall.deals.map((d, index) => ({ index, v: relicValue(s, d.relic) - curseCost(s, d.curse) })).sort((a, b) => b.v - a.v)[0];
-      return best && best.v >= 4 ? { type: 'takeDeal', index: best.index } : null;
+      // The relic, or the Cursed card when it's worth more (doubled Potency, a heart lost each time it's delivered).
+      const best = stall.deals
+        .flatMap((d, index) => [
+          { index, take: 'relic' as const, v: relicValue(s, d.relic) - curseCost(s, d.curse) },
+          ...(d.card ? [{ index, take: 'card' as const, v: cursedCardValue(s, d.card) - curseCost(s, d.curse) }] : []),
+        ])
+        .sort((a, b) => b.v - a.v)[0];
+      return best && best.v >= 4 ? { type: 'takeDeal', index: best.index, take: best.take } : null;
     }
     case 'black-market': {
       const i = stall.stock.findIndex((item) => item.kind === 'relic' && !item.sold && item.price <= spare && relicValue(s, item.relic) >= 8);
@@ -407,7 +430,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'pickReward', index: roll(4) },
     { type: 'takeGift', index: roll(4) },
     { type: 'passGift' },
-    { type: 'chooseErrand', errand: any(['market', 'forage', 'hearth'] as const)! },
+    { type: 'chooseErrand', errand: any(['market', 'forage', 'creek', 'hearth'] as const)! },
     { type: 'buy', index: roll(7) },
     { type: 'forage', index: roll(5) },
     { type: 'removeCard', uid: any([...s.drawPile, ...s.hand, ...s.discardPile].map((c) => c.uid)) ?? 0 },
@@ -422,7 +445,9 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'weave', from: any(deckUids) ?? 0, into: any(deckUids) ?? 0 },
     { type: 'drawTarot' },
     { type: 'swapForCard', index: roll(3), uids: [any(deckUids) ?? 0, any(deckUids) ?? 0] },
-    { type: 'takeDeal', index: roll(3) },
+    { type: 'takeDeal', index: roll(3), take: roll(2) ? 'relic' : 'card' },
+    { type: 'temper', uid: any(deckUids) ?? 0 },
+    { type: 'enchant', uid: any(deckUids) ?? 0, modifier: any(['moonlit', 'aged', 'gilded', 'blessed', 'cursed'] as const)! },
     { type: 'liftCurse', curse: any(s.curses) ?? 'nameless' },
   );
   // Weight away from ending the day so random runs actually brew.
