@@ -8,6 +8,7 @@ import { ArtSheet } from './scenes/ArtSheet';
 import { Boot } from './scenes/Boot';
 import { Run } from './scenes/Run';
 import { Title } from './scenes/Title';
+import { Cottage } from './scenes/Cottage';
 import { BASE_H, BASE_W, ZOOM, integerZoom } from './view/zoom';
 
 
@@ -29,7 +30,7 @@ async function start() {
     render: { maxTextures: params.get('maxtex') ? Number(params.get('maxtex')) : 1 },
     roundPixels: true,
     scale: { mode: Phaser.Scale.NONE },
-    scene: [Boot, Title, Run, ArtSheet],
+    scene: [Boot, Title, Cottage, Run, ArtSheet],
   });
   // Textures and text are rendered for one zoom level; a different one needs a fresh boot.
   window.addEventListener('resize', () => {

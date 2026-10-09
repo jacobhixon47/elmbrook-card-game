@@ -30,6 +30,11 @@ export const BACKDROPS = {
     source: 'Elmbrook 1.0 Midjourney firefly-jar grid (3f40becf), panel 2: pnpm art:import <image> title --grid 2 --panel 2',
     lights: [{ x: 160, y: 268, scale: 1.1 }],
   },
+  cottage: {
+    file: 'backdrops/cottage.png',
+    source: 'Elmbrook 1.0 Midjourney grid 907c1bd3 (inventory ref H), panel 0: pnpm art:import <image> cottage --grid 2 --panel 0 --focus 0.5,0.55',
+    lights: [{ x: 300, y: 262, scale: 1.2 }],
+  },
 } as const satisfies Record<string, Backdrop>;
 
 export type BackdropId = keyof typeof BACKDROPS;

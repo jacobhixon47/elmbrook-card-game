@@ -1024,7 +1024,7 @@ export class Run extends Phaser.Scene {
       const news = out.yearDone
         ? `That's the whole Year in Elmbrook: Spring to Winter. Year ${out.profile.years} done.`
         : out.opened
-          ? `${cap(out.opened)} is open: choose it from the title screen.`
+          ? `${cap(out.opened)} is open: set out for it from your cottage.`
           : null;
       if (news) this.text(320, 120, news, { size: 10, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5);
       this.endButtons(s, 'Play again');
@@ -1452,11 +1452,10 @@ export class Run extends Phaser.Scene {
     return recordRun(before, s);
   }
 
-  /** Play the same season again, or, with more than one open, go back to choose. */
+  /** Play the same season again, or go home to the cottage to choose another. */
   private endButtons(s: RunState, again: string) {
-    const open = this.endOutcome(s).profile.seasons;
-    this.add2(button(this, open.length > 1 ? 270 : 320, 180, again, () => this.newRun(s.season), { w: 80, color: 'Y' }));
-    if (open.length > 1) this.add2(button(this, 370, 180, 'Choose season', () => this.scene.start('Title', {}), { w: 88 }));
+    this.add2(button(this, 270, 180, again, () => this.newRun(s.season), { w: 80, color: 'Y' }));
+    this.add2(button(this, 370, 180, 'Home', () => this.scene.start('Cottage', {}), { w: 80 }));
   }
 
   /**
