@@ -8,6 +8,7 @@ The greedy bot after the M3 balance pass (commit with this file), 1,000 runs per
 | Summer | 27.9% |
 | Autumn | 33.1% |
 | All unlocks | 34.6% |
+| Winter (300 runs) | 8.7%, not tuned yet |
 | Random bot (300 runs) | 0 errors |
 
 What the pass changed, from the balance tables' `m3-close` patch:
@@ -18,6 +19,8 @@ What the pass changed, from the balance tables' `m3-close` patch:
 - The Shrine Blessing: 3 → 6 gold (Blessed costs 12 at the Creek Bank).
 
 The bot doesn't steer toward a commission, so its completion rates are floors for a real player.
+
+**Winter is outside the band.** Its own content and twists are M4 work, and it hasn't been tuned: the bot wins 8.7%, and a quarter of runs are lost by week 2. Playing the same 300 seeds with five bot variants (the default plus each `SIM_MOD`), only 18% of Winter seeds were won by any variant, and 17% were lost by week 2 by all of them. In Spring, 75% were won by at least one variant and 0.7% were lost early by all, so Spring's losses come from choices, not the deal. Tuning Winter is the first balance job of M4.
 
 ## Spring, in full
 
