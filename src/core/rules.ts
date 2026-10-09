@@ -158,6 +158,13 @@ export const RELIC_FALLBACK_GOLD = [0, 8, 12, 16] as const;
 export const BLACK_MARKET_RELIC = { tier: 2, price: 25 } as const;
 /** The Name-Taker offers this many deals; each Curse buys a relic of its severity's tier. */
 export const NAME_TAKER_DEALS = 2;
+/** Guild Commissions: offered at the Guild Hall, and held at once (GDD §7). */
+export const COMMISSIONS = {
+  offered: 2,
+  max: 2,
+  /** Taken at a later dusk than this day, a commission's deadline starts from next week. */
+  lastDayThisWeek: 2,
+} as const;
 /** The World's relic tier. */
 export const WORLD_RELIC_TIER = 2;
 

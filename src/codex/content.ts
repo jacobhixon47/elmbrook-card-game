@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Curse, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch } from './schema';
+import type { Commission, Curse, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -219,6 +219,20 @@ export const modifiers: In<typeof Modifier>[] = [
   { id: 'aged', name: 'Aged', text: '+2 Potency for each day in the deck, reset when brewed.', price: 3 },
   { id: 'blessed', name: 'Blessed', text: 'Retrigger: its Potency and effect count twice.', price: 12 },
   { id: 'cursed', name: 'Cursed', text: 'Potency x2. -1 heart with the customer it is delivered to.', price: null },
+];
+
+// Guild Commissions (GDD §7), from the balance tables. Goals are counted in core/commissions.ts.
+export const commissions: In<typeof Commission>[] = [
+  { id: 'calm-the-shrine', name: 'Calm the Shrine', goal: 'Deliver 3 Calming potions, Superb or better.', deadline: 1, reward: { kind: 'relic', tier: 1 } },
+  { id: 'miners-mend', name: 'Miner\'s Mend', goal: 'Deliver 3 Healing or Protection potions.', deadline: 1, reward: { kind: 'gold', amount: 12 } },
+  { id: 'bakers-dozen', name: 'Baker\'s Dozen', goal: 'Brew 6 Warming potions of any tier.', deadline: 1, reward: { kind: 'gold', amount: 10 } },
+  { id: 'full-shelf', name: 'Full Shelf', goal: 'End a day with every Shelf slot full.', deadline: 1, reward: { kind: 'relic', tier: 1 } },
+  { id: 'no-shadows', name: 'No Shadows', goal: 'Fill 5 orders without an Umbra ingredient.', deadline: 1, reward: { kind: 'card-pick', rarity: 'rare', count: 3 } },
+  { id: 'three-of-a-kind', name: 'Three of a Kind', goal: 'Brew 4 potions of 3 ingredients.', deadline: 1, reward: { kind: 'relic', tier: 1 }, minWeek: 2 },
+  { id: 'masters-proof', name: 'Master\'s Proof', goal: 'Brew a Masterwork potion.', deadline: 2, reward: { kind: 'relic', tier: 2 }, minWeek: 2 },
+  { id: 'full-moon-favour', name: 'Full Moon Favour', goal: 'Deliver 3 Superb Calming potions by the Full Moon.', deadline: 1, dueWeek: 2, reward: { kind: 'relic', tier: 2 }, maxWeek: 2 },
+  { id: 'the-whole-town', name: 'The Whole Town', goal: 'Deliver to 5 different customers.', deadline: 1, reward: { kind: 'gold', amount: 15 }, minWeek: 2 },
+  { id: 'night-owl', name: 'Night Owl', goal: 'Fill every order on the coming Night Shift.', deadline: 1, reward: { kind: 'relic', tier: 3 }, minWeek: 2 },
 ];
 
 // The Night Market's stalls (GDD §9).

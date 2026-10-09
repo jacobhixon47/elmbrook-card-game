@@ -75,7 +75,7 @@ export type Pending = {
 /** Extras for the next delivery (Charm Sachet). */
 export type DeliveryBoost = { hearts: number; tip: number; payMult: number };
 
-export type Errand = 'market' | 'forage' | 'creek' | 'hearth';
+export type Errand = 'market' | 'forage' | 'creek' | 'guild' | 'hearth';
 
 export type StockItem =
   | { kind: 'card'; card: string; price: number; sold: boolean }
@@ -93,6 +93,8 @@ export type Offer =
   | { kind: 'hearth'; removed: boolean }
   /** `done` once a card is tempered or given a modifier: the Creek Bank does one a visit. */
   | { kind: 'creek'; done: boolean }
+  /** Guild Commissions on offer; one taken a visit. */
+  | { kind: 'guild'; options: string[]; taken: boolean }
   | { kind: 'night-market'; stalls: StallState[]; at: number | null }
   | Gift;
 
@@ -111,8 +113,11 @@ export type NameTakerDeal = { curse: string; relic: string; card: string | null 
 
 export type { StallId };
 
+/** A Guild Commission in progress: how far along, and the week whose Night Shift it's due by. */
+export type ActiveCommission = { id: string; progress: number; dueWeek: number; customers: string[] };
+
 /** Why a free pick is on offer at night. */
-export type GiftSource = 'first-night' | 'lantern-witch' | 'bog-hag' | 'patron';
+export type GiftSource = 'first-night' | 'lantern-witch' | 'bog-hag' | 'patron' | 'commission';
 
 /** A free pick after a Night Shift: the first-night Lunar card, a night customer's payment or a patron's reward. */
 /** `cards` are familiar ids when it goes `into` your familiar slots. */
@@ -120,7 +125,7 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
 
 /** Plain, JSON-serialisable run state. Fixtures and saves are exactly this shape. */
 export type RunState = {
-  version: 9;
+  version: 10;
   seed: string;
   rng: RngState;
   witch: string;
@@ -172,6 +177,8 @@ export type RunState = {
   curses: string[];
   /** Brews today that made Sludge, for the Iron Lid. */
   sludgeToday: number;
+  /** Guild Commissions taken and not yet done or failed (GDD §7). */
+  commissions: ActiveCommission[];
   /** Fortune Tent twists on a later week (The Hermit, The Tower, The Moon). */
   fortunes: { week: number; card: string }[];
   /** Unlock-pool content this run may offer (meta-progression, M4). Base-pool content is always on. */

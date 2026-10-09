@@ -20,6 +20,8 @@ export type RunRecord = {
   rejected: number;
   /** Times each Tincture was played. */
   tinctures: Record<string, number>;
+  /** Guild Commissions by id: how many were taken, done and failed. */
+  commissions: Record<string, { taken: number; done: number; failed: number }>;
   /** Rent was paid in week 4 but the Moonless Patron's orders weren't all filled. */
   finaleFailed: boolean;
   /** Patron orders posted and filled, by week. */
@@ -41,7 +43,7 @@ export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; 
 export function playRun(seed: string, opts: SimOptions): RunRecord {
   const rec: RunRecord = {
     seed, won: false, lostWeek: null, finished: false, actions: [], quality: [], gold: [],
-    offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {},
+    offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {}, commissions: {},
     finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [], modifiers: [],
   };
   const max = opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000);
@@ -67,6 +69,13 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
           if (s.offer?.kind !== 'creek') break;
           rec.tinctures['mod:temper'] = (rec.tinctures['mod:temper'] ?? 0) + 1;
           break;
+        case 'commissionTaken':
+        case 'commissionDone':
+        case 'commissionFailed': {
+          const c = (rec.commissions[e.commission] ??= { taken: 0, done: 0, failed: 0 });
+          c[e.type === 'commissionTaken' ? 'taken' : e.type === 'commissionDone' ? 'done' : 'failed']++;
+          break;
+        }
         case 'tincturePlayed':
           rec.tinctures[e.card] = (rec.tinctures[e.card] ?? 0) + 1;
           break;

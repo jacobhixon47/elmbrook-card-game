@@ -1,6 +1,7 @@
 import { codex } from '../codex';
 import type { Pool } from '../codex/schema';
 import { activeEvents } from './calendar';
+import { guildOpen, offerCommissions } from './commissions';
 import { pickWeighted, shuffled, type Ctx } from './ctx';
 import { familiarPrice, rollFamiliars } from './familiars';
 import { rewardCount, rewardWeights } from './relics';
@@ -64,10 +65,11 @@ export function offerReward(ctx: Ctx): void {
   ctx.ev.push({ type: 'rewardOffered', cards });
 }
 
-const ERRANDS: readonly Errand[] = ['market', 'forage', 'creek', 'hearth'];
+const ERRANDS: readonly Errand[] = ['market', 'forage', 'creek', 'guild', 'hearth'];
 
 export function offerErrands(ctx: Ctx): void {
-  const options = shuffled(ctx, ERRANDS).slice(0, 2);
+  // The Guild Hall only comes up with a commission to give and room to take it.
+  const options = shuffled(ctx, ERRANDS.filter((e) => e !== 'guild' || guildOpen(ctx.s))).slice(0, 2);
   ctx.s.offer = { kind: 'errands', options };
   ctx.ev.push({ type: 'errandsOffered', options });
 }
@@ -99,6 +101,9 @@ export function openErrand(ctx: Ctx, errand: Errand): void {
     }
     case 'creek':
       s.offer = { kind: 'creek', done: false };
+      return;
+    case 'guild':
+      s.offer = { kind: 'guild', options: offerCommissions(ctx), taken: false };
       return;
     case 'hearth':
       s.offer = { kind: 'hearth', removed: false };
