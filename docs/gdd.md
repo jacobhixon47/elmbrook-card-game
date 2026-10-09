@@ -287,7 +287,7 @@ After the reward pick, choose one of two offered errands. This is the run's bran
 | Market Square | Coin shop: ingredients, tinctures, a familiar or two, Shelf upgrade. |
 | Wychwood Forage | Choose 2 of 5 Wychwood ingredients for free. Small chance of a fae encounter. |
 | Creek Bank | Upgrade a card's Potency, or add a modifier. In the build: temper an ingredient for +2 Potency for the run, free, or buy it a modifier at its price (§5.5). One card a visit. |
-| Guild Hall | Take a Guild Commission (multi-day quest: "deliver 3 Superb Calming potions by the Full Moon" → relic reward). From 1.0's guild quests. |
+| Guild Hall | Take a Guild Commission (multi-day quest: "deliver 3 Superb Calming potions by the Full Moon" → relic reward). From 1.0's guild quests. In the build: two of the ten commissions are offered (codex `commissions`, goals in `core/commissions.ts`); take one or none, and hold at most two. Each is due by a Night Shift: this week's when taken by day 2's dusk, otherwise next week's, so there are always two days and a Night Shift to work on it (a longer deadline adds weeks; Full Moon Favour is always due on week 2). Finishing pays gold, a relic or a free card pick; a lapsed commission costs nothing. The Hall isn't offered while you hold two. Progress shows under the rent line. |
 | Hearth (rest) | Remove a card from the deck (one per visit; the deck never drops below 8), or lift a Curse instead. |
 | Event | One of ~20 small events (fae visits, shop mishaps, a festival) with choices. From 1.0's random encounters. |
 
@@ -325,7 +325,7 @@ Phase flavour: First/Last Quarter nights have 3 stalls. Full Moon has all stalls
 
 ### Relics and curses
 
-Relics are run-long passives with no slot limit, never sold for gold. They come from patron rewards, the Name-Taker, the Black Market and The World (later also Guild Commissions and festival contests). Curses are run debuffs, taken only at the Name-Taker; the Sleepless Miller and the Hearth lift them. Both are in the codex (`relics`, `curses`) with their numbers in `core/relics.ts`, and show as tokens between the Grimoire button and your gold; hover one for what it does.
+Relics are run-long passives with no slot limit, never sold for gold. They come from patron rewards, the Name-Taker, the Black Market, The World and Guild Commissions (later also festival contests). Curses are run debuffs, taken only at the Name-Taker; the Sleepless Miller and the Hearth lift them. Both are in the codex (`relics`, `curses`) with their numbers in `core/relics.ts`, and show as tokens between the Grimoire button and your gold; hover one for what it does.
 
 | Relic | Tier | Effect |
 |---|---|---|

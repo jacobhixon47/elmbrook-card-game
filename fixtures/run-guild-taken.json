@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fx-0", "today": "clear", "steps": [{ "gold": 10 }, { "commission": "night-owl" }, "openShop", "endDay", "skipReward", { "errand": "guild" }, { "takeCommission": 0 }] }

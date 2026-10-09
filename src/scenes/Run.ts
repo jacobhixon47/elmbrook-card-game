@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, BLACK_MARKET, brewBlocked, cantModify, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, BLACK_MARKET, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
   type NameTakerDeal, type StockItem, type Weather,
@@ -17,7 +17,7 @@ import { gradedView, shopBackdrop, viewOverrides } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
 import {
-  BONUS_TEXT, cardText, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, orderNeeds, orderTerms, recipeName,
+  BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, orderNeeds, orderTerms, recipeName,
   requestText, TIER_NAME,
 } from '../view/describe';
 import { drawGrimoire, type GrimoireTab } from '../view/grimoire';
@@ -440,6 +440,7 @@ export class Run extends Phaser.Scene {
       today.on('pointerout', () => this.tip.hide());
     }
     this.text(630, 24, `Rent ${rentOf(s)}g after the Night Shift`, { size: 7, color: 'a', shadow: true }).setOrigin(1, 0);
+    this.drawCommissions(s);
     if (s.phase !== 'game-over' && s.phase !== 'victory') this.drawRibbon(s);
     const hidden = this.grimoireHidden(s);
     this.add2(button(this, 478, 16, hidden ? 'Grimoire hidden' : 'Grimoire (G)', () => this.toggleBook(s), { w: 74, enabled: !hidden }));
@@ -447,6 +448,18 @@ export class Run extends Phaser.Scene {
   }
 
   /** Relics, then Curses, as tokens between the Grimoire and the gold. Hover one for what it does. */
+  /** Guild Commissions in progress, under the rent; hover for each one's goal. */
+  private drawCommissions(s: RunState) {
+    if (!s.commissions.length || s.phase === 'game-over' || s.phase === 'victory') return;
+    const line = this.text(630, 33, `Guild: ${s.commissions.map((a) => `${codex.commissions.get(a.id)!.name} ${a.progress}/${goalOf(a.id).target}`).join(' · ')}`, { size: 7, color: 'l', shadow: true }).setOrigin(1, 0);
+    const lines = s.commissions.map((a) => {
+      const c = codex.commissions.get(a.id)!;
+      return `${c.name} (${a.progress}/${goalOf(a.id).target}): ${c.goal} Due ${commissionDue(a.dueWeek, s.week)}. Reward: ${commissionReward(a.id)}.`;
+    });
+    line.setInteractive().on('pointerover', () => this.tip.text('Guild Commissions', lines, line.x - line.width / 2, line.y + 10));
+    line.on('pointerout', () => this.tip.hide());
+  }
+
   private drawRelics(s: RunState) {
     const held = [
       ...s.relics.map((id) => { const r = codex.relics.get(id)!; return { name: r.name, text: r.text, kind: `Tier ${r.tier} relic`, texture: `token/relic-${r.tier}` }; }),
@@ -1017,6 +1030,8 @@ export class Run extends Phaser.Scene {
       }
       case 'creek':
         return this.drawCreek(s, offer, title);
+      case 'guild':
+        return this.drawGuild(s, offer, title);
       case 'gift': {
         const [head, sub] = GIFT_TITLE[offer.source];
         const where = offer.into === 'satchel' ? 'It goes in your Night Satchel, which joins your deck only on Night Shifts.'
@@ -1035,6 +1050,40 @@ export class Run extends Phaser.Scene {
       case 'night-market':
         return this.drawNightMarket(s, offer, title);
     }
+  }
+
+  /** The Guild Hall (GDD §7): take one of two commissions, due by a Night Shift. */
+  private drawGuild(s: RunState, offer: Extract<Offer, { kind: 'guild' }>, title: (t: string, sub: string) => void) {
+    const full = s.commissions.length >= COMMISSIONS.max;
+    title('Guild Hall', offer.taken ? 'Signed. The clerk files it away.' : full ? `You already hold ${COMMISSIONS.max} commissions.` : 'Take one commission, or none. Finish it in time for its reward; failing costs nothing.');
+    offer.options.forEach((id, i) => {
+      const c = codex.commissions.get(id)!;
+      const x = 320 + (i - (offer.options.length - 1) / 2) * 190;
+      const due = dueWeekOf(s, c);
+      const tile = this.add2(panel(this, x - 88, 92, 176, 104, 'k', 0.95, 'n'));
+      this.text(x, 100, c.name, { size: 10, color: 'y', align: 'center' }).setOrigin(0.5, 0);
+      this.text(x, 118, c.goal, { size: 8, color: 'w', align: 'center', wrap: 160 }).setOrigin(0.5, 0);
+      this.text(x, 154, `Due ${commissionDue(due, s.week)}`, { size: 7, color: 'a', align: 'center' }).setOrigin(0.5, 0);
+      this.text(x, 168, `Reward: ${commissionReward(id)}`, { size: 7, color: 'l', align: 'center', wrap: 160 }).setOrigin(0.5, 0);
+      if (offer.taken && s.commissions.some((a) => a.id === id)) {
+        tile.setStrokeStyle(2, hex('l'));
+        this.text(x, 182, 'Taken', { size: 8, color: 'l', align: 'center' }).setOrigin(0.5, 0);
+        return;
+      }
+      if (offer.taken || full) return void tile.setAlpha(0.4);
+      tile.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'takeCommission', index: i }));
+      tile.on('pointerover', () => tile.setStrokeStyle(2, hex('y')));
+      tile.on('pointerout', () => tile.setStrokeStyle(1, hex('n')));
+    });
+    if (s.commissions.length) {
+      this.add2(panel(this, 200, 206, 240, 18 + s.commissions.length * 11, 'k', 0.85, 'n'));
+      this.text(320, 210, 'Held', { size: 8, color: 'a', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
+      s.commissions.forEach((a, i) => {
+        const c = codex.commissions.get(a.id)!;
+        this.text(320, 222 + i * 11, `${c.name}: ${a.progress}/${goalOf(a.id).target}, ${commissionDue(a.dueWeek, s.week)}`, { size: 7, color: 'w', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
+      });
+    }
+    this.add2(button(this, 320, 262, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
   }
 
   /** The Creek Bank (GDD §7): temper a card for free, or buy it a modifier. One card a visit. */
@@ -1345,6 +1394,8 @@ function relicNote(events: readonly GameEvent[]): string | null {
     if (e.type === 'relicGained' && e.source !== 'debug') lines.push(`Relic: ${codex.relics.get(e.relic)!.name}. ${codex.relics.get(e.relic)!.text}`);
     if (e.type === 'curseLifted') lines.push(`${codex.curses.get(e.curse)!.name} is lifted.`);
     if (e.type === 'relicFired' && e.relic === 'iron-lid') lines.push('The Iron Lid caught the Sludge.');
+    if (e.type === 'commissionDone') lines.push(`Commission done: ${codex.commissions.get(e.commission)!.name}.`);
+    if (e.type === 'commissionFailed') lines.push(`${codex.commissions.get(e.commission)!.name} ran out of time.`);
     if (e.type === 'cardModified' && e.by !== 'debug') lines.push(`${cardName(e.card)} is ${codex.modifiers.get(e.modifier)!.name}.`);
   }
   return lines.length ? lines.join(' ') : null;
@@ -1378,6 +1429,7 @@ const GIFT_TITLE: Record<Gift['source'], [string, string]> = {
   'lantern-witch': ['The Lantern Witch pays', 'She pays in moonlight. Take one Lunar ingredient.'],
   'bog-hag': ['Granny Bogwort pays', 'Something rare from the fen. Take one.'],
   patron: ['The patron\'s reward', 'Take one, with their thanks.'],
+  commission: ['The Guild pays', 'A commission done. Take one, with the Guild\'s seal on it.'],
 };
 
 /** First-time players get the tutorial; ?tutorial=0, a chosen ?seed= or a finished one skip it, ?tutorial=1 forces it. */

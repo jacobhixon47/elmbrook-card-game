@@ -6,6 +6,7 @@ import { changeGold, draw, drawToHandSize, gainCard, Reject, reject, shuffled, t
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
 import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
+import { commissionsOnBrew, commissionsOnDayEnd, commissionsOnDeliver, takeCommission } from './commissions';
 import { addModifier, drawOnBrewOf, MODIFIER_RULES, enchant, heartDeltaOf, isAged, temper } from './modifiers';
 import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
 import { atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, stallStock, swapForCard, takeDeal, weave } from './market';
@@ -34,7 +35,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   }
 
   const s: RunState = {
-    version: 9,
+    version: 10,
     seed,
     rng: seedRng(seed),
     witch: witch.id,
@@ -70,6 +71,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     familiarSlots: FAMILIAR_SLOTS,
     discardCount: 0,
     relics: [],
+    commissions: [],
     curses: [],
     sludgeToday: 0,
     fortunes: [],
@@ -158,6 +160,7 @@ function openOrder(ctx: Ctx, id: number): Order {
 function fill(ctx: Ctx, order: Order, potion: Potion): void {
   // A multi-potion order (Harvest Fair) pays when its last potion arrives.
   order.delivered += 1;
+  commissionsOnDeliver(ctx, potion, order);
   if (order.delivered < order.quantity) {
     ctx.ev.push({ type: 'orderProgress', order: order.id, potion: potion.uid, delivered: order.delivered, quantity: order.quantity });
     return;
@@ -244,6 +247,7 @@ function brew(ctx: Ctx, deliverTo: number | undefined): void {
       experiment: !preview.known,
       heartDelta: heartDeltaOf(used),
     };
+    commissionsOnBrew(ctx, base, preview.copies);
     for (let i = 0; i < preview.copies; i++) {
       const potion: Potion = { uid: s.nextUid++, ...base };
       if (i === 0) ctx.ev.push({ type: 'brewed', potion, copies: preview.copies });
@@ -284,6 +288,7 @@ function endDay(ctx: Ctx): void {
     ctx.ev.push({ type: 'orderDeclined', order: o.id, customer: o.customer });
     changeHearts(ctx, o.customer, -1);
   }
+  commissionsOnDayEnd(ctx, isNightShift(s));
   for (const c of allCards(s)) if (isAged(c)) c.aged = (c.aged ?? 0) + (c.modifier === 'aged' ? MODIFIER_RULES.agedPerDay : 1);
   expireCards(ctx);
   if (isNightShift(s)) queueFirstNightGift(ctx);
@@ -322,17 +327,15 @@ function removeWeekCards(ctx: Ctx): void {
 }
 
 function afterReward(ctx: Ctx): void {
-  if (isNightShift(ctx.s)) {
-    // Free picks first (the first-night Lunar card, night customers' payments), then the Market.
-    const gift = ctx.s.gifts.shift();
-    if (gift) {
-      ctx.s.offer = gift;
-      return;
-    }
-    openNightMarket(ctx);
-  } else {
-    offerErrands(ctx);
+  // Free picks first (the first-night Lunar card, night customers' payments, a commission's reward),
+  // then the Night Market or an errand.
+  const gift = ctx.s.gifts.shift();
+  if (gift) {
+    ctx.s.offer = gift;
+    return;
   }
+  if (isNightShift(ctx.s)) openNightMarket(ctx);
+  else offerErrands(ctx);
 }
 
 /** After the Night Market: pay rent or lose the stall; the fourth rent wins the run. */
@@ -549,10 +552,14 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       enchant(ctx, action.uid, action.modifier);
       return;
 
+    case 'takeCommission':
+      takeCommission(ctx, action.index);
+      return;
+
     case 'leaveErrand': {
       requirePhase(ctx, 'dusk');
       const kind = s.offer?.kind;
-      if (kind !== 'market' && kind !== 'forage' && kind !== 'creek' && kind !== 'hearth') reject('choose an errand first');
+      if (kind !== 'market' && kind !== 'forage' && kind !== 'creek' && kind !== 'guild' && kind !== 'hearth') reject('choose an errand first');
       s.day += 1;
       startDay(ctx);
       return;
@@ -675,6 +682,11 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
         gainRelic(ctx, action.relic, 'debug');
       } else if (action.op === 'giveCurse') {
         takeCurse(ctx, action.curse);
+      } else if (action.op === 'giveCommission') {
+        const c = codex.commissions.get(action.commission);
+        if (!c) reject(`no commission ${action.commission}`);
+        if (s.commissions.some((a) => a.id === c.id)) reject(`you already hold ${c.name}`);
+        s.commissions.push({ id: c.id, progress: 0, dueWeek: c.dueWeek ?? s.week + c.deadline - 1, customers: [] });
       } else if (action.op === 'setModifier') {
         const card = [...allCards(s), ...s.satchel].find((c) => c.uid === action.uid);
         if (!card) reject(`no card ${action.uid}`);

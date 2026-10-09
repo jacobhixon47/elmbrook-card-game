@@ -74,6 +74,15 @@ export function report(runs: RunRecord[], title: string): string {
   lines.push(...[...plays].sort((a, b) => b[1] - a[1]).map(([card, k]) => `  ${card.padEnd(16)} ${((100 * k) / n).toFixed(0).padStart(6)}`));
   if (unplayed.length) lines.push(`  never played: ${unplayed.join(', ')}`);
 
+  // Guild Commissions: how often the bot takes each one, and how often it finishes it in time.
+  const comm = new Map<string, { taken: number; done: number }>();
+  for (const r of runs) for (const [id, c] of Object.entries(r.commissions)) {
+    const m = comm.get(id) ?? { taken: 0, done: 0 };
+    comm.set(id, { taken: m.taken + c.taken, done: m.done + c.done });
+  }
+  lines.push('', 'guild commissions (taken per 100 runs, done of taken)');
+  lines.push(...[...comm].sort((a, b) => b[1].taken - a[1].taken).map(([id, c]) => `  ${id.padEnd(18)} ${((100 * c.taken) / n).toFixed(0).padStart(6)} ${pct(c.done, c.taken).padStart(6)}`));
+
   // Which familiars, relics, curses and modifiers the bot ends up with, and how runs that had them did.
   const held = (title: string, ids: readonly string[], of: (r: RunRecord) => readonly string[]) => {
     const seen = new Map<string, { runs: number; wins: number }>();
