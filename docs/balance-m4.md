@@ -175,13 +175,21 @@ gold at the start of each day (runs still alive)
 ```
 
 
-## Years 2 to 5
+## Years 2 to 10
 
-Greedy, 1,000 runs, with every perk bought and every Almanac entry done (the profile of a player who has looped), no boon. Year 2's hidden patrons don't change the bot, which doesn't plan around the Calendar.
+A rule per Year in place of the rent and pay multipliers. Greedy, 600 runs, with every perk bought and every Almanac entry done (the profile of a player who has reached later Years), no boon. Each Year keeps the rules before it.
 
-| | Year 1 | Year 2 | Year 3 | Year 4 | Year 5 |
-|---|---|---|---|---|---|
-| Spring | 37.2% | 37.2% | 29.5% | 25.0% | 18.1% |
-| Winter | 32.3% | | 19.1% | | 7.9% |
+| Year | Adds | Spring | Winter |
+|---|---|---|---|
+| 1 | | 34.5% | 31.5% |
+| 2 | Patrons hidden until the day before | 34.5% | |
+| 3 | A Cobweb in the starting deck | 38.0% | |
+| 4 | One fewer Night Market stall | 35.0% | |
+| 5 | One fewer Discard a day | 27.5% | 21.5% |
+| 6 | Week 2 orders ask Superb or better | 22.2% | |
+| 7 | A random Curse at the start | 21.0% | |
+| 8 | The Shelf holds one less | 16.5% | |
+| 9 | Reward picks offer one card fewer | 14.8% | |
+| 10 | The Moonless Patron asks one tier higher | 12.2% | 7.8% |
 
-Spring plain (no perks or unlocks) is 38.3%, unchanged. The random bot in Year 5 with Blessed Hands: 0 errors in 300 runs. Winter in Year 5 is steep at 7.9%; the season-ramp pass tunes Years against an all-perks profile.
+At 600 runs a win rate moves about 2 points by chance, so Years 2 to 4 read as flat for the bot. Year 2 can't move it (the bot doesn't plan around the Calendar), and one Cobweb and one fewer stall are mild; they bite harder for a person. The big steps are Year 5 (Discards) and Year 8 (Shelf). Spring plain (no perks or unlocks) is 38.3%, unchanged. The random bot in Year 10 with A Lucky Find: 0 errors in 300 runs. The season-ramp pass tunes the strengths (Years 2 to 4 could use more, and Reputation at Year 10 is ×5.5).
