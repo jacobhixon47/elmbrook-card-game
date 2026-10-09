@@ -223,14 +223,14 @@ export const modifiers: In<typeof Modifier>[] = [
 
 // Guild Commissions (GDD §7), from the balance tables. Goals are counted in core/commissions.ts.
 export const commissions: In<typeof Commission>[] = [
-  { id: 'calm-the-shrine', name: 'Calm the Shrine', goal: 'Deliver 3 Calming potions, Superb or better.', deadline: 1, reward: { kind: 'relic', tier: 1 } },
+  { id: 'calm-the-shrine', name: 'Calm the Shrine', goal: 'Deliver 2 Calming potions.', deadline: 1, reward: { kind: 'relic', tier: 1 } },
   { id: 'miners-mend', name: 'Miner\'s Mend', goal: 'Deliver 3 Healing or Protection potions.', deadline: 1, reward: { kind: 'gold', amount: 12 } },
-  { id: 'bakers-dozen', name: 'Baker\'s Dozen', goal: 'Brew 6 Warming potions of any tier.', deadline: 1, reward: { kind: 'gold', amount: 10 } },
-  { id: 'full-shelf', name: 'Full Shelf', goal: 'End a day with every Shelf slot full.', deadline: 1, reward: { kind: 'relic', tier: 1 } },
+  { id: 'bakers-dozen', name: 'Baker\'s Dozen', goal: 'Brew 3 Warming potions of any tier.', deadline: 1, reward: { kind: 'gold', amount: 10 } },
+  { id: 'full-shelf', name: 'Full Shelf', goal: 'End a day with every Shelf slot full.', deadline: 1, reward: { kind: 'gold', amount: 8 } },
   { id: 'no-shadows', name: 'No Shadows', goal: 'Fill 5 orders without an Umbra ingredient.', deadline: 1, reward: { kind: 'card-pick', rarity: 'rare', count: 3 } },
   { id: 'three-of-a-kind', name: 'Three of a Kind', goal: 'Brew 4 potions of 3 ingredients.', deadline: 1, reward: { kind: 'relic', tier: 1 }, minWeek: 2 },
   { id: 'masters-proof', name: 'Master\'s Proof', goal: 'Brew a Masterwork potion.', deadline: 2, reward: { kind: 'relic', tier: 2 }, minWeek: 2 },
-  { id: 'full-moon-favour', name: 'Full Moon Favour', goal: 'Deliver 3 Superb Calming potions by the Full Moon.', deadline: 1, dueWeek: 2, reward: { kind: 'relic', tier: 2 }, maxWeek: 2 },
+  { id: 'full-moon-favour', name: 'Full Moon Favour', goal: 'Deliver 2 Superb Calming potions by the Full Moon.', deadline: 1, dueWeek: 2, reward: { kind: 'relic', tier: 2 }, maxWeek: 2 },
   { id: 'the-whole-town', name: 'The Whole Town', goal: 'Deliver to 5 different customers.', deadline: 1, reward: { kind: 'gold', amount: 15 }, minWeek: 2 },
   { id: 'night-owl', name: 'Night Owl', goal: 'Fill every order on the coming Night Shift.', deadline: 1, reward: { kind: 'relic', tier: 3 }, minWeek: 2 },
 ];
@@ -289,7 +289,7 @@ export const duskEvents: In<typeof DuskEvent>[] = [
   {
     id: 'shrine-blessing', name: 'A Shrine Blessing', tags: ['town'], weight: 4,
     text: 'The little shrine by the well glows warm tonight. The keeper smiles at you.',
-    choices: [{ label: 'Kneel', text: 'Leave 3 gold. Blessed on an ingredient of your choice.' }, { label: 'Nod and go', text: 'Nothing happens.' }],
+    choices: [{ label: 'Kneel', text: 'Leave 6 gold. Blessed on an ingredient of your choice.' }, { label: 'Nod and go', text: 'Nothing happens.' }],
   },
   {
     id: 'moonlit-walk', name: 'A Moonlit Walk', tags: ['fae'], weight: 4,

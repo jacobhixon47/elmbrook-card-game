@@ -45,7 +45,7 @@ describe('dusk events', () => {
     // Mopping up is always open.
     expect(no(s, { type: 'leaveErrand' })).toMatch(/choose/);
     const shrine = at('shrine-blessing', 0);
-    expect(no(shrine, { type: 'chooseEvent', index: 0 })).toMatch(/3 gold/);
+    expect(no(shrine, { type: 'chooseEvent', index: 0 })).toMatch(/6 gold/);
     expect(no(shrine, { type: 'chooseErrand', errand: 'market' })).toBeTruthy();
     expect(no(shrine, { type: 'chooseEvent', index: 5 })).toMatch(/no choice/);
   });
