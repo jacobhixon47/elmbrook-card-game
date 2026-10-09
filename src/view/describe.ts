@@ -141,7 +141,7 @@ const PATRON_LINE: Record<string, string> = {
   'moonless-patron': '...',
 };
 
-const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
+export const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
 
 export function dayLabel(state: Pick<RunState, 'week' | 'day'>): string {
   return `Week ${state.week} · ${state.day === NIGHT_SHIFT_DAY ? 'Night Shift' : `Day ${state.day}`}`;

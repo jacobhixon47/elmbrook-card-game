@@ -66,12 +66,13 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 
 ## M4 — Meta and story
 
-- Codex screen; persistent save with migrations.
-- The Year: season unlocks (Summer, Autumn, Winter content and twists), Year modifiers, and looping into the next Year with a boon (GDD §13).
+- Codex screen; ✅ persistent save with migrations (the profile and run migrations, `core/meta.ts`).
+- The Year: ✅ season unlocks (a win opens the next season; choose it on the title screen), Summer, Autumn and Winter content and twists, Year modifiers, and looping into the next Year with a boon (GDD §13).
 - Reputation and cottage perks (the out-of-run home); Almanac achievements that unlock pool content, relics included (about 6 to start).
 - Six regulars with hearts, Ink dialogue, heart-milestone beats and unlocks.
 - Witch and cauldron selection; unlock flow.
 - ✅ Winter tuned into the win-rate band: week 1's rent is the same in every season and Winter pays ×1.2 (`docs/balance-m4.md`).
+- Once meta progression is in: a gentle week-1 rent ramp (20, 22, 24, 26 by season, decided with Jacob) and descending win-rate targets (about 40%, 33%, 27%, 20%), simmed with the unlocks a player would carry into each season.
 
 **Accept:** a second run feels different from the first because of unlocks and regulars' stories.
 
