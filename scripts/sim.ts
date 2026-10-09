@@ -1,4 +1,4 @@
-// pnpm sim --runs 2000 --strategy greedy [--season spring] [--seed prefix] [--unlocks all]
+// pnpm sim --runs 2000 --strategy greedy [--season spring] [--seed prefix] [--unlocks all] [--perks all]
 // pnpm sim --replay path/to/run.json   (a {seed?, actions[]} log from a crash, the sim or the dev overlay)
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { codex } from '../src/codex';
@@ -34,12 +34,14 @@ if (season && !SEASONS.includes(season)) throw new Error(`unknown season ${seaso
 const prefix = arg('seed') ?? 'sim';
 // --unlocks all: play as if every heart and Almanac unlock were earned, so unlock-pool cards get tested too.
 const unlocks = arg('unlocks') === 'all' ? allUnlockIds() : undefined;
+// --perks all: every cottage perk bought.
+const perks = arg('perks') === 'all' ? [...codex.perks.keys()] : undefined;
 
 const t0 = performance.now();
-const records = Array.from({ length: runs }, (_, i) => playRun(`${prefix}-${i}`, { strategy, ...(season ? { season } : {}), ...(unlocks ? { unlocks } : {}) }));
+const records = Array.from({ length: runs }, (_, i) => playRun(`${prefix}-${i}`, { strategy, ...(season ? { season } : {}), ...(unlocks ? { unlocks } : {}), ...(perks ? { perks } : {}) }));
 const secs = ((performance.now() - t0) / 1000).toFixed(1);
 
-console.log(report(records, `${strategy}${season ? ` · ${season}` : ''}${unlocks ? ' · all unlocked' : ''}`));
+console.log(report(records, `${strategy}${season ? ` · ${season}` : ''}${unlocks ? ' · all unlocked' : ''}${perks ? ' · all perks' : ''}`));
 console.log(`\n${secs}s`);
 
 const failed = records.filter((r) => r.error);

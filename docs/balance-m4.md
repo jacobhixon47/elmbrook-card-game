@@ -35,6 +35,19 @@ Greedy bot, 1,000 runs a season:
 
 Seasons now get harder in order except that Summer (30.0%) sits a little below Autumn (32.3%). Winter's own content (the Frost Night Market, more Frost cards) is still to come in M4 and will need another pass.
 
+## Cottage perks
+
+Perks don't change a run without them: Spring and Winter sim the same as before (36.1%, 26.6%). With all four bought (`pnpm sim --perks all`), 1,000 runs a season:
+
+| | no perks | all perks |
+|---|---|---|
+| Spring | 36.1% | 41.4% |
+| Summer | 30.0% | 34.8% |
+| Autumn | 32.3% | 38.6% |
+| Winter | 26.6% | 36.2% |
+
+Random bot with all perks: 0 errors in 300 runs. A won Spring run earns about 55 Reputation and a run lost in week 4 about 35, so all four perks (95) take two or three runs. That is quick on purpose for now; the descending season targets (milestones, M4) will be tuned with perks in.
+
 ## winter, after
 
 ```

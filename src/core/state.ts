@@ -126,15 +126,19 @@ export type GiftSource = 'first-night' | 'lantern-witch' | 'bog-hag' | 'patron' 
 export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'deck' | 'satchel' | 'familiar' };
 
 /**
- * The run state's shape version. A saved run with another version is dropped rather than loaded
- * (until M4 brings migrations), so bump it whenever a change would break an older save.
+ * The run state's shape version. Bump it whenever a change would break an older save, and add the
+ * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 10;
+export const RUN_VERSION = 11;
+
+/** What a run has done so far, for Reputation at its end (GDD §13). */
+export type RunStats = { ordersFilled: number; potionsSold: number };
 
 /** Plain, JSON-serialisable run state. Fixtures and saves are exactly this shape. */
 export type RunState = {
   version: typeof RUN_VERSION;
   seed: string;
+  stats: RunStats;
   rng: RngState;
   witch: string;
   season: Season;

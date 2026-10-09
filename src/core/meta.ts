@@ -1,10 +1,12 @@
+import { codex } from '../codex';
 import { SEASONS, type Season } from './calendar';
+import { WEEKS } from './rules';
 import { RUN_VERSION, type RunState } from './state';
 
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 1;
+export const PROFILE_VERSION = 2;
 
 export type Profile = {
   version: typeof PROFILE_VERSION;
@@ -18,6 +20,11 @@ export type Profile = {
   years: number;
   /** The seed of the last run counted, so a run is never counted twice. */
   lastRun: string | null;
+  /** Reputation to spend at the cottage, and all ever earned. */
+  reputation: number;
+  reputationEarned: number;
+  /** Cottage perks bought (codex `perks`). */
+  perks: string[];
 };
 
 export function newProfile(): Profile {
@@ -29,6 +36,9 @@ export function newProfile(): Profile {
     wins: { spring: 0, summer: 0, autumn: 0, winter: 0 },
     years: 0,
     lastRun: null,
+    reputation: 0,
+    reputationEarned: 0,
+    perks: [],
   };
 }
 
@@ -40,6 +50,8 @@ type Raw = Record<string, unknown>;
  */
 const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   0: (p) => ({ ...newProfile(), tutorialDone: p.tutorialDone === true }),
+  // 1 → 2: Reputation and perks, starting from none.
+  1: (p) => ({ ...p, reputation: 0, reputationEarned: 0, perks: [] }),
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -70,6 +82,9 @@ function sanitize(p: Raw): Profile {
     wins: Object.fromEntries(SEASONS.map((s) => [s, count(wins[s])])) as Record<Season, number>,
     years: count(p.years),
     lastRun: typeof p.lastRun === 'string' ? p.lastRun : fresh.lastRun,
+    reputation: count(p.reputation),
+    reputationEarned: count(p.reputationEarned),
+    perks: Array.isArray(p.perks) ? [...codex.perks.keys()].filter((id) => (p.perks as unknown[]).includes(id)) : [],
   };
 }
 
@@ -78,8 +93,19 @@ export function nextSeason(season: Season): Season | null {
   return SEASONS[SEASONS.indexOf(season) + 1] ?? null;
 }
 
+/** Reputation a finished run earns (GDD §13): for each week's rent paid, each order filled and potion sold, and a win. */
+export const REPUTATION = { week: 4, order: 1, potionSold: 1, win: 10 } as const;
+
+export function reputationFor(s: Pick<RunState, 'phase' | 'week' | 'stats'>): number {
+  const won = s.phase === 'victory';
+  const weeks = won ? WEEKS : Math.max(0, s.week - 1);
+  return weeks * REPUTATION.week + s.stats.ordersFilled * REPUTATION.order + s.stats.potionsSold * REPUTATION.potionSold + (won ? REPUTATION.win : 0);
+}
+
 export type RunOutcome = {
   profile: Profile;
+  /** Reputation the run earned. */
+  reputation: number;
   /** A season this run opened. */
   opened: Season | null;
   /** This run completed a Year (a win in Winter). */
@@ -87,25 +113,47 @@ export type RunOutcome = {
 };
 
 /** Count a finished run. A run still going, or one already counted, changes nothing. */
-export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase'>): RunOutcome {
-  const same = { profile, opened: null, yearDone: false };
+export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'>): RunOutcome {
+  const same = { profile, reputation: 0, opened: null, yearDone: false };
   if ((s.phase !== 'victory' && s.phase !== 'game-over') || profile.lastRun === s.seed) return same;
-  const p: Profile = { ...profile, seasons: [...profile.seasons], wins: { ...profile.wins }, runs: profile.runs + 1, lastRun: s.seed };
-  if (s.phase === 'game-over') return { ...same, profile: p };
+  const reputation = reputationFor(s);
+  const p: Profile = {
+    ...profile, seasons: [...profile.seasons], wins: { ...profile.wins }, perks: [...profile.perks], runs: profile.runs + 1, lastRun: s.seed,
+    reputation: profile.reputation + reputation, reputationEarned: profile.reputationEarned + reputation,
+  };
+  if (s.phase === 'game-over') return { ...same, profile: p, reputation };
   p.wins[s.season]++;
   const next = nextSeason(s.season);
   const opened = next && !p.seasons.includes(next) ? next : null;
   if (opened) p.seasons = SEASONS.filter((x) => x === opened || p.seasons.includes(x));
   const yearDone = s.season === 'winter';
   if (yearDone) p.years++;
-  return { profile: p, opened, yearDone };
+  return { profile: p, reputation, opened, yearDone };
+}
+
+/** Why this perk can't be bought now, or null. */
+export function perkBlocked(p: Profile, id: string): string | null {
+  const perk = codex.perks.get(id);
+  if (!perk) return `no perk ${id}`;
+  if (p.perks.includes(id)) return 'already yours';
+  return p.reputation < perk.cost ? `needs ${perk.cost} Reputation` : null;
+}
+
+/** Buy a cottage perk with Reputation; it applies from the next run on. */
+export function buyPerk(p: Profile, id: string): Profile {
+  const why = perkBlocked(p, id);
+  if (why) throw new Error(why);
+  return { ...p, perks: [...p.perks, id], reputation: p.reputation - codex.perks.get(id)!.cost };
 }
 
 /**
  * Steps that bring a saved run of version n up to n + 1, so a game update doesn't throw away a run
  * in progress. A version with no step can't be continued. Bump RUN_VERSION and add a step together.
  */
-export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {};
+export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
+  // 10 → 11: run stats for Reputation. A run saved before them starts counting from now.
+  10: (s) => ({ ...s, stats: { ordersFilled: 0, potionsSold: 0 } }),
+};
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */
 export function migrateRun(raw: unknown): RunState | null {

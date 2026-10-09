@@ -1,0 +1,1 @@
+{ "scene": "Cottage", "profile": { "version": 2, "tutorialDone": true, "seasons": ["spring", "summer"], "runs": 4, "wins": { "spring": 1 }, "reputation": 27, "reputationEarned": 62, "perks": ["deep-shelf"] } }

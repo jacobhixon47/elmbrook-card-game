@@ -298,3 +298,20 @@ export const DuskEvent = z.object({
   choices: z.array(z.object({ label: z.string().min(1), text: z.string().min(1) })).min(1).max(3),
 });
 export type DuskEvent = z.infer<typeof DuskEvent>;
+
+/** A cottage perk (GDD §13): bought once with Reputation, it changes how every later run starts. */
+export const Perk = z.object({
+  id: Id,
+  name: z.string().min(1),
+  text: z.string().min(1),
+  /** Reputation it costs. */
+  cost: z.number().int().positive(),
+  /** What it does at run start: extra gold, Shelf slots, familiar slots, or cards in the starting deck. */
+  start: z.object({
+    gold: z.number().int().positive().optional(),
+    shelf: z.number().int().positive().optional(),
+    familiarSlots: z.number().int().positive().optional(),
+    cards: z.array(Id).min(1).optional(),
+  }),
+});
+export type Perk = z.infer<typeof Perk>;
