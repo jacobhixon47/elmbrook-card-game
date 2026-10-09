@@ -250,6 +250,11 @@ function greedyBrewing(s: RunState): Action {
     .map((p) => ({ ...p, value: fencePrice(asPotion(p)) + p.preview.quality / 100 }))
     .sort((a, b) => b.value - a.value)[0];
   if (shelfPlan && (room || open.length > 0)) return stepToward(s, shelfPlan);
+  // A full Shelf: pour away its cheapest potion when the new one would fetch clearly more.
+  if (shelfPlan && !room && s.brewsLeft > 0) {
+    const worst = s.shelf.slice().sort((a, b) => fencePrice(a) - fencePrice(b))[0]!;
+    if (fencePrice(asPotion(shelfPlan)) > fencePrice(worst) + 1) return { type: 'pourOut', uid: worst.uid };
+  }
   return { type: 'endDay' };
 }
 
@@ -511,6 +516,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'playTincture', uid: card, targets: hand.filter(() => roll(3) === 0) },
     { type: 'deliver', order, potion },
     { type: 'decline', order },
+    { type: 'pourOut', uid: potion },
     { type: 'pickReward', index: roll(4) },
     { type: 'takeGift', index: roll(4) },
     { type: 'passGift' },

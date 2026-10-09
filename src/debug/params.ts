@@ -26,6 +26,10 @@ export type Fixture = {
     familiar?: number;
     /** At the Creek Bank, this option picked. */
     creek?: 'temper' | ModifierId;
+    /** The tooltip of the Shelf potion at this index, open. */
+    shelfTip?: number;
+    /** Pouring out a Shelf potion. */
+    pour?: boolean;
     /** At a dusk event, choosing the card for the choice at this index. */
     eventCard?: number };
 };

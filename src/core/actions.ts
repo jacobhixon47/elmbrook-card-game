@@ -15,6 +15,8 @@ export type Action =
   | { type: 'playTincture'; uid: number; targets?: number[] }
   | { type: 'deliver'; order: number; potion: number }
   | { type: 'decline'; order: number }
+  /** Pour a Shelf potion away to make room. Free, any time. */
+  | { type: 'pourOut'; uid: number }
   | { type: 'endDay' }
   // Twilight: reward, then an errand.
   | { type: 'pickReward'; index: number }
@@ -100,6 +102,7 @@ export type GameEvent =
   | { type: 'recipeDiscovered'; recipe: string }
   | { type: 'potionShelved'; uid: number }
   | { type: 'potionSpilled'; uid: number }
+  | { type: 'potionPoured'; uid: number }
   | { type: 'orderFilled'; order: number; customer: string; potion: number; tier: Tier; pay: number; tip: number; bonus: boolean }
   | { type: 'orderDeclined'; order: number; customer: string }
   | { type: 'heartsChanged'; customer: string; hearts: number; delta: number }
