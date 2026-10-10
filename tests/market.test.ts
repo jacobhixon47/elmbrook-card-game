@@ -45,7 +45,7 @@ describe('the Night Market street', () => {
   });
 
   it('walks between stalls; each trade needs you at its stall', () => {
-    const s = market(2, { gold: 50 });
+    const s = market(2, { gold: 80 });
     expect(s.phase).toBe('night-market');
     const r = ok(s, { type: 'visitStall', index: 4 });
     expect(ofType(r.events, 'stallVisited')).toEqual([{ type: 'stallVisited', stall: 'fortune-tent' }]);

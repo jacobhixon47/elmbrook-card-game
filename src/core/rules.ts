@@ -14,8 +14,8 @@ export const SHELF_SLOTS = 4;
 export const MAX_SHELF_SLOTS = 6;
 /** The Hearth won't burn a deck below this. */
 export const MIN_DECK = 8;
-/** Rent after each week's Night Shift, before the season multiplier (GDD §3). */
-export const RENT = [20, 45, 90, 160] as const;
+/** Rent after each week's Night Shift, before the season multiplier (GDD §3). Week 1's is `weekOneRent`. */
+export const RENT = [20, 68, 155, 295] as const;
 export const SKIP_GOLD = 2;
 export const MAX_HEARTS = 10;
 
@@ -103,6 +103,9 @@ export const FORAGE_PICKS = 2;
 // Seasons (GDD §3): each later season is about 15% harder, plus its own twist.
 
 export type SeasonRules = {
+  /** Week 1's rent: a gentle ramp, so a cold start can't sink a run before the deck grows. */
+  weekOneRent: number;
+  /** Rent from week 2. */
   rentMult: number;
   payMult: number;
   /** Extra Brews on ordinary days (summer's long days). */
@@ -112,16 +115,17 @@ export type SeasonRules = {
 };
 
 export const SEASON_RULES: Record<Season, SeasonRules> = {
-  spring: { rentMult: 1, payMult: 1, dayBrews: 0, nightDiscards: 0 },
-  summer: { rentMult: 1.15, payMult: 1.15, dayBrews: 1, nightDiscards: -1 },
-  autumn: { rentMult: 1.32, payMult: 1.15, dayBrews: 0, nightDiscards: 0 },
-  winter: { rentMult: 1.52, payMult: 1.2, dayBrews: 0, nightDiscards: 0 },
+  spring: { weekOneRent: 20, rentMult: 1, payMult: 1, dayBrews: 0, nightDiscards: 0 },
+  summer: { weekOneRent: 22, rentMult: 1.15, payMult: 1.2, dayBrews: 1, nightDiscards: -1 },
+  autumn: { weekOneRent: 24, rentMult: 1.32, payMult: 1.23, dayBrews: 0, nightDiscards: 0 },
+  winter: { weekOneRent: 26, rentMult: 1.52, payMult: 1.35, dayBrews: 0, nightDiscards: 0 },
 };
 
-export function rentDue(season: Season, week: number): number {
-  const base = RENT[Math.min(RENT.length, Math.max(1, week)) - 1]!;
-  // Week 1's rent is the same in every season, so a cold start can't sink a run before the deck grows.
-  return week <= 1 ? base : Math.round(base * SEASON_RULES[season].rentMult);
+/** A week's rent in a season, times the Year's rent (`yearRent`). */
+export function rentDue(season: Season, week: number, yearMult = 1): number {
+  const rules = SEASON_RULES[season];
+  const base = week <= 1 ? rules.weekOneRent : RENT[Math.min(RENT.length, week) - 1]! * rules.rentMult;
+  return Math.round(base * yearMult);
 }
 
 // ---------------------------------------------------------------- Calendar effects (GDD §4.2)

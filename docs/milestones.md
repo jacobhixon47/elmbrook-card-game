@@ -73,7 +73,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - Six regulars with hearts, Ink dialogue, heart-milestone beats and unlocks.
 - Witch and cauldron selection; unlock flow.
 - ✅ Winter tuned into the win-rate band: week 1's rent is the same in every season and Winter pays ×1.2 (`docs/balance-m4.md`).
-- Once meta progression is in: a gentle week-1 rent ramp (20, 22, 24, 26 by season, decided with Jacob) and descending win-rate targets (about 40%, 33%, 27%, 20%), simmed with the unlocks a player would carry into each season. Year modifiers are tuned against an all-perks profile.
+- ✅ The ramp pass: a gentle week-1 rent ramp (20, 22, 24, 26 by season, decided with Jacob), heavier rent with pay trailing it by season, and rent rising in later Years. Year 1 wins about 40/34/29/23% by season, and Spring falls to about 15% by Year 10, simmed with the perks and unlocks a player would carry into each Year (`docs/balance-m4.md`).
 
 **Accept:** a second run feels different from the first because of unlocks and regulars' stories.
 

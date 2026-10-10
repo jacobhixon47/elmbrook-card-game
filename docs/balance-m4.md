@@ -223,3 +223,33 @@ Orders now count the Experiment's lower tier when they check what the deck can r
 | Winter | 31.2% | 65.1% |
 
 Patron orders filled in Spring went from 35, 24, 53 and 71% by week to 81, 67, 80 and 89%. Before, patrons, who like rare and Lunar recipes, often named one the deck could only brew as an Experiment, a tier under what they asked, so the order could not be filled and the bot gave up the patron's reward (and, in week 4, the run). The old win rates were built on those impossible orders. The season-ramp pass retunes from here; a first try that only lowered the tier of such orders came out the same (74.0, 67.7, 70.2 and 63.2%).
+
+## The ramp pass
+
+With fair orders the bot won 70 to 77% of Year 1 runs in every season, and rent almost never ended a run: 21% of Spring runs were lost to the Moonless Patron and 1% to rent. The pass makes rent the pressure again and spreads difficulty across seasons and Years:
+
+- Rent is 20 / 68 / 155 / 295 (was 20 / 45 / 90 / 160). Week 1 ramps 20 / 22 / 24 / 26 by season (decided with Jacob); later weeks keep the season multipliers (×1, ×1.15, ×1.32, ×1.52).
+- Pay trails rent in later seasons: ×1, ×1.2, ×1.23, ×1.35 (was ×1, ×1.15, ×1.15, ×1.2).
+- Rent rises 5% from Year 2 and 25% from Year 4 (`YEAR_RULES.rent`; Jacob chose this over weaker tier 4 perks or harsher rules). The Year rules alone took Spring from 45% in Year 2 to 16% in Year 10 for a player with perks up to tier 3, but tier 4 perks add about 25 points (Year 4 Spring with tier 3 perks: 33%; adding A Bigger Cauldron 59%, A Savings Jar 48%, The Heirloom 44%).
+
+Greedy, 400 runs a cell, with the perks a player would own by then (tier 1 in Year 1, tiers 1 and 2 plus every unlock in Year 2, tiers 1 to 3 in Year 3, everything from Year 4). Before:
+
+| | Y1 | Y2 | Y3 | Y4 | Y5 | Y6 | Y7 | Y8 | Y9 | Y10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Spring | 76.0 | 73.0 | 62.3 | 69.3 | 64.5 | 72.8 | 62.5 | 62.8 | 59.5 | 43.0 |
+| Summer | 69.8 | 63.5 | 58.8 | 66.5 | 54.5 | 54.5 | 51.3 | 54.5 | 54.3 | 38.5 |
+| Autumn | 76.8 | 71.5 | 66.0 | 69.5 | 65.0 | 62.8 | 63.8 | 65.5 | 64.8 | 44.3 |
+| Winter | 71.0 | 71.0 | 59.8 | 66.0 | 61.0 | 60.3 | 60.3 | 59.0 | 60.3 | 41.0 |
+
+After:
+
+| | Y1 | Y2 | Y3 | Y4 | Y5 | Y6 | Y7 | Y8 | Y9 | Y10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Spring | 39.5 | 42.5 | 33.3 | 31.5 | 25.0 | 29.3 | 26.5 | 19.3 | 17.8 | 16.0 |
+| Summer | 32.3 | 35.8 | 32.5 | 31.3 | 25.0 | 28.5 | 21.3 | 17.3 | 20.5 | 14.0 |
+| Autumn | 29.8 | 31.0 | 24.8 | 25.0 | 19.3 | 17.8 | 16.0 | 10.3 | 11.0 | 11.3 |
+| Winter | 20.3 | 22.3 | 15.8 | 14.0 | 11.3 | 12.3 | 9.3 | 5.5 | 8.8 | 5.5 |
+
+Targets were about 40 / 33 / 27 / 20% in Year 1, falling 3 to 4 points a Year to about 15% for Spring in Year 10. Year 2 sits a little above Year 1 because the second tier of perks and the Almanac unlocks arrive with it. Runs are now lost across weeks 2 to 4: Spring Year 1 loses 2% in week 2, 23% in week 3 and 49% in week 4.
+
+Plain greedy, 1,000 runs, no perks or unlocks (a first-ever run), before → after: Spring 74.6 → 25.9%, Summer 61.6 → 25.3%, Autumn 75.3 → 18.2%, Winter 65.1 → 12.0%. The random bot in Year 10 with A Lucky Find: 0 errors in 300 runs.
