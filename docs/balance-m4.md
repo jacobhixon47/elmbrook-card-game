@@ -210,3 +210,16 @@ Final, 600 runs:
 | Winter, all 14 perks (after) | 50.3% | 46.8% | 29.2% |
 
 Spring plain (no perks or unlocks) is 38.3%, unchanged. The random bot with all perks in Year 10 with a boon: 0 errors in 300 runs. Endgame players own every perk, so the season-ramp pass tunes Years against this all-perks profile; Years 2 to 5 now barely bite.
+
+## Fair orders
+
+Orders now count the Experiment's lower tier when they check what the deck can reach, and re-ask among recipes that can reach the tier instead of asking for an unreachable one. Greedy, 1,000 runs, no perks or unlocks:
+
+| | Before | After |
+|---|---|---|
+| Spring | 38.3% | 74.6% |
+| Summer | 33.1% | 61.6% |
+| Autumn | 36.4% | 75.3% |
+| Winter | 31.2% | 65.1% |
+
+Patron orders filled in Spring went from 35, 24, 53 and 71% by week to 81, 67, 80 and 89%. Before, patrons, who like rare and Lunar recipes, often named one the deck could only brew as an Experiment, a tier under what they asked, so the order could not be filled and the bot gave up the patron's reward (and, in week 4, the run). The old win rates were built on those impossible orders. The season-ramp pass retunes from here; a first try that only lowered the tier of such orders came out the same (74.0, 67.7, 70.2 and 63.2%).
