@@ -3,6 +3,7 @@ import { CODEX_TABLES, previewBrew, reduce } from '../src/core';
 import { CODEX_TABS, codexEntries } from '../src/view/codex';
 import { stepAction } from '../src/debug/fixture-steps';
 import { newRecipeHint, unknownRecipe, cardText, customerBlurb, customerLine, customerName, dayLabel, extraPay, orderNeeds, orderTerms, requestText } from '../src/view/describe';
+import { FONT_BODY, FONT_DISPLAY } from '../src/view/text';
 import { cardInfo } from '../src/view/inspect';
 import { bestOrderFor, previewPotion } from '../src/view/plan';
 import { brewing, slotAll, withHand } from './helpers';
@@ -97,5 +98,13 @@ describe('orders for recipes you do not know yet', () => {
     expect(newRecipeHint({ knownRecipes: [], relics: ['witchs-hatpin'] }, tea)).toMatch(/at full quality/);
     expect(newRecipeHint({ knownRecipes: ['four-leaf-tea'], relics: [] }, tea)).toBeNull();
     expect(newRecipeHint({ knownRecipes: [], relics: [] }, { request: { kind: 'family', family: 'healing' } })).toBeNull();
+  });
+});
+
+describe('fonts', () => {
+  // Pixelify Sans's 5 reads as S and its 3 as 8 at small sizes (seen in the ingredient tooltip).
+  it('draws digits from the clearer digit faces first', () => {
+    expect(FONT_BODY.startsWith('"Elmbrook Digits"')).toBe(true);
+    expect(FONT_DISPLAY.startsWith('"Elmbrook Display Digits"')).toBe(true);
   });
 });
