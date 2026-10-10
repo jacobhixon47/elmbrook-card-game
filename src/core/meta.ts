@@ -171,11 +171,13 @@ export type RunOutcome = {
   newYear: number | null;
   /** Almanac entries this run met for the first time. */
   almanac: string[];
+  /** Perk board tiers this run opened. */
+  perkTiers: number[];
 };
 
 /** Count a finished run. A run still going, or one already counted, changes nothing. */
 export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year'>>): RunOutcome {
-  const same = { profile, reputation: 0, opened: null, yearDone: false, newYear: null, almanac: [] };
+  const same = { profile, reputation: 0, opened: null, yearDone: false, newYear: null, almanac: [], perkTiers: [] };
   if ((s.phase !== 'victory' && s.phase !== 'game-over') || profile.lastRun === s.seed) return same;
   const reputation = reputationFor(s);
   const almanac = almanacMet(profile.almanac, s);
@@ -184,7 +186,7 @@ export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' 
     reputation: profile.reputation + reputation, reputationEarned: profile.reputationEarned + reputation, almanac: [...profile.almanac, ...almanac],
     codex: [...profile.codex, ...codexMet(profile.codex, s)],
   };
-  if (s.phase === 'game-over') return { ...same, profile: p, reputation, almanac };
+  if (s.phase === 'game-over') return { ...same, profile: p, reputation, almanac, perkTiers: tiersOpened(profile, p) };
   p.wins[s.season]++;
   const year = Math.min(p.yearSeasons.length, s.year ?? 1);
   const open = p.yearSeasons[year - 1]!;
@@ -199,7 +201,7 @@ export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' 
     p.yearSeasons.push(['spring']);
     p.boons.push(null);
   }
-  return { profile: p, reputation, opened, yearDone, newYear, almanac };
+  return { profile: p, reputation, opened, yearDone, newYear, almanac, perkTiers: tiersOpened(profile, p) };
 }
 
 /** Almanac entries done that open looping before a second Year is won (GDD §13: a quarter of the Almanac). */
@@ -239,11 +241,42 @@ export function pickBoon(p: Profile, id: string): Profile {
   return { ...p, boons, boonOffer: null };
 }
 
+/**
+ * The perk board's tiers (GDD §13): tier 1 is open from the start, and each later tier opens with a
+ * Year reached (won, for tier 2) or with Almanac entries done, whichever comes first.
+ */
+export const PERK_TIERS = [
+  { tier: 2, years: 1, almanac: 4 },
+  { tier: 3, year: 3, almanac: 8 },
+  { tier: 4, year: 6, almanac: codex.almanac.size },
+] as const;
+
+type TierRule = { tier: number; years?: number; year?: number; almanac: number };
+
+/** Whether a tier of the perk board is open. */
+export function perkTierOpen(p: Pick<Profile, 'years' | 'yearSeasons' | 'almanac'>, tier: number): boolean {
+  const rule: TierRule | undefined = PERK_TIERS.find((r) => r.tier === tier);
+  if (!rule) return tier === 1;
+  return p.years >= (rule.years ?? Infinity) || p.yearSeasons.length >= (rule.year ?? Infinity) || p.almanac.length >= rule.almanac;
+}
+
+/** What opens a tier of the perk board, as a line for the cottage. */
+export function perkTierGoal(tier: number): string {
+  const rule: TierRule | undefined = PERK_TIERS.find((r) => r.tier === tier);
+  if (!rule) return '';
+  const first = rule.years ? 'Win a Year' : `Reach Year ${rule.year}`;
+  const almanac = rule.almanac >= codex.almanac.size ? 'the whole Almanac' : `${rule.almanac} Almanac entries`;
+  return `${first} or ${almanac} to open.`;
+}
+
+const tiersOpened = (before: Profile, after: Profile): number[] => PERK_TIERS.map((r) => r.tier).filter((t) => !perkTierOpen(before, t) && perkTierOpen(after, t));
+
 /** Why this perk can't be bought now, or null. */
 export function perkBlocked(p: Profile, id: string): string | null {
   const perk = codex.perks.get(id);
   if (!perk) return `no perk ${id}`;
   if (p.perks.includes(id)) return 'already yours';
+  if (!perkTierOpen(p, perk.tier)) return perkTierGoal(perk.tier);
   return p.reputation < perk.cost ? `needs ${perk.cost} Reputation` : null;
 }
 

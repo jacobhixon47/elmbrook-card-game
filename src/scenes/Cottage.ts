@@ -3,7 +3,7 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { boonOf, CODEX_TABLES, migrateProfile, seasonsOf, perkBlocked, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
+import { boonOf, CODEX_TABLES, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
 import { CODEX_TABS, codexEntries } from '../view/codex';
 import { unlockName } from '../view/describe';
 import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow } from '../profile';
@@ -25,7 +25,7 @@ export class Cottage extends Phaser.Scene {
   /** The open Almanac or Codex, drawn over the room. */
   private overlay: Phaser.GameObjects.Container | null = null;
 
-  create(data: { fixture?: Fixture | null } = {}) {
+  create(data: { fixture?: Fixture | null; perkTier?: number } = {}) {
     this.overlay = null;
     pixelCamera(this);
     const bg = cottageBackdrop();
@@ -46,9 +46,10 @@ export class Cottage extends Phaser.Scene {
     };
     this.drawYear(profile, start, choose);
     // A fixture shows its profile but can't spend it.
-    this.drawPerks(profile, data.fixture ? null : (id) => {
+    const tier = data.perkTier ?? data.fixture?.ui?.perkTier ?? firstTier(profile);
+    this.drawPerks(profile, tier, (t) => this.scene.restart({ ...data, perkTier: t }), data.fixture ? null : (id) => {
       buyPerkNow(id);
-      this.scene.restart({});
+      this.scene.restart({ perkTier: tier });
     });
 
     const met = profile.codex.length;
@@ -121,21 +122,32 @@ export class Cottage extends Phaser.Scene {
     pixelText(this, x + 88, y + 216, `${runs} · Esc for the title`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
   }
 
-  /** Perks bought with Reputation: each changes how every later run starts. */
-  private drawPerks(p: Profile, buy: ((id: string) => void) | null) {
+  /**
+   * Perks bought with Reputation: each changes how every later run starts. The board shows one tier
+   * at a time; a tier not yet open shows its perks and what opens it.
+   */
+  private drawPerks(p: Profile, tier: number, show: (tier: number) => void, buy: ((id: string) => void) | null) {
     const x = 450;
     const y = 52;
     this.add.existing(panel(this, x, y, 176, 228, 'k', 0.9, 'n'));
     pixelText(this, x + 88, y + 8, `Reputation ${p.reputation}`, { size: 10, color: 'y', align: 'center' }).setOrigin(0.5, 0);
-    pixelText(this, x + 88, y + 24, 'Earned every run, won or lost. Perks last for good.', { size: 7, color: 'a', align: 'center', wrap: 160 }).setOrigin(0.5, 0);
+    const prev = button(this, x + 30, y + 30, '<', () => show(tier - 1), { w: 20 });
+    const next = button(this, x + 146, y + 30, '>', () => show(tier + 1), { w: 20 });
+    prev.setEnabled(tier > 1);
+    next.setEnabled(tier < TOP_TIER);
+    this.add.existing(prev);
+    this.add.existing(next);
+    const open = perkTierOpen(p, tier);
+    pixelText(this, x + 88, y + 24, `Tier ${tier} of ${TOP_TIER}`, { size: 8, color: open ? 'W' : 'S', align: 'center' }).setOrigin(0.5, 0);
+    pixelText(this, x + 88, y + 42, open ? 'Earned every run. Perks last for good.' : perkTierGoal(tier), { size: 6, color: open ? 'a' : 'y', align: 'center', wrap: 164 }).setOrigin(0.5, 0);
 
-    [...codex.perks.values()].forEach((perk, i) => {
-      const ty = y + 50 + i * 42;
+    [...codex.perks.values()].filter((perk) => perk.tier === tier).forEach((perk, i) => {
+      const ty = y + 54 + i * 41;
       const owned = p.perks.includes(perk.id);
       const why = perkBlocked(p, perk.id);
-      this.add.rectangle(x + 8, ty, 160, 38, hex(owned ? 'g' : 'b'), 0.6).setOrigin(0);
-      pixelText(this, x + 14, ty + 4, perk.name, { size: 8, color: owned ? 'L' : 'W' });
-      pixelText(this, x + 14, ty + 16, perk.text, { size: 6, color: 'a', wrap: 96 });
+      this.add.rectangle(x + 8, ty, 160, 38, hex(owned ? 'g' : open ? 'b' : 'q'), open ? 0.6 : 0.4).setOrigin(0);
+      pixelText(this, x + 14, ty + 4, perk.name, { size: 8, color: owned ? 'L' : open ? 'W' : 'S' });
+      pixelText(this, x + 14, ty + 16, perk.text, { size: 6, color: open ? 'a' : 'S', wrap: 96 });
       if (owned) {
         pixelText(this, x + 136, ty + 8, 'Yours', { size: 7, color: 'L', align: 'center' }).setOrigin(0.5, 0);
         return;
@@ -239,4 +251,12 @@ export class Cottage extends Phaser.Scene {
       c.add([prev, next]);
     }
   }
+}
+
+const TOP_TIER = 1 + PERK_TIERS.length;
+
+/** The perk board opens at the first open tier with something left to buy, else the top open tier. */
+function firstTier(p: Profile): number {
+  const tiers = Array.from({ length: TOP_TIER }, (_, i) => i + 1).filter((t) => perkTierOpen(p, t));
+  return tiers.find((t) => [...codex.perks.values()].some((perk) => perk.tier === t && !p.perks.includes(perk.id))) ?? tiers.at(-1)!;
 }

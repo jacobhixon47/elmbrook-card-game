@@ -40,7 +40,9 @@ export type Fixture = {
     almanac?: boolean;
     /** The cottage's Codex, open at this tab and page. */
     codex?: string;
-    codexPage?: number };
+    codexPage?: number;
+    /** The cottage's perk board, at this tier. */
+    perkTier?: number };
 };
 
 const fixtures = import.meta.glob<Fixture>('/fixtures/*.json', { eager: true, import: 'default' });
