@@ -221,7 +221,8 @@ describe('dusk', () => {
 
 describe('weeks, rent and the end of a run', () => {
   it('four days, then a Night Shift, then the Night Market and rent', () => {
-    let s = start('week');
+    // A seed whose errands can all be left at once (the helper takes the first one offered).
+    let s = start('week2');
     for (let d = 1; d < NIGHT_SHIFT_DAY; d++) {
       expect(s.day).toBe(d);
       s = skipDay(s);

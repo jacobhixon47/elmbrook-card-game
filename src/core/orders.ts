@@ -119,11 +119,26 @@ function ceilingOf(r: Reach, request: OrderRequest): Tier {
   return ids.map((id) => recipeCeiling(r, id)).reduce((a, b) => (tierIndex(b) > tierIndex(a) ? b : a));
 }
 
-/** A request this guest likes, from what the deck can brew: half the time a named recipe, half a family. */
-function requestFor(ctx: Ctx, r: Reach, prefers: readonly string[]): OrderRequest {
+/**
+ * A request this guest likes, from what the deck can brew: half the time a named recipe, half a family.
+ * With `want`, only recipes the deck can bring to that tier, counting the Experiment's lower tier for
+ * ones you don't know yet (all liked recipes if none can).
+ */
+function requestFor(ctx: Ctx, r: Reach, prefers: readonly string[], want?: Tier): OrderRequest {
   const liked = r.recipes.filter((x) => prefers.some((p) => (p === 'rare' ? x.pattern.length === 3 || x.baseHarmony >= 3 : x.family === p)));
-  const recipe = pick(ctx, liked.length ? liked : r.recipes);
+  const pool = liked.length ? liked : r.recipes;
+  const reaches = want ? pool.filter((x) => tierIndex(recipeCeiling(r, x.id)) >= tierIndex(want)) : pool;
+  const recipe = pick(ctx, reaches.length ? reaches : pool);
   return rand(ctx) < 0.5 ? { kind: 'recipe', recipe: recipe.id } : { kind: 'family', family: recipe.family };
+}
+
+/**
+ * Keep a request if the deck can bring it to the tier asked for; if not (often a recipe you don't
+ * know yet, which brews a tier lower), ask again among the ones that can. Rolling only when needed
+ * keeps every other order, and the tutorial seed, as it was.
+ */
+function fitRequest(ctx: Ctx, r: Reach, prefers: readonly string[], request: OrderRequest, want: Tier): OrderRequest {
+  return tierIndex(ceilingOf(r, request)) >= tierIndex(want) ? request : requestFor(ctx, r, prefers, want);
 }
 
 /** Can the deck put an Umbra ingredient into a potion of this request? */
@@ -195,12 +210,13 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
 
   for (let i = 0; i < count; i++) {
     const customer = customers[i % customers.length]!;
-    const request = requestFor(ctx, r, customer.prefers);
-    const ceiling = ceilingOf(r, request);
+    const asked = requestFor(ctx, r, customer.prefers);
     let rolled = pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
     // Year 6: week 2 asks for Superb or better.
     if (yearRule(s, 6) && s.week === 2 && tierIndex(rolled) < tierIndex(YEAR_RULES.weekTwoTier)) rolled = YEAR_RULES.weekTwoTier;
     const minTier = tower ? tierStep(rolled, 1) : rolled;
+    const request = fitRequest(ctx, r, customer.prefers, asked, minTier);
+    const ceiling = ceilingOf(r, request);
     postOrder(ctx, {
       customer: customer.id, request, minTier, ceiling,
       payScale: weekScale(s, false) * customer.payMult * (harvest ? HARVEST_FAIR.payMult : 1) * (hermit ? HERMIT_PAY : 1) * (tower ? TOWER_PAY : 1),
@@ -230,9 +246,10 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
   // The patron's order(s).
   const ladder = patron.ladder ?? [];
   for (const tier of ladder) {
-    const request = requestFor(ctx, r, ['lunar', 'rare']);
+    const asked = requestFor(ctx, r, ['lunar', 'rare']);
     // Year 10: the Moonless Patron asks higher (still no higher than the deck can reach).
     const minTier = finaleTier(s, tier);
+    const request = fitRequest(ctx, r, ['lunar', 'rare'], asked, minTier);
     postOrder(ctx, { customer: patron.id, request, minTier, ceiling: ceilingOf(r, request), payScale: scale, bonus: null, ...every });
   }
   if (!ladder.length) {
@@ -248,8 +265,9 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
       request = { kind: 'family', family: best.family };
       minTier = tierOf(r.reach.get(best.id)!);
     } else {
-      request = requestFor(ctx, r, ['rare']);
+      const asked = requestFor(ctx, r, ['rare']);
       minTier = tierStep(rolled(), 1);
+      request = fitRequest(ctx, r, ['rare'], asked, minTier);
     }
     postOrder(ctx, { customer: patron.id, request, minTier, ceiling: ceilingOf(r, request), payScale: scale, bonus: null, ...every });
   }
@@ -259,9 +277,11 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
   const extra = twist === 'pale-courier' ? PALE_COURIER_PAY : 1;
   for (let i = 0; i < count - Math.max(1, ladder.length); i++) {
     const guest = guests[i % guests.length]!;
-    const request = requestFor(ctx, r, guest.prefers);
+    const asked = requestFor(ctx, r, guest.prefers);
+    const minTier = rolled();
+    const request = fitRequest(ctx, r, guest.prefers, asked, minTier);
     postOrder(ctx, {
-      customer: guest.id, request, minTier: rolled(), ceiling: ceilingOf(r, request),
+      customer: guest.id, request, minTier, ceiling: ceilingOf(r, request),
       payScale: scale * guest.payMult * extra,
       bonus: guest.bonusChance > 0 && rand(ctx) < guest.bonusChance ? pick(ctx, guest.bonusPool) : null,
       needsUmbra: guest.needsUmbra === true && umbraFits(s, request, r),
