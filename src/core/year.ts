@@ -9,6 +9,8 @@ import type { RunState } from './state';
 export const MAX_YEAR = 10;
 
 export const YEAR_RULES = {
+  /** Rent times this from the Year given (the latest step applies): a little from Year 2, a lot from Year 4. */
+  rent: [[4, 1.25], [2, 1.05]] as [number, number][],
   /** Year 2: a patron is known only from the day before their Night Shift. */
   twistNoticeDays: 1,
   /** Year 3: junk in every starting deck. */
@@ -31,9 +33,9 @@ export const YEAR_RULES = {
 
 /** What each Year adds, in order. A Year carries every rule up to it. */
 export const YEAR_MODIFIERS: { year: number; text: string }[] = [
-  { year: 2, text: 'Patrons stay hidden until the day before their Night Shift.' },
+  { year: 2, text: 'Patrons stay hidden until the day before their Night Shift. Rent +5%.' },
   { year: 3, text: 'Every run starts with a Cobweb in the deck.' },
-  { year: 4, text: 'One fewer Night Market stall opens.' },
+  { year: 4, text: 'One fewer Night Market stall opens, and rent rises to +25%.' },
   { year: 5, text: 'One fewer Discard every day.' },
   { year: 6, text: 'Week 2 orders ask for Superb or better.' },
   { year: 7, text: 'Every run starts with a random Curse.' },
@@ -49,6 +51,8 @@ const yearOf = (s: InYear) => s.year ?? 1;
 export const yearRule = (s: InYear, year: number) => yearOf(s) >= year;
 export const yearModifiers = (year: number) => YEAR_MODIFIERS.filter((m) => m.year <= year);
 export const yearDiscards = (s: InYear) => (yearRule(s, 5) ? YEAR_RULES.discards : 0);
+/** Rent times this in the run's Year (GDD §13). */
+export const yearRent = (s: InYear) => YEAR_RULES.rent.find(([y]) => yearRule(s, y))?.[1] ?? 1;
 export const reputationMult = (year: number) => 1 + YEAR_RULES.reputationStep * (Math.max(1, year) - 1);
 
 /** A Moonless Patron ladder tier, one higher from Year 10. */

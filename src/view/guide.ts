@@ -93,7 +93,7 @@ export function guideSections(): { title: string; body: string }[] {
   return [
     {
       title: 'A run',
-      body: `${WEEKS} weeks. Each has ${DAYS_PER_WEEK} days, then a Night Shift with a patron who twists the rules. After it the Night Market opens and the Guild collects rent: ${RENT.join(', ')} gold. Miss a payment and the run is over. Pay all ${WEEKS} and complete ${FINALE_ORDERS === 1 ? 'an order' : FINALE_ORDERS >= 3 ? 'all three orders' : `${FINALE_ORDERS} orders`} for the Moonless Patron, and the stall is yours. The Calendar tab shows the weather, festival, sky events and patrons.`,
+      body: `${WEEKS} weeks. Each has ${DAYS_PER_WEEK} days, then a Night Shift with a patron who twists the rules. After it the Night Market opens and the Guild collects rent: ${RENT.join(', ')} gold in Spring, more in later seasons and Years. Miss a payment and the run is over. Pay all ${WEEKS} and complete ${FINALE_ORDERS === 1 ? 'an order' : FINALE_ORDERS >= 3 ? 'all three orders' : `${FINALE_ORDERS} orders`} for the Moonless Patron, and the stall is yours. The Calendar tab shows the weather, festival, sky events and patrons.`,
     },
     {
       title: 'A day',
