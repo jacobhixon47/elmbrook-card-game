@@ -63,7 +63,7 @@ The one exception to palette-locking is light: `fx/glow` is a smooth radial grad
 
 ## Text
 
-Like Stardew, text is sharper than the art. The game renders at screen resolution (640×360 × a whole-number zoom) and every camera zooms the world, so pixel art stays chunky while text (`pixelText`, and the text baked into card faces) is drawn at full screen resolution. Fonts: Pixelify Sans for body, Silkscreen for display (both OFL, from `@fontsource`).
+Like Stardew, text is sharper than the art. The game renders at screen resolution (640×360 × a whole-number zoom) and every camera zooms the world, so pixel art stays chunky while text (`pixelText`, and the text baked into card faces) is drawn at full screen resolution. Fonts: Pixelify Sans for body, Silkscreen for display, and VT323's digits in both, because Pixelify's 3, 5 and 8 read as 8, S and B at small sizes (all OFL, from `@fontsource`). The digits are their own font faces limited to 0-9 and scaled to sit with each font (`installDigits` in `view/text.ts`); canvas text picks the face per character.
 
 ## Motion
 

@@ -2,8 +2,20 @@ import type Phaser from 'phaser';
 import { PALETTE, type PaletteKey } from '../art/palette';
 import { ZOOM } from './zoom';
 
-export const FONT_BODY = '"Pixelify Sans"';
-export const FONT_DISPLAY = 'Silkscreen';
+// Pixelify Sans's 3, 5 and 8 read as 8, S and B at small sizes, so digits come from VT323,
+// scaled to sit with each font (installDigits). Canvas text falls through to the next font per glyph.
+export const FONT_BODY = '"Elmbrook Digits", "Pixelify Sans"';
+export const FONT_DISPLAY = '"Elmbrook Display Digits", Silkscreen';
+
+/** Register the digit faces; await the promise before Phaser measures any text. */
+export function installDigits(url: string): Promise<unknown> {
+  const faces = [
+    new FontFace('Elmbrook Digits', `url(${url})`, { unicodeRange: 'U+0030-0039', sizeAdjust: '125%' } as FontFaceDescriptors),
+    new FontFace('Elmbrook Display Digits', `url(${url})`, { unicodeRange: 'U+0030-0039', sizeAdjust: '150%' } as FontFaceDescriptors),
+  ];
+  for (const f of faces) document.fonts.add(f);
+  return Promise.all(faces.map((f) => f.load()));
+}
 
 type TextOpts = {
   size?: number;

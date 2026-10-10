@@ -3,6 +3,7 @@ import { CODEX_TABLES, previewBrew, reduce } from '../src/core';
 import { CODEX_TABS, codexEntries } from '../src/view/codex';
 import { stepAction } from '../src/debug/fixture-steps';
 import { cardText, customerBlurb, customerLine, customerName, dayLabel, extraPay, orderNeeds, orderTerms, requestText } from '../src/view/describe';
+import { FONT_BODY, FONT_DISPLAY } from '../src/view/text';
 import { cardInfo } from '../src/view/inspect';
 import { bestOrderFor, previewPotion } from '../src/view/plan';
 import { brewing, slotAll, withHand } from './helpers';
@@ -86,5 +87,13 @@ describe('the Codex', () => {
     for (const tab of CODEX_TABS) for (const r of codexEntries(tab.id, [...CODEX_TABLES[tab.id].keys()])) expect(r.name).not.toBe('???');
     expect(codexEntries('townsfolk', ['lamplighter'])[0]).toBeDefined();
     expect(codexEntries('townsfolk', ['lamplighter']).find((r) => r.id === 'lamplighter')!.text).toMatch(/face-down/);
+  });
+});
+
+describe('fonts', () => {
+  // Pixelify Sans's 5 reads as S and its 3 as 8 at small sizes (seen in the ingredient tooltip).
+  it('draws digits from the clearer digit faces first', () => {
+    expect(FONT_BODY.startsWith('"Elmbrook Digits"')).toBe(true);
+    expect(FONT_DISPLAY.startsWith('"Elmbrook Display Digits"')).toBe(true);
   });
 });
