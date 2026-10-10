@@ -103,6 +103,20 @@ export function requestText(order: Pick<Order, 'request'> & Partial<Pick<Order, 
   return `${n}× ${what}${order.delivered ? ` (${order.delivered}/${n})` : ''}`;
 }
 
+/** The recipe an order names, if it isn't in your Grimoire yet. */
+export function unknownRecipe(s: Pick<RunState, 'knownRecipes'>, order: Pick<Order, 'request'>): string | null {
+  return order.request.kind === 'recipe' && !s.knownRecipes.includes(order.request.recipe) ? order.request.recipe : null;
+}
+
+/** How to brew a recipe an order names that you don't know yet: its essences, and the Experiment's cost. */
+export function newRecipeHint(s: Pick<RunState, 'knownRecipes' | 'relics'>, order: Pick<Order, 'request'>): string | null {
+  const id = unknownRecipe(s, order);
+  if (!id) return null;
+  const essences = codex.recipes.get(id)!.pattern.map(cap).join(' + ');
+  const cost = s.relics.includes('witchs-hatpin') ? 'at full quality' : 'one tier lower';
+  return `New recipe: ${essences}. Brewing it teaches it, ${cost}.`;
+}
+
 /** The customer's line, in character (GDD §15: customers speak, the UI states it plainly). */
 export function customerLine(order: Pick<Order, 'request'> & Partial<Pick<Order, 'customer'>>): string {
   if (order.customer && codex.patrons.has(order.customer)) return PATRON_LINE[order.customer] ?? 'You know what I came for.';

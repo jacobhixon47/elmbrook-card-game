@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CODEX_TABLES, previewBrew, reduce } from '../src/core';
 import { CODEX_TABS, codexEntries } from '../src/view/codex';
 import { stepAction } from '../src/debug/fixture-steps';
-import { cardText, customerBlurb, customerLine, customerName, dayLabel, extraPay, orderNeeds, orderTerms, requestText } from '../src/view/describe';
+import { newRecipeHint, unknownRecipe, cardText, customerBlurb, customerLine, customerName, dayLabel, extraPay, orderNeeds, orderTerms, requestText } from '../src/view/describe';
 import { FONT_BODY, FONT_DISPLAY } from '../src/view/text';
 import { cardInfo } from '../src/view/inspect';
 import { bestOrderFor, previewPotion } from '../src/view/plan';
@@ -87,6 +87,17 @@ describe('the Codex', () => {
     for (const tab of CODEX_TABS) for (const r of codexEntries(tab.id, [...CODEX_TABLES[tab.id].keys()])) expect(r.name).not.toBe('???');
     expect(codexEntries('townsfolk', ['lamplighter'])[0]).toBeDefined();
     expect(codexEntries('townsfolk', ['lamplighter']).find((r) => r.id === 'lamplighter')!.text).toMatch(/face-down/);
+  });
+});
+
+describe('orders for recipes you do not know yet', () => {
+  const tea = { request: { kind: 'recipe' as const, recipe: 'four-leaf-tea' } };
+  it('show the essences and what the Experiment costs', () => {
+    expect(unknownRecipe({ knownRecipes: [] }, tea)).toBe('four-leaf-tea');
+    expect(newRecipeHint({ knownRecipes: [], relics: [] }, tea)).toMatch(/^New recipe: \w+ \+ \w+\. Brewing it teaches it, one tier lower\.$/);
+    expect(newRecipeHint({ knownRecipes: [], relics: ['witchs-hatpin'] }, tea)).toMatch(/at full quality/);
+    expect(newRecipeHint({ knownRecipes: ['four-leaf-tea'], relics: [] }, tea)).toBeNull();
+    expect(newRecipeHint({ knownRecipes: [], relics: [] }, { request: { kind: 'family', family: 'healing' } })).toBeNull();
   });
 });
 

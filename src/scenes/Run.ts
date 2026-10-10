@@ -18,7 +18,7 @@ import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
 import {
   BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, orderNeeds, orderTerms, recipeName,
-  requestText, TIER_NAME,
+  requestText, TIER_NAME, newRecipeHint, unknownRecipe,
   cap, listOf,
 } from '../view/describe';
 import { drawGrimoire, type GrimoireTab } from '../view/grimoire';
@@ -573,7 +573,7 @@ export class Run extends Phaser.Scene {
         this.text(ORDERS.x + 5, y + 14, 'Hidden in the fog', { size: 8, color: 'h' });
         this.text(ORDERS.x + 5, y + 26, 'Brew or Discard to see it', { size: 7, color: 'h' });
       } else {
-        this.text(ORDERS.x + 5, y + 14, `${requestText(o)}${o.needsUmbra ? ' + Umbra' : ''}`, { size: 8, color: 'B' });
+        this.text(ORDERS.x + 5, y + 14, `${requestText(o)}${unknownRecipe(s, o) ? ' (new)' : ''}${o.needsUmbra ? ' + Umbra' : ''}`, { size: 8, color: 'B' });
         this.text(ORDERS.x + 5, y + 26, orderTerms(o), { size: 7, color: 'r' });
       }
       if (o.bonus && !s.fog) this.text(ORDERS.x + ORDERS.w - 5, y + 26, '★', { size: 8, color: 'o' }).setOrigin(1, 0);
@@ -890,7 +890,9 @@ export class Run extends Phaser.Scene {
     this.text(x0 + 12, y0 + 82, orderTerms(o), { size: 8, color: 'c' });
     const extra = extraPay(o.customer);
     const needs = orderNeeds(o);
+    const hint = newRecipeHint(s, o);
     const notes = [
+      ...(hint ? [{ t: hint, c: 'l' as const }] : []),
       ...(o.bonus ? [{ t: `★ Bonus: ${BONUS_TEXT[o.bonus]} (+2g, +1 heart)`, c: 'o' as const }] : []),
       ...(extra ? [{ t: `Also pays: ${extra}`, c: 'l' as const }] : []),
       ...(needs ? [{ t: needs, c: 'I' as const }] : []),

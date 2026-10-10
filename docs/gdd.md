@@ -80,6 +80,8 @@ Each order shows on the Order Board as: portrait, name, hearts (relationship), a
 
 Carried over from 1.0: click an order to open its dialogue; choose **Fulfill**, **Decline**, or **Back**. Reopening returns to the choice without replaying dialogue. You choose which order to work on and in what order.
 
+*Fair orders (decided with Jacob, Oct 10):* every order asks for something your deck can bring to its tier. A recipe you don't know yet brews as an Experiment, a tier lower, so it only counts as reachable at that lower tier (full tier with the Witch's Hatpin). When the first request a customer rolls can't reach the tier asked, they ask again among the recipes that can; only when none can does the tier drop. An order naming a recipe you don't know shows "(new)" on its ticket, and its dialogue gives the recipe's essences and the Experiment's cost. Before this, about half the patrons' orders asked for a rare recipe the deck could only reach as an Experiment, below the tier asked, so they could not be filled; making them fair roughly doubled the bot's win rate, which the season-ramp pass brings back down (`docs/balance-m4.md`).
+
 **An order has:**
 - **Request:** a specific potion ("Healing Draught") or a family ("anything Warming", "a Calming potion").
 - **Quality minimum:** a quality tier (§6.4). The minimum rises by week (Fine in week 1; mostly Superb by week 3; half Masterwork in week 4; the Night Shift's first order is one tier harder), but an order never asks for more than your deck could brew with a perfect draw and the Tinctures you own. A weak deck gets easier orders that pay less, so rent is what squeezes it.
