@@ -193,3 +193,20 @@ A rule per Year in place of the rent and pay multipliers. Greedy, 600 runs, with
 | 10 | The Moonless Patron asks one tier higher | 12.2% | 7.8% |
 
 At 600 runs a win rate moves about 2 points by chance, so Years 2 to 4 read as flat for the bot. Year 2 can't move it (the bot doesn't plan around the Calendar), and one Cobweb and one fewer stall are mild; they bite harder for a person. The big steps are Year 5 (Discards) and Year 8 (Shelf). Spring plain (no perks or unlocks) is 38.3%, unchanged. The random bot in Year 10 with A Lucky Find: 0 errors in 300 runs. The season-ramp pass tunes the strengths (Years 2 to 4 could use more, and Reputation at Year 10 is ×5.5).
+
+## The tiered perk board
+
+Ten more perks in tiers 2 to 4 (GDD §13). Greedy, Spring, all Almanac unlocks. "All perks" now means all 14, so the Year numbers above (tier 1 only) move up.
+
+The first draft doubled the all-perks win rate in Year 1, from 34.5% to 69.3%. Taking one perk out of the full set at a time (400 runs each) showed where it came from: the tier 2 relic of The Heirloom was worth about 17 points, and the other start relic, the extra gold and the two Blessed cards about 5 to 8 each. Tier 1 alone was 32.3%, tiers 1 and 2 52.8%. The Heirloom became a second tier 1 relic, A Full Purse +5 gold (was +10), A Savings Jar +10 (was +20), and Twice Blessed blesses one card (was two). After that, tiers 1 and 2 are 46.0%.
+
+Final, 600 runs:
+
+| | Year 1 | Year 5 | Year 10 |
+|---|---|---|---|
+| Spring, tier 1 perks (before) | 34.5% | 27.5% | 12.2% |
+| Spring, all 14 perks (after) | 54.0% | 47.2% | 33.2% |
+| Winter, tier 1 perks (before) | 31.5% | 21.5% | 7.8% |
+| Winter, all 14 perks (after) | 50.3% | 46.8% | 29.2% |
+
+Spring plain (no perks or unlocks) is 38.3%, unchanged. The random bot with all perks in Year 10 with a boon: 0 errors in 300 runs. Endgame players own every perk, so the season-ramp pass tunes Years against this all-perks profile; Years 2 to 5 now barely bite.

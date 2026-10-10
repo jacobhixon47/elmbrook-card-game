@@ -161,10 +161,10 @@ describe('the tiered perk board', () => {
     const plain = newRun('tiers', 'hedge-witch').state;
     const s = newRun('tiers', 'hedge-witch', 'spring', [], all).state;
     expect(s.relics.length).toBe(2);
-    expect(allCards(s).filter((c) => c.modifier === 'blessed').length).toBe(3);
+    expect(allCards(s).filter((c) => c.modifier === 'blessed').length).toBe(2);
     expect(s.cauldronSlots).toBe(CAULDRON_SLOTS + 1);
     expect(s.shelfSize).toBe(SHELF_SLOTS + 2);
-    expect(s.gold).toBeGreaterThanOrEqual(START_GOLD + 35);
+    expect(s.gold).toBeGreaterThanOrEqual(START_GOLD + 20);
     expect(allCards(s).length).toBe(allCards(plain).length + 5);
   });
 });
