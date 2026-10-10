@@ -6,6 +6,7 @@ import { pick, pickWeighted, rand, type Ctx } from './ctx';
 import { FAMILIAR_RULES } from './familiars';
 import { fortuneOn } from './market';
 import { patronOf, twistNow } from './night';
+import { hasRelic } from './relics';
 import {
   BONUS_TIP, CLOCKLESS_BREWS, RAIN_MIN_ORDERS, HARVEST_FAIR, LONGEST_NIGHT, BLOOMTIDE_PAY, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount,
   HERMIT_PAY, PALE_COURIER_PAY, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, TOWER_PAY, WEEK_PAY_STEP, type Tier,
@@ -101,12 +102,21 @@ function nightGuests(cursed: boolean): (Guest & { weight: number })[] {
   ];
 }
 
-type Reach = { reach: Map<string, number>; recipes: Recipe[] };
+type Reach = { reach: Map<string, number>; recipes: Recipe[]; known: readonly string[]; fullExperiments: boolean };
 
-/** The best quality the deck can reach for a request. */
-function ceilingOf(r: Reach, request: OrderRequest): number {
-  if (request.kind === 'recipe') return r.reach.get(request.recipe)!;
-  return Math.max(...r.recipes.filter((x) => x.family === request.family).map((x) => r.reach.get(x.id)!));
+/**
+ * The best tier the deck can reach for a recipe. One you don't know yet brews as an Experiment, a
+ * tier lower (GDD §6), unless the Witch's Hatpin makes Experiments brew at full quality.
+ */
+function recipeCeiling(r: Reach, recipe: string): Tier {
+  const tier = tierOf(r.reach.get(recipe)!);
+  return r.known.includes(recipe) || r.fullExperiments ? tier : tierStep(tier, -1);
+}
+
+/** The best tier the deck can reach for a request. */
+function ceilingOf(r: Reach, request: OrderRequest): Tier {
+  const ids = request.kind === 'recipe' ? [request.recipe] : r.recipes.filter((x) => x.family === request.family).map((x) => x.id);
+  return ids.map((id) => recipeCeiling(r, id)).reduce((a, b) => (tierIndex(b) > tierIndex(a) ? b : a));
 }
 
 /** A request this guest likes, from what the deck can brew: half the time a named recipe, half a family. */
@@ -127,7 +137,7 @@ type OrderOpts = {
   customer: string;
   request: OrderRequest;
   minTier: Tier;
-  ceiling: number;
+  ceiling: Tier;
   payScale: number;
   bonus: OrderBonus | null;
   quantity?: number;
@@ -138,8 +148,7 @@ type OrderOpts = {
 
 function postOrder(ctx: Ctx, o: OrderOpts): void {
   const s = ctx.s;
-  const cap = tierOf(o.ceiling);
-  const minTier = tierIndex(o.minTier) > tierIndex(cap) ? cap : o.minTier;
+  const minTier = tierIndex(o.minTier) > tierIndex(o.ceiling) ? o.ceiling : o.minTier;
   const order: Order = {
     id: s.nextUid++,
     customer: o.customer,
@@ -168,7 +177,7 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
   const s = ctx.s;
   const reach = reachableRecipes(s, nightShift);
   if (reach.size === 0) return;
-  const r: Reach = { reach, recipes: [...reach.keys()].map((id) => codex.recipes.get(id)!) };
+  const r: Reach = { reach, recipes: [...reach.keys()].map((id) => codex.recipes.get(id)!), known: s.knownRecipes, fullExperiments: hasRelic(s, 'witchs-hatpin') };
   if (nightShift) return postNightOrders(ctx, r);
 
   const customers = weightedOrder(ctx, [...codex.regulars.values()].filter((x) => !x.nightOnly));
