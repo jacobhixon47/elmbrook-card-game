@@ -329,12 +329,23 @@ export const duskEvents: In<typeof DuskEvent>[] = [
   },
 ];
 
-// Cottage perks (GDD §13): a short list bought once each with Reputation. Starting values for tuning.
+// Cottage perks (GDD §13): bought once each with Reputation, on a board of four tiers. Tier 1 is open
+// from the start; later tiers open with Years and the Almanac (PERK_TIERS in core/meta.ts). Starting values for tuning.
 export const perks: In<typeof Perk>[] = [
-  { id: 'nest-egg', name: 'Nest Egg', text: 'Start every run with 5 more gold.', cost: 15, start: { gold: 5 } },
-  { id: 'deep-shelf', name: 'A Deeper Shelf', text: 'Your Shelf starts with 5 slots instead of 4.', cost: 20, start: { shelf: 1 } },
-  { id: 'old-spoon', name: "Gran's Spoon", text: 'Start every run with a Stir in your deck.', cost: 25, start: { cards: ['stir'] } },
-  { id: 'spare-perch', name: 'A Spare Perch', text: 'Room for one more familiar.', cost: 35, start: { familiarSlots: 1 } },
+  { id: 'nest-egg', name: 'Nest Egg', text: 'Start every run with 5 more gold.', tier: 1, cost: 15, start: { gold: 5 } },
+  { id: 'deep-shelf', name: 'A Deeper Shelf', text: 'Your Shelf starts with 5 slots instead of 4.', tier: 1, cost: 20, start: { shelf: 1 } },
+  { id: 'old-spoon', name: "Gran's Spoon", text: 'Start every run with a Stir in your deck.', tier: 1, cost: 25, start: { cards: ['stir'] } },
+  { id: 'spare-perch', name: 'A Spare Perch', text: 'Room for one more familiar.', tier: 1, cost: 35, start: { familiarSlots: 1 } },
+  { id: 'full-purse', name: 'A Full Purse', text: 'Start every run with 10 more gold.', tier: 2, cost: 50, start: { gold: 10 } },
+  { id: 'blessed-ladle', name: 'A Blessed Ladle', text: 'A random starting card is Blessed.', tier: 2, cost: 55, start: { blessed: 1 } },
+  { id: 'tidy-habits', name: 'Tidy Habits', text: 'Start every run with two Tidy Ups in your deck.', tier: 2, cost: 60, start: { cards: ['tidy-up', 'tidy-up'] } },
+  { id: 'grans-charm', name: "Gran's Charm", text: 'Start every run with a random tier 1 relic.', tier: 2, cost: 70, start: { relicTier: 1 } },
+  { id: 'wide-shelf', name: 'A Wide Shelf', text: 'One more Shelf slot.', tier: 3, cost: 120, start: { shelf: 1 } },
+  { id: 'grans-notes', name: "Gran's Notes", text: 'Start every run with a Steep and a Sift in your deck.', tier: 3, cost: 130, start: { cards: ['steep', 'sift'] } },
+  { id: 'twice-blessed', name: 'Twice Blessed', text: 'Two more random starting cards are Blessed.', tier: 3, cost: 150, start: { blessed: 2 } },
+  { id: 'savings-jar', name: 'A Savings Jar', text: 'Start every run with 20 more gold.', tier: 4, cost: 220, start: { gold: 20 } },
+  { id: 'heirloom', name: 'The Heirloom', text: 'Start every run with a random tier 2 relic.', tier: 4, cost: 260, start: { relicTier: 2 } },
+  { id: 'big-cauldron', name: 'A Bigger Cauldron', text: 'Your cauldron holds one more card.', tier: 4, cost: 320, start: { cauldron: 1 } },
 ];
 
 // The Almanac (GDD §13): goals met in any run, each adding content to the pools for good.

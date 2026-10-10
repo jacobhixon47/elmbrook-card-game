@@ -1,4 +1,5 @@
 import { codex } from '../codex';
+import type { RunStart } from '../codex/schema';
 import type { Action, GameEvent } from './actions';
 import { previewBrew } from './brew';
 import { activeEvents, FESTIVAL_DAY, festivalOn, NIGHT_SHIFT_DAY, rollCalendar, todaysWeather, type Season } from './calendar';
@@ -17,7 +18,7 @@ import { seedRng } from './rng';
 import {
   BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK,
   LONGEST_NIGHT, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
-  MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex,
+  MAX_CAULDRON_SLOTS, MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex,
 } from './rules';
 import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState, type RunStats } from './state';
 import { YEAR_RULES, yearDiscards, yearRule } from './year';
@@ -85,8 +86,8 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     skipStreak: 0,
     nextUid: uid,
   };
-  applyPerks(s, perks);
   const ctx: Ctx = { s, ev: [{ type: 'runStarted', seed, witch: witch.id, season }] };
+  applyPerks(ctx, perks);
   if (boon) applyBoon(ctx, boon);
   applyYear(ctx);
   startDay(ctx);
@@ -742,16 +743,27 @@ export function fencePrice(potion: Pick<Potion, 'tier' | 'ingredients'>): number
   return Math.round(FENCE_PRICE[potion.tier] * (shadowy ? FENCE_SHADOW_BONUS : 1));
 }
 
-/** Cottage perks change how a run starts (GDD §13): more gold, Shelf and familiar slots, extra cards. */
-function applyPerks(s: RunState, perks: readonly string[]): void {
+/** Cottage perks change how a run starts (GDD §13). */
+function applyPerks(ctx: Ctx, perks: readonly string[]): void {
   for (const id of perks) {
     const perk = codex.perks.get(id);
     if (!perk) throw new Error(`unknown perk: ${id}`);
-    const p = perk.start;
-    s.gold += p.gold ?? 0;
-    s.shelfSize = Math.min(MAX_SHELF_SLOTS, s.shelfSize + (p.shelf ?? 0));
-    s.familiarSlots = Math.min(MAX_FAMILIAR_SLOTS, s.familiarSlots + (p.familiarSlots ?? 0));
-    for (const card of p.cards ?? []) s.drawPile.push({ uid: s.nextUid++, card });
+    applyStart(ctx, perk.start, 'perk');
+  }
+}
+
+/** What a perk or boon does at run start: gold, slots, cards, a random relic, Blessed starting cards. */
+function applyStart(ctx: Ctx, start: RunStart, source: string): void {
+  const s = ctx.s;
+  s.gold += start.gold ?? 0;
+  s.shelfSize = Math.min(MAX_SHELF_SLOTS, s.shelfSize + (start.shelf ?? 0));
+  s.familiarSlots = Math.min(MAX_FAMILIAR_SLOTS, s.familiarSlots + (start.familiarSlots ?? 0));
+  s.cauldronSlots = Math.min(MAX_CAULDRON_SLOTS, s.cauldronSlots + (start.cauldron ?? 0));
+  for (const card of start.cards ?? []) s.drawPile.push({ uid: s.nextUid++, card });
+  if (start.relicTier) grantRelic(ctx, start.relicTier, source);
+  for (let i = 0; i < (start.blessed ?? 0); i++) {
+    const open = s.drawPile.filter((c) => !cantModify(c, 'blessed'));
+    if (open.length) addModifier(ctx, pick(ctx, open), 'blessed', source);
   }
 }
 
@@ -766,20 +778,11 @@ function applyYear(ctx: Ctx): void {
   if (yearRule(s, 8)) s.shelfSize = Math.max(1, s.shelfSize - YEAR_RULES.shelf);
 }
 
-/** A loop's boon (GDD §13), applied at the start of every run that Year. */
+/** A Year's boon (GDD §13), applied at the start of every run that Year. */
 function applyBoon(ctx: Ctx, id: string): void {
-  const s = ctx.s;
   const boon = codex.boons.get(id);
   if (!boon) throw new Error(`unknown boon: ${id}`);
-  const b = boon.start;
-  s.gold += b.gold ?? 0;
-  s.shelfSize = Math.min(MAX_SHELF_SLOTS, s.shelfSize + (b.shelf ?? 0));
-  s.familiarSlots = Math.min(MAX_FAMILIAR_SLOTS, s.familiarSlots + (b.familiarSlots ?? 0));
-  if (b.relicTier) grantRelic(ctx, b.relicTier, 'boon');
-  for (let i = 0; i < (b.blessed ?? 0); i++) {
-    const open = s.drawPile.filter((c) => !cantModify(c, 'blessed'));
-    if (open.length) addModifier(ctx, pick(ctx, open), 'blessed', 'boon');
-  }
+  applyStart(ctx, boon.start, 'boon');
 }
 
 /** The single entry point for game rules. Pure: same input, same output. A broken rule returns the old state and a `rejected` event. */

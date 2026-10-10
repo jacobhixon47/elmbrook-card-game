@@ -1491,6 +1491,7 @@ export class Run extends Phaser.Scene {
         ? null
         : `Win another Year, or finish ${LOOP_ALMANAC} Almanac entries, and your next Winter win opens Year ${top + 1}.`;
     if (news) this.text(320, 222, news, { size: 7, color: out.newYear ? 'L' : 'a', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
+    if (out.perkTiers.length) this.text(320, news ? 240 : 222, perkNews(out), { size: 7, color: 'Y', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
     this.add2(button(this, 270, 296, 'Play again', () => this.newRun(s.season), { w: 80 }));
     this.add2(button(this, 370, 296, 'Home', () => this.scene.start('Cottage', {}), { w: 80, color: 'Y' }));
   }
@@ -1501,7 +1502,8 @@ export class Run extends Phaser.Scene {
     if (out.reputation > 0) this.text(320, 146, `+${out.reputation} Reputation to spend at your cottage`, { size: 8, color: 'Y', stroke: 'k', align: 'center' }).setOrigin(0.5);
     if (out.almanac.length) {
       const names = out.almanac.map((id) => codex.almanac.get(id)!.name);
-      this.text(320, 160, `New in your Almanac: ${listOf(names)}. More joins the pools next run.`, { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);
+      const tiers = out.perkTiers.length ? ` ${perkNews(out)}` : '';
+      this.text(320, 160, `New in your Almanac: ${listOf(names)}. More joins the pools next run.${tiers}`, { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);
     }
     this.add2(button(this, 270, 190, again, () => this.newRun(s.season), { w: 80, color: 'Y' }));
     this.add2(button(this, 370, 190, 'Home', () => this.scene.start('Cottage', {}), { w: 80 }));
@@ -1613,4 +1615,10 @@ function wantsTutorial(): boolean {
   const flag = params.get('tutorial');
   if (flag) return flag === '1';
   return !params.get('seed') && !loadProfile().tutorialDone;
+}
+
+/** A line for perk board tiers a run opened. */
+function perkNews(out: RunOutcome): string {
+  const tiers = out.perkTiers.map((t) => `tier ${t}`);
+  return `New perks at your cottage: ${listOf(tiers)} of the perk board is open.`;
 }

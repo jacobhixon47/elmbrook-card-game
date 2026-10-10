@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { SEASONS, type Season, allCards, almanacMet, CODEX_TABLES, codexMet, almanacUnlocks, ALMANAC_GOALS, buyPerk, newStats, relicPool, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, migrateRun, newProfile, nextSeason, perkBlocked, PROFILE_VERSION, recordRun, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
+import { SEASONS, type Season, allCards, almanacMet, CODEX_TABLES, codexMet, almanacUnlocks, ALMANAC_GOALS, buyPerk, newStats, relicPool, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, migrateRun, newProfile, nextSeason, perkBlocked, perkTierOpen, perkTierGoal, PERK_TIERS, CAULDRON_SLOTS, PROFILE_VERSION, recordRun, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
 import { loadProfile, recordFinishedRun, saveProfile } from '../src/profile';
 import { playRun } from '../src/sim/run';
 import { brewing } from './helpers';
@@ -110,6 +110,62 @@ describe('Reputation and perks', () => {
     expect(bought).toMatchObject({ reputation: 10, perks: ['deep-shelf'] });
     expect(perkBlocked(bought, 'deep-shelf')).toMatch(/already/);
     expect(() => buyPerk(bought, 'deep-shelf')).toThrow(/already/);
+  });
+});
+
+describe('the tiered perk board', () => {
+  const tiers = [1, ...PERK_TIERS.map((r) => r.tier)];
+  const almanac = (n: number) => [...codex.almanac.keys()].slice(0, n);
+
+  it('has every tier filled, four perks at most each, dearer as it climbs', () => {
+    const perks = [...codex.perks.values()];
+    for (const t of tiers) expect(perks.filter((p) => p.tier === t).length).toBeGreaterThan(0);
+    for (const t of tiers) expect(perks.filter((p) => p.tier === t).length).toBeLessThanOrEqual(4);
+    for (const t of tiers.slice(1)) {
+      const cheapest = Math.min(...perks.filter((p) => p.tier === t).map((p) => p.cost));
+      expect(cheapest).toBeGreaterThan(Math.max(...perks.filter((p) => p.tier === t - 1).map((p) => p.cost)));
+    }
+    for (const card of perks.flatMap((p) => p.start.cards ?? [])) expect(codex.tinctures.has(card) || codex.ingredients.has(card)).toBe(true);
+  });
+
+  it('opens later tiers with Years and the Almanac', () => {
+    const fresh = newProfile();
+    expect(tiers.filter((t) => perkTierOpen(fresh, t))).toEqual([1]);
+    expect(perkTierOpen({ ...fresh, years: 1 }, 2)).toBe(true);
+    expect(perkTierOpen({ ...fresh, almanac: almanac(4) }, 2)).toBe(true);
+    expect(perkTierOpen({ ...fresh, almanac: almanac(3) }, 2)).toBe(false);
+    expect(perkTierOpen({ ...fresh, yearSeasons: [['spring'], ['spring'], ['spring']] }, 3)).toBe(true);
+    expect(perkTierOpen({ ...fresh, almanac: almanac(8) }, 3)).toBe(true);
+    expect(perkTierOpen({ ...fresh, almanac: almanac(8) }, 4)).toBe(false);
+    expect(perkTierOpen({ ...fresh, almanac: almanac(codex.almanac.size) }, 4)).toBe(true);
+    expect(perkTierOpen({ ...fresh, yearSeasons: Array.from({ length: 6 }, () => ['spring' as const]) }, 4)).toBe(true);
+    expect(perkTierGoal(2)).toBe('Win a Year or 4 Almanac entries to open.');
+    expect(perkTierGoal(4)).toBe('Reach Year 6 or the whole Almanac to open.');
+  });
+
+  it("a locked tier's perks can't be bought, and say what opens them", () => {
+    const p = { ...newProfile(), reputation: 1000 };
+    expect(perkBlocked(p, 'full-purse')).toBe(perkTierGoal(2));
+    expect(() => buyPerk(p, 'full-purse')).toThrow(/Win a Year/);
+    expect(buyPerk({ ...p, years: 1 }, 'full-purse').perks).toEqual(['full-purse']);
+  });
+
+  it('a run says which tiers it opened', () => {
+    expect(recordRun(newProfile(), end('winter', 'victory')).perkTiers).toEqual([2]);
+    expect(recordRun({ ...newProfile(), years: 1 }, end('winter', 'victory')).perkTiers).toEqual([]);
+    expect(recordRun(newProfile(), end('spring', 'game-over')).perkTiers).toEqual([]);
+  });
+
+  it('later perks start runs with relics, Blessed cards and a bigger cauldron', () => {
+    const all = [...codex.perks.keys()];
+    const plain = newRun('tiers', 'hedge-witch').state;
+    const s = newRun('tiers', 'hedge-witch', 'spring', [], all).state;
+    expect(s.relics.length).toBe(2);
+    expect(allCards(s).filter((c) => c.modifier === 'blessed').length).toBe(3);
+    expect(s.cauldronSlots).toBe(CAULDRON_SLOTS + 1);
+    expect(s.shelfSize).toBe(SHELF_SLOTS + 2);
+    expect(s.gold).toBeGreaterThanOrEqual(START_GOLD + 35);
+    expect(allCards(s).length).toBe(allCards(plain).length + 5);
   });
 });
 

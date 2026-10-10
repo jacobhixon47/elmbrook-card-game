@@ -300,20 +300,31 @@ export const DuskEvent = z.object({
 });
 export type DuskEvent = z.infer<typeof DuskEvent>;
 
+/**
+ * What a perk or a boon does at run start (GDD §13): extra gold, Shelf, familiar or cauldron slots,
+ * cards in the starting deck, a random relic of a tier, or random starting cards Blessed.
+ */
+export const RunStart = z.object({
+  gold: z.number().int().positive().optional(),
+  shelf: z.number().int().positive().optional(),
+  familiarSlots: z.number().int().positive().optional(),
+  cauldron: z.number().int().positive().optional(),
+  cards: z.array(Id).min(1).optional(),
+  relicTier: z.number().int().min(1).max(3).optional(),
+  blessed: z.number().int().positive().optional(),
+});
+export type RunStart = z.infer<typeof RunStart>;
+
 /** A cottage perk (GDD §13): bought once with Reputation, it changes how every later run starts. */
 export const Perk = z.object({
   id: Id,
   name: z.string().min(1),
   text: z.string().min(1),
+  /** The board's tier: 1 is open from the start, later tiers open with Years and the Almanac (core/meta.ts). */
+  tier: z.number().int().min(1).max(4),
   /** Reputation it costs. */
   cost: z.number().int().positive(),
-  /** What it does at run start: extra gold, Shelf slots, familiar slots, or cards in the starting deck. */
-  start: z.object({
-    gold: z.number().int().positive().optional(),
-    shelf: z.number().int().positive().optional(),
-    familiarSlots: z.number().int().positive().optional(),
-    cards: z.array(Id).min(1).optional(),
-  }),
+  start: RunStart,
 });
 export type Perk = z.infer<typeof Perk>;
 
@@ -334,13 +345,6 @@ export const Boon = z.object({
   id: Id,
   name: z.string().min(1),
   text: z.string().min(1),
-  /** What it does at run start: as a perk, or a random relic of a tier, or Blessed cards in the starting deck. */
-  start: z.object({
-    gold: z.number().int().positive().optional(),
-    shelf: z.number().int().positive().optional(),
-    familiarSlots: z.number().int().positive().optional(),
-    relicTier: z.number().int().min(1).max(3).optional(),
-    blessed: z.number().int().positive().optional(),
-  }),
+  start: RunStart,
 });
 export type Boon = z.infer<typeof Boon>;
