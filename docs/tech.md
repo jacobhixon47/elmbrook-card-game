@@ -12,7 +12,7 @@ Goal: a codebase Claude Code can build, run, test, see and tune end to end, with
 | Packages | pnpm | Fast, strict lockfile. |
 | Unit tests | Vitest | Fast, Vite-native. |
 | E2E + screenshots | Playwright (Chromium) | Claude drives the real game and looks at it. |
-| Fonts | Pixelify Sans, Silkscreen (OFL, `@fontsource`) | Pixel fonts with no external requests. |
+| Fonts | Pixelify Sans, Silkscreen, VT323 for digits (OFL, `@fontsource`) | Pixel fonts with no external requests. |
 | Data validation | Zod | Content files are checked at build and test time. |
 | Dialogue | Ink via inkjs | Plain-text narrative scripts, compiled in the build (inkjs ships a compiler). |
 | Desktop (later) | Tauri | Small native wrapper for Steam builds. |
