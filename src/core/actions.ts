@@ -10,7 +10,7 @@ export type Action =
   // Sunset: brewing.
   | { type: 'slot'; uid: number }
   | { type: 'unslot'; uid: number }
-  | { type: 'brew'; deliverTo?: number }
+  | { type: 'brew'; deliverTo?: number; /** When the ingredients fit more than one recipe, which to brew. */ recipe?: string }
   | { type: 'discard'; uids: number[] }
   | { type: 'playTincture'; uid: number; targets?: number[] }
   | { type: 'deliver'; order: number; potion: number }

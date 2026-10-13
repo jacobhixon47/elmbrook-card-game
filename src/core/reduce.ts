@@ -203,14 +203,15 @@ function shelve(ctx: Ctx, potion: Potion): void {
   }
 }
 
-function brew(ctx: Ctx, deliverTo: number | undefined): void {
+function brew(ctx: Ctx, deliverTo: number | undefined, pick: string | undefined): void {
   const s = ctx.s;
   requirePhase(ctx, 'brewing');
   if (s.brewsLeft <= 0) reject('no Brews left today');
   if (deliverTo !== undefined && s.fog) reject('the fog hides the orders until your first brew or Discard');
   const target = deliverTo === undefined ? null : openOrder(ctx, deliverTo);
-  const preview = previewBrew(s, s.cauldron, s.hand);
+  const preview = previewBrew(s, s.cauldron, s.hand, pick);
   if (preview.kind === 'empty') reject('the cauldron needs at least two ingredients');
+  if (pick !== undefined && (preview.kind !== 'potion' || preview.recipe !== pick)) reject(`these ingredients can't brew ${codex.recipes.get(pick)?.name ?? pick}`);
   if (preview.discardCost > s.discardsLeft) reject('not enough Discards left');
   const blocked = brewBlocked(s, s.cauldron);
   if (blocked) reject(blocked);
@@ -418,7 +419,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
     }
 
     case 'brew':
-      brew(ctx, action.deliverTo);
+      brew(ctx, action.deliverTo, action.recipe);
       return;
 
     case 'discard': {

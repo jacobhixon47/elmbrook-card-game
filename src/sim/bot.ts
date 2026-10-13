@@ -14,7 +14,7 @@ import { nextFloat, type RngState } from '../core/rng';
 
 export type Strategy = 'greedy' | 'random';
 
-type Plan = { cards: CardInstance[]; preview: Extract<BrewPreview, { kind: 'potion' }>; deliverTo?: number; value: number };
+type Plan = { cards: CardInstance[]; preview: Extract<BrewPreview, { kind: 'potion' }>; deliverTo?: number; value: number; /** Which recipe to brew, when the cards fit more than one. */ recipe?: string };
 
 function combos<T>(items: readonly T[], min: number, max: number): T[][] {
   const out: T[][] = [];
@@ -46,7 +46,15 @@ function brewOptions(s: RunState): Plan[] {
     const rest = pool.filter((c) => !cards.includes(c));
     const preview = previewBrew(s, cards, rest);
     if (preview.kind !== 'potion' || preview.discardCost > s.discardsLeft || brewBlocked(s, cards)) continue;
-    out.push({ cards, preview, value: 0 });
+    if (preview.options.length < 2) {
+      out.push({ cards, preview, value: 0 });
+      continue;
+    }
+    // The cards fit more than one recipe: each is its own plan, named when brewed.
+    for (const recipe of preview.options) {
+      const alt = recipe === preview.recipe ? preview : previewBrew(s, cards, rest, recipe);
+      if (alt.kind === 'potion') out.push({ cards, preview: alt, value: 0, recipe });
+    }
   }
   return out;
 }
@@ -70,7 +78,8 @@ function stepToward(s: RunState, plan: Plan): Action {
   if (stray) return { type: 'unslot', uid: stray.uid };
   const missing = plan.cards.find((c) => !s.cauldron.some((k) => k.uid === c.uid));
   if (missing) return { type: 'slot', uid: missing.uid };
-  return plan.deliverTo === undefined ? { type: 'brew' } : { type: 'brew', deliverTo: plan.deliverTo };
+  const recipe = plan.recipe === undefined ? {} : { recipe: plan.recipe };
+  return plan.deliverTo === undefined ? { type: 'brew', ...recipe } : { type: 'brew', deliverTo: plan.deliverTo, ...recipe };
 }
 
 /** What the bot thinks each Tincture is worth when picking rewards and shopping (about an ingredient's Potency). */

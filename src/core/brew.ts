@@ -27,6 +27,8 @@ export type BrewPreview =
       copies: number;
       discardCost: number;
       steps: ScoreStep[];
+      /** Every recipe these ingredients could brew, best first; more than one means you can pick. */
+      options: string[];
     };
 
 const PERMS: Record<number, number[][]> = {
@@ -72,23 +74,24 @@ export function weatherPotency(ing: Ingredient, weather: Weather): number {
 const anySlots = (r: Recipe) => r.pattern.filter((e) => e === 'any').length;
 
 /**
- * The recipe these ingredients brew, if any. When several match, the most specific pattern wins
- * (fewest "any" slots), then the highest base Harmony, then a recipe you already know, then codex order.
+ * Every recipe these ingredients brew, best first: the most specific pattern (fewest "any" slots), then
+ * the highest base Harmony, then a recipe you already know, then codex order. The brew makes the first
+ * unless you pick another (GDD §6.2).
  */
-export function matchRecipe(ings: readonly Ingredient[], s: RecipeAccess): Recipe | null {
-  let best: Recipe | null = null;
+export function matchingRecipes(ings: readonly Ingredient[], s: RecipeAccess): Recipe[] {
   const rank = (r: Recipe) => [-anySlots(r), r.baseHarmony, s.knownRecipes.includes(r.id) ? 1 : 0];
-  for (const r of codex.recipes.values()) {
-    if (!recipeAvailable(r, s) || !fillsPattern(ings, r.pattern)) continue;
-    if (!best) {
-      best = r;
-      continue;
-    }
-    const [a, b] = [rank(r), rank(best)];
+  const found = [...codex.recipes.values()].filter((r) => recipeAvailable(r, s) && fillsPattern(ings, r.pattern));
+  // A stable sort keeps codex order among equals.
+  return found.sort((x, y) => {
+    const [a, b] = [rank(x), rank(y)];
     const i = a.findIndex((v, k) => v !== b[k]);
-    if (i >= 0 && a[i]! > b[i]!) best = r;
-  }
-  return best;
+    return i < 0 ? 0 : b[i]! - a[i]!;
+  });
+}
+
+/** The recipe these ingredients brew by default, if any (`matchingRecipes`). */
+export function matchRecipe(ings: readonly Ingredient[], s: RecipeAccess): Recipe | null {
+  return matchingRecipes(ings, s)[0] ?? null;
 }
 
 /** A card's essences after any weaving (the Hollow Tailor): the woven one replaces the second. */
@@ -115,7 +118,7 @@ export function ingredientsOf(cards: readonly CardInstance[]): Ingredient[] | nu
  */
 export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf' | 'relics' | 'curses'>>;
 
-export function previewBrew(state: BrewState, cards: readonly CardInstance[], hand: readonly CardInstance[]): BrewPreview {
+export function previewBrew(state: BrewState, cards: readonly CardInstance[], hand: readonly CardInstance[], pick?: string): BrewPreview {
   const raw = ingredientsOf(cards);
   if (!raw || raw.length < 2) return { kind: 'empty' };
   // Moth Swarm: every ingredient also counts as Lunar for this brew.
@@ -123,7 +126,9 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
   // The Moth familiar: Lunar ingredients count as every essence.
   const ings = state.familiars?.includes('moth') ? swarm.map((i) => (i.essences.includes('lunar') ? { ...i, essences: [...ESSENCES] } : i)) : swarm;
   const discardCost = cards.reduce((n, c) => n + sumEffect(c.card, 'discardCost'), 0);
-  const recipe = matchRecipe(ings, state);
+  const matches = matchingRecipes(ings, state);
+  // The recipe you picked, when these ingredients can brew it; otherwise the best match.
+  const recipe = matches.find((r) => r.id === pick) ?? matches[0];
   if (!recipe) return { kind: 'sludge', discardCost };
 
   const steps: ScoreStep[] = [];
@@ -246,5 +251,6 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     copies,
     discardCost,
     steps,
+    options: matches.map((r) => r.id),
   };
 }

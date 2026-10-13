@@ -32,6 +32,8 @@ export type Fixture = {
     creek?: 'temper' | ModifierId;
     /** The tooltip of the Shelf potion at this index, open. */
     shelfTip?: number;
+    /** The recipe picked for the cauldron's cards, when they fit more than one. */
+    recipe?: string;
     /** Pouring out a Shelf potion. */
     pour?: boolean;
     /** At a dusk event, choosing the card for the choice at this index. */

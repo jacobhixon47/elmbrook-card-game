@@ -84,6 +84,8 @@ export class Run extends Phaser.Scene {
   private ui!: Phaser.GameObjects.Container;
   private mode: Mode = { kind: 'idle' };
   private pinned: number | null = null;
+  /** The recipe picked for the cauldron's current cards, when they fit more than one. */
+  private recipePick: { cauldron: string; recipe: string } | null = null;
   private confirm: 'endDay' | 'sludge' | null = null;
   private busy = false;
   private dispatching = false;
@@ -160,6 +162,7 @@ export class Run extends Phaser.Scene {
     if (fixture?.ui?.pour) this.mode = { kind: 'pour' };
     if (fixture?.ui?.eventCard !== undefined) this.mode = { kind: 'event-card', choice: fixture.ui.eventCard };
     if (fixture?.ui?.grimoire) this.book = fixture.ui.grimoire;
+    if (fixture?.ui?.recipe) this.recipePick = { cauldron: cauldronKey(state), recipe: fixture.ui.recipe };
     if (fixture?.ui?.tutorial) {
       // Show one tip: everything before it counts as done.
       const at = TIPS.findIndex((t) => t.id === fixture.ui!.tutorial);
@@ -433,7 +436,7 @@ export class Run extends Phaser.Scene {
       this.tutorial = null;
       return;
     }
-    const preview = s.phase === 'brewing' ? previewBrew(s, s.cauldron, s.hand).kind : 'empty';
+    const preview = s.phase === 'brewing' ? this.previewOf(s).kind : 'empty';
     const tip = t.current(s, { dialog: this.mode.kind === 'dialog', book: this.book !== null, preview });
     if (!tip || (this.book && tip.id !== 'grimoire')) return;
     this.drawTip(tip, () => {
@@ -596,7 +599,7 @@ export class Run extends Phaser.Scene {
     // Preview of the brew in the cauldron (GDD §6.1).
     this.add2(panel(this, SIDE.x, SIDE.y, SIDE.w, 98));
     const x = SIDE.x + 6;
-    const preview = previewBrew(s, s.cauldron, s.hand);
+    const preview = this.previewOf(s);
     const patron = s.day === NIGHT_SHIFT_DAY ? patronOf(s) : null;
     const blocked = s.phase === 'brewing' && preview.kind !== 'empty' ? brewBlocked(s, s.cauldron) : null;
     if (s.phase === 'morning' && patron) {
@@ -617,9 +620,18 @@ export class Run extends Phaser.Scene {
       this.text(x, SIDE.y + 5, 'Sludge!', { size: 10, color: 'R' });
       this.text(x, SIDE.y + 21, "These essences don't make any recipe. Brewing it adds a Sludge card to your deck.", { size: 7, color: 'a', wrap: SIDE.w - 12 });
     } else {
-      this.text(x, SIDE.y + 5, preview.known ? recipeName(preview.recipe) : '??? (new recipe)', { size: 8, color: 'y', wrap: SIDE.w - 12 });
+      const choice = preview.options.length > 1;
+      this.text(x, SIDE.y + 5, preview.known ? recipeName(preview.recipe) : '??? (new recipe)', { size: 8, color: 'y', wrap: SIDE.w - (choice ? 48 : 12) });
       const pattern = codex.recipes.get(preview.recipe)!.pattern;
-      if (preview.known) pattern.forEach((e, i) => e !== 'any' && this.add2(this.add.image(x + 3 + i * 9, SIDE.y + 22, `pip/${e}`)));
+      // With a choice, the pips show which essences this pick uses, known or not.
+      if (preview.known || choice) pattern.forEach((e, i) => e !== 'any' && this.add2(this.add.image(x + 3 + i * 9, SIDE.y + 22, `pip/${e}`)));
+      if (choice) {
+        // These cards fit more than one recipe: click (or R) for the next.
+        const at = preview.options.indexOf(preview.recipe);
+        const next = this.add2(button(this, SIDE.x + SIDE.w - 22, SIDE.y + 11, `${at + 1}/${preview.options.length} >`, () => this.nextRecipe(s), { w: 34 }));
+        next.setScale(0.85);
+        this.text(SIDE.x + SIDE.w - 6, SIDE.y + 20, 'recipe', { size: 6, color: 'a' }).setOrigin(1, 0);
+      }
       this.text(x, SIDE.y + 30, `Potency ${preview.potency} × Harmony ${preview.harmony}`, { size: 7, color: 'w' });
       this.text(x, SIDE.y + 42, `= ${preview.quality} · ${TIER_NAME[preview.tier]}`, { size: 10, color: TIER_COLOR[preview.tier]! });
       if (!preview.known) this.text(x, SIDE.y + 56, 'Experiment: one tier lower this time.', { size: 7, color: 'v', wrap: SIDE.w - 12 });
@@ -790,7 +802,7 @@ export class Run extends Phaser.Scene {
       }, { w: 52 }));
       return;
     }
-    const preview = previewBrew(s, s.cauldron, s.hand);
+    const preview = this.previewOf(s);
     const brewLabel = this.confirm === 'sludge' ? 'Brew Sludge?' : `Brew (${s.brewsLeft})`;
     const blocked = brewBlocked(s, s.cauldron) !== null;
     this.add2(button(this, 320, y, brewLabel, () => this.brew(), { w: 76, color: this.confirm === 'sludge' ? 'I' : 'Y', enabled: preview.kind !== 'empty' && s.brewsLeft > 0 && !blocked }));
@@ -844,9 +856,25 @@ export class Run extends Phaser.Scene {
     });
   }
 
+  /** The brew in the cauldron, as the recipe picked for these cards if there is one. */
+  private previewOf(s: RunState) {
+    const pick = this.recipePick?.cauldron === cauldronKey(s) ? this.recipePick.recipe : undefined;
+    return previewBrew(s, s.cauldron, s.hand, pick);
+  }
+
+  /** Brew the next recipe these cards fit. */
+  private nextRecipe(s: RunState) {
+    const preview = this.previewOf(s);
+    if (preview.kind !== 'potion' || preview.options.length < 2) return;
+    const recipe = preview.options[(preview.options.indexOf(preview.recipe) + 1) % preview.options.length]!;
+    this.recipePick = { cauldron: cauldronKey(s), recipe };
+    this.confirm = null;
+    this.render();
+  }
+
   private brew() {
     const s = store.getState()!;
-    const preview = previewBrew(s, s.cauldron, s.hand);
+    const preview = this.previewOf(s);
     // GDD §6.2: an invalid mix warns first, then makes Sludge if you insist.
     if (preview.kind === 'sludge' && this.confirm !== 'sludge') {
       this.confirm = 'sludge';
@@ -856,7 +884,9 @@ export class Run extends Phaser.Scene {
     const potion = previewPotion(preview, s.cauldron);
     const target = potion ? bestOrderFor(s, potion, this.pinned) : null;
     if (target?.id === this.pinned) this.pinned = null;
-    this.dispatch(target ? { type: 'brew', deliverTo: target.id } : { type: 'brew' });
+    // Name the recipe only when the cards fit more than one, so a plain brew stays a plain action.
+    const recipe = preview.kind === 'potion' && preview.options.length > 1 ? { recipe: preview.recipe } : {};
+    this.dispatch(target ? { type: 'brew', deliverTo: target.id, ...recipe } : { type: 'brew', ...recipe });
   }
 
   private endDay() {
@@ -1546,6 +1576,7 @@ export class Run extends Phaser.Scene {
       const n = Number(e.key);
       if (n >= 1 && n <= 9 && s.hand[n - 1]) return this.clickCard(s, s.hand[n - 1]!);
       if (e.key === 'Enter') return this.mode.kind === 'select' ? this.confirmSelect() : this.brew();
+      if (e.key === 'r' || e.key === 'R') return this.nextRecipe(s);
       if (e.key === 'd' || e.key === 'D') {
         if (this.mode.kind === 'select') return this.confirmSelect();
         return this.startDiscard(s);
@@ -1553,6 +1584,9 @@ export class Run extends Phaser.Scene {
     });
   }
 }
+
+/** The cauldron's cards, so a recipe pick lasts only while they stay the same. */
+const cauldronKey = (s: Pick<RunState, 'cauldron'>) => s.cauldron.map((c) => c.uid).join(',');
 
 const RARITY_BORDER: Record<'common' | 'uncommon' | 'rare', PaletteKey> = { common: 'n', uncommon: 'c', rare: 'v' };
 

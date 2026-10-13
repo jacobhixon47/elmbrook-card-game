@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop", { "give": "mistcap" }, { "slot": 8 }, { "slot": 0 }], "ui": { "recipe": "restful-tonic" } }
