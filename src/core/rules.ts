@@ -95,6 +95,8 @@ export const HEARTH_TRADER = { hearts: 5, cards: 2, familiars: 1 };
  * Shelf potion per `potionGold` (rounded up) or one deck card per `cardGold`. The Lantern Seller's 7
  * gold becomes 2 potions or 1 card, as the balance tables have it.
  */
+/** A repeated request gives way to one the deck can bring at most this many tiers lower (GDD §4). */
+export const ORDER_VARIETY_DROP = 1;
 export const FROST_MARKET = { potionGold: 4, cardGold: 8 };
 export const frostPrice = (gold: number) => ({ potions: Math.ceil(gold / FROST_MARKET.potionGold), cards: Math.ceil(gold / FROST_MARKET.cardGold) });
 /** The Hermit: one order fewer a day, each paying this much more. The Tower: one tier up, this much more pay. */

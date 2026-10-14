@@ -37,6 +37,26 @@ export function report(runs: RunRecord[], title: string): string {
     lines.push(`  week ${w}  ${pct(filled, posted).padStart(6)}  (${filled}/${posted})`);
   }
 
+  // Order variety: how often a request repeats one already on the board or on yesterday's, and the
+  // recipe asked for most by name each week.
+  lines.push('', 'order variety (repeats: on the board or yesterday\'s; top recipe asked by name)');
+  for (let w = 1; w <= WEEKS; w++) {
+    let posted = 0;
+    let repeats = 0;
+    const named = new Map<string, number>();
+    for (const r of runs) {
+      const days = r.boards[w - 1] ?? [];
+      const prev = (d: number) => (d > 0 ? days[d - 1] : r.boards[w - 2]?.[NIGHT_SHIFT_DAY - 1]) ?? [];
+      days.forEach((board, d) => board.forEach((q, i) => {
+        posted++;
+        if (board.slice(0, i).includes(q) || prev(d).includes(q)) repeats++;
+        if (!q.startsWith('family:')) named.set(q, (named.get(q) ?? 0) + 1);
+      }));
+    }
+    const [top, k] = [...named].sort((a, b) => b[1] - a[1])[0] ?? ['-', 0];
+    lines.push(`  week ${w}  ${pct(repeats, posted).padStart(6)} repeats   ${top} ${pct(k, posted)}`);
+  }
+
   lines.push('', 'average quality brewed (potions)');
   for (let w = 1; w <= WEEKS; w++) {
     const qs = runs.flatMap((r) => r.quality[w - 1] ?? []);

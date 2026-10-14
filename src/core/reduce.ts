@@ -118,6 +118,7 @@ function startDay(ctx: Ctx): void {
   s.hand = [];
   s.discardPile = [];
   s.cauldron = [];
+  const yesterday = s.orders.map((o) => o.request);
   s.orders = [];
   s.offer = null;
   s.gifts = [];
@@ -138,7 +139,7 @@ function startDay(ctx: Ctx): void {
   }
   ctx.ev.push({ type: 'dayStarted', week: s.week, day: s.day, nightShift: night });
   ctx.ev.push({ type: 'deckShuffled', size: s.drawPile.length });
-  postOrders(ctx, night);
+  postOrders(ctx, night, yesterday);
 }
 
 const isFrost = (c: CardInstance) => codex.ingredients.get(c.card)?.tags.includes('frost') ?? false;
