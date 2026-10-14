@@ -301,6 +301,14 @@ describe('Omens', () => {
     expect(r.state.gold).toBe(s.gold - 3);
   });
 
+  it('the Yule Candle gains a Brew for 5 gold, and only Winter\'s Lantern Seller has it', () => {
+    const { s, r } = play('yule-candle', { gold: 10 });
+    expect(r.state.brewsLeft).toBe(s.brewsLeft + 1);
+    expect(r.state.gold).toBe(s.gold - 5);
+    expect(play('yule-candle', { gold: 2 }).r.state.gold).toBe(0);
+    expect(omenPool({ unlocks: [] })).not.toContain('yule-candle');
+  });
+
   it('every Omen is registered and only offered from the night', () => {
     for (const id of omenPool({ unlocks: ['cracked-mirror', 'moth-swarm'] })) {
       expect(codex.tinctures.get(id)!.rarity).toBe('lunar');

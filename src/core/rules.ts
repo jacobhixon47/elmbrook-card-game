@@ -90,6 +90,18 @@ export const CIDER_PRESS = { potency: 2, max: 3 };
 export const HARVEST_AUCTION = { tier: 2, rival: [12, 24] as const, bids: [12, 15, 18, 21, 24] as const };
 /** Hearts with one regular for a pick of Rare cards and familiars (the tables' 3 hearts and two familiars made Winter easier than Autumn). */
 export const HEARTH_TRADER = { hearts: 5, cards: 2, familiars: 1 };
+/**
+ * Winter at the Night Market (decided with Jacob, Oct 14). A snowy quarter-moon night is Snowed In
+ * half the time: only the Hearth Trader opens. He also keeps the Yule Log (burn up to 2 cards) and
+ * the Holly Crown (a Frost familiar).
+ */
+export const SNOWED_IN_CHANCE = 0.5;
+export const YULE_LOG = { price: 4, cards: 2 };
+export const HOLLY_CROWN = { price: 8, familiars: ['frost-hare', 'ermine'] };
+/** Winter's Fence: folks want warmth, so Warming potions sell for more and the rest for a little less. */
+/** Winter's Lantern Seller: low on Lunar stock, with a Yule Candle beside the Omens. */
+export const WINTER_LANTERN = { lunar: 2, omen: 'yule-candle' };
+export const WINTER_FENCE = { warming: 1.5, other: 0.9 };
 /** The Hermit: one order fewer a day, each paying this much more. The Tower: one tier up, this much more pay. */
 export const HERMIT_PAY = 1.5;
 export const TOWER_PAY = 2;

@@ -41,7 +41,7 @@ export function potionLines(state: RunState, potion: Potion, pinned: number | nu
   } else if (state.phase === 'brewing') {
     lines.push('No open order wants it yet.');
   }
-  lines.push(`The Fence pays ${fencePrice(potion)}g after the Night Shift.`);
+  lines.push(`The Fence pays ${fencePrice(potion, state.season)}g after the Night Shift.`);
   lines.push('Click to deliver. Right-click to pour it away.');
   return lines;
 }

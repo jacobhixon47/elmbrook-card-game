@@ -1,1 +1,1 @@
-{"scene": "Run", "seed": "fixture-hand", "today": "clear", "season": "winter", "steps": [{"jump": [2, 5]}, "openShop", "endDay", "skipReward", {"hearts": ["old-tobin", 7]}, {"hearts": ["bea-thornwick", 5]}, {"visit": 6}]}
+{"scene": "Run", "seed": "fixture-hand", "today": "clear", "season": "winter", "steps": [{"jump": [2, 5]}, "openShop", "endDay", "skipReward", {"hearts": ["old-tobin", 7]}, {"hearts": ["bea-thornwick", 5]}, {"visit": 2}]}

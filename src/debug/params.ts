@@ -27,7 +27,9 @@ export type Fixture = {
     /** A targeting Tincture at this hand index waiting for its targets; `picked` are hand indexes (draw pile indexes for Taste Test). */
     target?: { hand: number; picked?: number[] };
     /** At a Night Market stall: deck cards picked (positions in the sorted deck it shows), and the Black Market stock being traded for. */
-    stall?: { picked?: number[]; swap?: number };
+    stall?: { picked?: number[]; swap?: number; tab?: 'hearts' | 'yule' | 'crown' };
+    /** Seasonal scene screens to count as already shown, e.g. `snowed-in-1`. */
+    scenesSeen?: string[];
     /** The card of the familiar in this slot, open. */
     familiar?: number;
     /** At the Creek Bank, this option picked. */

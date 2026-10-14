@@ -1,16 +1,17 @@
 import { codex } from '../codex';
 import type { StallId, TarotEffect } from '../codex/schema';
 import { essencesOf, recipeAvailable } from './brew';
-import { NIGHT_SHIFT_DAY, WEATHER_WEIGHTS } from './calendar';
+import { NIGHT_SHIFT_DAY, WEATHER_WEIGHTS, weatherOn } from './calendar';
 import { addHearts, changeGold, gainCard, pick, pickWeighted, randInt, reject, removeCard, shuffled, type Ctx } from './ctx';
 import { dayPool, rarityOf } from './dusk';
 import { addFamiliar, familiarPrice, rollFamiliars } from './familiars';
+import { nextFloat, seedRng } from './rng';
 import { draft, lunarPool, omenPool, rarityPool } from './night';
 import { addModifier, modifiable } from './modifiers';
 import { cursePool, gainRelic, rollRelic, takeCurse } from './relics';
 import {
-  BLACK_MARKET, BLACK_MARKET_RELIC, BLOSSOM_ORACLE_PRICE, BROKER_CARDS, CIDER_PRESS, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER, NECTAR_TRADER, SEED_SWAPPER,
-  tierIndex, type ShopRarity, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS, MIN_DECK,
+  BLACK_MARKET, BLACK_MARKET_RELIC, HOLLY_CROWN, SNOWED_IN_CHANCE, YULE_LOG, BLOSSOM_ORACLE_PRICE, BROKER_CARDS, CIDER_PRESS, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER, NECTAR_TRADER, SEED_SWAPPER,
+  tierIndex, type ShopRarity, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, WINTER_LANTERN, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS, MIN_DECK,
   NAME_TAKER_DEALS, QUARTER_DRAWN_STALLS, TAILOR_POTENCY, TINKER_PRICE, WEEKS, WORLD_RELIC_TIER,
 } from './rules';
 import { YEAR_RULES, yearRule } from './year';
@@ -24,13 +25,28 @@ export function moonOf(week: number): 'quarter' | 'full-moon' | 'new-moon' {
   return week === 2 ? 'full-moon' : week === WEEKS ? 'new-moon' : 'quarter';
 }
 
-/** Tonight's stalls: the Lantern Seller and the Fence always, one drawn stall at a quarter moon, every one plus a visitor at the full and new moon. */
+/**
+ * Snowed In: in Winter, a quarter-moon Night Shift with snow buries the market half the time, and only
+ * the Hearth Trader opens. Rolled from the seed so the Calendar can show it in advance.
+ */
+export function snowedIn(s: Pick<RunState, 'season' | 'seed' | 'calendar'>, week: number): boolean {
+  if (s.season !== 'winter' || moonOf(week) !== 'quarter' || weatherOn(s, week, NIGHT_SHIFT_DAY) !== 'snow') return false;
+  return nextFloat(seedRng(`${s.seed}:snowed-in:${week}`))[0] < SNOWED_IN_CHANCE;
+}
+
+/**
+ * Tonight's stalls: the Lantern Seller and the Fence always, one drawn stall at a quarter moon, every
+ * one plus a visitor at the full and new moon. In Winter the Hearth Trader opens every night, and on a
+ * Snowed In night he is the only one.
+ */
 export function rollStalls(ctx: Ctx): StallId[] {
   const moon = moonOf(ctx.s.week);
+  if (snowedIn(ctx.s, ctx.s.week)) return ['hearth-trader'];
   const all = [...codex.stalls.values()];
-  const always = all.filter((x) => x.opens === 'always').map((x) => x.id);
+  const inSeason = (x: (typeof all)[number]) => x.opens === 'season' && x.season === ctx.s.season;
+  const always = all.filter((x) => x.opens === 'always' || (inSeason(x) && x.everyNight)).map((x) => x.id);
   // This season's stalls are drawn with the rest (a next-week trade stays away in the last week).
-  const seasonal = (x: (typeof all)[number]) => x.opens === 'season' && x.season === ctx.s.season && !(x.nextWeek && ctx.s.week >= WEEKS);
+  const seasonal = (x: (typeof all)[number]) => inSeason(x) && !x.everyNight && !(x.nextWeek && ctx.s.week >= WEEKS);
   const drawn = all.filter((x) => x.opens === 'drawn' || seasonal(x)).map((x) => x.id);
   // Year 4: one fewer drawn stall opens.
   const fewer = yearRule(ctx.s, 4) ? YEAR_RULES.fewerStalls : 0;
@@ -45,16 +61,23 @@ export function rollStalls(ctx: Ctx): StallId[] {
 function openStall(ctx: Ctx, id: StallId, opened: readonly StallState[]): StallState {
   const s = ctx.s;
   switch (id) {
-    case 'lantern-seller':
+    case 'lantern-seller': {
+      // In Winter she's low on Lunar stock, and keeps a Yule Candle by the Omens.
+      const winter = s.season === 'winter';
       return {
         id,
         stock: [
-          ...draft(ctx, lunarPool(s), LANTERN_STOCK.lunar).map((card): StockItem => ({ kind: 'card', card, price: LANTERN_STOCK.lunarPrice, sold: false })),
+          ...draft(ctx, lunarPool(s), winter ? WINTER_LANTERN.lunar : LANTERN_STOCK.lunar).map((card): StockItem => ({ kind: 'card', card, price: LANTERN_STOCK.lunarPrice, sold: false })),
           ...draft(ctx, omenPool(s), LANTERN_STOCK.omens).map((card): StockItem => ({ kind: 'card', card, price: LANTERN_STOCK.omenPrice, sold: false })),
+          ...(winter ? [{ kind: 'card' as const, card: WINTER_LANTERN.omen, price: LANTERN_STOCK.omenPrice, sold: false }] : []),
         ],
       };
+    }
     case 'wandering-tinker': {
       const stock: StockItem[] = rollFamiliars(ctx, 1, 'rare').map((familiar) => ({ kind: 'familiar', familiar, price: Math.round(familiarPrice(familiar) * TINKER_FAMILIAR), sold: false }));
+      // In Winter he also carries a Frost familiar you don't have, at full price.
+      const frost = s.season === 'winter' ? HOLLY_CROWN.familiars.find((f) => !s.familiars.includes(f)) : undefined;
+      if (frost) stock.push({ kind: 'familiar', familiar: frost, price: familiarPrice(frost), sold: false });
       if (s.cauldronSlots < MAX_CAULDRON_SLOTS) stock.push({ kind: 'cauldron-slot', price: TINKER_PRICE.cauldronSlot, sold: false });
       if (s.shelfSize < MAX_SHELF_SLOTS) stock.push({ kind: 'shelf-slot', price: TINKER_PRICE.shelfSlot, sold: false });
       return { id, stock };
@@ -80,7 +103,10 @@ function openStall(ctx: Ctx, id: StallId, opened: readonly StallState[]): StallS
     case 'nectar-trader':
       return { id, cards: draft(ctx, dayCards(s, 'rare'), NECTAR_TRADER.cards), done: false };
     case 'hearth-trader':
-      return { id, cards: draft(ctx, dayCards(s, 'rare'), HEARTH_TRADER.cards), familiars: rollFamiliars(ctx, HEARTH_TRADER.familiars), done: false };
+      return {
+        id, cards: draft(ctx, dayCards(s, 'rare'), HEARTH_TRADER.cards), familiars: rollFamiliars(ctx, HEARTH_TRADER.familiars), done: false,
+        burned: false, crown: HOLLY_CROWN.familiars.filter((f) => !s.familiars.includes(f)), crowned: false,
+      };
     case 'blossom-oracle':
       return { id, done: false };
     case 'firefly-games':
@@ -486,4 +512,29 @@ export function tradeHearts(ctx: Ctx, regular: string, index: number): void {
   if (familiar) addFamiliar(ctx, pick);
   else gainCard(ctx, pick, 'market');
   stall.done = true;
+}
+
+/** The Yule Log: 4 gold to burn one or two cards from your deck. Once a night; the deck can't drop below 8. */
+export function burnYule(ctx: Ctx, uids: readonly number[]): void {
+  const stall = atStall(ctx, 'hearth-trader');
+  if (stall.burned) reject('the Yule Log burns once a night');
+  const n = new Set(uids).size;
+  if (n < 1 || n > YULE_LOG.cards) reject(`burn 1 or ${YULE_LOG.cards} cards`);
+  if (ctx.s.gold < YULE_LOG.price) reject('not enough gold');
+  giveCards(ctx, [...ctx.s.drawPile, ...ctx.s.hand, ...ctx.s.discardPile], uids, n, 0);
+  changeGold(ctx, -YULE_LOG.price, 'yule-log');
+  stall.burned = true;
+}
+
+/** The Holly Crown: 8 gold for one of the Frost familiars you don't have. Once a night. */
+export function wearCrown(ctx: Ctx, index: number): void {
+  const s = ctx.s;
+  const stall = atStall(ctx, 'hearth-trader');
+  const familiar = stall.crown[index];
+  if (stall.crowned || !familiar) reject(`no familiar ${index} under the Holly Crown`);
+  if (s.familiars.length >= s.familiarSlots) reject('no free familiar slot');
+  if (s.gold < HOLLY_CROWN.price) reject('not enough gold');
+  changeGold(ctx, -HOLLY_CROWN.price, 'holly-crown');
+  addFamiliar(ctx, familiar);
+  stall.crowned = true;
 }

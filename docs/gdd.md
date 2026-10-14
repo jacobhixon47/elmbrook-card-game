@@ -47,7 +47,7 @@ Every run happens in one season. The season is chosen at run start from those yo
 | Spring | Fresh herbs and flowers more common (Vital, Calming) | Gentle: lower rent, the tutorial season | Blossom, rain, new beginnings |
 | Summer | Fruit, honey, Ember ingredients | Long days: +1 Brew on Days, Night Shifts are short (-1 Discard). Rent ×1.15, orders pay ×1.2 | Fireflies, festivals |
 | Autumn | Roots, mushrooms, Umbra ingredients | Harvest patrons: bigger orders, bigger tips. Rent ×1.32, orders pay ×1.23 | Falling leaves, lanterns, the Harvest Fair |
-| Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | Frost Night Market: stalls take only odd currencies. Rent ×1.48, orders pay ×1.35 | Snow, hearth fires, the longest nights |
+| Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | The Hearth Trader every night, and snowy nights can bury the rest of the Night Market (Snowed In). Rent ×1.48, orders pay ×1.35 | Snow, hearth fires, the longest nights |
 
 Seasons scale in difficulty in that order: rent rises faster than pay, so the bot's win rates in Year 1 are about 40%, 34%, 29% and 23% (the M4 ramp pass, `docs/balance-m4.md`). Numbers are tuning starting points. Each season adds its own ingredients, patrons, events and two Night Market variants to the pools, so later seasons also feel new, not only harder.
 
@@ -341,9 +341,16 @@ Phase flavour: First/Last Quarter nights have 3 stalls. Full Moon has all stalls
 | The Nectar Trader | Summer | Your lowest Superb-or-better Shelf potion for 1 of 3 Rare cards. One trade a night. |
 | The Cider Press | Autumn | Your lowest Shelf potion is pressed, and one ingredient in your deck gets +2 Potency for the run. Up to 3 a night. |
 | The Harvest Auction | Autumn | One sealed bid (12, 15, 18, 21 or 24 gold) for a tier 2 relic against the farmers' hidden bid of 12 to 24. Win at or above it and pay your bid; lose and pay nothing. |
-| The Hearth Trader | Winter | 5 hearts with one regular, your choice, for 1 of 2 Rare cards or a familiar. One trade a night. (The tables had 3 hearts and two familiars; see the balance note.) |
+| The Hearth Trader | Winter | Open every Winter night, with three trades, each once a night. **Trade hearts:** 5 hearts with one regular, your choice, for 1 of 2 Rare cards or a familiar (the tables had 3 hearts and two familiars; see the balance note). **The Yule Log:** 4 gold to burn 1 or 2 cards from your deck for good; the deck can't drop below 8. **The Holly Crown:** 8 gold for 1 of 2 Frost familiars (the Frost Hare and the Ermine) you don't have, if a slot is free. |
 
-Stalls that take a potion take your lowest one (by tier, then quality), and say which on their sign. **Winter's other variant is the Frost Market**, its twist: no stall takes gold, and gold prices become potions or cards. It comes in its own change.
+Stalls that take a potion take your lowest one (by tier, then quality), and say which on their sign.
+
+**The Winter Night Market (decided with Jacob, Oct 14).** Winter is the finale of the Year, so its market is the most different, while every stall still takes gold. (This replaces the Frost Market, where no stall took gold: closing the shops at the holidays felt wrong, and Winter stays the hardest season through rent and pay instead.)
+- **Snowed In:** when a quarter-moon Night Shift (weeks 1 and 3) is snowy, there is a 1 in 2 chance the lane drifts over and only the Hearth Trader opens. The Calendar marks it on the night's cell. The first time each night, a short scene says why.
+- **The Fence** wants warmth: Warming potions sell for ×1.5 and the rest for ×0.9 (`WINTER_FENCE`). Umbra and Lunar still fetch half again on top.
+- **The Wandering Tinker** also brings a Frost familiar you don't have, at the usual Tinker price.
+- **The Ermine** (Uncommon, Frost ingredients +3 Potency) is an event-pool familiar, found only through Winter's trades.
+- **The Lantern Seller** runs low on Lunar stock (2, not 3) and keeps a **Yule Candle** by the Omens at the usual 6 gold: gain 1 Brew, lose 5 gold (agreed with Jacob: the first idea, a Brew and a Discard for 3 gold, was too cheap). It's an event-pool Omen, so it's only found here.
 
 ### Relics and curses
 

@@ -238,6 +238,7 @@ export const EFFECTS: Record<string, Effect> = {
   'next-delivery-pay-x2': { onPlay: (ctx) => void (ctx.s.delivery.payMult *= 2) },
   'add-sludge': { onPlay: (ctx) => void gainCard(ctx, 'sludge', 'sludge') },
   'lose-gold-3': { onPlay: (ctx) => changeGold(ctx, -Math.min(3, ctx.s.gold), 'omen') },
+  'lose-gold-5': { onPlay: (ctx) => changeGold(ctx, -Math.min(5, ctx.s.gold), 'omen') },
   'copy-card-permanent': {
     targets: 'hand-one',
     onPlay: (ctx, targets) => {
