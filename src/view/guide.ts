@@ -101,7 +101,7 @@ export function guideSections(): { title: string; body: string }[] {
     },
     {
       title: 'Brewing',
-      body: 'Put ingredients in the cauldron. If their essences match a recipe you know, you get that potion. A match you don\'t know yet is an Experiment: it teaches you the recipe at one tier lower. No match makes Sludge. A potion goes to the order it suits best, or onto the Shelf for later.',
+      body: 'Put ingredients in the cauldron. If their essences match a recipe you know, you get that potion. A match you don\'t know yet is an Experiment: it teaches you the recipe at one tier lower. No match makes Sludge. When the cards fit more than one recipe, the button beside the recipe\'s name (or R) picks which. A potion goes to the order it suits best, or onto the Shelf for later.',
     },
     {
       title: 'The Night Market',

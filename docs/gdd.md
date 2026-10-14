@@ -254,7 +254,7 @@ A recipe is an essence pattern with a base Harmony and a potion family.
 - **Known recipes** are in your **Grimoire**. Each witch starts knowing 4.
 - **Unknown but valid** combinations brew as an **Experiment**: the preview shows "???", and brewing it discovers the recipe (added to the Grimoire for this run, and to the permanent Codex) at -1 quality tier for that first brew. This folds 1.0's separate "recipe experimentation" screen into play.
 - **Invalid** combinations warn first, then produce **Sludge** if you insist: no potion, and a Sludge junk card is added to the deck (it can be removed at errands).
-- **When several recipes match**, the most specific pattern wins (fewest "any" slots), then the higher base Harmony, then a recipe you already know, then codex order.
+- **When several recipes match**, you choose (decided with Jacob, Oct 10): the preview starts on the most specific pattern (fewest "any" slots), then the higher base Harmony, then a recipe you already know, then codex order, and a button beside its name (or the R key) steps through the others. A dual-essence card like Mistcap (Tide or Umbra) with Elmroot can brew Healing Draught or Restful Tonic, so it can also teach the one you don't know yet.
 - **Pools:** base recipes can be discovered in any run. Unlock-pool recipes need a meta unlock (§13) first, and event recipes (Eclipse) only brew during their event.
 
 ### 6.3 Scoring

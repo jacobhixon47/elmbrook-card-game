@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
-import { allCards, matchRecipe, previewBrew, tierOf, tierStep, type RunState } from '../src/core';
+import { allCards, matchingRecipes, matchRecipe, previewBrew, tierOf, tierStep, type RunState } from '../src/core';
 import { EFFECTS } from '../src/core/effects';
 import { brewing, no, ofType, ok, slotAll, withHand } from './helpers';
 
@@ -31,6 +31,29 @@ describe('recipe matching', () => {
     // Honeycomb + Willow Bark make Healing Draught or Hearthwarm Tonic (both 2).
     expect(matchRecipe(ings('honeycomb', 'willow-bark'), known)?.id).toBe('healing-draught');
     expect(matchRecipe(ings('honeycomb', 'willow-bark'), { knownRecipes: ['hearthwarm-tonic'], unlocks: [] })?.id).toBe('hearthwarm-tonic');
+  });
+
+  it('lists every recipe the cards fit, the default first', () => {
+    // Mistcap (Tide or Umbra) + Elmroot (Vital): Healing Draught, or Restful Tonic you don't know yet.
+    expect(matchingRecipes(ings('mistcap', 'elmroot'), known).map((r) => r.id)).toEqual(['healing-draught', 'restful-tonic']);
+    expect(matchingRecipes(ings('elmroot', 'creekwater'), known).map((r) => r.id)).toEqual(['healing-draught']);
+    expect(matchingRecipes(ings('elmroot', 'elmroot'), known)).toEqual([]);
+  });
+
+  it('brews the recipe you pick when the cards fit more than one', () => {
+    const [s0, uids] = withHand(brewing(), ['mistcap', 'elmroot']);
+    const s = slotAll(s0, uids);
+    const preview = previewBrew(s, s.cauldron, s.hand);
+    expect(preview).toMatchObject({ kind: 'potion', recipe: 'healing-draught', options: ['healing-draught', 'restful-tonic'] });
+    expect(previewBrew(s, s.cauldron, s.hand, 'restful-tonic')).toMatchObject({ recipe: 'restful-tonic', known: false });
+    // A pick these cards can't brew falls back to the default in the preview, and is refused by the brew.
+    expect(previewBrew(s, s.cauldron, s.hand, 'sleep-syrup')).toMatchObject({ recipe: 'healing-draught' });
+    expect(no(s, { type: 'brew', recipe: 'sleep-syrup' })).toMatch(/can't brew Sleep Syrup/);
+    const r = ok(s, { type: 'brew', recipe: 'restful-tonic' });
+    expect(r.state.knownRecipes).toContain('restful-tonic');
+    expect(ofType(r.events, 'brewed')[0]).toMatchObject({ potion: { recipe: 'restful-tonic' } });
+    // Without a pick, the brew makes the default, as before.
+    expect(ofType(ok(s, { type: 'brew' }).events, 'brewed')[0]).toMatchObject({ potion: { recipe: 'healing-draught' } });
   });
 
   it('wild essences and "any" slots match anything', () => {
