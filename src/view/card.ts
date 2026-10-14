@@ -58,6 +58,15 @@ export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essenc
     ctx.font = `${8 * Z}px ${FONT_DISPLAY}`;
     ctx.fillStyle = PALETTE.r;
     ctx.fillText(String(ing.potency), 5 * Z, (CARD_H - 13) * Z);
+    // Tags the rules read (Frost, Flower) get a chip on the face, so a Frost card reads as Frost at a glance.
+    // They sit in a row across the foot of the art window, like a type line.
+    const shown = FACE_TAGS.filter((t) => ing.tags.includes(t.tag));
+    const widths = shown.map((t) => chipWidth(ctx, t, Z));
+    let left = Math.round((CARD_W - (widths.reduce((a, b) => a + b, 0) + 2 * (shown.length - 1))) / 2);
+    shown.forEach((t, i) => {
+      tagChip(ctx, t, left, 37, widths[i]!, Z);
+      left += widths[i]! + 2;
+    });
   } else if (kind === 'tincture') {
     const t = codex.tinctures.get(cardId)!;
     text(t.name, CARD_W / 2, 44, 7, 'k', FONT_BODY, 52);
@@ -69,6 +78,31 @@ export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essenc
   }
   tex.refresh();
   return key;
+}
+
+/** Ingredient tags that rules care about, with their chip colours. Other tags (Root, Mineral...) stay in the inspect panel. */
+const FACE_TAGS: { tag: string; label: string; fill: PaletteKey; edge: PaletteKey }[] = [
+  { tag: 'frost', label: 'FROST', fill: 'c', edge: 'u' },
+  { tag: 'flower', label: 'FLOWER', fill: 'I', edge: 'r' },
+];
+
+function chipWidth(ctx: CanvasRenderingContext2D, t: (typeof FACE_TAGS)[number], Z: number): number {
+  ctx.font = `${5 * Z}px ${FONT_DISPLAY}`;
+  return Math.ceil(ctx.measureText(t.label).width / Z) + 4;
+}
+
+/** A small labelled chip, its top-left at (left, y) in card pixels. */
+function tagChip(ctx: CanvasRenderingContext2D, t: (typeof FACE_TAGS)[number], left: number, y: number, w: number, Z: number): void {
+  ctx.font = `${5 * Z}px ${FONT_DISPLAY}`;
+  ctx.fillStyle = PALETTE[t.edge];
+  ctx.fillRect((left + 1) * Z, y * Z, (w - 2) * Z, 7 * Z);
+  ctx.fillRect(left * Z, (y + 1) * Z, w * Z, 5 * Z);
+  ctx.fillStyle = PALETTE[t.fill];
+  ctx.fillRect((left + 1) * Z, (y + 1) * Z, (w - 2) * Z, 5 * Z);
+  ctx.fillStyle = PALETTE.k;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(t.label, (left + w / 2) * Z, (y + 1) * Z);
 }
 
 function scaleUp(data: Uint8ClampedArray, w: number, h: number, z: number): ImageData {
