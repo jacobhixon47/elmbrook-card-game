@@ -4,7 +4,7 @@ import { codex, type Essence, type ModifierId } from '../codex';
 import {
   allCards, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
-  HARVEST_AUCTION, HEARTH_TRADER, NECTAR_TRADER, pressable, SEED_SWAPPER,
+  HARVEST_AUCTION, HEARTH_TRADER, NECTAR_TRADER, pressable, SEED_SWAPPER, frostCards, frostOn, frostPrice, MIN_DECK, type FrostPay,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
   type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome, almanacUnlocks, boonOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
 } from '../core';
@@ -42,7 +42,7 @@ type Mode =
   | { kind: 'dialog'; order: number }
   | { kind: 'select'; purpose: Purpose; tincture?: number; picked: number[] }
   /** Deck cards picked at a Night Market stall: the Hollow Tailor's two, or the Black Market's trade for stock `swap`. */
-  | { kind: 'stall'; picked: number[]; swap?: number; regular?: string }
+  | { kind: 'stall'; picked: number[]; swap?: number; regular?: string; frost?: number | 'tarot' }
   /** A familiar's card, to sell it or move it. */
   | { kind: 'familiar'; index: number }
   /** At the Creek Bank: tempering, or which modifier to buy. */
@@ -160,7 +160,7 @@ export class Run extends Phaser.Scene {
     }
     if (fixture?.ui?.stall) {
       const deck = sortedDeck(stallDeck(state));
-      this.mode = { kind: 'stall', picked: (fixture.ui.stall.picked ?? []).map((i) => deck[i]!.uid), ...(fixture.ui.stall.swap !== undefined ? { swap: fixture.ui.stall.swap } : {}) };
+      this.mode = { kind: 'stall', picked: (fixture.ui.stall.picked ?? []).map((i) => deck[i]!.uid), ...(fixture.ui.stall.swap !== undefined ? { swap: fixture.ui.stall.swap } : {}), ...(fixture.ui.stall.frost !== undefined ? { frost: fixture.ui.stall.frost } : {}) };
     }
     if (fixture?.ui?.familiar !== undefined) this.mode = { kind: 'familiar', index: fixture.ui.familiar };
     if (fixture?.ui?.creek) this.mode = { kind: 'creek', pick: fixture.ui.creek };
@@ -1291,7 +1291,13 @@ export class Run extends Phaser.Scene {
     stock.forEach((item, i) => {
       const x = 320 + (i - (stock.length - 1) / 2) * 74;
       const y = 150;
-      const buy = () => this.dispatch({ type: 'buy', index: i });
+      // Winter's Frost Market takes potions or cards: choose how to pay first.
+      const frost = frostOn(s);
+      const buy = () => {
+        if (!frost) return void this.dispatch({ type: 'buy', index: i });
+        this.mode = { kind: 'stall', picked: [], frost: i };
+        this.render();
+      };
       if (item.kind === 'card') {
         this.offerCard(x, y, item.card, buy, item.sold);
       } else if (item.kind === 'familiar') {
@@ -1305,7 +1311,9 @@ export class Run extends Phaser.Scene {
         if (item.sold) tile.setAlpha(0.4);
         else tile.setInteractive({ useHandCursor: true }).on('pointerdown', buy);
       }
-      this.text(x, y - 54, item.sold ? 'sold' : `${item.price}g`, { size: 8, color: item.sold ? 'h' : item.price > s.gold ? 'R' : 'y', stroke: 'k' }).setOrigin(0.5, 0);
+      const label = item.sold ? 'sold' : frost ? frostLabel(item.price) : `${item.price}g`;
+      const short = frost ? !canPayFrost(s, item.price, item.kind === 'card' ? 1 : 0) : item.price > s.gold;
+      this.text(x, y - 54, label, { size: frost ? 6 : 8, color: item.sold ? 'h' : short ? 'R' : 'y', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
       after?.(item, i, x);
     });
   }
@@ -1362,6 +1370,9 @@ export class Run extends Phaser.Scene {
       this.add2(button(this, 320, 214, short ? `Can't pay ${due}g: leave` : `Pay ${due}g rent and go home`, () => this.dispatch({ type: 'leaveMarket' }), { w: 160, color: short ? 'I' : 'Y' }));
       return;
     }
+
+    const paying = this.mode.kind === 'stall' && this.mode.frost !== undefined ? this.mode : null;
+    if (paying) return this.drawFrostPay(s, stall, paying, title);
 
     switch (stall.id) {
       case 'fence': {
@@ -1614,11 +1625,51 @@ export class Run extends Phaser.Scene {
           this.text(x, 136, t.text, { size: 7, color: 'w', align: 'center', wrap: 80 }).setOrigin(0.5, 0);
         });
         if (!stall.drawn.length) this.text(320, 150, 'The cards wait, face-down.', { size: 8, color: 'a', align: 'center' }).setOrigin(0.5);
-        this.add2(button(this, 320, 230, `Draw a card (${price}g)`, () => this.dispatch({ type: 'drawTarot' }), { w: 110, color: price > s.gold ? 'R' : 'Y', enabled: price <= s.gold }));
+        if (frostOn(s)) {
+          const can = canPayFrost(s, price, 0);
+          this.add2(button(this, 320, 230, `Draw a card (${frostLabel(price)})`, () => {
+            this.mode = { kind: 'stall', picked: [], frost: 'tarot' };
+            this.render();
+          }, { w: 190, color: can ? 'Y' : 'R', enabled: can }));
+        } else {
+          this.add2(button(this, 320, 230, `Draw a card (${price}g)`, () => this.dispatch({ type: 'drawTarot' }), { w: 110, color: price > s.gold ? 'R' : 'Y', enabled: price <= s.gold }));
+        }
         break;
       }
     }
     backButton();
+  }
+
+  /** Winter's Frost Market: pay a gold price in Shelf potions (your lowest) or in cards picked from the deck. */
+  private drawFrostPay(s: RunState, stall: StallState, paying: { picked: number[]; frost?: number | 'tarot' }, title: (t: string, sub: string) => void) {
+    const tarot = paying.frost === 'tarot';
+    const item = !tarot && 'stock' in stall ? stall.stock[paying.frost as number] : undefined;
+    const gold = tarot && stall.id === 'fortune-tent' ? fortunePrice(stall.drawn.length) : item?.price ?? 0;
+    const gain = item?.kind === 'card' ? 1 : 0;
+    const price = frostPrice(gold);
+    const what = tarot ? 'a tarot draw' : item?.kind === 'card' ? cardName(item.card) : item?.kind === 'familiar' ? codex.familiars.get(item.familiar)!.name : item?.kind === 'relic' ? codex.relics.get(item.relic)!.name : item?.kind === 'cauldron-slot' ? 'a cauldron slot' : 'a Shelf slot';
+    const done = (pay: FrostPay) => {
+      this.mode = { kind: 'idle' };
+      void this.dispatch(tarot ? { type: 'drawTarot', pay } : { type: 'buy', index: paying.frost as number, pay });
+    };
+    const head = `The Frost Market takes no gold. Pay for ${what} with your ${price.potions} lowest Shelf potions, or pick ${price.cards} ${price.cards === 1 ? 'card' : 'cards'} from your deck to give up.`;
+    title(codex.stalls.get(stall.id)!.name, head);
+    const potions = s.shelf.length >= price.potions;
+    this.add2(button(this, 320, 100, `Pay ${price.potions} ${price.potions === 1 ? 'potion' : 'potions'}`, () => done('potions'), { w: 100, color: potions ? 'Y' : 'R', enabled: potions }));
+    this.text(320, 114, `or give up ${price.cards} ${price.cards === 1 ? 'card' : 'cards'}:`, { size: 7, color: 'a', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
+    const deckOk = frostCards(s).length - price.cards + gain >= MIN_DECK;
+    this.deckGrid(frostCards(s), deckOk ? (inst) => {
+      const picked = paying.picked.includes(inst.uid) ? paying.picked.filter((u) => u !== inst.uid) : [...paying.picked, inst.uid];
+      if (picked.length < price.cards) {
+        this.mode = { kind: 'stall', picked, frost: paying.frost! };
+        return this.render();
+      }
+      done(picked);
+    } : null, paying.picked, 150);
+    this.add2(button(this, 320, 262, 'Cancel', () => {
+      this.mode = { kind: 'idle' };
+      this.render();
+    }, { w: 60 }));
   }
 
   private offerCard(x: number, y: number, id: string, onPick: () => void, dim = false) {
@@ -1772,6 +1823,18 @@ function relicNote(events: readonly GameEvent[]): string | null {
   }
   return lines.length ? lines.join(' ') : null;
 }
+
+/** A Frost Market price, for a stall's sign. */
+const frostLabel = (gold: number) => {
+  const p = frostPrice(gold);
+  return `${p.potions} potions · ${p.cards} ${p.cards === 1 ? 'card' : 'cards'}`;
+};
+
+/** Can you pay a Frost Market price at all, in potions or cards? */
+const canPayFrost = (s: RunState, gold: number, gain: number) => {
+  const p = frostPrice(gold);
+  return s.shelf.length >= p.potions || frostCards(s).length - p.cards + gain >= MIN_DECK;
+};
 
 /** What's left to do at a stall, for its sign on the street. */
 function stallNote(s: RunState, st: StallState): string | null {

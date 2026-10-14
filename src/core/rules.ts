@@ -90,6 +90,13 @@ export const CIDER_PRESS = { potency: 2, max: 3 };
 export const HARVEST_AUCTION = { tier: 2, rival: [12, 24] as const, bids: [12, 15, 18, 21, 24] as const };
 /** Hearts with one regular for a pick of Rare cards and familiars (the tables' 3 hearts and two familiars made Winter easier than Autumn). */
 export const HEARTH_TRADER = { hearts: 5, cards: 2, familiars: 1 };
+/**
+ * Winter's Frost Market (GDD §3, §9): no Night Market stall takes gold. A gold price is paid as one
+ * Shelf potion per `potionGold` (rounded up) or one deck card per `cardGold`. The Lantern Seller's 7
+ * gold becomes 2 potions or 1 card, as the balance tables have it.
+ */
+export const FROST_MARKET = { potionGold: 4, cardGold: 8 };
+export const frostPrice = (gold: number) => ({ potions: Math.ceil(gold / FROST_MARKET.potionGold), cards: Math.ceil(gold / FROST_MARKET.cardGold) });
 /** The Hermit: one order fewer a day, each paying this much more. The Tower: one tier up, this much more pay. */
 export const HERMIT_PAY = 1.5;
 export const TOWER_PAY = 2;

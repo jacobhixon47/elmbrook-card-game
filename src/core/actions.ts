@@ -3,6 +3,9 @@ import type { Tier } from './rules';
 import type { Essence, ModifierId, StallId } from '../codex/schema';
 import type { Errand, GiftSource, Order, Potion } from './state';
 
+/** How a Frost Market price is paid: Shelf potions, or these deck cards. */
+export type FrostPay = 'potions' | number[];
+
 export type Action =
   | { type: 'startRun'; seed: string; witch: string; season?: Season; unlocks?: string[]; perks?: string[]; year?: number; boon?: string }
   // Afternoon: read the Order Board, then open the shop to draw a hand.
@@ -22,7 +25,8 @@ export type Action =
   | { type: 'pickReward'; index: number }
   | { type: 'skipReward' }
   | { type: 'chooseErrand'; errand: Errand }
-  | { type: 'buy'; index: number }
+  /** `pay` is for Winter's Frost Market, which takes no gold: your lowest potions, or these deck cards. */
+  | { type: 'buy'; index: number; pay?: FrostPay }
   | { type: 'forage'; index: number }
   | { type: 'removeCard'; uid: number }
   /** At the Hearth, instead of burning a card. */
@@ -45,7 +49,7 @@ export type Action =
   | { type: 'forgetRecipe'; recipe: string }
   | { type: 'brokerPick'; index: number }
   | { type: 'weave'; from: number; into: number }
-  | { type: 'drawTarot' }
+  | { type: 'drawTarot'; pay?: FrostPay }
   | { type: 'swapForCard'; index: number; uids: number[] }
   /** The Name-Taker: take this deal's Curse for its relic, or for its Cursed Rare card. */
   | { type: 'takeDeal'; index: number; take?: 'relic' | 'card' }

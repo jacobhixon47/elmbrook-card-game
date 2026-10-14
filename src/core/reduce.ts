@@ -12,7 +12,7 @@ import { commissionsOnBrew, commissionsOnDayEnd, commissionsOnDeliver, takeCommi
 import { addModifier, cantModify, drawOnBrewOf, MODIFIER_RULES, enchant, heartDeltaOf, isAged, temper } from './modifiers';
 import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
 import {
-  atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, placeBid, pressCider, readPetals, seedSwap, stallStock, swapForCard, takeDeal, takePrize,
+  atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, payPrice, placeBid, pressCider, readPetals, seedSwap, stallStock, swapForCard, takeDeal, takePrize,
   tossRing, tradeHearts, tradeNectar, weave,
 } from './market';
 import { cursePool, dayAllowance, gainRelic, grantRelic, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
@@ -515,11 +515,10 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       const item = (stallStock(s) ?? offerOf(ctx, 'market').stock)[action.index];
       if (!item) reject(`no stock ${action.index}`);
       if (item.sold) reject('already sold');
-      if (s.gold < item.price) reject('not enough gold');
+      payPrice(ctx, item.price, action.pay, item.kind === 'card' ? 1 : 0, 'market');
       if (item.kind === 'familiar') addFamiliar(ctx, item.familiar);
       if (item.kind === 'relic') gainRelic(ctx, item.relic, 'market');
       item.sold = true;
-      changeGold(ctx, -item.price, 'market');
       if (item.kind === 'card') {
         gainCard(ctx, item.card, 'market');
       } else if (item.kind !== 'familiar' && item.kind !== 'relic') {
@@ -640,7 +639,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       return;
 
     case 'drawTarot':
-      drawTarot(ctx);
+      drawTarot(ctx, action.pay);
       return;
 
     case 'swapForCard':

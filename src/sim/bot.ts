@@ -1,7 +1,7 @@
 import type { ModifierId } from '../codex/schema';
 import { codex } from '../codex';
 import {
-  allCards, cheapestPotion, CIDER_PRESS, commonCards, dueWeekOf, EVENT_GOLD, eventChoiceBlocked, eventChoiceCards, eventDone, fits, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER,
+  allCards, cheapestPotion, CIDER_PRESS, commonCards, dueWeekOf, frostCards, frostOn, frostPrice, type FrostPay, EVENT_GOLD, eventChoiceBlocked, eventChoiceCards, eventDone, fits, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER,
   MIN_DECK, NECTAR_TRADER, NIGHT_SHIFT_DAY, payout, pressable, previewBrew, rentOf, SEED_SWAPPER, tierIndex, WEEKS,
   type Action, type BrewPreview, type CardInstance, type Errand, type Order, type Potion, type RunState, type StallState, type StockItem,
 } from '../core';
@@ -466,8 +466,28 @@ function keptPotions(s: RunState): Set<number> {
 
 /** What the greedy bot does at a Night Market stall, or null when it has no use for it. */
 function stallAction(s: RunState, stall: StallState): Action | null {
-  // Keep tonight's rent and half of next week's: rent more than doubles each week.
-  const spare = s.gold - rentOf(s) - (s.week < WEEKS ? Math.round(rentOf(s, s.week + 1) * NEXT_RENT_RESERVE) : 0);
+  if (!frostOn(s)) {
+    // Keep tonight's rent and half of next week's: rent more than doubles each week.
+    return stallTrade(s, stall, s.gold - rentOf(s) - (s.week < WEEKS ? Math.round(rentOf(s, s.week + 1) * NEXT_RENT_RESERVE) : 0));
+  }
+  // Winter's Frost Market takes no gold: pay in potions, or in the deck's weakest cards.
+  const a = stallTrade(s, stall, Infinity);
+  if (a?.type !== 'buy' || !('stock' in stall)) return a;
+  const item = stall.stock[a.index]!;
+  const pay = frostPay(s, item.price, item.kind === 'card' ? 1 : 0);
+  return pay ? { ...a, pay } : null;
+}
+
+/** How the bot pays a Frost Market price: potions if the Shelf has enough, else cards it won't miss. */
+function frostPay(s: RunState, gold: number, gain: number): FrostPay | null {
+  const price = frostPrice(gold);
+  if (s.shelf.length >= price.potions) return 'potions';
+  const cards = frostCards(s).sort((a, b) => cardValue(s, a.card) - cardValue(s, b.card)).slice(0, price.cards);
+  const fine = cards.length === price.cards && cards.every((c) => cardValue(s, c.card) < 5) && allCards(s).length - price.cards + gain >= MIN_DECK + 2;
+  return fine ? cards.map((c) => c.uid) : null;
+}
+
+function stallTrade(s: RunState, stall: StallState, spare: number): Action | null {
   switch (stall.id) {
     case 'fence': {
       // Potions the Nectar Trader or the Cider Press will take tonight stay on the Shelf.
@@ -597,7 +617,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'takeGift', index: roll(4) },
     { type: 'passGift' },
     { type: 'chooseErrand', errand: any(['market', 'forage', 'creek', 'guild', 'hearth', 'event'] as const)! },
-    { type: 'buy', index: roll(7) },
+    { type: 'buy', index: roll(7), ...(roll(2) ? { pay: roll(2) ? 'potions' as const : [any(deckUids) ?? 0, any(deckUids) ?? 0].slice(0, 1 + roll(2)) } : {}) },
     { type: 'forage', index: roll(5) },
     { type: 'chooseEvent', index: roll(3), uid: any(deckUids) ?? 0 },
     { type: 'removeCard', uid: any([...s.drawPile, ...s.hand, ...s.discardPile].map((c) => c.uid)) ?? 0 },
@@ -610,7 +630,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'forgetRecipe', recipe: any(s.knownRecipes) ?? '' },
     { type: 'brokerPick', index: roll(3) },
     { type: 'weave', from: any(deckUids) ?? 0, into: any(deckUids) ?? 0 },
-    { type: 'drawTarot' },
+    { type: 'drawTarot', ...(roll(2) ? { pay: roll(2) ? 'potions' as const : [any(deckUids) ?? 0] } : {}) },
     { type: 'swapForCard', index: roll(3), uids: [any(deckUids) ?? 0, any(deckUids) ?? 0] },
     { type: 'takeDeal', index: roll(3), take: roll(2) ? 'relic' : 'card' },
     { type: 'temper', uid: any(deckUids) ?? 0 },

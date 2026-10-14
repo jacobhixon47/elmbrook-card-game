@@ -1,6 +1,7 @@
 import { codex } from '../codex';
 import type { StallId, TarotEffect } from '../codex/schema';
 import { essencesOf, recipeAvailable } from './brew';
+import type { FrostPay } from './actions';
 import { NIGHT_SHIFT_DAY, WEATHER_WEIGHTS } from './calendar';
 import { addHearts, changeGold, gainCard, pick, pickWeighted, randInt, reject, removeCard, shuffled, type Ctx } from './ctx';
 import { dayPool, rarityOf } from './dusk';
@@ -10,7 +11,7 @@ import { addModifier, modifiable } from './modifiers';
 import { cursePool, gainRelic, rollRelic, takeCurse } from './relics';
 import {
   BLACK_MARKET, BLACK_MARKET_RELIC, BLOSSOM_ORACLE_PRICE, BROKER_CARDS, CIDER_PRESS, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER, NECTAR_TRADER, SEED_SWAPPER,
-  tierIndex, type ShopRarity, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS, MIN_DECK,
+  frostPrice, tierIndex, type ShopRarity, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS, MIN_DECK,
   NAME_TAKER_DEALS, QUARTER_DRAWN_STALLS, TAILOR_POTENCY, TINKER_PRICE, WEEKS, WORLD_RELIC_TIER,
 } from './rules';
 import { YEAR_RULES, yearRule } from './year';
@@ -201,12 +202,11 @@ export function fortuneOn(s: Pick<RunState, 'fortunes' | 'week'>, effect: TarotE
   return s.fortunes.some((f) => f.week === s.week && codex.tarot.get(f.card)?.effect === effect);
 }
 
-export function drawTarot(ctx: Ctx): void {
+export function drawTarot(ctx: Ctx, pay?: FrostPay): void {
   const s = ctx.s;
   const stall = atStall(ctx, 'fortune-tent');
   const price = fortunePrice(stall.drawn.length);
-  if (s.gold < price) reject('not enough gold');
-  changeGold(ctx, -price, 'fortune');
+  payPrice(ctx, price, pay, 0, 'fortune');
   const deck = [...codex.tarot.values()].filter((t) => !t.nextWeek || s.week < WEEKS);
   const card = pickWeighted(ctx, deck.map((t) => [t, t.weight] as const));
   stall.drawn.push(card.id);
@@ -486,4 +486,35 @@ export function tradeHearts(ctx: Ctx, regular: string, index: number): void {
   if (familiar) addFamiliar(ctx, pick);
   else gainCard(ctx, pick, 'market');
   stall.done = true;
+}
+
+// ------------------------------------------------------------------ the Frost Market (Winter)
+
+/** Winter's twist: the Night Market takes no gold (GDD §3). */
+export const frostOn = (s: Pick<RunState, 'season' | 'phase'>) => s.season === 'winter' && s.phase === 'night-market';
+
+/** Deck cards the Frost Market takes as payment: anything but junk. */
+export function frostCards(s: RunState): CardInstance[] {
+  return [...s.drawPile, ...s.hand, ...s.discardPile].filter((c) => !codex.junk.has(c.card));
+}
+
+/**
+ * Pay a Night Market price: gold, or in Winter your lowest Shelf potions or deck cards (`gain` is how
+ * many cards the trade adds, for the deck's minimum).
+ */
+export function payPrice(ctx: Ctx, gold: number, pay: FrostPay | undefined, gain: number, reason: string): void {
+  const s = ctx.s;
+  if (!frostOn(s)) {
+    if (s.gold < gold) reject('not enough gold');
+    changeGold(ctx, -gold, reason);
+    return;
+  }
+  const price = frostPrice(gold);
+  if (pay === undefined) reject(`the Frost Market takes no gold: ${price.potions} potions or ${price.cards} ${price.cards === 1 ? 'card' : 'cards'}`);
+  if (pay === 'potions') {
+    if (s.shelf.length < price.potions) reject(`it costs ${price.potions} Shelf potions`);
+    for (let i = 0; i < price.potions; i++) takePotion(ctx, cheapestPotion(s)!);
+    return;
+  }
+  giveCards(ctx, frostCards(s), pay, price.cards, gain);
 }

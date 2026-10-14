@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  allCards, CIDER_PRESS, commonCards, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER, MIN_DECK, NIGHT_SHIFT_DAY, reduce,
+  allCards, CIDER_PRESS, commonCards, FIREFLY_GAMES, frostCards, frostOn, frostPrice, HARVEST_AUCTION, HEARTH_TRADER, MIN_DECK, NIGHT_SHIFT_DAY, reduce,
   type Potion, type RunState, type Season, type StallId, type StallState, type Tier,
 } from '../src/core';
 import { no, ofType, ok, start } from './helpers';
@@ -204,4 +204,38 @@ it('the new trades reject away from their stall', () => {
   for (const a of [{ type: 'tossRing' }, { type: 'readPetals' }, { type: 'placeBid', amount: 12 }, { type: 'pressCider', uid: 1 }] as const) {
     expect(reduce(s, a).events[0]!.type).toBe('rejected');
   }
+});
+
+describe("Winter's Frost Market", () => {
+  const lantern = (opts: { gold?: number; shelf?: Potion[] } = {}) => visit(market('winter', 1, { gold: 50, ...opts }), 'lantern-seller');
+
+  it('takes no gold: 2 potions or 1 card for a Lantern Seller card', () => {
+    expect(frostPrice(7)).toEqual({ potions: 2, cards: 1 });
+    const s = lantern({ shelf: [potion(901, 'superb', 40), potion(902, 'fine', 12), potion(903, 'crude', 2)] });
+    expect(no(s, { type: 'buy', index: 0 })).toMatch(/no gold: 2 potions or 1 card/);
+    const card = at(s, 'lantern-seller').stock[0]!;
+    const byPotions = ok(s, { type: 'buy', index: 0, pay: 'potions' }).state;
+    expect(byPotions.gold).toBe(50);
+    expect(byPotions.shelf.map((p) => p.uid)).toEqual([901]);
+    expect(byPotions.satchel.map((c) => c.card)).toContain(card.kind === 'card' && card.card);
+    const give = frostCards(s)[0]!;
+    const byCard = ok(s, { type: 'buy', index: 0, pay: [give.uid] }).state;
+    expect(byCard.gold).toBe(50);
+    expect(allCards(byCard).some((c) => c.uid === give.uid)).toBe(false);
+    expect(no(s, { type: 'buy', index: 0, pay: [] })).toMatch(/pick 1/);
+    expect(no({ ...s, shelf: [potion(901, 'fine')] }, { type: 'buy', index: 0, pay: 'potions' })).toMatch(/2 Shelf potions/);
+  });
+
+  it('only in Winter, and only at night', () => {
+    const spring = visit(market('spring', 1, { gold: 50 }), 'lantern-seller');
+    expect(ok(spring, { type: 'buy', index: 0 }).state.gold).toBe(43);
+    expect(frostOn(market('winter', 1))).toBe(true);
+    expect(frostOn(start('w', 'winter'))).toBe(false);
+  });
+
+  it('the Fortune Tent takes potions or cards too', () => {
+    const s = visit(market('winter', 2, { shelf: [potion(901, 'fine'), potion(902, 'fine')] }), 'fortune-tent');
+    expect(no(s, { type: 'drawTarot' })).toMatch(/no gold/);
+    expect(ok(s, { type: 'drawTarot', pay: 'potions' }).state.shelf).toEqual([]);
+  });
 });
