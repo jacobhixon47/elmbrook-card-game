@@ -32,6 +32,8 @@ import { TIPS, TUTORIAL_SEED, TutorialProgress, type Tip } from '../view/tutoria
 import { loadProfile, recordFinishedRun, saveProfile } from '../profile';
 import { clearRun, saveRun } from '../save';
 import { button, panel } from '../view/ui';
+import { play, playEvents } from '../audio/sfx';
+import { TIER_SOUND, tickPitch } from '../audio/sounds';
 import { addWeather } from '../view/weather';
 
 type Mode =
@@ -234,13 +236,18 @@ export class Run extends Phaser.Scene {
     if (rejected) {
       this.render();
       this.toast(rejected.reason, 'I');
+      play('nope');
       return events;
     }
     const after = store.getState()!;
     const note = relicNote(events);
     if (note) this.toast(note);
     const resky = () => this.afterChange();
-    if (events.some((e) => e.type === 'brewed' || e.type === 'sludge') && !noAnim) {
+    const brewing = events.some((e) => e.type === 'brewed' || e.type === 'sludge');
+    // A brew's sounds play with its animation, in time with the numbers; everything else plays now.
+    if (!brewing) playEvents(events);
+    else if (noAnim) this.brewFinale(events, 0);
+    if (brewing && !noAnim) {
       this.busy = true;
       this.playBrew(before, after, events).then(() => {
         this.busy = false;
@@ -979,7 +986,9 @@ export class Run extends Phaser.Scene {
         this.time.delayedCall(t, () => {
           score.setText(`${step.potency} × ${step.harmony}${step.note ? `  (${step.note})` : ''}`);
           this.tweens.add({ targets: score, scale: { from: 1.3, to: 1 }, duration: 160 });
+          play('tick', { pitch: tickPitch(steps.indexOf(step)) });
           if (step.source === 'ingredient') {
+            play('bubble', { volume: 0.6 });
             const card = cards.shift();
             if (card) this.tweens.add({ targets: card, y: this.cauldronY - 6, scale: 0.2, alpha: 0, duration: 220, ease: 'Quad.easeIn' });
             this.bubbles();
@@ -995,6 +1004,7 @@ export class Run extends Phaser.Scene {
 
       const brewed = events.find((e) => e.type === 'brewed');
       this.time.delayedCall(t, () => {
+        this.brewFinale(events, 0.9);
         if (!brewed) {
           score.setText('Sludge!').setColor(PALETTE.R);
           this.bubbles(10);
@@ -1028,6 +1038,15 @@ export class Run extends Phaser.Scene {
         resolve();
       });
     });
+  }
+
+  /** The end of a brew: its tier's jingle (or Sludge's burp), a new recipe, and coins when it filled an order `coinsAt` seconds later. */
+  private brewFinale(events: readonly GameEvent[], coinsAt: number) {
+    const brewed = events.find((e) => e.type === 'brewed');
+    if (!brewed) return play('sludge');
+    play(TIER_SOUND[brewed.potion.tier]);
+    if (events.some((e) => e.type === 'recipeDiscovered')) play('discover');
+    if (events.some((e) => e.type === 'orderFilled')) play('filled', { at: coinsAt });
   }
 
   private bubbles(count = 4) {

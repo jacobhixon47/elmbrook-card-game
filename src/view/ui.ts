@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { hex, type PaletteKey } from '../art/palette';
 import { pixelText } from './text';
+import { play } from '../audio/sfx';
 
 // Small UI building blocks: parchment panels and buttons, palette-locked.
 
@@ -24,7 +25,11 @@ export function button(scene: Phaser.Scene, x: number, y: number, label: string,
   c.setInteractive({ useHandCursor: true });
   c.on('pointerover', () => enabled && bg.setFillStyle(hex('B')));
   c.on('pointerout', () => bg.setFillStyle(hex('b')));
-  c.on('pointerdown', () => enabled && onClick());
+  c.on('pointerdown', () => {
+    if (!enabled) return;
+    play('click');
+    onClick();
+  });
   c.setEnabled = (on: boolean) => {
     enabled = on;
     c.setAlpha(on ? 1 : 0.4);

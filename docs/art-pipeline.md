@@ -87,4 +87,11 @@ Larger illustrations (title art, backgrounds, portraits) can also be drafted in 
 
 ## Audio
 
-Same spirit later (M5): small SFX set synthesised in code (Web Audio: bubbles, plops, chimes, coin clinks) plus CC0 or self-made loops, tracked with sources and licences in `docs/audio.md`.
+Sound effects are code too, like sprites (the early sound pass, pulled forward from M5):
+
+- `src/audio/synth.ts` renders a sound, a list of voices (a sine, triangle, square, saw or noise wave sliding between two pitches, with a delay, a quick fade in and an easing decay), into samples. It is pure and deterministic, so tests check the samples.
+- `src/audio/sounds.ts` is the catalogue (`SOUNDS`: clicks, pops, bubbles, a tick per scoring step, a jingle per tier, coins, rent, win and lose) and `cuesFor`, which picks one clear sound for an action's events. Keep them cozy: soft waves, short tails, low volume.
+- `src/audio/sfx.ts` plays them through Web Audio at the profile's volume, after the first click or key (browsers hold audio until then), and does nothing where there is no audio.
+- The brewing animation plays its own sounds in time with the numbers: a tick a semitone higher per step, bubbles per ingredient, then the tier's jingle and coins when it fills an order.
+
+To add a sound, add its voices to `SOUNDS` and a rule to `cuesFor` (or a `play` call where the animation is). Music comes in M5: CC0 or self-made loops, tracked with sources and licences in `docs/audio.md`.

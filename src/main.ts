@@ -12,6 +12,7 @@ import { Title } from './scenes/Title';
 import { Cottage } from './scenes/Cottage';
 import { BASE_H, BASE_W, ZOOM, integerZoom } from './view/zoom';
 import { installDigits } from './view/text';
+import { play, setSound, soundSettings, unlockAudio } from './audio/sfx';
 
 
 async function start() {
@@ -37,6 +38,15 @@ async function start() {
   // Textures and text are rendered for one zoom level; a different one needs a fresh boot.
   window.addEventListener('resize', () => {
     if (integerZoom() !== ZOOM) location.reload();
+  });
+  // Browsers hold audio until the first click or key. M mutes and unmutes anywhere.
+  window.addEventListener('pointerdown', unlockAudio);
+  window.addEventListener('keydown', (e) => {
+    unlockAudio();
+    if ((e.key === 'm' || e.key === 'M') && !e.repeat) {
+      setSound({ muted: !soundSettings().muted });
+      play('click');
+    }
   });
   installHook(game);
   installOverlay(game, loadFixture()?.overlay === true);

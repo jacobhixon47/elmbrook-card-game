@@ -16,7 +16,7 @@ Touchstones: Balatro (scoring juice, run structure, jokers), Slay the Spire (dec
 
 ## 2. Design pillars
 
-1. **Every brew is a little puzzle with a satisfying payoff.** The score counter should feel like Balatro's: numbers climbing, sounds stacking, cauldron bubbling over.
+1. **Every brew is a little puzzle with a satisfying payoff.** The score counter should feel like Balatro's: numbers climbing, sounds stacking, cauldron bubbling over. In the build, the score ticks up a semitone per step, each tier has its own jingle, and slotting, discarding, coins and rent all have a sound made in code (`docs/art-pipeline.md`, Audio). Volume is on the title screen and M mutes anywhere; music comes in M5.
 2. **Cozy surface, real stakes.** Warm art and gentle characters, but rent is real and a bad week ends the run.
 3. **The town remembers you.** Regulars carry relationships and stories across runs; that's the meta-progression, not just unlock lists.
 4. **Night is different.** Moon nights change the rules, the customers and the economy.
