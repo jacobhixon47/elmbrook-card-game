@@ -83,6 +83,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
   - ✅ A way to view the discard pile, next to the deck and draw pile in the Grimoire.
   - ✅ The Year and season shown above the day and week in the top-left HUD.
 
+- ✅ Tags a rule reads (Frost, Flower) shown as chips on card faces (Jacob, Oct 14).
 - Balance holds until the M4 features are in (Jacob, Oct 14): no sim passes mid-build. Then one balance pass with a systems review: each system (familiars, Omens, seasonal stalls, rent, recipes and the rest) on its own and as a whole, compared with similar games, so the game is neither bloated nor bare. Known drift going in: the six unlock recipes make later Years easier (they add power, not just breadth), and Winter Year 1 rose to about 30% with the Winter Night Market.
 
 **Accept:** a second run feels different from the first because of unlocks and regulars' stories.

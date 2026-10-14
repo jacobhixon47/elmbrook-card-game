@@ -1,0 +1,1 @@
+{"scene": "Run", "seed": "fixture-hand", "today": "snow", "season": "winter", "steps": ["openShop", {"give": "frostcap"}, {"give": "ice-lily"}, {"give": "hollyberry"}]}
