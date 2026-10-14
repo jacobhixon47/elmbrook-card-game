@@ -21,7 +21,7 @@ import {
   requestText, TIER_NAME, newRecipeHint, unknownRecipe,
   cap, listOf,
 } from '../view/describe';
-import { drawGrimoire, type GrimoireTab } from '../view/grimoire';
+import { DECK_VIEWS, drawGrimoire, type GrimoireTab } from '../view/grimoire';
 import { stages } from '../view/guide';
 import { bestOrderFor, potionLines, previewPotion } from '../view/plan';
 import { todayLine, todayRules } from '../view/calendar';
@@ -66,6 +66,8 @@ const PICK_PROMPT: Record<Exclude<Purpose, 'discard'>, string> = {
 const HAND_Y = 304;
 const SLOT_Y = 128;
 const ORDERS = { x: 8, y: 46, w: 134 };
+/** The season's colour in the HUD. */
+const SEASON_COLOR: Record<Season, PaletteKey> = { spring: 'L', summer: 'y', autumn: 'o', winter: 'c' };
 const TICKET_H = 40;
 const SIDE = { x: 498, y: 42, w: 134 };
 const SHELF_Y = 146;
@@ -164,6 +166,7 @@ export class Run extends Phaser.Scene {
     if (fixture?.ui?.pour) this.mode = { kind: 'pour' };
     if (fixture?.ui?.eventCard !== undefined) this.mode = { kind: 'event-card', choice: fixture.ui.eventCard };
     if (fixture?.ui?.grimoire) this.book = fixture.ui.grimoire;
+    if (fixture?.ui?.page !== undefined) this.bookPage = fixture.ui.page;
     if (fixture?.ui?.recipe) this.recipePick = { cauldron: cauldronKey(state), recipe: fixture.ui.recipe };
     if (fixture?.ui?.tutorial) {
       // Show one tip: everything before it counts as done.
@@ -305,8 +308,9 @@ export class Run extends Phaser.Scene {
     this.drawTutorial(s);
   }
 
-  private openBook(tab: GrimoireTab | null) {
+  private openBook(tab: GrimoireTab | null, page?: number) {
     if (tab !== this.book) this.bookPage = 0;
+    if (page !== undefined) this.bookPage = page;
     this.book = tab;
     this.render();
   }
@@ -477,7 +481,8 @@ export class Run extends Phaser.Scene {
   }
 
   private drawHud(s: RunState) {
-    this.text(10, 8, dayLabel(s), { size: 12, color: 'a', shadow: true });
+    this.text(10, 2, `Year ${s.year} · ${s.season[0]!.toUpperCase()}${s.season.slice(1)}`, { size: 7, color: SEASON_COLOR[s.season], shadow: true });
+    this.text(10, 10, dayLabel(s), { size: 12, color: 'a', shadow: true });
     this.text(630, 8, `${s.gold} gold`, { size: 12, color: 'y', shadow: true }).setOrigin(1, 0);
     if (s.phase === 'brewing') this.text(10, 24, `Brews ${s.brewsLeft} · Discards ${s.discardsLeft}`, { size: 8, color: 'w', shadow: true });
     else if (s.phase === 'morning') this.text(10, 24, s.day === NIGHT_SHIFT_DAY ? 'The night customers are here' : "Today's orders", { size: 8, color: 'w', shadow: true });
@@ -728,7 +733,10 @@ export class Run extends Phaser.Scene {
       const back = this.add2(this.add.image(34 + i, HAND_Y - i, 'card/back'));
       back.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.openBook('deck'));
     }
-    this.text(36, HAND_Y + 42, `Draw ${s.drawPile.length}`, { size: 8, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
+    this.text(36, HAND_Y + 37, `Draw ${s.drawPile.length}`, { size: 7, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
+    // The discard pile: click to see what's in it.
+    const discarded = this.text(36, HAND_Y + 46, `Discarded ${s.discardPile.length}`, { size: 7, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
+    discarded.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.openBook('deck', DECK_VIEWS.indexOf('discard')));
 
     const picked = this.mode.kind === 'select' ? this.mode.picked : [];
     const tincture = this.mode.kind === 'select' ? this.mode.tincture : undefined;

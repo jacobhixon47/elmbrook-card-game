@@ -502,9 +502,9 @@ Decided after the M2 playtest: the rules must explain themselves before M3 adds 
 - **Card inspect.** Hovering any card (hand, cauldron, rewards, Market, Hearth) shows a tooltip: name, kind and rarity, essences by name, Potency, the effect text, and a one-line definition of each game term it mentions (Harmony, Aged, Discard...).
 - **Grimoire** (the G key, or the book button at the top of the screen), open at any time in a run. Three tabs:
   - *Recipes:* every recipe you know with its essence pattern, base Harmony and family; undiscovered ones show as "???" with their ingredient count. This is Balatro's Run Info, not a rules change.
-  - *Deck:* every card in the run, with what is in the draw pile now. Clicking the draw pile opens it here.
+  - *Deck:* every card in the run, with what is in the draw pile now, or just the draw pile or the discard pile. Clicking the draw pile opens it here; clicking the Discarded count under it opens the discard pile.
   - *How to play:* the run and the day, brewing, the scoring formula, quality tiers and the glossary.
-- **Where am I.** A ribbon at the top shows the week's days (four days, then the Night Shift) and the steps of the current one: Orders, Brew, Twilight, then Errand, or on a Night Shift, the Night Market. Every evening screen says in one line what it is for.
+- **Where am I.** The top-left corner shows the Year and season above the week and day (Jacob's playtest, Oct 14). A ribbon at the top shows the week's days (four days, then the Night Shift) and the steps of the current one: Orders, Brew, Twilight, then Errand, or on a Night Shift, the Night Market. Every evening screen says in one line what it is for.
 - **Tutorial.** A player's first run is a guided week 1 on a fixed seed, and it can't be skipped. Tips appear as each part of the game first comes up; most wait for the player to do the thing (open an order, slot two cards, brew), the rest have a Got it button. Finishing week 1 marks the tutorial done in the player's profile (browser storage until M4 brings saves). Developers skip it with `?tutorial=0` or the dev overlay; fixtures and `pnpm e2e` never show it unless they ask for a tip. The Calendar, patrons and the Night Satchel have their own tips (weather, patron, gift); Night Market stalls add theirs in M3 part 4.
 
 ## 16. Out of scope for v1
