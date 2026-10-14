@@ -1,18 +1,20 @@
 import { codex } from '../codex';
 import type { StallId, TarotEffect } from '../codex/schema';
 import { essencesOf, recipeAvailable } from './brew';
-import { NIGHT_SHIFT_DAY } from './calendar';
-import { addHearts, changeGold, gainCard, pick, pickWeighted, reject, removeCard, shuffled, type Ctx } from './ctx';
+import { NIGHT_SHIFT_DAY, WEATHER_WEIGHTS } from './calendar';
+import { addHearts, changeGold, gainCard, pick, pickWeighted, randInt, reject, removeCard, shuffled, type Ctx } from './ctx';
+import { dayPool, rarityOf } from './dusk';
 import { addFamiliar, familiarPrice, rollFamiliars } from './familiars';
 import { draft, lunarPool, omenPool, rarityPool } from './night';
 import { addModifier, modifiable } from './modifiers';
 import { cursePool, gainRelic, rollRelic, takeCurse } from './relics';
 import {
-  BLACK_MARKET, BLACK_MARKET_RELIC, BROKER_CARDS, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS, MIN_DECK,
+  BLACK_MARKET, BLACK_MARKET_RELIC, BLOSSOM_ORACLE_PRICE, BROKER_CARDS, CIDER_PRESS, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER, NECTAR_TRADER, SEED_SWAPPER,
+  tierIndex, type ShopRarity, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS, MIN_DECK,
   NAME_TAKER_DEALS, QUARTER_DRAWN_STALLS, TAILOR_POTENCY, TINKER_PRICE, WEEKS, WORLD_RELIC_TIER,
 } from './rules';
 import { YEAR_RULES, yearRule } from './year';
-import { allCards, type CardInstance, type NameTakerDeal, type RunState, type StallState, type StockItem } from './state';
+import { allCards, type CardInstance, type NameTakerDeal, type Potion, type RunState, type StallState, type StockItem } from './state';
 
 // The Night Market (GDD §9): a street of stalls after each Night Shift, before rent. You can visit
 // every stall that's open; which ones open depends on the moon.
@@ -27,7 +29,9 @@ export function rollStalls(ctx: Ctx): StallId[] {
   const moon = moonOf(ctx.s.week);
   const all = [...codex.stalls.values()];
   const always = all.filter((x) => x.opens === 'always').map((x) => x.id);
-  const drawn = all.filter((x) => x.opens === 'drawn').map((x) => x.id);
+  // This season's stalls are drawn with the rest (a next-week trade stays away in the last week).
+  const seasonal = (x: (typeof all)[number]) => x.opens === 'season' && x.season === ctx.s.season && !(x.nextWeek && ctx.s.week >= WEEKS);
+  const drawn = all.filter((x) => x.opens === 'drawn' || seasonal(x)).map((x) => x.id);
   // Year 4: one fewer drawn stall opens.
   const fewer = yearRule(ctx.s, 4) ? YEAR_RULES.fewerStalls : 0;
   const count = Math.max(0, (moon === 'quarter' ? QUARTER_DRAWN_STALLS : drawn.length) - fewer);
@@ -71,8 +75,27 @@ function openStall(ctx: Ctx, id: StallId, opened: readonly StallState[]): StallS
       return { id, done: false };
     case 'fortune-tent':
       return { id, drawn: [] };
+    case 'seed-swapper':
+      return { id, cards: draft(ctx, dayCards(s, 'uncommon'), SEED_SWAPPER.cards), done: false };
+    case 'nectar-trader':
+      return { id, cards: draft(ctx, dayCards(s, 'rare'), NECTAR_TRADER.cards), done: false };
+    case 'hearth-trader':
+      return { id, cards: draft(ctx, dayCards(s, 'rare'), HEARTH_TRADER.cards), familiars: rollFamiliars(ctx, HEARTH_TRADER.familiars), done: false };
+    case 'blossom-oracle':
+      return { id, done: false };
+    case 'firefly-games':
+      return { id, tosses: 0, prizes: [], last: null };
+    case 'cider-press':
+      return { id, pressed: 0 };
+    case 'harvest-auction': {
+      const [lo, hi] = HARVEST_AUCTION.rival;
+      return { id, relic: rollRelic(ctx, HARVEST_AUCTION.tier, relicsOnOffer(opened)), rival: lo + randInt(ctx, hi - lo + 1), bid: null };
+    }
   }
 }
+
+/** Day cards of a rarity that rewards could offer: ingredients and Tinctures. */
+const dayCards = (s: RunState, rarity: ShopRarity) => dayPool(s).filter((c) => c.rarity === rarity).map((c) => c.id);
 
 export function openNightMarket(ctx: Ctx): void {
   const stalls: StallState[] = [];
@@ -259,6 +282,7 @@ export function drawTarot(ctx: Ctx): void {
 function relicsOnOffer(stalls: readonly StallState[]): string[] {
   return stalls.flatMap((st) => {
     if (st.id === 'name-taker') return st.done ? [] : st.deals.map((d) => d.relic);
+    if (st.id === 'harvest-auction') return st.relic && st.bid === null ? [st.relic] : [];
     if ('stock' in st) return st.stock.flatMap((i) => (i.kind === 'relic' && !i.sold ? [i.relic] : []));
     return [];
   });
@@ -316,4 +340,150 @@ export function swapForCard(ctx: Ctx, index: number, uids: readonly number[]): v
   }
   item.sold = true;
   gainCard(ctx, item.card, 'market');
+}
+
+// ------------------------------------------------------------------ seasonal stalls (GDD §9)
+
+/** Deck cards (not in the cauldron) the Seed Swapper takes: Common ingredients and Tinctures. */
+export function commonCards(s: RunState): CardInstance[] {
+  return [...s.drawPile, ...s.hand, ...s.discardPile].filter((c) => !codex.junk.has(c.card) && (codex.ingredients.has(c.card) || codex.tinctures.has(c.card)) && rarityOf(c.card) === 'common');
+}
+
+/** Take cards out of the deck for good, keeping it at `MIN_DECK` or more after `gain` cards come in. */
+function giveCards(ctx: Ctx, from: readonly CardInstance[], uids: readonly number[], n: number, gain: number): void {
+  const unique = [...new Set(uids)];
+  if (unique.length !== n || !unique.every((u) => from.some((c) => c.uid === u))) reject(`pick ${n} cards`);
+  const deck = [...ctx.s.drawPile, ...ctx.s.hand, ...ctx.s.discardPile];
+  if (deck.length - n + gain < MIN_DECK) reject(`the deck can't go below ${MIN_DECK} cards`);
+  for (const uid of unique) removeCard(ctx, deck.find((c) => c.uid === uid)!);
+}
+
+/** The Seed Swapper: two Common cards from the deck and 5 gold for one of the Uncommon cards on offer. One swap a night. */
+export function seedSwap(ctx: Ctx, index: number, uids: readonly number[]): void {
+  const stall = atStall(ctx, 'seed-swapper');
+  const card = stall.cards[index];
+  if (stall.done || !card) reject(`no card ${index} from the Seed Swapper`);
+  if (ctx.s.gold < SEED_SWAPPER.price) reject('not enough gold');
+  giveCards(ctx, commonCards(ctx.s), uids, SEED_SWAPPER.give, 1);
+  changeGold(ctx, -SEED_SWAPPER.price, 'seed-swapper');
+  gainCard(ctx, card, 'market');
+  stall.done = true;
+}
+
+/** The Blossom Oracle: next week's four days get their weather rolled again. Once a night, never in week 4. */
+export function readPetals(ctx: Ctx): void {
+  const s = ctx.s;
+  const stall = atStall(ctx, 'blossom-oracle');
+  if (stall.done) reject('the Oracle reads the petals once a night');
+  if (s.week >= WEEKS) reject('there is no next week to read');
+  if (s.gold < BLOSSOM_ORACLE_PRICE) reject('not enough gold');
+  changeGold(ctx, -BLOSSOM_ORACLE_PRICE, 'oracle');
+  const week = s.calendar.weather[s.week]!;
+  for (let d = 0; d < NIGHT_SHIFT_DAY - 1; d++) week[d] = pickWeighted(ctx, WEATHER_WEIGHTS[s.season]);
+  stall.done = true;
+  ctx.ev.push({ type: 'weatherRead', week: s.week + 1, weather: week.slice(0, NIGHT_SHIFT_DAY - 1) });
+}
+
+/** Firefly Games: a ring toss. One in three wins a pick of familiars (an Uncommon card with no free slot); a miss wins a Common card. */
+export function tossRing(ctx: Ctx): void {
+  const s = ctx.s;
+  const stall = atStall(ctx, 'firefly-games');
+  if (stall.prizes.length) reject('pick your prize first');
+  if (s.gold < FIREFLY_GAMES.price) reject('not enough gold');
+  changeGold(ctx, -FIREFLY_GAMES.price, 'firefly');
+  stall.tosses++;
+  const won = randInt(ctx, FIREFLY_GAMES.odds) === 0;
+  const prizes = won && s.familiars.length < s.familiarSlots ? rollFamiliars(ctx, FIREFLY_GAMES.prizes) : [];
+  let card: string | null = null;
+  if (!prizes.length) {
+    const pool = dayCards(s, won ? 'uncommon' : 'common');
+    if (pool.length) card = gainCard(ctx, pick(ctx, pool), 'market').card;
+  }
+  stall.prizes = prizes;
+  stall.last = { won, card };
+  ctx.ev.push({ type: 'ringTossed', won, card });
+}
+
+export function takePrize(ctx: Ctx, index: number): void {
+  const stall = atStall(ctx, 'firefly-games');
+  const prize = stall.prizes[index];
+  if (!prize) reject(`no prize ${index}`);
+  addFamiliar(ctx, prize);
+  stall.prizes = [];
+}
+
+/** The potion a stall takes: the lowest tier and quality on the Shelf, at `minTier` or better. */
+export function cheapestPotion(s: Pick<RunState, 'shelf'>, minTier = 'crude' as Potion['tier']): Potion | undefined {
+  return [...s.shelf]
+    .filter((p) => tierIndex(p.tier) >= tierIndex(minTier))
+    .sort((a, b) => tierIndex(a.tier) - tierIndex(b.tier) || a.quality - b.quality)[0];
+}
+
+function takePotion(ctx: Ctx, potion: Potion): void {
+  ctx.s.shelf = ctx.s.shelf.filter((p) => p.uid !== potion.uid);
+  ctx.ev.push({ type: 'potionTraded', uid: potion.uid });
+}
+
+/** The Nectar Trader: your lowest Superb-or-better potion for one of the Rare cards. One trade a night. */
+export function tradeNectar(ctx: Ctx, index: number): void {
+  const stall = atStall(ctx, 'nectar-trader');
+  const card = stall.cards[index];
+  if (stall.done || !card) reject(`no card ${index} from the Nectar Trader`);
+  const potion = cheapestPotion(ctx.s, NECTAR_TRADER.minTier);
+  if (!potion) reject('the Nectar Trader wants a Superb or better potion');
+  takePotion(ctx, potion);
+  gainCard(ctx, card, 'market');
+  stall.done = true;
+}
+
+/** Ingredients the Cider Press can sweeten. */
+export function pressable(s: RunState): CardInstance[] {
+  return allCards(s).filter((c) => codex.ingredients.has(c.card) && !codex.ingredients.get(c.card)!.nightOnly);
+}
+
+/** The Cider Press: your lowest Shelf potion is pressed, and one ingredient gets +2 Potency for the run. Up to three a night. */
+export function pressCider(ctx: Ctx, uid: number): void {
+  const stall = atStall(ctx, 'cider-press');
+  if (stall.pressed >= CIDER_PRESS.max) reject(`the press takes ${CIDER_PRESS.max} potions a night`);
+  const card = pressable(ctx.s).find((c) => c.uid === uid);
+  if (!card) reject('the press only sweetens ingredients in your deck');
+  const potion = cheapestPotion(ctx.s);
+  if (!potion) reject('your Shelf is empty');
+  takePotion(ctx, potion);
+  card.bonus = (card.bonus ?? 0) + CIDER_PRESS.potency;
+  stall.pressed++;
+  ctx.ev.push({ type: 'cardInfused', uid: card.uid, bonus: card.bonus });
+}
+
+/** The Harvest Auction: one bid a night. It wins at the farmers' bid or more, and you pay only if it wins. */
+export function placeBid(ctx: Ctx, amount: number): void {
+  const s = ctx.s;
+  const stall = atStall(ctx, 'harvest-auction');
+  if (!stall.relic) reject('nothing is up for auction');
+  if (stall.bid !== null) reject('one bid a night');
+  if (!(HARVEST_AUCTION.bids as readonly number[]).includes(amount)) reject(`bids are ${HARVEST_AUCTION.bids.join(', ')}`);
+  if (s.gold < amount) reject('not enough gold');
+  stall.bid = amount;
+  const won = amount >= stall.rival;
+  ctx.ev.push({ type: 'auctionBid', bid: amount, rival: stall.rival, won });
+  if (!won) return;
+  changeGold(ctx, -amount, 'auction');
+  gainRelic(ctx, stall.relic, 'auction');
+}
+
+/** The Hearth Trader: five hearts with one regular for a Rare card or a familiar (`index` runs over the cards, then the familiars). */
+export function tradeHearts(ctx: Ctx, regular: string, index: number): void {
+  const s = ctx.s;
+  const stall = atStall(ctx, 'hearth-trader');
+  if (stall.done) reject('the Hearth Trader trades once a night');
+  if ((s.hearts[regular] ?? 0) < HEARTH_TRADER.hearts) reject(`you need ${HEARTH_TRADER.hearts} hearts with them`);
+  const offers = [...stall.cards, ...stall.familiars];
+  const pick = offers[index];
+  if (!pick) reject(`no offer ${index}`);
+  const familiar = index >= stall.cards.length;
+  if (familiar && s.familiars.length >= s.familiarSlots) reject('no free familiar slot');
+  addHearts(ctx, regular, -HEARTH_TRADER.hearts);
+  if (familiar) addFamiliar(ctx, pick);
+  else gainCard(ctx, pick, 'market');
+  stall.done = true;
 }

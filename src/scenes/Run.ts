@@ -3,7 +3,8 @@ import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
   allCards, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
-  skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS,
+  skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
+  HARVEST_AUCTION, HEARTH_TRADER, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
   type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome, almanacUnlocks, boonOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
 } from '../core';
@@ -24,7 +25,7 @@ import {
 import { DECK_VIEWS, drawGrimoire, type GrimoireTab } from '../view/grimoire';
 import { stages } from '../view/guide';
 import { bestOrderFor, potionLines, previewPotion } from '../view/plan';
-import { todayLine, todayRules } from '../view/calendar';
+import { todayLine, todayRules, WEATHER_NAME } from '../view/calendar';
 import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
 import type { CardExtras } from '../view/inspect';
@@ -41,7 +42,7 @@ type Mode =
   | { kind: 'dialog'; order: number }
   | { kind: 'select'; purpose: Purpose; tincture?: number; picked: number[] }
   /** Deck cards picked at a Night Market stall: the Hollow Tailor's two, or the Black Market's trade for stock `swap`. */
-  | { kind: 'stall'; picked: number[]; swap?: number }
+  | { kind: 'stall'; picked: number[]; swap?: number; regular?: string }
   /** A familiar's card, to sell it or move it. */
   | { kind: 'familiar'; index: number }
   /** At the Creek Bank: tempering, or which modifier to buy. */
@@ -1471,6 +1472,136 @@ export class Run extends Phaser.Scene {
         stall.deals.forEach((deal, i) => this.drawDeal(320 + (i - (stall.deals.length - 1) / 2) * 176, deal, (take) => this.dispatch({ type: 'takeDeal', index: i, take })));
         break;
       }
+      case 'seed-swapper': {
+        if (stall.done) {
+          head('He pockets your seeds and hums. One swap a night.');
+          break;
+        }
+        const picking = this.mode.kind === 'stall' && this.mode.swap !== undefined ? this.mode : null;
+        if (picking) {
+          head(`Pick ${SEED_SWAPPER.give} Common cards from your deck to swap, with ${SEED_SWAPPER.price}g, for ${cardName(stall.cards[picking.swap!]!)}.`);
+          this.deckGrid(commonCards(s), (inst) => {
+            const picked = picking.picked.includes(inst.uid) ? picking.picked.filter((u) => u !== inst.uid) : [...picking.picked, inst.uid];
+            if (picked.length < SEED_SWAPPER.give) {
+              this.mode = { ...picking, picked };
+              return this.render();
+            }
+            this.mode = { kind: 'idle' };
+            void this.dispatch({ type: 'seedSwap', index: picking.swap!, uids: picked });
+          }, picking.picked);
+          this.add2(button(this, 320, 262, 'Cancel', () => {
+            this.mode = { kind: 'idle' };
+            this.render();
+          }, { w: 60 }));
+          return;
+        }
+        head(`Pick an Uncommon card, then give ${SEED_SWAPPER.give} Common cards from your deck and ${SEED_SWAPPER.price}g for it. One swap a night.`);
+        stall.cards.forEach((id, i) => this.offerCard(320 + (i - (stall.cards.length - 1) / 2) * 76, 150, id, () => {
+          this.mode = { kind: 'stall', picked: [], swap: i };
+          this.render();
+        }, commonCards(s).length < SEED_SWAPPER.give || s.gold < SEED_SWAPPER.price));
+        break;
+      }
+      case 'blossom-oracle': {
+        const next = s.calendar.weather[s.week]!.slice(0, NIGHT_SHIFT_DAY - 1);
+        head(stall.done ? 'The petals have spoken.' : `She reads the petals and rolls next week's weather again. ${BLOSSOM_ORACLE_PRICE}g, once a night.`);
+        this.text(320, 110, 'Next week', { size: 8, color: 'a', align: 'center' }).setOrigin(0.5, 0);
+        next.forEach((w, d) => {
+          const x = 320 + (d - (next.length - 1) / 2) * 84;
+          this.add2(panel(this, x - 38, 126, 76, 40, 'k', 0.95, 'n'));
+          this.text(x, 132, `Day ${d + 1}`, { size: 7, color: 'a', align: 'center' }).setOrigin(0.5, 0);
+          this.text(x, 146, WEATHER_NAME[w], { size: 8, color: 'W', align: 'center' }).setOrigin(0.5, 0);
+        });
+        if (!stall.done) this.add2(button(this, 320, 200, `Read the petals (${BLOSSOM_ORACLE_PRICE}g)`, () => this.dispatch({ type: 'readPetals' }), { w: 120, color: s.gold < BLOSSOM_ORACLE_PRICE ? 'R' : 'Y', enabled: s.gold >= BLOSSOM_ORACLE_PRICE }));
+        break;
+      }
+      case 'firefly-games': {
+        if (stall.prizes.length) {
+          head('A ringer! Pick a familiar.');
+          stall.prizes.forEach((id, i) => this.offerFamiliar(320 + (i - (stall.prizes.length - 1) / 2) * 76, 150, id, () => this.dispatch({ type: 'takePrize', index: i })));
+          break;
+        }
+        head(`Toss a ring for ${FIREFLY_GAMES.price}g. One in ${FIREFLY_GAMES.odds} wins a familiar (an Uncommon card if your slots are full). A miss still wins a Common card.`);
+        const last = stall.last;
+        if (last?.card) {
+          this.text(320, 100, last.won ? 'A ringer, and a prize:' : 'A miss. A consolation prize:', { size: 8, color: last.won ? 'y' : 'a', align: 'center' }).setOrigin(0.5, 0);
+          this.offerCard(320, 160, last.card, () => undefined, false);
+        } else if (!last) {
+          this.text(320, 150, 'Fireflies circle the pegs.', { size: 8, color: 'a', align: 'center' }).setOrigin(0.5);
+        }
+        this.add2(button(this, 320, 236, `Toss a ring (${FIREFLY_GAMES.price}g)`, () => this.dispatch({ type: 'tossRing' }), { w: 110, color: s.gold < FIREFLY_GAMES.price ? 'R' : 'Y', enabled: s.gold >= FIREFLY_GAMES.price }));
+        break;
+      }
+      case 'nectar-trader': {
+        const pays = cheapestPotion(s, NECTAR_TRADER.minTier);
+        if (stall.done) {
+          head('She corks your potion and smiles. One trade a night.');
+          break;
+        }
+        head(pays
+          ? `A Rare card for a ${TIER_NAME[NECTAR_TRADER.minTier]} or better potion. She takes your lowest: ${TIER_NAME[pays.tier]} ${recipeName(pays.recipe)}.`
+          : `She only takes ${TIER_NAME[NECTAR_TRADER.minTier]} or better potions, and your Shelf has none.`);
+        stall.cards.forEach((id, i) => this.offerCard(320 + (i - (stall.cards.length - 1) / 2) * 76, 150, id, () => this.dispatch({ type: 'tradeNectar', index: i }), !pays));
+        break;
+      }
+      case 'cider-press': {
+        const pays = cheapestPotion(s);
+        const left = CIDER_PRESS.max - stall.pressed;
+        head(!left
+          ? 'The press is dry for tonight.'
+          : pays
+            ? `Press your lowest Shelf potion (${TIER_NAME[pays.tier]} ${recipeName(pays.recipe)}) and pick an ingredient: +${CIDER_PRESS.potency} Potency for the run. ${left} more tonight.`
+            : 'The press wants a potion from your Shelf, and it is empty.');
+        this.deckGrid(pressable(s), left && pays ? (inst) => void this.dispatch({ type: 'pressCider', uid: inst.uid }) : null);
+        break;
+      }
+      case 'harvest-auction': {
+        if (!stall.relic) {
+          head('Nothing worth bidding on tonight.');
+          break;
+        }
+        const bid = stall.bid;
+        const won = bid !== null && bid >= stall.rival;
+        head(bid === null
+          ? 'One sealed bid against the farmers. Win and you pay your bid; lose and you pay nothing.'
+          : won ? `Sold! Your ${bid}g beat the farmers' ${stall.rival}g.` : `The farmers bid ${stall.rival}g. No sale, and no charge.`);
+        this.offerRelic(320, 140, stall.relic, () => undefined, bid !== null && !won);
+        if (bid === null) {
+          HARVEST_AUCTION.bids.forEach((amount, i) => {
+            const x = 320 + (i - (HARVEST_AUCTION.bids.length - 1) / 2) * 56;
+            this.add2(button(this, x, 222, `Bid ${amount}g`, () => this.dispatch({ type: 'placeBid', amount }), { w: 52, color: amount > s.gold ? 'R' : 'Y', enabled: amount <= s.gold }));
+          });
+        }
+        break;
+      }
+      case 'hearth-trader': {
+        if (stall.done) {
+          head('He warms his hands and nods. One trade a night.');
+          break;
+        }
+        const able = [...codex.regulars.values()].filter((r) => !r.nightOnly && (s.hearts[r.id] ?? 0) >= HEARTH_TRADER.hearts);
+        const chosen = this.mode.kind === 'stall' && this.mode.regular && able.some((r) => r.id === (this.mode as { regular?: string }).regular)
+          ? this.mode.regular
+          : [...able].sort((a, b) => (s.hearts[b.id] ?? 0) - (s.hearts[a.id] ?? 0))[0]?.id;
+        head(chosen
+          ? `Spend ${HEARTH_TRADER.hearts} of a regular's hearts on a Rare card or a familiar. Paying with ${customerName(chosen)}.`
+          : `He trades in hearts: ${HEARTH_TRADER.hearts} with one regular. No one likes you that much yet.`);
+        able.forEach((r, i) => {
+          const x = 320 + (i - (able.length - 1) / 2) * 104;
+          const on = r.id === chosen;
+          const b = this.add2(button(this, x, 98, `${r.name}: ${s.hearts[r.id]} hearts`, () => {
+            this.mode = { kind: 'stall', picked: [], regular: r.id };
+            this.render();
+          }, { w: 100, color: on ? 'Y' : 'W' }));
+          if (on) (b.list[0] as Phaser.GameObjects.Rectangle).setStrokeStyle(1, hex('y'));
+        });
+        const n = stall.cards.length + stall.familiars.length;
+        const x = (i: number) => 320 + (i - (n - 1) / 2) * 76;
+        const trade = (index: number) => chosen && this.dispatch({ type: 'tradeHearts', regular: chosen, index });
+        stall.cards.forEach((id, i) => this.offerCard(x(i), 160, id, () => void trade(i), !chosen));
+        stall.familiars.forEach((id, k) => this.offerFamiliar(x(stall.cards.length + k), 160, id, () => void trade(stall.cards.length + k), !chosen || s.familiars.length >= s.familiarSlots));
+        break;
+      }
       case 'fortune-tent': {
         const price = fortunePrice(stall.drawn.length);
         head(s.week < WEEKS ? 'Draw a tarot. Boons come at once; twists change next week.' : 'Draw a tarot. A boon, or a small curse. Next week is past saving.');
@@ -1646,7 +1777,10 @@ function relicNote(events: readonly GameEvent[]): string | null {
 function stallNote(s: RunState, st: StallState): string | null {
   if ('stock' in st) return st.stock.length && st.stock.every((i) => i.sold) ? 'sold out' : null;
   if (st.id === 'fence') return s.shelf.length ? `${s.shelf.length} on your Shelf` : null;
-  if (st.id === 'moth-broker' || st.id === 'hollow-tailor' || st.id === 'name-taker') return st.done ? 'done' : null;
+  if ('done' in st) return st.done ? 'done' : null;
+  if (st.id === 'firefly-games') return st.tosses ? `${st.tosses} tossed` : null;
+  if (st.id === 'cider-press') return st.pressed >= CIDER_PRESS.max ? 'done' : null;
+  if (st.id === 'harvest-auction') return st.bid !== null ? 'bid placed' : null;
   return st.drawn.length ? `drew ${st.drawn.length}` : null;
 }
 
@@ -1654,6 +1788,8 @@ function stallNote(s: RunState, st: StallState): string | null {
 function stallDeck(s: RunState): CardInstance[] {
   const o = s.offer;
   const st = o?.kind === 'night-market' && o.at !== null ? o.stalls[o.at] : undefined;
+  if (st?.id === 'seed-swapper') return commonCards(s);
+  if (st?.id === 'cider-press') return pressable(s);
   return st?.id === 'hollow-tailor' ? tailorCards(s) : blackMarketDeck(s);
 }
 

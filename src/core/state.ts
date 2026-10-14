@@ -109,7 +109,16 @@ export type StallState =
   | { id: 'hollow-tailor'; done: boolean }
   | { id: 'fortune-tent'; drawn: string[] }
   /** Each deal is a Curse to take for its relic or, instead, its Rare card with the Cursed modifier; one deal a night. */
-  | { id: 'name-taker'; deals: NameTakerDeal[]; done: boolean };
+  | { id: 'name-taker'; deals: NameTakerDeal[]; done: boolean }
+  /** Seasonal stalls (GDD §9). `cards` and `familiars` are the picks on offer; `done` once traded. */
+  | { id: 'seed-swapper' | 'nectar-trader'; cards: string[]; done: boolean }
+  | { id: 'hearth-trader'; cards: string[]; familiars: string[]; done: boolean }
+  | { id: 'blossom-oracle'; done: boolean }
+  /** `prizes` are the familiars a winning toss offers; `last` is what the last toss won. */
+  | { id: 'firefly-games'; tosses: number; prizes: string[]; last: { won: boolean; card: string | null } | null }
+  | { id: 'cider-press'; pressed: number }
+  /** `rival` is the farmers' best bid, hidden until you bid; `bid` is yours. */
+  | { id: 'harvest-auction'; relic: string | null; rival: number; bid: number | null };
 
 export type NameTakerDeal = { curse: string; relic: string; card: string | null };
 

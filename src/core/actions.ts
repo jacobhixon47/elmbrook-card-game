@@ -49,6 +49,14 @@ export type Action =
   | { type: 'swapForCard'; index: number; uids: number[] }
   /** The Name-Taker: take this deal's Curse for its relic, or for its Cursed Rare card. */
   | { type: 'takeDeal'; index: number; take?: 'relic' | 'card' }
+  | { type: 'seedSwap'; index: number; uids: number[] }
+  | { type: 'readPetals' }
+  | { type: 'tossRing' }
+  | { type: 'takePrize'; index: number }
+  | { type: 'tradeNectar'; index: number }
+  | { type: 'pressCider'; uid: number }
+  | { type: 'placeBid'; amount: number }
+  | { type: 'tradeHearts'; regular: string; index: number }
   | { type: 'leaveMarket' }
   // Familiars, at any time in a run: sell one for half its price, or move it to another slot.
   | { type: 'sellFamiliar'; index: number }
@@ -70,7 +78,10 @@ export type Action =
   | { type: 'debug'; op: 'patronReward'; patron: string }
   | { type: 'debug'; op: 'learnRecipes'; recipes: string[] }
   | { type: 'debug'; op: 'setWeather'; weather: Weather }
-  | { type: 'debug'; op: 'setPatron'; week: number; patron: string };
+  | { type: 'debug'; op: 'setPatron'; week: number; patron: string }
+  /** A potion of a known recipe straight onto the Shelf, at the lowest quality of its tier. */
+  | { type: 'debug'; op: 'givePotion'; recipe: string; tier: Tier }
+  | { type: 'debug'; op: 'setHearts'; regular: string; hearts: number };
 
 export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'relic' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
 
@@ -147,6 +158,12 @@ export type GameEvent =
   | { type: 'cardWoven'; from: string; fromUid: number; into: string; intoUid: number; essence: Essence }
   | { type: 'tarotDrawn'; card: string; price: number }
   | { type: 'potionSold'; uid: number; price: number }
+  /** A Shelf potion paid to a stall (the Nectar Trader, the Cider Press). */
+  | { type: 'potionTraded'; uid: number }
+  | { type: 'weatherRead'; week: number; weather: Weather[] }
+  /** A Firefly Games toss: `card` is the card it won, if not a familiar pick. */
+  | { type: 'ringTossed'; won: boolean; card: string | null }
+  | { type: 'auctionBid'; bid: number; rival: number; won: boolean }
   | { type: 'rentPaid'; week: number; amount: number }
   | { type: 'rentFailed'; week: number; amount: number; gold: number }
   | { type: 'runWon' }
