@@ -83,6 +83,7 @@ export const tinctures: In<typeof Tincture>[] = [
   { id: 'howl', name: 'Howl', rarity: 'lunar', effects: ['potency-2-per-lunar-in-brew'], text: 'Next brew: every ingredient +2 Potency per Lunar card in the cauldron.' },
   { id: 'cracked-mirror', name: 'Cracked Mirror', rarity: 'lunar', effects: ['copy-card-permanent', 'lose-gold-3'], text: 'Add a copy of a card in hand to your deck. Lose 3 gold.', pool: 'unlock' },
   { id: 'wishing-star', name: 'Wishing Star', rarity: 'lunar', effects: ['next-delivery-pay-x2', 'lose-discard'], text: 'Your next delivery pays double. Lose 1 Discard.' },
+  { id: 'yule-candle', name: 'Yule Candle', rarity: 'lunar', effects: ['gain-brew', 'lose-gold-5'], text: 'Gain 1 Brew. Lose 5 gold. It burns through the long night.', pool: 'event' },
   { id: 'moth-swarm', name: 'Moth Swarm', rarity: 'lunar', effects: ['hand-counts-lunar', 'next-customer-lose-heart'], text: 'Every ingredient also counts as Lunar for your next brew. -1 heart with the next customer you serve.', pool: 'unlock' },
 ];
 
@@ -181,6 +182,7 @@ export const familiars: In<typeof Familiar>[] = [
   { id: 'tortoise', name: 'Tortoise', rarity: 'uncommon', text: '+2 gold for each Brew left unused at the end of the day.' },
   { id: 'fox', name: 'Fox', rarity: 'uncommon', text: 'Tips for beating an order\'s minimum tier are doubled.', pool: 'unlock' },
   { id: 'frost-hare', name: 'Frost Hare', rarity: 'uncommon', text: '+1 Harmony per Frost ingredient in the brew.' },
+  { id: 'ermine', name: 'Ermine', rarity: 'uncommon', text: 'Frost ingredients +3 Potency.', pool: 'event' },
   { id: 'jackdaw', name: 'Jackdaw', rarity: 'uncommon', text: '+1 Harmony per distinct essence in the brew.' },
   { id: 'moth', name: 'Moth', rarity: 'rare', text: 'Lunar ingredients count as every essence.' },
   { id: 'will-o-wisp', name: 'Will-o\'-Wisp', rarity: 'rare', text: 'First brew each day: ×2 Harmony.' },
@@ -253,7 +255,7 @@ export const stalls: In<typeof Stall>[] = [
   { id: 'nectar-trader', name: 'The Nectar Trader', currency: 'Potions', text: 'A Superb or better potion buys a Rare card of your choice.', opens: 'season', season: 'summer' },
   { id: 'cider-press', name: 'The Cider Press', currency: 'Potions', text: 'Press a Shelf potion: one ingredient gets +2 Potency for the run.', opens: 'season', season: 'autumn' },
   { id: 'harvest-auction', name: 'The Harvest Auction', currency: 'Gold, a bid', text: 'Bid against the farmers for a tier 2 relic. You pay only if you win.', opens: 'season', season: 'autumn' },
-  { id: 'hearth-trader', name: 'The Hearth Trader', currency: 'Hearts', text: "Trade 5 of a regular's hearts for a Rare card or a familiar.", opens: 'season', season: 'winter' },
+  { id: 'hearth-trader', name: 'The Hearth Trader', currency: 'Hearts and gold', text: "A regular's hearts for a Rare card or a familiar, the Yule Log, and the Holly Crown.", opens: 'season', season: 'winter', everyNight: true },
 ];
 
 // The Fortune Tent's tarot deck (GDD §9).

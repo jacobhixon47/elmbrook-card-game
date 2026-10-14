@@ -112,7 +112,7 @@ export type StallState =
   | { id: 'name-taker'; deals: NameTakerDeal[]; done: boolean }
   /** Seasonal stalls (GDD §9). `cards` and `familiars` are the picks on offer; `done` once traded. */
   | { id: 'seed-swapper' | 'nectar-trader'; cards: string[]; done: boolean }
-  | { id: 'hearth-trader'; cards: string[]; familiars: string[]; done: boolean }
+  | { id: 'hearth-trader'; cards: string[]; familiars: string[]; done: boolean; burned: boolean; crown: string[]; crowned: boolean }
   | { id: 'blossom-oracle'; done: boolean }
   /** `prizes` are the familiars a winning toss offers; `last` is what the last toss won. */
   | { id: 'firefly-games'; tosses: number; prizes: string[]; last: { won: boolean; card: string | null } | null }

@@ -13,13 +13,13 @@ import { addModifier, cantModify, drawOnBrewOf, MODIFIER_RULES, enchant, heartDe
 import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
 import {
   atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, placeBid, pressCider, readPetals, seedSwap, stallStock, swapForCard, takeDeal, takePrize,
-  tossRing, tradeHearts, tradeNectar, weave,
+  tossRing, tradeHearts, burnYule, wearCrown, tradeNectar, weave,
 } from './market';
 import { cursePool, dayAllowance, gainRelic, grantRelic, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
 import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import {
-  BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK, TIER_MIN,
+  BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, WINTER_FENCE, MAX_DISCARD, MAX_HEARTS, MIN_DECK, TIER_MIN,
   LONGEST_NIGHT, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
   MAX_CAULDRON_SLOTS, MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex,
 } from './rules';
@@ -672,6 +672,12 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
     case 'placeBid':
       placeBid(ctx, action.amount);
       return;
+    case 'burnYule':
+      burnYule(ctx, action.uids);
+      return;
+    case 'wearCrown':
+      wearCrown(ctx, action.index);
+      return;
     case 'tradeHearts':
       tradeHearts(ctx, action.regular, action.index);
       return;
@@ -698,7 +704,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       const i = s.shelf.findIndex((p) => p.uid === action.uid);
       if (i < 0) reject(`potion ${action.uid} is not on the Shelf`);
       const [potion] = s.shelf.splice(i, 1);
-      const price = fencePrice(potion!);
+      const price = fencePrice(potion!, s.season);
       ctx.ev.push({ type: 'potionSold', uid: potion!.uid, price });
       changeGold(ctx, price, 'fence');
       return;
@@ -772,12 +778,14 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
 }
 
 /** The Fence pays by tier, and half again for potions with Umbra or Lunar in them (GDD §9). */
-export function fencePrice(potion: Pick<Potion, 'tier' | 'ingredients'>): number {
+export function fencePrice(potion: Pick<Potion, 'tier' | 'ingredients' | 'family'>, season?: Season): number {
   const shadowy = potion.ingredients.some((id) => {
     const e = codex.ingredients.get(id)?.essences ?? [];
     return e.includes('umbra') || e.includes('lunar');
   });
-  return Math.round(FENCE_PRICE[potion.tier] * (shadowy ? FENCE_SHADOW_BONUS : 1));
+  // Winter: folks want warmth, so Warming potions fetch more and the rest a little less.
+  const winter = season === 'winter' ? (potion.family === 'warming' ? WINTER_FENCE.warming : WINTER_FENCE.other) : 1;
+  return Math.round(FENCE_PRICE[potion.tier] * (shadowy ? FENCE_SHADOW_BONUS : 1) * winter);
 }
 
 /** Cottage perks change how a run starts (GDD §13). */

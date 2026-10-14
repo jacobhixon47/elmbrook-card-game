@@ -57,6 +57,8 @@ export type Action =
   | { type: 'pressCider'; uid: number }
   | { type: 'placeBid'; amount: number }
   | { type: 'tradeHearts'; regular: string; index: number }
+  | { type: 'burnYule'; uids: number[] }
+  | { type: 'wearCrown'; index: number }
   | { type: 'leaveMarket' }
   // Familiars, at any time in a run: sell one for half its price, or move it to another slot.
   | { type: 'sellFamiliar'; index: number }

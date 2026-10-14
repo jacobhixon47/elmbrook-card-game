@@ -2,9 +2,9 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
-  HARVEST_AUCTION, HEARTH_TRADER, NECTAR_TRADER, pressable, SEED_SWAPPER,
+  HARVEST_AUCTION, HEARTH_TRADER, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
   type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome, almanacUnlocks, boonOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
 } from '../core';
@@ -37,12 +37,15 @@ import { play, playEvents } from '../audio/sfx';
 import { TIER_SOUND, tickPitch } from '../audio/sounds';
 import { addWeather } from '../view/weather';
 
+/** The Hearth Trader's three trades (Winter). */
+type HearthTab = 'hearts' | 'yule' | 'crown';
+
 type Mode =
   | { kind: 'idle' }
   | { kind: 'dialog'; order: number }
   | { kind: 'select'; purpose: Purpose; tincture?: number; picked: number[] }
   /** Deck cards picked at a Night Market stall: the Hollow Tailor's two, or the Black Market's trade for stock `swap`. */
-  | { kind: 'stall'; picked: number[]; swap?: number; regular?: string }
+  | { kind: 'stall'; picked: number[]; swap?: number; regular?: string; tab?: HearthTab }
   /** A familiar's card, to sell it or move it. */
   | { kind: 'familiar'; index: number }
   /** At the Creek Bank: tempering, or which modifier to buy. */
@@ -100,6 +103,8 @@ export class Run extends Phaser.Scene {
   /** The open Grimoire tab, drawn over any screen; null when closed. */
   private book: GrimoireTab | null = null;
   private bookPage = 0;
+  /** Seasonal scene screens already shown this run, so each shows once (Snowed In, by week). */
+  private scenesSeen = new Set<string>();
   private tip!: Tooltip;
   /** The first-run tutorial, while it lasts (GDD §15.1). Kept across restarts for a new sky. */
   private tutorial: TutorialProgress | null = null;
@@ -160,12 +165,16 @@ export class Run extends Phaser.Scene {
     }
     if (fixture?.ui?.stall) {
       const deck = sortedDeck(stallDeck(state));
-      this.mode = { kind: 'stall', picked: (fixture.ui.stall.picked ?? []).map((i) => deck[i]!.uid), ...(fixture.ui.stall.swap !== undefined ? { swap: fixture.ui.stall.swap } : {}) };
+      this.mode = {
+        kind: 'stall', picked: (fixture.ui.stall.picked ?? []).map((i) => deck[i]!.uid),
+        ...(fixture.ui.stall.swap !== undefined ? { swap: fixture.ui.stall.swap } : {}), ...(fixture.ui.stall.tab ? { tab: fixture.ui.stall.tab } : {}),
+      };
     }
     if (fixture?.ui?.familiar !== undefined) this.mode = { kind: 'familiar', index: fixture.ui.familiar };
     if (fixture?.ui?.creek) this.mode = { kind: 'creek', pick: fixture.ui.creek };
     if (fixture?.ui?.pour) this.mode = { kind: 'pour' };
     if (fixture?.ui?.eventCard !== undefined) this.mode = { kind: 'event-card', choice: fixture.ui.eventCard };
+    if (fixture?.ui?.scenesSeen) for (const k of fixture.ui.scenesSeen) this.scenesSeen.add(k);
     if (fixture?.ui?.grimoire) this.book = fixture.ui.grimoire;
     if (fixture?.ui?.page !== undefined) this.bookPage = fixture.ui.page;
     if (fixture?.ui?.recipe) this.recipePick = { cauldron: cauldronKey(state), recipe: fixture.ui.recipe };
@@ -418,6 +427,17 @@ export class Run extends Phaser.Scene {
       this.add2(button(this, x, 238, 'Take the deal', () => onTake('relic'), { w: 80, color: 'v' }));
     }
     tile.setInteractive();
+  }
+
+  /** A short seasonal scene screen over the window: why something seasonal is happening, then on. */
+  private seasonScene(name: string, lines: readonly string[], onDone: () => void) {
+    this.add2(panel(this, 150, 70, 340, 150, 'k', 0.9, 'c'));
+    this.text(320, 84, name, { size: 14, color: 'c', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
+    this.text(320, 112, lines.join('\n\n'), { size: 8, color: 'W', stroke: 'k', align: 'center', wrap: 300 }).setOrigin(0.5, 0);
+    this.add2(button(this, 320, 198, 'Walk on', () => {
+      onDone();
+      this.render();
+    }, { w: 72, color: 'Y' }));
   }
 
   /** A familiar on offer: a tile with its sprite, name and rule. */
@@ -1342,7 +1362,12 @@ export class Run extends Phaser.Scene {
     const head = (sub: string) => title(info!.name, `${sub} You have ${s.gold}g.`);
 
     if (!stall) {
-      title('The Night Market', `${MOON_LINE[moonOf(s.week)]} Visit any stall, then the Guild collects this week's rent: ${due}g. You have ${s.gold}g.`);
+      const buried = snowedIn(s, s.week);
+      if (buried && !this.scenesSeen.has(`snowed-in-${s.week}`)) {
+        this.seasonScene('Snowed In', SNOWED_IN_SCENE, () => this.scenesSeen.add(`snowed-in-${s.week}`));
+        return;
+      }
+      title(buried ? 'The Night Market, Snowed In' : 'The Night Market', `${buried ? SNOWED_IN_LINE : MOON_LINE[moonOf(s.week)]} Visit any stall, then the Guild collects this week's rent: ${due}g. You have ${s.gold}g.`);
       const n = offer.stalls.length;
       const w = Math.min(84, Math.floor(600 / n) - 6);
       offer.stalls.forEach((st, i) => {
@@ -1365,22 +1390,24 @@ export class Run extends Phaser.Scene {
 
     switch (stall.id) {
       case 'fence': {
-        head('Sells potions from your Shelf. Potions with Umbra or Lunar in them fetch half again.');
+        head(s.season === 'winter'
+          ? 'Sells potions from your Shelf. Folks want warmth this time of year: Warming potions fetch half again, the rest a little less. Umbra or Lunar still fetch half again.'
+          : 'Sells potions from your Shelf. Potions with Umbra or Lunar in them fetch half again.');
         if (s.shelf.length === 0) this.text(320, 140, 'Your Shelf is empty.', { size: 8, color: 'a', align: 'center' }).setOrigin(0.5);
         s.shelf.forEach((p, i) => {
           const x = 320 + (i - (s.shelf.length - 1) / 2) * 50;
           const img = this.add2(this.add.image(x, 140, `potion/${p.family}`).setScale(2));
-          this.text(x, 160, `${TIER_NAME[p.tier]}\n${fencePrice(p)}g`, { size: 7, color: 'y', align: 'center' }).setOrigin(0.5, 0);
+          this.text(x, 160, `${TIER_NAME[p.tier]}\n${fencePrice(p, s.season)}g`, { size: 7, color: 'y', align: 'center' }).setOrigin(0.5, 0);
           img.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'sellPotion', uid: p.uid }));
         });
         break;
       }
       case 'lantern-seller':
-        head('Lunar ingredients and Omens. They go in your Night Satchel, which joins your deck only on Night Shifts.');
+        head(`Lunar ingredients and Omens. They go in your Night Satchel, which joins your deck only on Night Shifts.${s.season === 'winter' ? ' Lunar stock runs low in Winter, but there is a Yule Candle.' : ''}`);
         this.drawStock(s, stall.stock);
         break;
       case 'wandering-tinker':
-        head(stall.stock.length ? 'Here only at the full moon, and cheaper than the Market.' : 'Your shop has every slot already. The Tinker shrugs.');
+        head(stall.stock.length ? `Here only at the full moon, and cheaper than the Market.${s.season === 'winter' ? ' A Frost familiar rides in his cart this time of year.' : ''}` : 'Your shop has every slot already. The Tinker shrugs.');
         this.drawStock(s, stall.stock);
         break;
       case 'black-market': {
@@ -1575,13 +1602,59 @@ export class Run extends Phaser.Scene {
         break;
       }
       case 'hearth-trader': {
+        const mode = this.mode.kind === 'stall' ? this.mode : null;
+        const tab = mode?.tab ?? 'hearts';
+        const tabs: [HearthTab, string, boolean][] = [
+          ['hearts', 'Trade hearts', stall.done],
+          ['yule', `The Yule Log ${YULE_LOG.price}g`, stall.burned],
+          ['crown', `The Holly Crown ${HOLLY_CROWN.price}g`, stall.crowned || !stall.crown.length],
+        ];
+        tabs.forEach(([id, label, used], i) => {
+          const x = 320 + (i - 1) * 118;
+          const on = id === tab;
+          if (on) this.add2(this.add.rectangle(x, 86, 112, 20).setStrokeStyle(1, hex('Y')));
+          this.add2(button(this, x, 86, used ? `${label} ✓` : label, () => {
+            this.mode = { kind: 'stall', picked: [], tab: id };
+            this.render();
+          }, { w: 108, color: on ? 'Y' : 'W' }));
+        });
+        if (tab === 'yule') {
+          if (stall.burned) {
+            head('The Yule Log crackles. What burned is gone for good. Once a night.');
+            break;
+          }
+          const picked = mode?.picked ?? [];
+          head(`Burn one or two cards from your deck in the Yule fire, for good. ${YULE_LOG.price}g, once a night.`);
+          this.deckGrid(blackMarketDeck(s), (inst) => {
+            const has = picked.includes(inst.uid);
+            if (!has && picked.length >= YULE_LOG.cards) return;
+            this.mode = { kind: 'stall', tab: 'yule', picked: has ? picked.filter((u) => u !== inst.uid) : [...picked, inst.uid] };
+            this.render();
+          }, picked, 120);
+          const ok = picked.length > 0 && s.gold >= YULE_LOG.price;
+          this.add2(button(this, 320, 238, picked.length ? `Burn ${picked.length} (${YULE_LOG.price}g)` : 'Pick 1 or 2 cards', () => {
+            this.mode = { kind: 'stall', picked: [], tab: 'yule' };
+            void this.dispatch({ type: 'burnYule', uids: picked });
+          }, { w: 100, color: ok ? 'Y' : 'W', enabled: ok }));
+          break;
+        }
+        if (tab === 'crown') {
+          head(stall.crowned ? 'The holly sits well on them. Once a night.'
+            : stall.crown.length ? `Wear the Holly Crown: ${HOLLY_CROWN.price}g for a Frost familiar. Once a night.` : 'Every Frost familiar already keeps your hearth.');
+          stall.crown.forEach((id, i) => {
+            const x = 320 + (i - (stall.crown.length - 1) / 2) * 90;
+            this.offerFamiliar(x, 160, id, () => void this.dispatch({ type: 'wearCrown', index: i }),
+              stall.crowned || s.gold < HOLLY_CROWN.price || s.familiars.length >= s.familiarSlots);
+          });
+          break;
+        }
         if (stall.done) {
           head('He warms his hands and nods. One trade a night.');
           break;
         }
         const able = [...codex.regulars.values()].filter((r) => !r.nightOnly && (s.hearts[r.id] ?? 0) >= HEARTH_TRADER.hearts);
-        const chosen = this.mode.kind === 'stall' && this.mode.regular && able.some((r) => r.id === (this.mode as { regular?: string }).regular)
-          ? this.mode.regular
+        const chosen = mode?.regular && able.some((r) => r.id === mode.regular)
+          ? mode.regular
           : [...able].sort((a, b) => (s.hearts[b.id] ?? 0) - (s.hearts[a.id] ?? 0))[0]?.id;
         head(chosen
           ? `Spend ${HEARTH_TRADER.hearts} of a regular's hearts on a Rare card or a familiar. Paying with ${customerName(chosen)}.`
@@ -1589,7 +1662,7 @@ export class Run extends Phaser.Scene {
         able.forEach((r, i) => {
           const x = 320 + (i - (able.length - 1) / 2) * 104;
           const on = r.id === chosen;
-          const b = this.add2(button(this, x, 98, `${r.name}: ${s.hearts[r.id]} hearts`, () => {
+          const b = this.add2(button(this, x, 110, `${r.name}: ${s.hearts[r.id]} hearts`, () => {
             this.mode = { kind: 'stall', picked: [], regular: r.id };
             this.render();
           }, { w: 100, color: on ? 'Y' : 'W' }));
@@ -1598,8 +1671,8 @@ export class Run extends Phaser.Scene {
         const n = stall.cards.length + stall.familiars.length;
         const x = (i: number) => 320 + (i - (n - 1) / 2) * 76;
         const trade = (index: number) => chosen && this.dispatch({ type: 'tradeHearts', regular: chosen, index });
-        stall.cards.forEach((id, i) => this.offerCard(x(i), 160, id, () => void trade(i), !chosen));
-        stall.familiars.forEach((id, k) => this.offerFamiliar(x(stall.cards.length + k), 160, id, () => void trade(stall.cards.length + k), !chosen || s.familiars.length >= s.familiarSlots));
+        stall.cards.forEach((id, i) => this.offerCard(x(i), 170, id, () => void trade(i), !chosen));
+        stall.familiars.forEach((id, k) => this.offerFamiliar(x(stall.cards.length + k), 170, id, () => void trade(stall.cards.length + k), !chosen || s.familiars.length >= s.familiarSlots));
         break;
       }
       case 'fortune-tent': {
@@ -1753,6 +1826,13 @@ function familiarTexture(scene: Phaser.Scene, id: string): string {
   return scene.textures.exists(`familiar/${id}`) ? `familiar/${id}` : 'placeholder/16';
 }
 
+/** The scene screen for a Snowed In night (GDD §9): why only the Hearth Trader is open. */
+const SNOWED_IN_SCENE = [
+  'Snow came down all through the Night Shift, and the lane is drifted to the shutters.',
+  'The stalls are buried tonight. Only one fire is lit: the Hearth Trader has dug himself out, as he always does.',
+];
+const SNOWED_IN_LINE = 'Snow has buried the stalls. Only the Hearth Trader\'s fire is lit.';
+
 const MOON_LINE: Record<ReturnType<typeof moonOf>, string> = {
   quarter: 'A quarter moon: three stalls tonight.',
   'full-moon': 'The full moon: every stall is out, and the Wandering Tinker is in town.',
@@ -1777,6 +1857,10 @@ function relicNote(events: readonly GameEvent[]): string | null {
 function stallNote(s: RunState, st: StallState): string | null {
   if ('stock' in st) return st.stock.length && st.stock.every((i) => i.sold) ? 'sold out' : null;
   if (st.id === 'fence') return s.shelf.length ? `${s.shelf.length} on your Shelf` : null;
+  if (st.id === 'hearth-trader') {
+    const used = [st.done, st.burned, st.crowned || !st.crown.length].filter(Boolean).length;
+    return used === 3 ? 'done' : used ? `${used} of 3 done` : null;
+  }
   if ('done' in st) return st.done ? 'done' : null;
   if (st.id === 'firefly-games') return st.tosses ? `${st.tosses} tossed` : null;
   if (st.id === 'cider-press') return st.pressed >= CIDER_PRESS.max ? 'done' : null;

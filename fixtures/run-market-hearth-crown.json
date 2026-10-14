@@ -1,0 +1,1 @@
+{"scene": "Run", "seed": "fixture-hand", "today": "clear", "season": "winter", "steps": [{"jump": [2, 5]}, "openShop", "endDay", "skipReward", {"gold": 10}, {"visit": 2}], "ui": {"stall": {"tab": "crown"}}}

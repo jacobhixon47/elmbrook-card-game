@@ -1,7 +1,7 @@
 import type { ModifierId } from '../codex/schema';
 import { codex } from '../codex';
 import {
-  allCards, cheapestPotion, CIDER_PRESS, commonCards, dueWeekOf, EVENT_GOLD, eventChoiceBlocked, eventChoiceCards, eventDone, fits, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER,
+  allCards, cheapestPotion, CIDER_PRESS, commonCards, dueWeekOf, EVENT_GOLD, eventChoiceBlocked, eventChoiceCards, eventDone, fits, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER, HOLLY_CROWN, YULE_LOG,
   MIN_DECK, NECTAR_TRADER, NIGHT_SHIFT_DAY, payout, pressable, previewBrew, rentOf, SEED_SWAPPER, tierIndex, WEEKS,
   type Action, type BrewPreview, type CardInstance, type Errand, type Order, type Potion, type RunState, type StallState, type StockItem,
 } from '../core';
@@ -88,7 +88,7 @@ const TINCTURE_VALUE: Record<string, number> = {
   'second-wind': 10, 'bottle-spare': 9, 'double-boil': 9, steep: 8, infuse: 7, 'pinch-of-salt': 6, 'tidy-up': 6, decant: 6,
   stir: 5, simmer: 5, 'grimoire-page': 5, 'charm-sachet': 5, forage: 4, sift: 4, 'taste-test': 3,
   // Omens: Night Satchel only, so they never thin the day deck.
-  'blood-moon': 9, 'witching-hour': 8, 'wishing-star': 7, howl: 6, 'raven-call': 6, 'moth-swarm': 6, 'cracked-mirror': 5, 'black-cat-crossing': 4,
+  'blood-moon': 9, 'witching-hour': 8, 'wishing-star': 7, howl: 6, 'raven-call': 6, 'moth-swarm': 6, 'cracked-mirror': 5, 'black-cat-crossing': 4, 'yule-candle': 6,
 };
 
 /** Sell the weakest familiar when one worth `v` would be clearly better and every slot is taken. */
@@ -130,6 +130,7 @@ export function familiarValue(s: RunState, id: string): number {
     case 'hearth-toad': return 7;
     case 'firefly': return 6;
     case 'frost-hare': return 2 + 20 * share((i) => i.tags.includes('frost'));
+    case 'ermine': return 2 + 30 * share((i) => i.tags.includes('frost'));
     case 'tortoise': case 'magpie': return 7;
     case 'fox': return 6;
     case 'ferret': return 5;
@@ -257,13 +258,13 @@ function greedyBrewing(s: RunState): Action {
   const room = s.shelf.length < s.shelfSize;
   const shelfPlan = options
     .filter((p) => p.preview.known)
-    .map((p) => ({ ...p, value: fencePrice(asPotion(p)) + p.preview.quality / 100 }))
+    .map((p) => ({ ...p, value: fencePrice(asPotion(p), s.season) + p.preview.quality / 100 }))
     .sort((a, b) => b.value - a.value)[0];
   if (shelfPlan && (room || open.length > 0)) return stepToward(s, shelfPlan);
   // A full Shelf: pour away its cheapest potion when the new one would fetch clearly more.
   if (shelfPlan && !room && s.brewsLeft > 0) {
-    const worst = s.shelf.slice().sort((a, b) => fencePrice(a) - fencePrice(b))[0]!;
-    if (fencePrice(asPotion(shelfPlan)) > fencePrice(worst) + 1) return { type: 'pourOut', uid: worst.uid };
+    const worst = s.shelf.slice().sort((a, b) => fencePrice(a, s.season) - fencePrice(b, s.season))[0]!;
+    if (fencePrice(asPotion(shelfPlan), s.season) > fencePrice(worst, s.season) + 1) return { type: 'pourOut', uid: worst.uid };
   }
   return { type: 'endDay' };
 }
@@ -457,7 +458,7 @@ function keptPotions(s: RunState): Set<number> {
       if (p) keep.add(p.uid);
     }
     if (st.id === 'cider-press') {
-      const cheap = s.shelf.filter((p) => !keep.has(p.uid) && fencePrice(p) <= CIDER_PRESS_MAX_PRICE);
+      const cheap = s.shelf.filter((p) => !keep.has(p.uid) && fencePrice(p, s.season) <= CIDER_PRESS_MAX_PRICE);
       for (const p of cheap.slice(0, CIDER_PRESS.max - st.pressed)) keep.add(p.uid);
     }
   }
@@ -525,7 +526,7 @@ function stallAction(s: RunState, stall: StallState): Action | null {
     }
     case 'cider-press': {
       const potion = cheapestPotion(s);
-      if (stall.pressed >= CIDER_PRESS.max || !potion || fencePrice(potion) > CIDER_PRESS_MAX_PRICE) return null;
+      if (stall.pressed >= CIDER_PRESS.max || !potion || fencePrice(potion, s.season) > CIDER_PRESS_MAX_PRICE) return null;
       const best = pressable(s).sort((a, b) => cardPotency(b) - cardPotency(a))[0];
       return best ? { type: 'pressCider', uid: best.uid } : null;
     }
@@ -535,15 +536,25 @@ function stallAction(s: RunState, stall: StallState): Action | null {
       return bid ? { type: 'placeBid', amount: bid } : null;
     }
     case 'hearth-trader': {
-      if (stall.done) return null;
       const regular = Object.entries(s.hearts).filter(([, h]) => h >= HEARTH_TRADER.hearts).sort((a, b) => b[1] - a[1])[0]?.[0];
-      if (!regular) return null;
-      const fam = s.familiars.length < s.familiarSlots
-        ? stall.familiars.map((id, k) => ({ index: stall.cards.length + k, v: familiarValue(s, id) })).sort((a, b) => b.v - a.v)[0]
-        : undefined;
-      if (fam) return { type: 'tradeHearts', regular, index: fam.index };
-      const card = stall.cards.map((c, index) => ({ index, v: cardValue(s, c) })).sort((a, b) => b.v - a.v)[0];
-      return card && card.v >= 7 ? { type: 'tradeHearts', regular, index: card.index } : null;
+      if (!stall.done && regular) {
+        const fam = s.familiars.length < s.familiarSlots
+          ? stall.familiars.map((id, k) => ({ index: stall.cards.length + k, v: familiarValue(s, id) })).sort((a, b) => b.v - a.v)[0]
+          : undefined;
+        if (fam) return { type: 'tradeHearts', regular, index: fam.index };
+        const card = stall.cards.map((c, index) => ({ index, v: cardValue(s, c) })).sort((a, b) => b.v - a.v)[0];
+        if (card && card.v >= 7) return { type: 'tradeHearts', regular, index: card.index };
+      }
+      // The Holly Crown: a Frost familiar worth a slot.
+      if (!stall.crowned && s.familiars.length < s.familiarSlots && spare >= HOLLY_CROWN.price) {
+        const best = stall.crown.map((id, index) => ({ index, v: familiarValue(s, id) })).sort((a, b) => b.v - a.v)[0];
+        if (best && best.v >= 6) return { type: 'wearCrown', index: best.index };
+      }
+      // The Yule Log: burn junk while the deck has room to shrink.
+      const deck = [...s.drawPile, ...s.hand, ...s.discardPile];
+      if (stall.burned || spare < YULE_LOG.price || deck.length < MIN_DECK + 2) return null;
+      const burn = deck.filter((c) => codex.junk.has(c.card)).slice(0, YULE_LOG.cards);
+      return burn.length ? { type: 'burnYule', uids: burn.map((c) => c.uid) } : null;
     }
     default:
       // The Moth Broker, the Hollow Tailor, the Fortune Tent and the Blossom Oracle: the random bot covers them.
@@ -625,6 +636,8 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'pressCider', uid: any(deckUids) ?? 0 },
     { type: 'placeBid', amount: any(HARVEST_AUCTION.bids) ?? 12 },
     { type: 'tradeHearts', regular: any(Object.keys(s.hearts)) ?? 'old-tobin', index: roll(4) },
+    { type: 'burnYule', uids: [any(allCards(s))?.uid ?? 0] },
+    { type: 'wearCrown', index: roll(3) },
   );
   // Weight away from ending the day so random runs actually brew.
   const a = roll(10) === 0 ? candidates[roll(5)]! : candidates[5 + roll(candidates.length - 5)]!;

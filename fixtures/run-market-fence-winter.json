@@ -1,0 +1,1 @@
+{"scene": "Run", "seed": "fixture-hand", "today": "clear", "season": "winter", "steps": [{"jump": [2, 5]}, "openShop", "endDay", "skipReward", {"potion": ["hearthwarm-tonic", "superb"]}, {"potion": ["healing-draught", "superb"]}, {"visit": 1}]}

@@ -1,6 +1,6 @@
 import { codex } from '../codex';
 import {
-  patronOf, patronKnown, FESTIVAL_WEEK, festivalOn, MOON_NAME, NIGHT_SHIFT_DAY, SEASON_FESTIVAL, todaysWeather, WEATHER_RULE, weatherOn,
+  patronOf, patronKnown, FESTIVAL_WEEK, festivalOn, MOON_NAME, NIGHT_SHIFT_DAY, SEASON_FESTIVAL, snowedIn, todaysWeather, WEATHER_RULE, weatherOn,
   WEEK_MOONS, WEEKS, type Festival, type RunState, type SkyEvent, type Weather,
 } from '../core';
 
@@ -35,7 +35,10 @@ export const SKY_RULE: Record<SkyEvent, string> = {
   'meteor-shower': 'Fallen Stars can turn up in rewards, the Market and the Forage all week.',
 };
 
-type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'> & Partial<Pick<RunState, 'patrons' | 'fortunes' | 'year'>>;
+type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'> & Partial<Pick<RunState, 'patrons' | 'fortunes' | 'year' | 'seed'>>;
+
+const buried = (s: When, week: number) => s.seed !== undefined && snowedIn({ ...s, seed: s.seed }, week);
+const SNOWED_IN_RULE = 'Snowed In: drifts bury the Night Market, and only the Hearth Trader opens.';
 
 /** From Year 2 a patron stays a stranger until the day before their Night Shift (GDD §13). */
 const HIDDEN_PATRON = { name: 'A patron', text: 'Who, and what they want, you learn the day before.' };
@@ -88,6 +91,7 @@ export function dayRules(s: When, c: Pick<CalendarCell, 'week' | 'day' | 'weathe
   if (f) out.push(`${FESTIVAL_NAME[f]}: ${FESTIVAL_RULE[f]}`);
   const e = skyOn(s, c.week, c.day);
   if (e) out.push(`${SKY_NAME[e]}: ${SKY_RULE[e]}`);
+  if (c.day === NIGHT_SHIFT_DAY && buried(s, c.week)) out.push(SNOWED_IN_RULE);
   // Fortune Tent twists on this week's days (The Moon's fog already shows as the weather).
   if (c.day < NIGHT_SHIFT_DAY) {
     for (const f of s.fortunes ?? []) {
@@ -114,6 +118,7 @@ export function calendarWeeks(s: When): CalendarWeek[] {
       if (f) marks.push(FESTIVAL_NAME[f]);
       const e = skyOn(s, week, day);
       if (e) marks.push(SKY_NAME[e]);
+      if (day === NIGHT_SHIFT_DAY && buried(s, week)) marks.push('Snowed In');
       const at = week * 10 + day;
       const now = s.week * 10 + s.day;
       return {
