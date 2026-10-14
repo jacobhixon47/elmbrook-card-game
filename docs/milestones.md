@@ -77,7 +77,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - ✅ The ramp pass: a gentle week-1 rent ramp (20, 22, 24, 26 by season, decided with Jacob), heavier rent with pay trailing it by season, and rent rising in later Years. Year 1 wins about 40/34/29/23% by season, and Spring falls to about 15% by Year 10, simmed with the perks and unlocks a player would carry into each Year (`docs/balance-m4.md`).
 - Seasonal content: ✅ seven seasonal Night Market stalls (GDD §9); ✅ the Frost Market (Winter's no-gold rule).
 - Playtest notes (Jacob, Oct 14, after a Spring run):
-  - Orders repeat the same recipe (Elmbrook Panacea, again and again). Late weeks only ask for recipes the deck can bring to a high tier, and that is often one recipe. Fix with more recipes per family and a rule against posting a request that is already on the board or was just filled.
+  - ✅ Orders repeat the same recipe (Elmbrook Panacea, again and again). Late weeks only ask for recipes the deck can bring to a high tier, and that is often one recipe. Fixed with a rule against posting a request that is already on the board or was on yesterday's (GDD §4): repeats fall from 10-20% of orders to under 2%. More recipes per family turned out not to be needed for this; they stay an option for content.
   - ✅ A way to view the discard pile, next to the deck and draw pile in the Grimoire.
   - ✅ The Year and season shown above the day and week in the top-left HUD.
 

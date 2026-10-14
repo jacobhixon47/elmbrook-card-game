@@ -308,3 +308,27 @@ What the tuning found:
 - **Converting every gold price made Winter the easiest season.** A Black Market Rare or a Tinker slot for a couple of potions is a bargain at any rate: 3 potions or 4 cards per 7 gold still left Year 3 near 48%. Closing the Fortune Tent, the Tinker and the Black Market in Winter fixes that and matches the tables' "no stall takes gold".
 - **Any non-gold price frees gold for rent.** With the stalls closed and normal gold prices, Winter already rises to 16.6% plain (2,000 runs) and 32.9% in Year 2. Paying the Lantern Seller in potions or cards adds a couple of points more. Its rate barely matters: 2 to 4 potions, or 1 to 4 cards, all land at 16 to 18% plain.
 - **So the lever is rent.** Winter's multiplier goes back to ×1.52 (it was ×1.48 since the recipe switcher). At ×1.56 Year 1 fell to 19%. Winter is again the hardest season in almost every Year; Years 8 to 10 sit within noise of Autumn. The random bot plays 300 Winter runs at Year 10 without an error.
+
+## Order variety
+
+Jacob's Spring playtest kept getting Elmbrook Panacea. The sim's new order-variety section shows why: late weeks ask only for what the deck can bring to a high tier, which is often one recipe, so 10 to 20% of orders repeat a request already on the board or on yesterday's. The no-repeat rule (GDD §4) asks for another recipe or family, up to one tier lower if it must.
+
+Same grid as above (400 runs per Year, 1,000 plain; Years 1, 3, 6 and 10 with the perks and unlocks a player would carry):
+
+| Season | Y1 | Y3 | Y6 | Y10 | Plain |
+|---|---|---|---|---|---|
+| Spring before | 39.0 | 38.0 | 36.3 | 21.3 | 25.8 |
+| Spring after | 34.5 | 40.8 | 30.3 | 19.3 | 26.7 |
+| Summer before | 32.0 | 36.0 | 21.5 | 12.0 | 21.5 |
+| Summer after | 33.0 | 28.5 | 27.8 | 12.3 | 19.1 |
+| Autumn before | 28.8 | 25.5 | 19.0 | 11.5 | 16.7 |
+| Autumn after | 25.0 | 26.3 | 17.5 | 11.3 | 14.7 |
+| Winter before | 24.0 | 27.3 | 11.3 | 12.5 | 14.7 |
+| Winter after | 23.3 | 23.8 | 10.3 | 7.8 | 14.3 |
+
+| Repeated requests (plain Spring) | Week 1 | Week 2 | Week 3 | Week 4 |
+|---|---|---|---|---|
+| Before | 10.2% | 14.5% | 12.8% | 19.9% |
+| After | 2.1% | 0.0% | 0.8% | 0.0% |
+
+Repeats all but disappear, and Year 10's top named recipe (Panacea) is about 5% of orders either way. Win rates move about a point or two down on average, within noise cell by cell: the bot builds toward a few recipes, and varied orders fit its deck a little less often. The ×1.52 Winter rent and the season order still hold. No rule change compensates; the random bot plays 300 runs without an error.
