@@ -21,6 +21,9 @@ const W = 560;
 const H = 304;
 /** Known recipes per Grimoire page: two columns. */
 export const RECIPES_PER_PAGE = 14;
+/** The Deck tab's views, by page: the whole deck, then one pile. */
+export const DECK_VIEWS = ['deck', 'draw', 'discard'] as const;
+const DECK_VIEW_LABEL = { deck: 'Whole deck', draw: 'Draw pile', discard: 'Discarded' };
 
 /**
  * The Grimoire (GDD §15.1): known recipes, the deck and a rules guide, drawn over whatever screen
@@ -72,8 +75,16 @@ export function drawGrimoire(
 
   if (tab === 'deck') {
     const total = s.drawPile.length + s.hand.length + s.discardPile.length + s.cauldron.length;
-    text(X + 12, top, `${total} cards. Draw pile ${s.drawPile.length} · hand ${s.hand.length} · discarded ${s.discardPile.length}. Every morning the whole deck is shuffled together.`, { size: 7, color: 'a', wrap: W - 24 });
-    const rows = deckRows(s);
+    text(X + 12, top, `${total} cards. Draw pile ${s.drawPile.length} · hand ${s.hand.length} · discarded ${s.discardPile.length}. Every morning the whole deck is shuffled together.`, { size: 7, color: 'a', wrap: W - 230 });
+    // Whole deck, or one pile: the page picks which.
+    const view = DECK_VIEWS[Math.min(page, DECK_VIEWS.length - 1)]!;
+    DECK_VIEWS.forEach((v, i) => {
+      const b = add(button(scene, X + W - 176 + i * 68, top + 6, DECK_VIEW_LABEL[v], () => on.page(i), { w: 64, color: v === view ? 'Y' : 'W' }));
+      if (v === view) (b.list[0] as Phaser.GameObjects.Rectangle).setStrokeStyle(1, hex('y'));
+    });
+    const none = { drawPile: [], hand: [], discardPile: [], cauldron: [] };
+    const rows = view === 'deck' ? deckRows(s) : deckRows({ ...none, [view === 'draw' ? 'drawPile' : 'discardPile']: view === 'draw' ? s.drawPile : s.discardPile });
+    if (!rows.length) text(X + W / 2, top + 60, view === 'draw' ? 'The draw pile is empty.' : 'Nothing discarded yet today. Brewed and discarded cards land here until the morning shuffle.', { size: 8, color: 'a', align: 'center', wrap: 360 }).setOrigin(0.5, 0);
     const perRow = 8;
     rows.forEach((r, i) => {
       const x = X + 48 + (i % perRow) * 66;
@@ -82,7 +93,8 @@ export function drawGrimoire(
       c.setInteractive();
       c.on('pointerover', () => tip.card(r.card, x, y - 30, y + 30));
       c.on('pointerout', () => tip.hide());
-      text(x, y + 32, `×${r.total} · ${r.inDraw} to draw`, { size: 7, color: r.inDraw ? 'W' : 'a', align: 'center' }).setOrigin(0.5, 0);
+      const label = view === 'deck' ? `×${r.total} · ${r.inDraw} to draw` : `×${r.total}`;
+      text(x, y + 32, label, { size: 7, color: view !== 'deck' || r.inDraw ? 'W' : 'a', align: 'center' }).setOrigin(0.5, 0);
     });
     // The Night Satchel (GDD §5.4): Lunar cards and Omens that join the deck only on Night Shifts.
     const satchel = deckRows({ drawPile: [], hand: [], discardPile: s.satchel, cauldron: [] });
