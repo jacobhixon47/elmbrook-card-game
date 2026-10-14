@@ -47,7 +47,7 @@ Every run happens in one season. The season is chosen at run start from those yo
 | Spring | Fresh herbs and flowers more common (Vital, Calming) | Gentle: lower rent, the tutorial season | Blossom, rain, new beginnings |
 | Summer | Fruit, honey, Ember ingredients | Long days: +1 Brew on Days, Night Shifts are short (-1 Discard). Rent ×1.15, orders pay ×1.2 | Fireflies, festivals |
 | Autumn | Roots, mushrooms, Umbra ingredients | Harvest patrons: bigger orders, bigger tips. Rent ×1.32, orders pay ×1.23 | Falling leaves, lanterns, the Harvest Fair |
-| Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | Frost Night Market: stalls take only odd currencies. Rent ×1.48, orders pay ×1.35 | Snow, hearth fires, the longest nights |
+| Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | Frost Night Market: no stall takes gold, the gold-only stalls close and the Lantern Seller takes potions or cards (§9). Rent ×1.48, orders pay ×1.35 | Snow, hearth fires, the longest nights |
 
 Seasons scale in difficulty in that order: rent rises faster than pay, so the bot's win rates in Year 1 are about 40%, 34%, 29% and 23% (the M4 ramp pass, `docs/balance-m4.md`). Numbers are tuning starting points. Each season adds its own ingredients, patrons, events and two Night Market variants to the pools, so later seasons also feel new, not only harder.
 
@@ -343,7 +343,11 @@ Phase flavour: First/Last Quarter nights have 3 stalls. Full Moon has all stalls
 | The Harvest Auction | Autumn | One sealed bid (12, 15, 18, 21 or 24 gold) for a tier 2 relic against the farmers' hidden bid of 12 to 24. Win at or above it and pay your bid; lose and pay nothing. |
 | The Hearth Trader | Winter | 5 hearts with one regular, your choice, for 1 of 2 Rare cards or a familiar. One trade a night. (The tables had 3 hearts and two familiars; see the balance note.) |
 
-Stalls that take a potion take your lowest one (by tier, then quality), and say which on their sign. **Winter's other variant is the Frost Market**, its twist: no stall takes gold, and gold prices become potions or cards. It comes in its own change.
+Stalls that take a potion take your lowest one (by tier, then quality), and say which on their sign.
+
+**The Frost Market (Winter).** In Winter the Night Market is the Frost Market, and no stall takes gold. The Fortune Tent, the Wandering Tinker and the Black Market sell only for gold, so they stay closed all Winter; a full or new moon opens every other stall but brings no visiting vendor. The Lantern Seller takes your lowest Shelf potions or any cards from your deck instead: a price of N gold becomes N/4 potions or N/8 cards, rounded up, so both its Lunar ingredients (7 gold) and its Omens (6 gold) cost 2 potions or 1 card. Junk cards don't count as payment, and the deck can't drop below 8. Rent is still paid in gold.
+
+(The first version converted every gold price, the Tinker's and the Black Market's included. In the sim that made Winter the easiest season, 54% in Year 2 and 23% plain, and higher prices barely moved it, because a Black Market Rare for 2 potions is a bargain at any rate. Closing the gold-only stalls keeps the twist and keeps Winter the hardest season; see `docs/balance-m4.md`.)
 
 ### Relics and curses
 
