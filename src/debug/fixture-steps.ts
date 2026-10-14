@@ -1,5 +1,5 @@
 import type { ModifierId } from '../codex/schema';
-import type { Action, Errand, RunState } from '../core';
+import type { Action, Errand, RunState, Tier } from '../core';
 
 /**
  * Fixtures reach a UI state by replaying steps from a seed. Steps name hand positions rather than
@@ -39,7 +39,10 @@ export type FixtureStep =
   /** Open the Event errand on this dusk event. */
   | { duskEvent: string }
   /** Make the dusk event choice at this index (not one that asks for a card). */
-  | { chooseEvent: number };
+  | { chooseEvent: number }
+  /** Put a potion of this recipe and tier on the Shelf. */
+  | { potion: [string, Tier] }
+  | { hearts: [string, number] };
 
 export function stepAction(state: RunState, step: FixtureStep): Action {
   if (typeof step === 'string') return { type: step === 'skipReward' ? 'skipReward' : step };
@@ -57,6 +60,8 @@ export function stepAction(state: RunState, step: FixtureStep): Action {
   if ('gift' in step) return { type: 'takeGift', index: step.gift };
   if ('brewFor' in step) return { type: 'brew', deliverTo: state.orders[step.brewFor]?.id ?? -1 };
   if ('patron' in step) return { type: 'debug', op: 'setPatron', week: step.patron[0], patron: step.patron[1] };
+  if ('potion' in step) return { type: 'debug', op: 'givePotion', recipe: step.potion[0], tier: step.potion[1] };
+  if ('hearts' in step) return { type: 'debug', op: 'setHearts', regular: step.hearts[0], hearts: step.hearts[1] };
   if ('visit' in step) return { type: 'visitStall', index: step.visit };
   if ('reward' in step) return { type: 'debug', op: 'patronReward', patron: step.reward };
   if ('relic' in step) return { type: 'debug', op: 'giveRelic', relic: step.relic };

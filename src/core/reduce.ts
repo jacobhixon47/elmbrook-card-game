@@ -11,12 +11,15 @@ import { chooseEvent, eventDone, openEvent } from './dusk-events';
 import { commissionsOnBrew, commissionsOnDayEnd, commissionsOnDeliver, takeCommission } from './commissions';
 import { addModifier, cantModify, drawOnBrewOf, MODIFIER_RULES, enchant, heartDeltaOf, isAged, temper } from './modifiers';
 import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
-import { atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, stallStock, swapForCard, takeDeal, weave } from './market';
+import {
+  atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, placeBid, pressCider, readPetals, seedSwap, stallStock, swapForCard, takeDeal, takePrize,
+  tossRing, tradeHearts, tradeNectar, weave,
+} from './market';
 import { cursePool, dayAllowance, gainRelic, grantRelic, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
 import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import {
-  BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK,
+  BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, MAX_DISCARD, MAX_HEARTS, MIN_DECK, TIER_MIN,
   LONGEST_NIGHT, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
   MAX_CAULDRON_SLOTS, MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex,
 } from './rules';
@@ -648,6 +651,31 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       takeDeal(ctx, action.index, action.take ?? 'relic');
       return;
 
+    case 'seedSwap':
+      seedSwap(ctx, action.index, action.uids);
+      return;
+    case 'readPetals':
+      readPetals(ctx);
+      return;
+    case 'tossRing':
+      tossRing(ctx);
+      return;
+    case 'takePrize':
+      takePrize(ctx, action.index);
+      return;
+    case 'tradeNectar':
+      tradeNectar(ctx, action.index);
+      return;
+    case 'pressCider':
+      pressCider(ctx, action.uid);
+      return;
+    case 'placeBid':
+      placeBid(ctx, action.amount);
+      return;
+    case 'tradeHearts':
+      tradeHearts(ctx, action.regular, action.index);
+      return;
+
     case 'liftCurse': {
       const offer = offerOf(ctx, 'hearth');
       if (offer.removed) reject('the Hearth takes one card a night');
@@ -702,6 +730,14 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
         ctx.ev.push({ type: 'cardDrawn', uid: inst.uid, card: inst.card });
       } else if (action.op === 'giveFamiliar') {
         addFamiliar(ctx, action.familiar);
+      } else if (action.op === 'givePotion') {
+        const r = codex.recipes.get(action.recipe);
+        if (!r) reject(`no recipe ${action.recipe}`);
+        if (s.shelf.length >= s.shelfSize) reject('the Shelf is full');
+        s.shelf.push({ uid: s.nextUid++, recipe: r.id, family: r.family, quality: TIER_MIN[action.tier], tier: action.tier, ingredients: [], experiment: false, heartDelta: 0 });
+      } else if (action.op === 'setHearts') {
+        if (!codex.regulars.has(action.regular)) reject(`no regular ${action.regular}`);
+        s.hearts[action.regular] = Math.max(0, Math.min(MAX_HEARTS, action.hearts));
       } else if (action.op === 'giveRelic') {
         gainRelic(ctx, action.relic, 'debug');
       } else if (action.op === 'giveCurse') {

@@ -270,3 +270,24 @@ The whole grid after, with the perks a player would own by then:
 | Winter | 20.3 | 21.8 | 23.5 | 18.5 | 14.0 | 14.8 | 11.5 | 8.5 | 7.8 | 7.0 |
 
 The random bot in Year 10 with A Lucky Find: 0 errors in 300 runs.
+
+## Seasonal stalls
+
+Simmed with the same grid as the ramp pass (400 runs per cell with the perks and unlocks a player would carry into each Year, plus 1,000 plain runs per season). Before is `main` after the recipe switcher retune.
+
+| Season | Y1 | Y2 | Y3 | Y4 | Y5 | Y6 | Y7 | Y8 | Y9 | Y10 | Plain |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Spring before | 40.0 | 38.5 | 35.0 | 32.8 | 29.5 | 30.5 | 25.3 | 22.8 | 22.5 | 18.8 | 25.0 |
+| Spring after | 39.0 | 37.3 | 38.0 | 36.5 | 28.0 | 36.3 | 29.5 | 26.0 | 23.0 | 21.3 | 25.8 |
+| Summer before | 32.5 | 38.3 | 35.0 | 37.3 | 26.0 | 28.8 | 24.0 | 19.3 | 15.3 | 14.0 | 24.0 |
+| Summer after | 32.0 | 31.8 | 36.0 | 30.3 | 24.8 | 21.5 | 20.5 | 15.0 | 16.5 | 12.0 | 21.5 |
+| Autumn before | 30.3 | 32.5 | 27.0 | 26.3 | 17.8 | 19.3 | 12.3 | 10.3 | 11.0 | 11.5 | 16.9 |
+| Autumn after | 28.8 | 34.5 | 25.5 | 25.3 | 16.5 | 19.0 | 15.3 | 12.5 | 11.3 | 11.5 | 16.7 |
+| Winter before | 20.3 | 21.8 | 23.5 | 18.5 | 14.0 | 14.8 | 11.5 | 8.5 | 7.8 | 7.0 | 12.0 |
+| Winter after | 25.5 | 26.5 | 28.5 | 23.5 | 16.0 | 15.0 | 14.5 | 11.3 | 10.0 | 9.8 | 15.3 |
+
+What the tuning found:
+
+- **As the tables had them, two stalls were too generous.** The Seed Swapper (2 Commons for an Uncommon of your choice) put Spring's Year 3 at 46% and Year 6 at 42%; with the bot not using it, 37% and 33%. Taking 3 Commons, or offering 1 Uncommon, changed little; a 5-gold price brings it to 38% and 36%. The Hearth Trader (3 hearts, two familiars on offer) put plain Winter at 19% and Year 3 at 34%, easier than Autumn. Its familiars are the strength: with cards only it does nothing for the bot. At 5 hearts with one familiar, Winter sits a few points under Autumn.
+- **Summer is a few points lower in Years 2 to 6.** Turning off either Summer stall changes nothing (the bot rarely has 3 spare gold for Firefly Games), so the drop comes from the drawn pool: on quarter nights the Name-Taker, which the bot uses for relics, now opens 1 night in 6 instead of 1 in 4. Players will use the Summer stalls more than the bot does.
+- The seasons keep their order in Year 1, and Winter stays the hardest. The random bot plays 300 runs without an error.

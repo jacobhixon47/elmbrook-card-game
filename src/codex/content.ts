@@ -246,6 +246,14 @@ export const stalls: In<typeof Stall>[] = [
   { id: 'name-taker', name: 'The Name-Taker', currency: 'Your name', text: 'Take a Curse for a relic. A worse Curse buys a better one.', opens: 'drawn' },
   { id: 'wandering-tinker', name: 'The Wandering Tinker', currency: 'Gold', text: 'Here only at the full moon: a cauldron slot and a Shelf slot, cheap.', opens: 'full-moon' },
   { id: 'black-market', name: 'The Black Market', currency: 'Gold or cards', text: 'Here only at the new moon: Rare cards for gold, or for two of yours.', opens: 'new-moon' },
+  // Seasonal stalls (balance tables, shops.json): drawn with the others, only in their season.
+  { id: 'seed-swapper', name: 'The Seed Swapper', currency: 'Cards and gold', text: 'Two Common cards and 5 gold for an Uncommon of your choice.', opens: 'season', season: 'spring' },
+  { id: 'blossom-oracle', name: 'The Blossom Oracle', currency: 'Gold', text: "Reads the petals and changes next week's weather.", opens: 'season', season: 'spring', nextWeek: true },
+  { id: 'firefly-games', name: 'Firefly Games', currency: 'Gold, a game', text: 'A ring toss: one in three wins a familiar. Every miss wins a Common card.', opens: 'season', season: 'summer' },
+  { id: 'nectar-trader', name: 'The Nectar Trader', currency: 'Potions', text: 'A Superb or better potion buys a Rare card of your choice.', opens: 'season', season: 'summer' },
+  { id: 'cider-press', name: 'The Cider Press', currency: 'Potions', text: 'Press a Shelf potion: one ingredient gets +2 Potency for the run.', opens: 'season', season: 'autumn' },
+  { id: 'harvest-auction', name: 'The Harvest Auction', currency: 'Gold, a bid', text: 'Bid against the farmers for a tier 2 relic. You pay only if you win.', opens: 'season', season: 'autumn' },
+  { id: 'hearth-trader', name: 'The Hearth Trader', currency: 'Hearts', text: "Trade 5 of a regular's hearts for a Rare card or a familiar.", opens: 'season', season: 'winter' },
 ];
 
 // The Fortune Tent's tarot deck (GDD §9).

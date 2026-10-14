@@ -329,7 +329,21 @@ Phase flavour: First/Last Quarter nights have 3 stalls. Full Moon has all stalls
 - **The Name-Taker** offers 2 deals a night and makes one: take a Curse you don't carry for the rest of the run, and a relic for it. The relic's tier is the Curse's severity, so Nameless or Leaky Roof buys a tier 1 relic and Unpaid Debt or Heavy Hands a tier 3. (The balance tables gave tier 2 for any Curse and tier 3 for severity 3. In the sim the mild Curses cost almost nothing, so Spring wins rose from 29% to 47%; matching tiers puts them at 35%.) Each deal also offers a Rare ingredient with the Cursed modifier: take the Curse for the relic or for the card, not both.
 - No relic is offered twice in one night: the Black Market, the Name-Taker's deals and The World skip each other's.
 - **Relics bought on the new moon** come after the last Night Shift, so only the Guild Seal (cheaper final rent) helps. Worth revisiting with the Long Year mode.
-- The Wandering Tinker sells one Rare familiar at a quarter off. **Waiting for M4's seasons:** the eight seasonal stall variants in the balance tables.
+- The Wandering Tinker sells one Rare familiar at a quarter off.
+
+**Seasonal stalls (M4).** Each season brings its own stalls from the balance tables. They are drawn with the Moth Broker, the Hollow Tailor, the Name-Taker and the Fortune Tent, so a quarter-moon night opens one of them about a third of the time, and they all open at the full and new moon. (The tables said each would *replace* a random stall on quarter nights; drawing them with the others keeps the Lantern Seller and the Fence on every night.)
+
+| Stall | Season | Trade |
+|---|---|---|
+| The Seed Swapper | Spring | Give 2 Common cards from your deck and 5 gold for 1 of 3 Uncommon cards. One swap a night; the deck can't drop below 8. (The tables had no gold; see the balance note.) |
+| The Blossom Oracle | Spring | 4 gold: next week's four days roll their weather again. Once a night; stays away in week 4. (The tables' second option, revealing next week's town event, is dropped: the Calendar already shows it.) |
+| Firefly Games | Summer | A ring toss for 3 gold, as often as you like. One in 3 wins a pick of 2 familiars, or a random Uncommon card if your slots are full; a miss wins a random Common card. |
+| The Nectar Trader | Summer | Your lowest Superb-or-better Shelf potion for 1 of 3 Rare cards. One trade a night. |
+| The Cider Press | Autumn | Your lowest Shelf potion is pressed, and one ingredient in your deck gets +2 Potency for the run. Up to 3 a night. |
+| The Harvest Auction | Autumn | One sealed bid (12, 15, 18, 21 or 24 gold) for a tier 2 relic against the farmers' hidden bid of 12 to 24. Win at or above it and pay your bid; lose and pay nothing. |
+| The Hearth Trader | Winter | 5 hearts with one regular, your choice, for 1 of 2 Rare cards or a familiar. One trade a night. (The tables had 3 hearts and two familiars; see the balance note.) |
+
+Stalls that take a potion take your lowest one (by tier, then quality), and say which on their sign. **Winter's other variant is the Frost Market**, its twist: no stall takes gold, and gold prices become potions or cards. It comes in its own change.
 
 ### Relics and curses
 

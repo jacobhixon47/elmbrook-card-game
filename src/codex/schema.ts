@@ -184,7 +184,11 @@ export const Witch = z.object({
 export type Witch = z.infer<typeof Witch>;
 
 /** The Night Market's stalls (GDD §9). Their trades need code, so each id is handled in core/market.ts. */
-export const STALLS = ['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'name-taker', 'wandering-tinker', 'black-market'] as const;
+export const STALLS = [
+  'lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'name-taker', 'wandering-tinker', 'black-market',
+  // Seasonal stalls (GDD §9): two a season (Winter's second is the Frost Market's rule, not a stall).
+  'seed-swapper', 'blossom-oracle', 'firefly-games', 'nectar-trader', 'cider-press', 'harvest-auction', 'hearth-trader',
+] as const;
 export const StallId = z.enum(STALLS);
 export type StallId = z.infer<typeof StallId>;
 
@@ -197,10 +201,14 @@ export const Stall = z.object({
   text: z.string().min(1),
   /**
    * Which nights it opens: `always` every night, `drawn` one of them on quarter-moon nights and all
-   * of them at the full and new moon, or only on that moon.
+   * of them at the full and new moon, or only on that moon. A `season` stall is drawn with the
+   * `drawn` ones, but only in its season.
    */
-  opens: z.enum(['always', 'drawn', 'full-moon', 'new-moon']),
-});
+  opens: z.enum(['always', 'drawn', 'full-moon', 'new-moon', 'season']),
+  season: Season.optional(),
+  /** It trades in next week, so it stays away on the new moon (week 4). */
+  nextWeek: z.boolean().default(false),
+}).refine((x) => (x.opens === 'season') === (x.season !== undefined), { message: 'a seasonal stall names its season, and only it' });
 export type Stall = z.infer<typeof Stall>;
 
 /** What a tarot card does; each is handled by id in core/market.ts. */

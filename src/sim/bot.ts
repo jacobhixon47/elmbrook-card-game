@@ -1,7 +1,8 @@
 import type { ModifierId } from '../codex/schema';
 import { codex } from '../codex';
 import {
-  allCards, dueWeekOf, EVENT_GOLD, eventChoiceBlocked, eventChoiceCards, eventDone, fits, NIGHT_SHIFT_DAY, payout, previewBrew, rentOf, tierIndex, WEEKS,
+  allCards, cheapestPotion, CIDER_PRESS, commonCards, dueWeekOf, EVENT_GOLD, eventChoiceBlocked, eventChoiceCards, eventDone, fits, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER,
+  MIN_DECK, NECTAR_TRADER, NIGHT_SHIFT_DAY, payout, pressable, previewBrew, rentOf, SEED_SWAPPER, tierIndex, WEEKS,
   type Action, type BrewPreview, type CardInstance, type Errand, type Order, type Potion, type RunState, type StallState, type StockItem,
 } from '../core';
 import { effectsOf, targetsOf } from '../core/effects';
@@ -442,13 +443,38 @@ export function curseCost(s: RunState, id: string): number {
 const SATCHEL_WANT = 4;
 const NEXT_RENT_RESERVE = 0.5;
 
+/** The Cider Press is worth a potion the Fence would pay this much for or less. */
+const CIDER_PRESS_MAX_PRICE = 3;
+
+/** Shelf potions a seasonal stall open tonight will take, so the Fence leaves them. */
+function keptPotions(s: RunState): Set<number> {
+  const keep = new Set<number>();
+  const o = s.offer;
+  if (o?.kind !== 'night-market') return keep;
+  for (const st of o.stalls) {
+    if (st.id === 'nectar-trader' && !st.done) {
+      const p = cheapestPotion(s, NECTAR_TRADER.minTier);
+      if (p) keep.add(p.uid);
+    }
+    if (st.id === 'cider-press') {
+      const cheap = s.shelf.filter((p) => !keep.has(p.uid) && fencePrice(p) <= CIDER_PRESS_MAX_PRICE);
+      for (const p of cheap.slice(0, CIDER_PRESS.max - st.pressed)) keep.add(p.uid);
+    }
+  }
+  return keep;
+}
+
 /** What the greedy bot does at a Night Market stall, or null when it has no use for it. */
 function stallAction(s: RunState, stall: StallState): Action | null {
   // Keep tonight's rent and half of next week's: rent more than doubles each week.
   const spare = s.gold - rentOf(s) - (s.week < WEEKS ? Math.round(rentOf(s, s.week + 1) * NEXT_RENT_RESERVE) : 0);
   switch (stall.id) {
-    case 'fence':
-      return s.shelf[0] ? { type: 'sellPotion', uid: s.shelf[0].uid } : null;
+    case 'fence': {
+      // Potions the Nectar Trader or the Cider Press will take tonight stay on the Shelf.
+      const keep = keptPotions(s);
+      const sell = s.shelf.find((p) => !keep.has(p.uid));
+      return sell ? { type: 'sellPotion', uid: sell.uid } : null;
+    }
     case 'lantern-seller': {
       // Satchel cards only help on later Night Shifts, and only a handful get drawn.
       if (s.week >= WEEKS || s.satchel.length + allCards(s).filter((c) => isSatchelCard(c.card)).length >= SATCHEL_WANT) return null;
@@ -478,8 +504,49 @@ function stallAction(s: RunState, stall: StallState): Action | null {
       const i = stall.stock.findIndex((item) => item.kind === 'relic' && !item.sold && item.price <= spare && relicValue(s, item.relic) >= 8);
       return i >= 0 ? { type: 'buy', index: i } : null;
     }
+    case 'seed-swapper': {
+      if (stall.done || allCards(s).length - SEED_SWAPPER.give + 1 < MIN_DECK || spare < SEED_SWAPPER.price) return null;
+      const best = stall.cards.map((card, index) => ({ index, v: cardValue(s, card) })).sort((a, b) => b.v - a.v)[0];
+      const give = commonCards(s).sort((a, b) => cardValue(s, a.card) - cardValue(s, b.card)).slice(0, SEED_SWAPPER.give);
+      if (!best || give.length < SEED_SWAPPER.give || best.v < 7) return null;
+      return give.reduce((v, c) => v + cardValue(s, c.card), 0) < best.v + 4 ? { type: 'seedSwap', index: best.index, uids: give.map((c) => c.uid) } : null;
+    }
+    case 'firefly-games': {
+      if (stall.prizes.length) {
+        const best = stall.prizes.map((id, index) => ({ index, v: familiarValue(s, id) })).sort((a, b) => b.v - a.v)[0]!;
+        return { type: 'takePrize', index: best.index };
+      }
+      return stall.tosses < 2 && spare >= FIREFLY_GAMES.price && allCards(s).length < 24 ? { type: 'tossRing' } : null;
+    }
+    case 'nectar-trader': {
+      if (stall.done || !cheapestPotion(s, NECTAR_TRADER.minTier)) return null;
+      const best = stall.cards.map((card, index) => ({ index, v: cardValue(s, card) })).sort((a, b) => b.v - a.v)[0];
+      return best && best.v >= 7 ? { type: 'tradeNectar', index: best.index } : null;
+    }
+    case 'cider-press': {
+      const potion = cheapestPotion(s);
+      if (stall.pressed >= CIDER_PRESS.max || !potion || fencePrice(potion) > CIDER_PRESS_MAX_PRICE) return null;
+      const best = pressable(s).sort((a, b) => cardPotency(b) - cardPotency(a))[0];
+      return best ? { type: 'pressCider', uid: best.uid } : null;
+    }
+    case 'harvest-auction': {
+      if (!stall.relic || stall.bid !== null || relicValue(s, stall.relic) < 8) return null;
+      const bid = [...HARVEST_AUCTION.bids].reverse().find((b) => b <= spare && b <= 21);
+      return bid ? { type: 'placeBid', amount: bid } : null;
+    }
+    case 'hearth-trader': {
+      if (stall.done) return null;
+      const regular = Object.entries(s.hearts).filter(([, h]) => h >= HEARTH_TRADER.hearts).sort((a, b) => b[1] - a[1])[0]?.[0];
+      if (!regular) return null;
+      const fam = s.familiars.length < s.familiarSlots
+        ? stall.familiars.map((id, k) => ({ index: stall.cards.length + k, v: familiarValue(s, id) })).sort((a, b) => b.v - a.v)[0]
+        : undefined;
+      if (fam) return { type: 'tradeHearts', regular, index: fam.index };
+      const card = stall.cards.map((c, index) => ({ index, v: cardValue(s, c) })).sort((a, b) => b.v - a.v)[0];
+      return card && card.v >= 7 ? { type: 'tradeHearts', regular, index: card.index } : null;
+    }
     default:
-      // The Moth Broker, the Hollow Tailor and the Fortune Tent: the random bot covers them.
+      // The Moth Broker, the Hollow Tailor, the Fortune Tent and the Blossom Oracle: the random bot covers them.
       return null;
   }
 }
@@ -537,8 +604,8 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'sellPotion', uid: potion },
     { type: 'sellFamiliar', index: roll(5) },
     { type: 'moveFamiliar', from: roll(5), to: roll(5) },
-    { type: 'visitStall', index: roll(8) },
-    { type: 'visitStall', index: roll(8) },
+    { type: 'visitStall', index: roll(10) },
+    { type: 'visitStall', index: roll(10) },
     { type: 'leaveStall' },
     { type: 'forgetRecipe', recipe: any(s.knownRecipes) ?? '' },
     { type: 'brokerPick', index: roll(3) },
@@ -550,6 +617,14 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'takeCommission', index: roll(3) },
     { type: 'enchant', uid: any(deckUids) ?? 0, modifier: any(['moonlit', 'aged', 'blessed', 'cursed'] as const)! },
     { type: 'liftCurse', curse: any(s.curses) ?? 'nameless' },
+    { type: 'seedSwap', index: roll(3), uids: [any(deckUids) ?? 0, any(deckUids) ?? 0] },
+    { type: 'readPetals' },
+    { type: 'tossRing' },
+    { type: 'takePrize', index: roll(2) },
+    { type: 'tradeNectar', index: roll(3) },
+    { type: 'pressCider', uid: any(deckUids) ?? 0 },
+    { type: 'placeBid', amount: any(HARVEST_AUCTION.bids) ?? 12 },
+    { type: 'tradeHearts', regular: any(Object.keys(s.hearts)) ?? 'old-tobin', index: roll(4) },
   );
   // Weight away from ending the day so random runs actually brew.
   const a = roll(10) === 0 ? candidates[roll(5)]! : candidates[5 + roll(candidates.length - 5)]!;

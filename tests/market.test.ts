@@ -38,10 +38,12 @@ describe('the Night Market street', () => {
       expect(q.slice(0, 2)).toEqual(['lantern-seller', 'fence']);
       drawn.add(q[2]!);
     }
-    expect([...drawn].every((id) => codex.stalls.get(id)!.opens === 'drawn')).toBe(true);
+    // Spring's own stalls are drawn with the rest.
+    expect([...drawn].every((id) => codex.stalls.get(id)!.opens === 'drawn' || codex.stalls.get(id)!.season === 'spring')).toBe(true);
     expect(drawn.size).toBeGreaterThan(1);
-    expect(ids(market(2))).toEqual(['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'name-taker', 'wandering-tinker']);
-    expect(ids(market(4))).toEqual(['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'name-taker', 'black-market']);
+    expect(ids(market(2))).toEqual(['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'name-taker', 'seed-swapper', 'blossom-oracle', 'wandering-tinker']);
+    // The Oracle trades in next week's weather, so it stays away in the last week.
+    expect(ids(market(4))).toEqual(['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'fortune-tent', 'name-taker', 'seed-swapper', 'black-market']);
   });
 
   it('walks between stalls; each trade needs you at its stall', () => {

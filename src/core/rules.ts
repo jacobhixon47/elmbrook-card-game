@@ -78,6 +78,18 @@ export const TAILOR_POTENCY = 1;
 export const FORTUNE_PRICE = { base: 5, step: 3 };
 export const TINKER_PRICE = { cauldronSlot: 12, shelfSlot: 4 };
 export const BLACK_MARKET = { cards: 3, price: 14, swap: 2 };
+/** Seasonal stalls (GDD §9; balance tables, shops.json). */
+/** The Seed Swapper takes `give` Common cards and `price` gold (the sim's tuning: cards alone lifted Spring's later Years by about 10 points). */
+export const SEED_SWAPPER = { give: 2, price: 5, cards: 3 };
+export const BLOSSOM_ORACLE_PRICE = 4;
+/** One toss in `odds` wins a pick of `prizes` familiars; the rest win a Common card. */
+export const FIREFLY_GAMES = { price: 3, odds: 3, prizes: 2 };
+export const NECTAR_TRADER = { cards: 3, minTier: 'superb' as Tier };
+export const CIDER_PRESS = { potency: 2, max: 3 };
+/** The farmers' best bid is rolled between these; your bids are the steps. */
+export const HARVEST_AUCTION = { tier: 2, rival: [12, 24] as const, bids: [12, 15, 18, 21, 24] as const };
+/** Hearts with one regular for a pick of Rare cards and familiars (the tables' 3 hearts and two familiars made Winter easier than Autumn). */
+export const HEARTH_TRADER = { hearts: 5, cards: 2, familiars: 1 };
 /** The Hermit: one order fewer a day, each paying this much more. The Tower: one tier up, this much more pay. */
 export const HERMIT_PAY = 1.5;
 export const TOWER_PAY = 2;
