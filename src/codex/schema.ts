@@ -208,6 +208,8 @@ export const Stall = z.object({
   season: Season.optional(),
   /** It trades in next week, so it stays away on the new moon (week 4). */
   nextWeek: z.boolean().default(false),
+  /** It only takes gold, so it stays away from Winter's Frost Market. */
+  goldOnly: z.boolean().default(false),
 }).refine((x) => (x.opens === 'season') === (x.season !== undefined), { message: 'a seasonal stall names its season, and only it' });
 export type Stall = z.infer<typeof Stall>;
 

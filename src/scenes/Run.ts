@@ -42,7 +42,7 @@ type Mode =
   | { kind: 'dialog'; order: number }
   | { kind: 'select'; purpose: Purpose; tincture?: number; picked: number[] }
   /** Deck cards picked at a Night Market stall: the Hollow Tailor's two, or the Black Market's trade for stock `swap`. */
-  | { kind: 'stall'; picked: number[]; swap?: number; regular?: string; frost?: number | 'tarot' }
+  | { kind: 'stall'; picked: number[]; swap?: number; regular?: string; frost?: number }
   /** A familiar's card, to sell it or move it. */
   | { kind: 'familiar'; index: number }
   /** At the Creek Bank: tempering, or which modifier to buy. */
@@ -1350,7 +1350,7 @@ export class Run extends Phaser.Scene {
     const head = (sub: string) => title(info!.name, `${sub} You have ${s.gold}g.`);
 
     if (!stall) {
-      title('The Night Market', `${MOON_LINE[moonOf(s.week)]} Visit any stall, then the Guild collects this week's rent: ${due}g. You have ${s.gold}g.`);
+      title(s.season === 'winter' ? 'The Frost Market' : 'The Night Market', `${(s.season === 'winter' ? FROST_LINE : MOON_LINE)[moonOf(s.week)]} Visit any stall, then the Guild collects this week's rent: ${due}g. You have ${s.gold}g.`);
       const n = offer.stalls.length;
       const w = Math.min(84, Math.floor(600 / n) - 6);
       offer.stalls.forEach((st, i) => {
@@ -1358,7 +1358,7 @@ export class Run extends Phaser.Scene {
         const meta = codex.stalls.get(st.id)!;
         const tile = this.add2(panel(this, x - w / 2, 96, w, 96, 'k', 0.95, 'n'));
         this.text(x, 102, meta.name, { size: 8, color: 'y', align: 'center', wrap: w - 8 }).setOrigin(0.5, 0);
-        this.text(x, 128, meta.currency, { size: 7, color: 'a', align: 'center', wrap: w - 8 }).setOrigin(0.5, 0);
+        this.text(x, 128, st.id === 'lantern-seller' && s.season === 'winter' ? 'Potions or cards' : meta.currency, { size: 7, color: 'a', align: 'center', wrap: w - 8 }).setOrigin(0.5, 0);
         this.text(x, 142, meta.text, { size: 6, color: 'w', align: 'center', wrap: w - 8 }).setOrigin(0.5, 0);
         const note = stallNote(s, st);
         if (note) this.text(x, 180, note, { size: 6, color: 'h', align: 'center' }).setOrigin(0.5, 0);
@@ -1387,7 +1387,9 @@ export class Run extends Phaser.Scene {
         break;
       }
       case 'lantern-seller':
-        head('Lunar ingredients and Omens. They go in your Night Satchel, which joins your deck only on Night Shifts.');
+        head(frostOn(s)
+          ? 'Lunar ingredients and Omens for your Night Satchel. No gold at the Frost Market: pay in Shelf potions or deck cards.'
+          : 'Lunar ingredients and Omens. They go in your Night Satchel, which joins your deck only on Night Shifts.');
         this.drawStock(s, stall.stock);
         break;
       case 'wandering-tinker':
@@ -1625,15 +1627,7 @@ export class Run extends Phaser.Scene {
           this.text(x, 136, t.text, { size: 7, color: 'w', align: 'center', wrap: 80 }).setOrigin(0.5, 0);
         });
         if (!stall.drawn.length) this.text(320, 150, 'The cards wait, face-down.', { size: 8, color: 'a', align: 'center' }).setOrigin(0.5);
-        if (frostOn(s)) {
-          const can = canPayFrost(s, price, 0);
-          this.add2(button(this, 320, 230, `Draw a card (${frostLabel(price)})`, () => {
-            this.mode = { kind: 'stall', picked: [], frost: 'tarot' };
-            this.render();
-          }, { w: 190, color: can ? 'Y' : 'R', enabled: can }));
-        } else {
-          this.add2(button(this, 320, 230, `Draw a card (${price}g)`, () => this.dispatch({ type: 'drawTarot' }), { w: 110, color: price > s.gold ? 'R' : 'Y', enabled: price <= s.gold }));
-        }
+        this.add2(button(this, 320, 230, `Draw a card (${price}g)`, () => this.dispatch({ type: 'drawTarot' }), { w: 110, color: price > s.gold ? 'R' : 'Y', enabled: price <= s.gold }));
         break;
       }
     }
@@ -1641,16 +1635,15 @@ export class Run extends Phaser.Scene {
   }
 
   /** Winter's Frost Market: pay a gold price in Shelf potions (your lowest) or in cards picked from the deck. */
-  private drawFrostPay(s: RunState, stall: StallState, paying: { picked: number[]; frost?: number | 'tarot' }, title: (t: string, sub: string) => void) {
-    const tarot = paying.frost === 'tarot';
-    const item = !tarot && 'stock' in stall ? stall.stock[paying.frost as number] : undefined;
-    const gold = tarot && stall.id === 'fortune-tent' ? fortunePrice(stall.drawn.length) : item?.price ?? 0;
+  private drawFrostPay(s: RunState, stall: StallState, paying: { picked: number[]; frost?: number }, title: (t: string, sub: string) => void) {
+    const item = 'stock' in stall ? stall.stock[paying.frost!] : undefined;
+    const gold = item?.price ?? 0;
     const gain = item?.kind === 'card' ? 1 : 0;
     const price = frostPrice(gold);
-    const what = tarot ? 'a tarot draw' : item?.kind === 'card' ? cardName(item.card) : item?.kind === 'familiar' ? codex.familiars.get(item.familiar)!.name : item?.kind === 'relic' ? codex.relics.get(item.relic)!.name : item?.kind === 'cauldron-slot' ? 'a cauldron slot' : 'a Shelf slot';
+    const what = item?.kind === 'card' ? cardName(item.card) : item?.kind === 'familiar' ? codex.familiars.get(item.familiar)!.name : item?.kind === 'relic' ? codex.relics.get(item.relic)!.name : item?.kind === 'cauldron-slot' ? 'a cauldron slot' : 'a Shelf slot';
     const done = (pay: FrostPay) => {
       this.mode = { kind: 'idle' };
-      void this.dispatch(tarot ? { type: 'drawTarot', pay } : { type: 'buy', index: paying.frost as number, pay });
+      void this.dispatch({ type: 'buy', index: paying.frost!, pay });
     };
     const head = `The Frost Market takes no gold. Pay for ${what} with your ${price.potions} lowest Shelf potions, or pick ${price.cards} ${price.cards === 1 ? 'card' : 'cards'} from your deck to give up.`;
     title(codex.stalls.get(stall.id)!.name, head);
@@ -1803,6 +1796,13 @@ const RARITY_BORDER: Record<'common' | 'uncommon' | 'rare', PaletteKey> = { comm
 function familiarTexture(scene: Phaser.Scene, id: string): string {
   return scene.textures.exists(`familiar/${id}`) ? `familiar/${id}` : 'placeholder/16';
 }
+
+/** Winter's street: the Frost Market takes no gold, so the Tinker, the Black Market and the Fortune Tent stay home. */
+const FROST_LINE: Record<ReturnType<typeof moonOf>, string> = {
+  quarter: 'A frosty quarter moon. The Frost Market takes no gold.',
+  'full-moon': 'The full moon on the Frost Market: no stall takes gold, and the Tinker stayed home.',
+  'new-moon': 'The new moon on the Frost Market: no stall takes gold, and the Black Market stayed home.',
+};
 
 const MOON_LINE: Record<ReturnType<typeof moonOf>, string> = {
   quarter: 'A quarter moon: three stalls tonight.',

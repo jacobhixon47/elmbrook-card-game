@@ -242,10 +242,10 @@ export const stalls: In<typeof Stall>[] = [
   { id: 'fence', name: 'The Fence', currency: 'Potions', text: 'Buys your Shelf at night prices. Pays more for potions with Umbra or Lunar in them.', opens: 'always' },
   { id: 'moth-broker', name: 'The Moth Broker', currency: 'Memories', text: 'Forget a recipe you learned for a Rare card.', opens: 'drawn' },
   { id: 'hollow-tailor', name: 'The Hollow Tailor', currency: 'Cards', text: 'Give up a card. Its essence is sewn into another, with +1 Potency.', opens: 'drawn' },
-  { id: 'fortune-tent', name: 'Fortune Tent', currency: 'Gold, a gamble', text: 'Draw a tarot: a boon, or a twist on next week.', opens: 'drawn' },
+  { id: 'fortune-tent', name: 'Fortune Tent', currency: 'Gold, a gamble', text: 'Draw a tarot: a boon, or a twist on next week.', opens: 'drawn', goldOnly: true },
   { id: 'name-taker', name: 'The Name-Taker', currency: 'Your name', text: 'Take a Curse for a relic. A worse Curse buys a better one.', opens: 'drawn' },
-  { id: 'wandering-tinker', name: 'The Wandering Tinker', currency: 'Gold', text: 'Here only at the full moon: a cauldron slot and a Shelf slot, cheap.', opens: 'full-moon' },
-  { id: 'black-market', name: 'The Black Market', currency: 'Gold or cards', text: 'Here only at the new moon: Rare cards for gold, or for two of yours.', opens: 'new-moon' },
+  { id: 'wandering-tinker', name: 'The Wandering Tinker', currency: 'Gold', text: 'Here only at the full moon: a cauldron slot and a Shelf slot, cheap.', opens: 'full-moon', goldOnly: true },
+  { id: 'black-market', name: 'The Black Market', currency: 'Gold or cards', text: 'Here only at the new moon: Rare cards for gold, or for two of yours.', opens: 'new-moon', goldOnly: true },
   // Seasonal stalls (balance tables, shops.json): drawn with the others, only in their season.
   { id: 'seed-swapper', name: 'The Seed Swapper', currency: 'Cards and gold', text: 'Two Common cards and 5 gold for an Uncommon of your choice.', opens: 'season', season: 'spring' },
   { id: 'blossom-oracle', name: 'The Blossom Oracle', currency: 'Gold', text: "Reads the petals and changes next week's weather.", opens: 'season', season: 'spring', nextWeek: true },

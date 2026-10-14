@@ -630,7 +630,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'forgetRecipe', recipe: any(s.knownRecipes) ?? '' },
     { type: 'brokerPick', index: roll(3) },
     { type: 'weave', from: any(deckUids) ?? 0, into: any(deckUids) ?? 0 },
-    { type: 'drawTarot', ...(roll(2) ? { pay: roll(2) ? 'potions' as const : [any(deckUids) ?? 0] } : {}) },
+    { type: 'drawTarot' },
     { type: 'swapForCard', index: roll(3), uids: [any(deckUids) ?? 0, any(deckUids) ?? 0] },
     { type: 'takeDeal', index: roll(3), take: roll(2) ? 'relic' : 'card' },
     { type: 'temper', uid: any(deckUids) ?? 0 },

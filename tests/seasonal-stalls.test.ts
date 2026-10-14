@@ -233,9 +233,13 @@ describe("Winter's Frost Market", () => {
     expect(frostOn(start('w', 'winter'))).toBe(false);
   });
 
-  it('the Fortune Tent takes potions or cards too', () => {
-    const s = visit(market('winter', 2, { shelf: [potion(901, 'fine'), potion(902, 'fine')] }), 'fortune-tent');
-    expect(no(s, { type: 'drawTarot' })).toMatch(/no gold/);
-    expect(ok(s, { type: 'drawTarot', pay: 'potions' }).state.shelf).toEqual([]);
+  it('keeps the stalls that only take gold away: the Wandering Tinker, the Black Market and the Fortune Tent', () => {
+    for (const week of [1, 2, 3, 4]) {
+      const open = ids(market('winter', week));
+      expect(open).not.toContain('wandering-tinker');
+      expect(open).not.toContain('black-market');
+      expect(open).not.toContain('fortune-tent');
+    }
+    expect(ids(market('winter', 2))).toEqual(['lantern-seller', 'fence', 'moth-broker', 'hollow-tailor', 'name-taker', 'hearth-trader']);
   });
 });

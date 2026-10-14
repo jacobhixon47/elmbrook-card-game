@@ -28,7 +28,8 @@ export function moonOf(week: number): 'quarter' | 'full-moon' | 'new-moon' {
 /** Tonight's stalls: the Lantern Seller and the Fence always, one drawn stall at a quarter moon, every one plus a visitor at the full and new moon. */
 export function rollStalls(ctx: Ctx): StallId[] {
   const moon = moonOf(ctx.s.week);
-  const all = [...codex.stalls.values()];
+  // Winter's Frost Market: the stalls that only take gold stay away.
+  const all = [...codex.stalls.values()].filter((x) => !(x.goldOnly && ctx.s.season === 'winter'));
   const always = all.filter((x) => x.opens === 'always').map((x) => x.id);
   // This season's stalls are drawn with the rest (a next-week trade stays away in the last week).
   const seasonal = (x: (typeof all)[number]) => x.opens === 'season' && x.season === ctx.s.season && !(x.nextWeek && ctx.s.week >= WEEKS);
@@ -202,11 +203,12 @@ export function fortuneOn(s: Pick<RunState, 'fortunes' | 'week'>, effect: TarotE
   return s.fortunes.some((f) => f.week === s.week && codex.tarot.get(f.card)?.effect === effect);
 }
 
-export function drawTarot(ctx: Ctx, pay?: FrostPay): void {
+export function drawTarot(ctx: Ctx): void {
   const s = ctx.s;
   const stall = atStall(ctx, 'fortune-tent');
   const price = fortunePrice(stall.drawn.length);
-  payPrice(ctx, price, pay, 0, 'fortune');
+  if (s.gold < price) reject('not enough gold');
+  changeGold(ctx, -price, 'fortune');
   const deck = [...codex.tarot.values()].filter((t) => !t.nextWeek || s.week < WEEKS);
   const card = pickWeighted(ctx, deck.map((t) => [t, t.weight] as const));
   stall.drawn.push(card.id);
@@ -490,7 +492,7 @@ export function tradeHearts(ctx: Ctx, regular: string, index: number): void {
 
 // ------------------------------------------------------------------ the Frost Market (Winter)
 
-/** Winter's twist: the Night Market takes no gold (GDD §3). */
+/** Winter's twist: the Night Market takes no gold (GDD §3). The gold-only stalls stay away, and the Lantern Seller takes potions or cards. */
 export const frostOn = (s: Pick<RunState, 'season' | 'phase'>) => s.season === 'winter' && s.phase === 'night-market';
 
 /** Deck cards the Frost Market takes as payment: anything but junk. */

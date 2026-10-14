@@ -49,7 +49,7 @@ export type Action =
   | { type: 'forgetRecipe'; recipe: string }
   | { type: 'brokerPick'; index: number }
   | { type: 'weave'; from: number; into: number }
-  | { type: 'drawTarot'; pay?: FrostPay }
+  | { type: 'drawTarot' }
   | { type: 'swapForCard'; index: number; uids: number[] }
   /** The Name-Taker: take this deal's Curse for its relic, or for its Cursed Rare card. */
   | { type: 'takeDeal'; index: number; take?: 'relic' | 'card' }

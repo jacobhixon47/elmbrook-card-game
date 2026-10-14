@@ -639,7 +639,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       return;
 
     case 'drawTarot':
-      drawTarot(ctx, action.pay);
+      drawTarot(ctx);
       return;
 
     case 'swapForCard':
