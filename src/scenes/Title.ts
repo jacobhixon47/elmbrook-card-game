@@ -4,12 +4,13 @@ import { markReady } from '../debug/hook';
 import { titleBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { noAnim, type Fixture } from '../debug/params';
-import { migrateProfile, type RunState } from '../core';
+import { migrateProfile, type RunState, type SoundSettings } from '../core';
 import { loadProfile } from '../profile';
 import { clearRun, loadRun } from '../save';
 import { dayLabel } from '../view/describe';
 import { button } from '../view/ui';
 import { pixelText } from '../view/text';
+import { setSound, soundSettings } from '../audio/sfx';
 
 const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
 
@@ -60,6 +61,8 @@ export class Title extends Phaser.Scene {
     // The first run is the tutorial; after that every run starts from the cottage (GDD §13).
     const fresh = () => (profile.tutorialDone ? this.scene.start('Cottage', {}) : this.scene.start('Run', {}));
     const keys = this.input.keyboard;
+    // A fixture's profile can show the setting; the sound itself always follows this browser's.
+    this.soundButton(data.fixture?.profile ? profile.settings : soundSettings());
     if (saved) {
       const resume = () => this.scene.start('Run', { saved });
       const line = `${dayLabel(saved)} · ${cap(saved.season)} · ${saved.gold} gold`;
@@ -84,9 +87,31 @@ export class Title extends Phaser.Scene {
       const prompt = pixelText(this, TX, 226, 'press any key', { size: 8, color: 'v', align: 'center' }).setOrigin(0.5);
       if (!noAnim) this.tweens.add({ targets: prompt, alpha: 0.2, duration: 700, yoyo: true, repeat: -1 });
       keys?.once('keydown', fresh);
-      this.input.once('pointerdown', fresh);
+      // Any click starts, except one on a button (the sound setting).
+      const onClick = (_p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+        if (over.length) return;
+        this.input.off('pointerdown', onClick);
+        fresh();
+      };
+      this.input.on('pointerdown', onClick);
     }
 
     markReady(this);
+  }
+
+  /** The sound setting, bottom right: click through off, 40%, 70% and 100%. M mutes anywhere. */
+  private soundButton(shown: SoundSettings) {
+    const LEVELS = [0.4, 0.7, 1];
+    const label = (s: SoundSettings) => (s.muted || s.volume <= 0 ? 'Sound: off' : `Sound: ${Math.round(s.volume * 100)}%`);
+    const b = this.add.existing(
+      button(this, 590, 334, label(shown), () => {
+        const { muted, volume } = soundSettings();
+        const next = muted ? LEVELS[0]! : LEVELS.find((l) => l > volume + 0.01);
+        setSound(next === undefined ? { muted: true } : { muted: false, volume: next });
+        text.setText(label(soundSettings()));
+      }, { w: 84 }),
+    );
+    const text = b.list[1] as Phaser.GameObjects.Text;
+    pixelText(this, 590, 345, 'M mutes', { size: 6, color: 'a', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
   }
 }

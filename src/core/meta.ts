@@ -9,7 +9,10 @@ import { RUN_VERSION, type RunState } from './state';
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 5;
+export const PROFILE_VERSION = 6;
+
+/** Sound settings: volume 0 to 1, and mute. */
+export type SoundSettings = { volume: number; muted: boolean };
 
 export type Profile = {
   version: typeof PROFILE_VERSION;
@@ -40,6 +43,7 @@ export type Profile = {
   almanac: string[];
   /** Codex entries met in any run (cards, recipes, familiars, relics, customers), in the order first met. */
   codex: string[];
+  settings: SoundSettings;
 };
 
 export function newProfile(): Profile {
@@ -59,6 +63,7 @@ export function newProfile(): Profile {
     perks: [],
     almanac: [],
     codex: [],
+    settings: { volume: 0.7, muted: false },
   };
 }
 
@@ -78,6 +83,8 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   3: (p) => ({ ...p, codex: [] }),
   // 4 → 5: Years, each with its own seasons. Everything so far was Year 1.
   4: (p) => ({ ...p, yearSeasons: p.yearSeasons ?? [p.seasons ?? ['spring']], year: 1, boons: [null], boonOffer: null }),
+  // 5 → 6: sound settings, at the default volume.
+  5: (p) => ({ ...p, settings: newProfile().settings }),
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -106,6 +113,7 @@ function sanitize(p: Raw): Profile {
   const offer = p.boonOffer;
   const wins = (p.wins && typeof p.wins === 'object' ? p.wins : {}) as Partial<Record<Season, unknown>>;
   const count = (n: unknown) => (typeof n === 'number' && n >= 0 ? Math.floor(n) : 0);
+  const sound = (p.settings && typeof p.settings === 'object' ? p.settings : {}) as Partial<Record<keyof SoundSettings, unknown>>;
   return {
     version: PROFILE_VERSION,
     tutorialDone: p.tutorialDone === true,
@@ -122,6 +130,10 @@ function sanitize(p: Raw): Profile {
     perks: Array.isArray(p.perks) ? [...codex.perks.keys()].filter((id) => (p.perks as unknown[]).includes(id)) : [],
     almanac: Array.isArray(p.almanac) ? [...new Set(p.almanac)].filter((id): id is string => typeof id === 'string' && codex.almanac.has(id)) : [],
     codex: Array.isArray(p.codex) ? [...new Set(p.codex)].filter((id): id is string => typeof id === 'string' && inCodex(id)) : [],
+    settings: {
+      volume: typeof sound.volume === 'number' && Number.isFinite(sound.volume) ? Math.min(1, Math.max(0, sound.volume)) : fresh.settings.volume,
+      muted: sound.muted === true,
+    },
   };
 }
 
