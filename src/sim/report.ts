@@ -37,6 +37,29 @@ export function report(runs: RunRecord[], title: string): string {
     lines.push(`  week ${w}  ${pct(filled, posted).padStart(6)}  (${filled}/${posted})`);
   }
 
+  // Order variety: how often a recipe is named twice on one board, how often a request repeats one from
+  // yesterday's board (allowed), and the recipe asked for most by name each week.
+  lines.push('', 'order variety (same recipe twice on a board; repeats yesterday\'s; top recipe asked by name)');
+  for (let w = 1; w <= WEEKS; w++) {
+    let posted = 0;
+    let twice = 0;
+    let again = 0;
+    const named = new Map<string, number>();
+    for (const r of runs) {
+      const days = r.boards[w - 1] ?? [];
+      const prev = (d: number) => (d > 0 ? days[d - 1] : r.boards[w - 2]?.[NIGHT_SHIFT_DAY - 1]) ?? [];
+      days.forEach((board, d) => board.forEach((q, i) => {
+        posted++;
+        const recipe = !q.startsWith('family:');
+        if (recipe && board.slice(0, i).includes(q)) twice++;
+        if (prev(d).includes(q)) again++;
+        if (recipe) named.set(q, (named.get(q) ?? 0) + 1);
+      }));
+    }
+    const [top, k] = [...named].sort((a, b) => b[1] - a[1])[0] ?? ['-', 0];
+    lines.push(`  week ${w}  ${pct(twice, posted).padStart(6)} twice  ${pct(again, posted).padStart(6)} again   ${top} ${pct(k, posted)}`);
+  }
+
   lines.push('', 'average quality brewed (potions)');
   for (let w = 1; w <= WEEKS; w++) {
     const qs = runs.flatMap((r) => r.quality[w - 1] ?? []);
