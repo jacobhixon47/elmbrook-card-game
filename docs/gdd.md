@@ -47,7 +47,7 @@ Every run happens in one season. The season is chosen at run start from those yo
 | Spring | Fresh herbs and flowers more common (Vital, Calming) | Gentle: lower rent, the tutorial season | Blossom, rain, new beginnings |
 | Summer | Fruit, honey, Ember ingredients | Long days: +1 Brew on Days, Night Shifts are short (-1 Discard). Rent ×1.15, orders pay ×1.2 | Fireflies, festivals |
 | Autumn | Roots, mushrooms, Umbra ingredients | Harvest patrons: bigger orders, bigger tips. Rent ×1.32, orders pay ×1.23 | Falling leaves, lanterns, the Harvest Fair |
-| Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | Frost Night Market: no stall takes gold, the gold-only stalls close and the Lantern Seller takes potions or cards (§9). Rent ×1.48, orders pay ×1.35 | Snow, hearth fires, the longest nights |
+| Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | Frost Night Market: no stall takes gold, the gold-only stalls close and the Lantern Seller takes potions or cards (§9). Rent ×1.52, orders pay ×1.35 | Snow, hearth fires, the longest nights |
 
 Seasons scale in difficulty in that order: rent rises faster than pay, so the bot's win rates in Year 1 are about 40%, 34%, 29% and 23% (the M4 ramp pass, `docs/balance-m4.md`). Numbers are tuning starting points. Each season adds its own ingredients, patrons, events and two Night Market variants to the pools, so later seasons also feel new, not only harder.
 
@@ -131,7 +131,7 @@ The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; th
 
 *Balance note (M4 ramp pass):* once orders were fair (every order reachable), the bot won 70 to 77% of Year 1 runs in every season, and rent almost never ended a run: nearly every loss was the Moonless Patron. Rent is now 20 / 68 / 155 / 295 (was 20 / 45 / 90 / 160), week 1 ramps 20 / 22 / 24 / 26 by season (decided with Jacob), and later seasons' pay trails their rent (×1.2, ×1.23, ×1.35 against ×1.15, ×1.32, ×1.52). Runs are now lost across weeks 2 to 4, and Year 1 wins about 40 / 34 / 29 / 23%. See `docs/balance-m4.md`.
 
-*Balance note (recipe choice):* letting you pick the recipe when the cards fit more than one lifted the bot's win rates 4 to 9 points, so rent rose about 4% (20 / 71 / 161 / 307) and Winter's multiplier eased to ×1.48 to bring Year 1 back to about 40 / 33 / 27 / 20%.
+*Balance note (recipe choice):* letting you pick the recipe when the cards fit more than one lifted the bot's win rates 4 to 9 points, so rent rose about 4% (20 / 71 / 161 / 307) and Winter's multiplier eased to ×1.48 to bring Year 1 back to about 40 / 33 / 27 / 20%. The Frost Market put it back to ×1.52 (§9).
 
 **Town events** (about one per week, a story choice at twilight, replacing that day's errand choice):
 

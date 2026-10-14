@@ -137,7 +137,7 @@ export const SEASON_RULES: Record<Season, SeasonRules> = {
   spring: { weekOneRent: 20, rentMult: 1, payMult: 1, dayBrews: 0, nightDiscards: 0 },
   summer: { weekOneRent: 22, rentMult: 1.15, payMult: 1.2, dayBrews: 1, nightDiscards: -1 },
   autumn: { weekOneRent: 24, rentMult: 1.32, payMult: 1.23, dayBrews: 0, nightDiscards: 0 },
-  winter: { weekOneRent: 26, rentMult: 1.48, payMult: 1.35, dayBrews: 0, nightDiscards: 0 },
+  winter: { weekOneRent: 26, rentMult: 1.52, payMult: 1.35, dayBrews: 0, nightDiscards: 0 },
 };
 
 /** A week's rent in a season, times the Year's rent (`yearRent`). */

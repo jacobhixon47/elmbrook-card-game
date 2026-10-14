@@ -272,7 +272,7 @@ describe('weeks, rent and the end of a run', () => {
     expect(rentDue('winter', 4)).toBeGreaterThan(rentDue('autumn', 4));
     // Week 1's rent ramps gently by season (the M4 ramp pass).
     expect(SEASONS.map((se) => rentDue(se, 1))).toEqual([20, 22, 24, 26]);
-    expect(rentDue('winter', 2)).toBe(Math.round(71 * 1.48));
+    expect(rentDue('winter', 2)).toBe(Math.round(71 * 1.52));
     // Later Years raise it: a little from Year 2, more from Year 4.
     expect([1, 2, 3, 4, 10].map((year) => rentOf({ season: 'spring', week: 4, year }))).toEqual([307, 322, 322, 384, 384]);
     const summer = start('sun', 'summer');
