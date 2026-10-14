@@ -35,7 +35,7 @@ Week 4 (Waning Crescent)  Day · Day · Day · Day · Night Shift (NEW MOON fina
 - **The Calendar is seeded at run start:** each day's weather, the week's town event, the festival in week 3, and any rare sky event, so you can plan around them.
 - **The Calendar is the run map.** It shows the current week, each day's weather/event icon, and the upcoming Night Shift's patron and rule twist (revealed in advance, like Balatro's boss blind). In the build it is the Grimoire's Calendar tab: four weeks of five days with each week's moon, every day's weather, the festival and any sky event; hovering a day gives its rules. Today's weather and events also sit under the Brews in the HUD.
 - The Calendar rolls from its own random stream (`seed:calendar`), so the same seed deals the same cards whatever the weather.
-- **Rent** is paid automatically after each Night Shift: 20 / 68 / 155 / 295 gold in Spring. Week 1's rent ramps gently by season (20, 22, 24, 26); later weeks take the season's multiplier, and later Years add to it (§13). Can't pay = run over ("the Guild reclaims your stall").
+- **Rent** is paid automatically after each Night Shift: 20 / 71 / 161 / 307 gold in Spring. Week 1's rent ramps gently by season (20, 22, 24, 26); later weeks take the season's multiplier, and later Years add to it (§13). Can't pay = run over ("the Guild reclaims your stall").
 - **Full Moon** (week 2) is the mid-run boss. **New Moon** (week 4) is the finale.
 
 ### Seasons
@@ -47,7 +47,7 @@ Every run happens in one season. The season is chosen at run start from those yo
 | Spring | Fresh herbs and flowers more common (Vital, Calming) | Gentle: lower rent, the tutorial season | Blossom, rain, new beginnings |
 | Summer | Fruit, honey, Ember ingredients | Long days: +1 Brew on Days, Night Shifts are short (-1 Discard). Rent ×1.15, orders pay ×1.2 | Fireflies, festivals |
 | Autumn | Roots, mushrooms, Umbra ingredients | Harvest patrons: bigger orders, bigger tips. Rent ×1.32, orders pay ×1.23 | Falling leaves, lanterns, the Harvest Fair |
-| Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | Frost Night Market: stalls take only odd currencies. Rent ×1.52, orders pay ×1.35 | Snow, hearth fires, the longest nights |
+| Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | Frost Night Market: stalls take only odd currencies. Rent ×1.48, orders pay ×1.35 | Snow, hearth fires, the longest nights |
 
 Seasons scale in difficulty in that order: rent rises faster than pay, so the bot's win rates in Year 1 are about 40%, 34%, 29% and 23% (the M4 ramp pass, `docs/balance-m4.md`). Numbers are tuning starting points. Each season adds its own ingredients, patrons, events and two Night Market variants to the pools, so later seasons also feel new, not only harder.
 
@@ -130,6 +130,8 @@ The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; th
 *Balance note (M4 Winter tuning):* Winter won 8% of bot runs. Its rent was ×1.52 but its orders paid ×1, and week 1's rent of 30 sank about 7% of seeds whatever the bot did. Week 1's rent is now the same 20 gold in every season, so a run can't be lost to a cold deal before the deck has grown, and Winter orders pay ×1.2. The flat week 1 lifted Autumn to 40%, so Autumn orders pay ×1.15 instead of ×1.25. See `docs/balance-m4.md`.
 
 *Balance note (M4 ramp pass):* once orders were fair (every order reachable), the bot won 70 to 77% of Year 1 runs in every season, and rent almost never ended a run: nearly every loss was the Moonless Patron. Rent is now 20 / 68 / 155 / 295 (was 20 / 45 / 90 / 160), week 1 ramps 20 / 22 / 24 / 26 by season (decided with Jacob), and later seasons' pay trails their rent (×1.2, ×1.23, ×1.35 against ×1.15, ×1.32, ×1.52). Runs are now lost across weeks 2 to 4, and Year 1 wins about 40 / 34 / 29 / 23%. See `docs/balance-m4.md`.
+
+*Balance note (recipe choice):* letting you pick the recipe when the cards fit more than one lifted the bot's win rates 4 to 9 points, so rent rose about 4% (20 / 71 / 161 / 307) and Winter's multiplier eased to ×1.48 to bring Year 1 back to about 40 / 33 / 27 / 20%.
 
 **Town events** (about one per week, a story choice at twilight, replacing that day's errand choice):
 

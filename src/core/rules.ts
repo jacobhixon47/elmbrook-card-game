@@ -15,7 +15,7 @@ export const MAX_SHELF_SLOTS = 6;
 /** The Hearth won't burn a deck below this. */
 export const MIN_DECK = 8;
 /** Rent after each week's Night Shift, before the season multiplier (GDD §3). Week 1's is `weekOneRent`. */
-export const RENT = [20, 68, 155, 295] as const;
+export const RENT = [20, 71, 161, 307] as const;
 export const SKIP_GOLD = 2;
 export const MAX_HEARTS = 10;
 
@@ -118,7 +118,7 @@ export const SEASON_RULES: Record<Season, SeasonRules> = {
   spring: { weekOneRent: 20, rentMult: 1, payMult: 1, dayBrews: 0, nightDiscards: 0 },
   summer: { weekOneRent: 22, rentMult: 1.15, payMult: 1.2, dayBrews: 1, nightDiscards: -1 },
   autumn: { weekOneRent: 24, rentMult: 1.32, payMult: 1.23, dayBrews: 0, nightDiscards: 0 },
-  winter: { weekOneRent: 26, rentMult: 1.52, payMult: 1.35, dayBrews: 0, nightDiscards: 0 },
+  winter: { weekOneRent: 26, rentMult: 1.48, payMult: 1.35, dayBrews: 0, nightDiscards: 0 },
 };
 
 /** A week's rent in a season, times the Year's rent (`yearRent`). */
