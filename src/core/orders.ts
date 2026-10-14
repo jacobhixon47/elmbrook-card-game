@@ -119,13 +119,15 @@ function ceilingOf(r: Reach, request: OrderRequest): Tier {
   return ids.map((id) => recipeCeiling(r, id)).reduce((a, b) => (tierIndex(b) > tierIndex(a) ? b : a));
 }
 
+const likes = (prefers: readonly string[], x: Recipe) => prefers.some((p) => (p === 'rare' ? x.pattern.length === 3 || x.baseHarmony >= 3 : x.family === p));
+
 /**
  * A request this guest likes, from what the deck can brew: half the time a named recipe, half a family.
  * With `want`, only recipes the deck can bring to that tier, counting the Experiment's lower tier for
  * ones you don't know yet (all liked recipes if none can).
  */
 function requestFor(ctx: Ctx, r: Reach, prefers: readonly string[], want?: Tier): OrderRequest {
-  const liked = r.recipes.filter((x) => prefers.some((p) => (p === 'rare' ? x.pattern.length === 3 || x.baseHarmony >= 3 : x.family === p)));
+  const liked = r.recipes.filter((x) => likes(prefers, x));
   const pool = liked.length ? liked : r.recipes;
   const reaches = want ? pool.filter((x) => tierIndex(recipeCeiling(r, x.id)) >= tierIndex(want)) : pool;
   const recipe = pick(ctx, reaches.length ? reaches : pool);
@@ -139,6 +141,22 @@ function requestFor(ctx: Ctx, r: Reach, prefers: readonly string[], want?: Tier)
  */
 function fitRequest(ctx: Ctx, r: Reach, prefers: readonly string[], request: OrderRequest, want: Tier): OrderRequest {
   return tierIndex(ceilingOf(r, request)) >= tierIndex(want) ? request : requestFor(ctx, r, prefers, want);
+}
+
+/**
+ * No recipe is asked for twice on one board (Jacob's playtest, GDD §4). A customer who names a recipe
+ * already there asks for another they like that the deck can bring to the tier, then any the deck can,
+ * and otherwise for that recipe's family. Families can repeat, and so can yesterday's requests. Rolls
+ * only on a repeat, so other orders stay as they were.
+ */
+function freshRecipe(ctx: Ctx, r: Reach, prefers: readonly string[], request: OrderRequest, want: Tier, board: readonly Order[]): OrderRequest {
+  if (request.kind !== 'recipe') return request;
+  const named = new Set(board.flatMap((o) => (o.request.kind === 'recipe' ? [o.request.recipe] : [])));
+  if (!named.has(request.recipe)) return request;
+  const fresh = r.recipes.filter((x) => !named.has(x.id) && tierIndex(recipeCeiling(r, x.id)) >= tierIndex(want));
+  const liked = fresh.filter((x) => likes(prefers, x));
+  const pool = liked.length ? liked : fresh;
+  return pool.length ? { kind: 'recipe', recipe: pick(ctx, pool).id } : { kind: 'family', family: codex.recipes.get(request.recipe)!.family };
 }
 
 /** Can the deck put an Umbra ingredient into a potion of this request? */
@@ -215,7 +233,7 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
     // Year 6: week 2 asks for Superb or better.
     if (yearRule(s, 6) && s.week === 2 && tierIndex(rolled) < tierIndex(YEAR_RULES.weekTwoTier)) rolled = YEAR_RULES.weekTwoTier;
     const minTier = tower ? tierStep(rolled, 1) : rolled;
-    const request = fitRequest(ctx, r, customer.prefers, asked, minTier);
+    const request = freshRecipe(ctx, r, customer.prefers, fitRequest(ctx, r, customer.prefers, asked, minTier), minTier, s.orders);
     const ceiling = ceilingOf(r, request);
     postOrder(ctx, {
       customer: customer.id, request, minTier, ceiling,
@@ -249,7 +267,7 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
     const asked = requestFor(ctx, r, ['lunar', 'rare']);
     // Year 10: the Moonless Patron asks higher (still no higher than the deck can reach).
     const minTier = finaleTier(s, tier);
-    const request = fitRequest(ctx, r, ['lunar', 'rare'], asked, minTier);
+    const request = freshRecipe(ctx, r, ['lunar', 'rare'], fitRequest(ctx, r, ['lunar', 'rare'], asked, minTier), minTier, s.orders);
     postOrder(ctx, { customer: patron.id, request, minTier, ceiling: ceilingOf(r, request), payScale: scale, bonus: null, ...every });
   }
   if (!ladder.length) {
@@ -279,7 +297,7 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
     const guest = guests[i % guests.length]!;
     const asked = requestFor(ctx, r, guest.prefers);
     const minTier = rolled();
-    const request = fitRequest(ctx, r, guest.prefers, asked, minTier);
+    const request = freshRecipe(ctx, r, guest.prefers, fitRequest(ctx, r, guest.prefers, asked, minTier), minTier, s.orders);
     postOrder(ctx, {
       customer: guest.id, request, minTier, ceiling: ceilingOf(r, request),
       payScale: scale * guest.payMult * extra,

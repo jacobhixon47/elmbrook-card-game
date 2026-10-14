@@ -37,6 +37,8 @@ export type RunRecord = {
   curses: string[];
   /** The modifier on each modified card at the end, one entry per card. */
   modifiers: string[];
+  /** Each day's requests (a recipe id, or `family:<id>`), by week: [week][day]. */
+  boards: string[][][];
   error?: string;
 };
 
@@ -47,7 +49,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
   const rec: RunRecord = {
     seed, won: false, lostWeek: null, finished: false, actions: [], quality: [], gold: [],
     offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {}, commissions: {}, events: {},
-    finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [], modifiers: [],
+    finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [], modifiers: [], boards: [],
   };
   const max = opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000);
   let rng = seedRng(`bot:${seed}`);
@@ -94,9 +96,12 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
           rec.ordersFilled++;
           if (isPatron(e.customer)) rec.patronFilled[s.week - 1] = (rec.patronFilled[s.week - 1] ?? 0) + 1;
           break;
-        case 'orderPosted':
+        case 'orderPosted': {
+          const q = e.order.request;
+          ((rec.boards[s.week - 1] ??= [])[s.day - 1] ??= []).push(q.kind === 'recipe' ? q.recipe : `family:${q.family}`);
           if (isPatron(e.order.customer)) rec.patronPosted[s.week - 1] = (rec.patronPosted[s.week - 1] ?? 0) + 1;
           break;
+        }
         case 'finaleFailed':
           rec.finaleFailed = true;
           break;

@@ -291,3 +291,25 @@ What the tuning found:
 - **As the tables had them, two stalls were too generous.** The Seed Swapper (2 Commons for an Uncommon of your choice) put Spring's Year 3 at 46% and Year 6 at 42%; with the bot not using it, 37% and 33%. Taking 3 Commons, or offering 1 Uncommon, changed little; a 5-gold price brings it to 38% and 36%. The Hearth Trader (3 hearts, two familiars on offer) put plain Winter at 19% and Year 3 at 34%, easier than Autumn. Its familiars are the strength: with cards only it does nothing for the bot. At 5 hearts with one familiar, Winter sits a few points under Autumn.
 - **Summer is a few points lower in Years 2 to 6.** Turning off either Summer stall changes nothing (the bot rarely has 3 spare gold for Firefly Games), so the drop comes from the drawn pool: on quarter nights the Name-Taker, which the bot uses for relics, now opens 1 night in 6 instead of 1 in 4. Players will use the Summer stalls more than the bot does.
 - The seasons keep their order in Year 1, and Winter stays the hardest. The random bot plays 300 runs without an error.
+
+## New recipes and order variety
+
+Same grid as above, at Years 1, 3, 6 and 10 (400 runs per cell) and 1,000 plain runs per season. Before is `main` before the Winter Night Market; the recipe change touches no Winter rule, so the two compare cell by cell.
+
+| Season | Y1 | Y3 | Y6 | Y10 | Plain |
+|---|---|---|---|---|---|
+| Spring before | 39.0 | 38.0 | 36.3 | 21.3 | 25.8 |
+| Spring after | 36.3 | 48.0 | 39.5 | 26.0 | 26.9 |
+| Summer before | 32.0 | 36.0 | 21.5 | 12.0 | 21.5 |
+| Summer after | 32.3 | 37.0 | 30.3 | 16.8 | 20.9 |
+| Autumn before | 28.8 | 25.5 | 19.0 | 11.5 | 16.7 |
+| Autumn after | 27.3 | 35.0 | 25.3 | 16.0 | 16.7 |
+| Winter before | 25.5 | 28.5 | 15.0 | 9.8 | 15.3 |
+| Winter after | 25.3 | 35.3 | 24.3 | 14.8 | 15.9 |
+
+What it found:
+
+- **In the base pool the six recipes made the game much easier**: plain runs rose to 35 / 32 / 23 / 23%. They are Harmony 5 on common essences, so a deck reaches high tiers more often. At Harmony 4 plain runs were still 31 / 31 / 23 / 20%.
+- **As unlocks** (each opened by an early Almanac goal), Year 1 and plain runs are within noise of before, but Years 3 to 10 are 5 to 10 points easier, since those runs carry the unlocks. Rent 5% higher brought Year 1 down about 8 points, too much, so rent is unchanged.
+- **Variety:** a recipe named twice on one board was 0.4 to 1.8% of boards before and is now 0%. The most-asked recipe's share in week 4 roughly halved (Greater Restorative from 7.8 to 4.0% in plain Spring). About 16% of week-4 orders still repeat one of yesterday's requests, which stays allowed.
+- Left for the balance pass after M4 (Jacob, Oct 14): the recipes add power as well as breadth. Making them no stronger than their peers, say Harmony 4, is the likely fix, rather than steeper rent.
