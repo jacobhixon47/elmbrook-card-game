@@ -291,3 +291,20 @@ What the tuning found:
 - **As the tables had them, two stalls were too generous.** The Seed Swapper (2 Commons for an Uncommon of your choice) put Spring's Year 3 at 46% and Year 6 at 42%; with the bot not using it, 37% and 33%. Taking 3 Commons, or offering 1 Uncommon, changed little; a 5-gold price brings it to 38% and 36%. The Hearth Trader (3 hearts, two familiars on offer) put plain Winter at 19% and Year 3 at 34%, easier than Autumn. Its familiars are the strength: with cards only it does nothing for the bot. At 5 hearts with one familiar, Winter sits a few points under Autumn.
 - **Summer is a few points lower in Years 2 to 6.** Turning off either Summer stall changes nothing (the bot rarely has 3 spare gold for Firefly Games), so the drop comes from the drawn pool: on quarter nights the Name-Taker, which the bot uses for relics, now opens 1 night in 6 instead of 1 in 4. Players will use the Summer stalls more than the bot does.
 - The seasons keep their order in Year 1, and Winter stays the hardest. The random bot plays 300 runs without an error.
+
+## Frost Market
+
+Same grid (400 runs per cell, 1,000 plain). Before is Winter with the seasonal stalls (above).
+
+| Winter | Y1 | Y2 | Y3 | Y4 | Y5 | Y6 | Y7 | Y8 | Y9 | Y10 | Plain |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Before | 25.5 | 26.5 | 28.5 | 23.5 | 16.0 | 15.0 | 14.5 | 11.3 | 10.0 | 9.8 | 15.3 |
+| Every price converted | 39.8 | 53.8 | 50.0 | 39.3 | 31.0 | 30.5 | 25.5 | 23.0 | 24.5 | 24.0 | 23.4 |
+| Gold-only stalls closed, rent ×1.48 | 28.5 | 37.3 | 31.0 | 21.5 | 16.0 | 16.0 | 14.0 | 15.0 | 14.5 | 16.8 | 19.0 |
+| After: closed, rent ×1.52 | 24.0 | 28.8 | 27.3 | 17.0 | 12.0 | 11.3 | 10.3 | 11.0 | 10.3 | 12.5 | 14.7 |
+
+What the tuning found:
+
+- **Converting every gold price made Winter the easiest season.** A Black Market Rare or a Tinker slot for a couple of potions is a bargain at any rate: 3 potions or 4 cards per 7 gold still left Year 3 near 48%. Closing the Fortune Tent, the Tinker and the Black Market in Winter fixes that and matches the tables' "no stall takes gold".
+- **Any non-gold price frees gold for rent.** With the stalls closed and normal gold prices, Winter already rises to 16.6% plain (2,000 runs) and 32.9% in Year 2. Paying the Lantern Seller in potions or cards adds a couple of points more. Its rate barely matters: 2 to 4 potions, or 1 to 4 cards, all land at 16 to 18% plain.
+- **So the lever is rent.** Winter's multiplier goes back to ×1.52 (it was ×1.48 since the recipe switcher). At ×1.56 Year 1 fell to 19%. Winter is again the hardest season in almost every Year; Years 8 to 10 sit within noise of Autumn. The random bot plays 300 Winter runs at Year 10 without an error.
