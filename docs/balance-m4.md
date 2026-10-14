@@ -253,3 +253,20 @@ After:
 Targets were about 40 / 33 / 27 / 20% in Year 1, falling 3 to 4 points a Year to about 15% for Spring in Year 10. Year 2 sits a little above Year 1 because the second tier of perks and the Almanac unlocks arrive with it. Runs are now lost across weeks 2 to 4: Spring Year 1 loses 2% in week 2, 23% in week 3 and 49% in week 4.
 
 Plain greedy, 1,000 runs, no perks or unlocks (a first-ever run), before → after: Spring 74.6 → 25.9%, Summer 61.6 → 25.3%, Autumn 75.3 → 18.2%, Winter 65.1 → 12.0%. The random bot in Year 10 with A Lucky Find: 0 errors in 300 runs.
+
+## After the recipe switcher
+
+Picking the recipe when the cards fit more than one (#32) lifted the bot's win rates 4 to 9 points, since it now brews whichever recipe suits an order. Rent rises about 4% to 20 / 71 / 161 / 307 (was 20 / 68 / 155 / 295), and Winter's multiplier eases from ×1.52 to ×1.48.
+
+Before → after, greedy, 400 runs a cell: Year 1 (tier 1 perks) Spring 47.8 → 40.0%, Summer 41.0 → 32.5%, Autumn 35.3 → 30.3%, Winter 24.5 → 20.3%; Year 10 (everything) Spring 25.5 → 18.8%, Summer 18.0 → 14.0%, Autumn 11.8 → 11.5%, Winter 8.8 → 7.0%. No perks, 1,000 runs: Spring 32.3 → 25.0%, Summer 31.4 → 24.0%, Autumn 24.9 → 16.9%, Winter 13.8 → 12.0%.
+
+The whole grid after, with the perks a player would own by then:
+
+| | Y1 | Y2 | Y3 | Y4 | Y5 | Y6 | Y7 | Y8 | Y9 | Y10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Spring | 40.0 | 38.5 | 35.0 | 32.8 | 29.5 | 30.5 | 25.3 | 22.8 | 22.5 | 18.8 |
+| Summer | 32.5 | 38.3 | 35.0 | 37.3 | 26.0 | 28.8 | 24.0 | 19.3 | 15.3 | 14.0 |
+| Autumn | 30.3 | 32.5 | 27.0 | 26.3 | 17.8 | 19.3 | 12.3 | 10.3 | 11.0 | 11.5 |
+| Winter | 20.3 | 21.8 | 23.5 | 18.5 | 14.0 | 14.8 | 11.5 | 8.5 | 7.8 | 7.0 |
+
+The random bot in Year 10 with A Lucky Find: 0 errors in 300 runs.
