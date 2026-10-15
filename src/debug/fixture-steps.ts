@@ -42,7 +42,9 @@ export type FixtureStep =
   | { chooseEvent: number }
   /** Put a potion of this recipe and tier on the Shelf. */
   | { potion: [string, Tier] }
-  | { hearts: [string, number] };
+  | { hearts: [string, number] }
+  /** Buy the item at [stall, index] at the seasonal fair. */
+  | { fairBuy: [number, number] };
 
 export function stepAction(state: RunState, step: FixtureStep): Action {
   if (typeof step === 'string') return { type: step === 'skipReward' ? 'skipReward' : step };
@@ -62,6 +64,7 @@ export function stepAction(state: RunState, step: FixtureStep): Action {
   if ('patron' in step) return { type: 'debug', op: 'setPatron', week: step.patron[0], patron: step.patron[1] };
   if ('potion' in step) return { type: 'debug', op: 'givePotion', recipe: step.potion[0], tier: step.potion[1] };
   if ('hearts' in step) return { type: 'debug', op: 'setHearts', regular: step.hearts[0], hearts: step.hearts[1] };
+  if ('fairBuy' in step) return { type: 'buyAtFair', stall: step.fairBuy[0], index: step.fairBuy[1] };
   if ('visit' in step) return { type: 'visitStall', index: step.visit };
   if ('reward' in step) return { type: 'debug', op: 'patronReward', patron: step.reward };
   if ('relic' in step) return { type: 'debug', op: 'giveRelic', relic: step.relic };

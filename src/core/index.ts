@@ -16,3 +16,4 @@ export * from './dusk-events';
 export * from './meta';
 export * from './almanac';
 export * from './year';
+export * from './fair';

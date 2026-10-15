@@ -21,6 +21,7 @@ export const RELIC_RULES = {
   almanacDiscards: 1,
   satchelHand: 1,
   locketBrews: 1,
+  mayCrownPay: 1.25,
 } as const;
 
 export const CURSE_RULES = {

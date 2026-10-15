@@ -2,10 +2,11 @@ import { codex } from '../codex';
 import type { RunStart } from '../codex/schema';
 import type { Action, GameEvent } from './actions';
 import { previewBrew } from './brew';
-import { activeEvents, FESTIVAL_DAY, festivalOn, NIGHT_SHIFT_DAY, rollCalendar, todaysWeather, type Season } from './calendar';
+import { activeEvents, NIGHT_SHIFT_DAY, rollCalendar, todaysWeather, type Season } from './calendar';
 import { changeGold, draw, drawToHandSize, gainCard, pick, Reject, reject, shuffled, takeFromHand, type Ctx } from './ctx';
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
+import { fairToday, openFair } from './fair';
 import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
 import { chooseEvent, eventDone, openEvent } from './dusk-events';
 import { commissionsOnBrew, commissionsOnDayEnd, commissionsOnDeliver, takeCommission } from './commissions';
@@ -20,10 +21,10 @@ import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import {
   BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, WINTER_FENCE, MAX_DISCARD, MAX_HEARTS, MIN_DECK, TIER_MIN,
-  LONGEST_NIGHT, SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
+  SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
   MAX_CAULDRON_SLOTS, MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex,
 } from './rules';
-import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState, type RunStats } from './state';
+import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState, type RunStats, type StockItem } from './state';
 import { YEAR_RULES, yearDiscards, yearRule } from './year';
 
 export type ReduceResult = { state: RunState; events: GameEvent[] };
@@ -131,11 +132,6 @@ function startDay(ctx: Ctx): void {
   const allowance = dayAllowance(s, { brews: BREWS_PER_DAY + (night ? 0 : rules.dayBrews), discards: Math.max(0, DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0) - yearDiscards(s)) }, night, weather);
   s.brewsLeft = allowance.brews;
   s.discardsLeft = allowance.discards;
-  // Longest Night: the festival week's Night Shift is longer.
-  if (night && festivalOn(s, s.week, FESTIVAL_DAY) === 'longest-night') {
-    s.brewsLeft += LONGEST_NIGHT.brews;
-    s.discardsLeft += LONGEST_NIGHT.discards;
-  }
   ctx.ev.push({ type: 'dayStarted', week: s.week, day: s.day, nightShift: night });
   ctx.ev.push({ type: 'deckShuffled', size: s.drawPile.length });
   postOrders(ctx, night);
@@ -245,6 +241,13 @@ function brew(ctx: Ctx, deliverTo: number | undefined, pick: string | undefined)
     }
   } else {
     ctx.ev.push(...preview.steps);
+    // Primrose grows a little every time it's brewed.
+    for (const c of used) {
+      const grow = sumEffect(c.card, 'growsOnBrew');
+      if (!grow) continue;
+      c.bonus = (c.bonus ?? 0) + grow;
+      ctx.ev.push({ type: 'cardInfused', uid: c.uid, bonus: c.bonus });
+    }
     if (!preview.known) {
       s.knownRecipes.push(preview.recipe);
       ctx.ev.push({ type: 'recipeDiscovered', recipe: preview.recipe });
@@ -307,7 +310,9 @@ function endDay(ctx: Ctx): void {
   if (isNightShift(s)) queueFirstNightGift(ctx);
   ctx.ev.push({ type: 'dayEnded', week: s.week, day: s.day });
   s.phase = 'dusk';
-  offerReward(ctx);
+  // On festival day the fair is the day's reward.
+  if (fairToday(s)) afterReward(ctx);
+  else offerReward(ctx);
 }
 
 /** Cards like Rot leave the deck by themselves after a few days. */
@@ -347,7 +352,9 @@ function afterReward(ctx: Ctx): void {
     ctx.s.offer = gift;
     return;
   }
+  const fair = fairToday(ctx.s);
   if (isNightShift(ctx.s)) openNightMarket(ctx);
+  else if (fair) openFair(ctx, fair);
   else offerErrands(ctx);
 }
 
@@ -382,6 +389,25 @@ function collectRent(ctx: Ctx): void {
   s.week += 1;
   s.day = 1;
   startDay(ctx);
+}
+
+/** Pay for a Market, Night Market or fair item and take it. */
+function buyItem(ctx: Ctx, item: StockItem | undefined, index: number): void {
+  const s = ctx.s;
+  if (!item) reject(`no stock ${index}`);
+  if (item.sold) reject('already sold');
+  if (s.gold < item.price) reject('not enough gold');
+  if (item.kind === 'familiar') addFamiliar(ctx, item.familiar);
+  if (item.kind === 'relic') gainRelic(ctx, item.relic, 'market');
+  item.sold = true;
+  changeGold(ctx, -item.price, 'market');
+  if (item.kind === 'card') {
+    gainCard(ctx, item.card, 'market');
+  } else if (item.kind !== 'familiar' && item.kind !== 'relic') {
+    if (item.kind === 'cauldron-slot') s.cauldronSlots += 1;
+    else s.shelfSize += 1;
+    ctx.ev.push({ type: 'upgradeBought', upgrade: item.kind });
+  }
 }
 
 function offerOf<K extends NonNullable<RunState['offer']>['kind']>(ctx: Ctx, kind: K): Extract<NonNullable<RunState['offer']>, { kind: K }> {
@@ -510,25 +536,14 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       return;
     }
 
-    case 'buy': {
+    case 'buy':
       // The day's Market Square, or the Night Market stall you're standing at.
-      const item = (stallStock(s) ?? offerOf(ctx, 'market').stock)[action.index];
-      if (!item) reject(`no stock ${action.index}`);
-      if (item.sold) reject('already sold');
-      if (s.gold < item.price) reject('not enough gold');
-      if (item.kind === 'familiar') addFamiliar(ctx, item.familiar);
-      if (item.kind === 'relic') gainRelic(ctx, item.relic, 'market');
-      item.sold = true;
-      changeGold(ctx, -item.price, 'market');
-      if (item.kind === 'card') {
-        gainCard(ctx, item.card, 'market');
-      } else if (item.kind !== 'familiar' && item.kind !== 'relic') {
-        if (item.kind === 'cauldron-slot') s.cauldronSlots += 1;
-        else s.shelfSize += 1;
-        ctx.ev.push({ type: 'upgradeBought', upgrade: item.kind });
-      }
+      buyItem(ctx, (stallStock(s) ?? offerOf(ctx, 'market').stock)[action.index], action.index);
       return;
-    }
+
+    case 'buyAtFair':
+      buyItem(ctx, offerOf(ctx, 'fair').stalls[action.stall]?.stock[action.index], action.index);
+      return;
 
     case 'forage': {
       const offer = offerOf(ctx, 'forage');
@@ -576,7 +591,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
     case 'leaveErrand': {
       requirePhase(ctx, 'dusk');
       const kind = s.offer?.kind;
-      if (kind !== 'market' && kind !== 'forage' && kind !== 'creek' && kind !== 'guild' && kind !== 'hearth' && kind !== 'event') reject('choose an errand first');
+      if (kind !== 'market' && kind !== 'forage' && kind !== 'creek' && kind !== 'guild' && kind !== 'hearth' && kind !== 'event' && kind !== 'fair') reject('choose an errand first');
       if (s.offer?.kind === 'event' && !eventDone(s, s.offer)) reject('choose what to do first');
       s.day += 1;
       startDay(ctx);

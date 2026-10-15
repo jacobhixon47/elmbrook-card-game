@@ -1184,7 +1184,45 @@ export class Run extends Phaser.Scene {
       }
       case 'night-market':
         return this.drawNightMarket(s, offer, title);
+      case 'fair':
+        return this.drawFair(s, offer, title);
     }
+  }
+
+  /** A seasonal fair after closing on festival day (GDD §4.2): lantern-lit stalls in the square, then home. */
+  private drawFair(s: RunState, offer: Extract<Offer, { kind: 'fair' }>, title: (t: string, sub: string) => void) {
+    const fair = codex.fairs.get(offer.fair)!;
+    const seen = `fair-${fair.id}`;
+    if (!this.scenesSeen.has(seen)) {
+      this.seasonScene(fair.name, fair.intro, () => this.scenesSeen.add(seen));
+      return;
+    }
+    title(fair.name, `Lantern-lit stalls in the square, tonight only. Buy what you like, then head home. You have ${s.gold}g.`);
+    const step = 72;
+    const widths = offer.stalls.map((st) => Math.max(1, st.stock.length) * step + 12);
+    const gap = 10;
+    let left = 320 - (widths.reduce((a, b) => a + b, 0) + gap * (widths.length - 1)) / 2;
+    offer.stalls.forEach((st, si) => {
+      const meta = fair.stalls.find((m) => m.id === st.id)!;
+      const w = widths[si]!;
+      const cx = left + w / 2;
+      this.add2(panel(this, left, 88, w, 168, 'k', 0.85, 'n'));
+      this.text(cx, 94, meta.name, { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
+      this.text(cx, 106, meta.text, { size: 6, color: 'a', align: 'center', wrap: w - 10 }).setOrigin(0.5, 0);
+      if (st.stock.length === 0) this.text(cx, 170, 'Nothing left\nfor you here.', { size: 7, color: 'h', align: 'center' }).setOrigin(0.5);
+      st.stock.forEach((item, i) => {
+        const x = cx + (i - (st.stock.length - 1) / 2) * step;
+        const y = 180;
+        const buy = () => this.dispatch({ type: 'buyAtFair', stall: si, index: i });
+        const full = item.kind === 'familiar' && s.familiars.length >= s.familiarSlots;
+        if (item.kind === 'card') this.offerCard(x, y, item.card, buy, item.sold);
+        else if (item.kind === 'familiar') this.offerFamiliar(x, y, item.familiar, buy, item.sold || full);
+        else if (item.kind === 'relic') this.offerRelic(x, y, item.relic, buy, item.sold);
+        this.text(x, y - 52, item.sold ? 'sold' : `${item.price}g`, { size: 8, color: item.sold ? 'h' : item.price > s.gold ? 'R' : 'y', stroke: 'k' }).setOrigin(0.5, 0);
+      });
+      left += w + gap;
+    });
+    this.add2(button(this, 320, 272, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
   }
 
   /** A dusk event (GDD §7): one choice, then home. */

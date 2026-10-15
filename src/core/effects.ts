@@ -3,6 +3,8 @@ import type { Essence, Ingredient, Recipe } from '../codex/schema';
 import { changeGold, draw, gainCard, randInt, reject, takeFromHand, type Ctx } from './ctx';
 import { tierIndex, tierStep } from './rules';
 import type { CardInstance } from './state';
+import type { Weather } from './calendar';
+import { addModifier } from './modifiers';
 
 /** Running totals while a brew is scored; ingredient effects adjust them in slot order. */
 export type ScoreCtx = {
@@ -17,6 +19,8 @@ export type ScoreCtx = {
   firstBrew: boolean;
   /** Orders filled so far today. */
   filledToday: number;
+  /** Today's weather. */
+  weather: Weather;
 };
 
 export type Effect = {
@@ -34,6 +38,8 @@ export type Effect = {
   copies?: number;
   /** +1 Potency for each day in the deck, reset when brewed. */
   aged?: boolean;
+  /** Permanent Potency this copy gains each time it is brewed (Primrose). */
+  growsOnBrew?: number;
   /** Hearts it adds or costs with the customer it is delivered to. */
   heartDelta?: number;
   /** Discards it costs when drawn on a Night Shift. */
@@ -112,6 +118,15 @@ export const EFFECTS: Record<string, Effect> = {
   'harmony-2-first-brew': harmonyIf(2, (c) => c.firstBrew),
   'harmony-per-ember-in-brew': harmonyPer((i) => hasEssence(i, 'ember')),
   'harmony-per-frost-in-brew': harmonyPer((i) => i.tags.includes('frost')),
+  'harmony-per-flower-in-brew': harmonyPer((i) => i.tags.includes('flower')),
+  grows: { growsOnBrew: 1 },
+  'potency-3-if-rain': {
+    onScore: (c) => {
+      if (c.weather !== 'rain') return undefined;
+      c.potency += 3;
+      return '+3 Potency (Rain)';
+    },
+  },
   'harmony-x1.5-if-secrets': {
     onScore: (c) => {
       if (c.recipe.family !== 'secrets') return undefined;
@@ -237,6 +252,15 @@ export const EFFECTS: Record<string, Effect> = {
   'next-customer-lose-heart': { onPlay: (ctx) => void (ctx.s.delivery.hearts -= 1) },
   'next-delivery-pay-x2': { onPlay: (ctx) => void (ctx.s.delivery.payMult *= 2) },
   'add-sludge': { onPlay: (ctx) => void gainCard(ctx, 'sludge', 'sludge') },
+  'bless-in-hand': {
+    targets: 'hand-one',
+    onPlay: (ctx, targets) => {
+      if (targets.length !== 1) reject('choose one card in hand');
+      const card = ctx.s.hand.find((c) => c.uid === targets[0]);
+      if (!card) reject(`card ${targets[0]} is not in hand`);
+      addModifier(ctx, card, 'blessed', 'royal-jelly');
+    },
+  },
   'lose-gold-3': { onPlay: (ctx) => changeGold(ctx, -Math.min(3, ctx.s.gold), 'omen') },
   'lose-gold-5': { onPlay: (ctx) => changeGold(ctx, -Math.min(5, ctx.s.gold), 'omen') },
   'copy-card-permanent': {
@@ -266,7 +290,7 @@ export function hasEffect(cardId: string, flag: keyof Effect): boolean {
   return effectsOf(cardId).some((e) => e[flag] !== undefined && e[flag] !== false);
 }
 
-type NumberKey = 'discardCost' | 'drawOnDiscard' | 'drawOnBrew' | 'heartDelta' | 'nightDrawCost' | 'inHandHarmony';
+type NumberKey = 'discardCost' | 'drawOnDiscard' | 'drawOnBrew' | 'heartDelta' | 'nightDrawCost' | 'inHandHarmony' | 'growsOnBrew';
 
 export function sumEffect(cardId: string, key: NumberKey): number {
   return effectsOf(cardId).reduce((n, e) => n + (e[key] ?? 0), 0);

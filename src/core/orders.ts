@@ -1,14 +1,14 @@
 import { codex } from '../codex';
 import type { Ingredient, Recipe, Regular } from '../codex/schema';
 import { fillsPattern, recipeAvailable } from './brew';
-import { FESTIVAL_DAY, festivalOn, todaysWeather } from './calendar';
+import { todaysWeather } from './calendar';
 import { pick, pickWeighted, rand, type Ctx } from './ctx';
 import { FAMILIAR_RULES } from './familiars';
 import { fortuneOn } from './market';
 import { patronOf, twistNow } from './night';
-import { hasRelic } from './relics';
+import { hasRelic, RELIC_RULES } from './relics';
 import {
-  BONUS_TIP, CLOCKLESS_BREWS, RAIN_MIN_ORDERS, HARVEST_FAIR, LONGEST_NIGHT, BLOOMTIDE_PAY, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount,
+  BONUS_TIP, CLOCKLESS_BREWS, RAIN_MIN_ORDERS, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount,
   HERMIT_PAY, PALE_COURIER_PAY, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, TOWER_PAY, WEEK_PAY_STEP, type Tier,
 } from './rules';
 import { allCards, type CardInstance, type Order, type OrderBonus, type OrderRequest, type Potion, type RunState } from './state';
@@ -192,7 +192,8 @@ function postOrder(ctx: Ctx, o: OrderOpts): void {
     status: 'open',
     quantity: o.quantity ?? 1,
     delivered: 0,
-    tagBonus: o.tagBonus ?? null,
+    // The May Crown: deliveries with a Flower ingredient pay more.
+    tagBonus: o.tagBonus ?? (hasRelic(s, 'may-crown') ? { tag: 'flower', mult: RELIC_RULES.mayCrownPay } : null),
     needsUmbra: o.needsUmbra ?? false,
     expiresIn: o.expiresIn ?? null,
   };
@@ -214,13 +215,9 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
   if (nightShift) return postNightOrders(ctx, r);
 
   const customers = weightedOrder(ctx, [...codex.regulars.values()].filter((x) => !x.nightOnly));
-  const festival = festivalOn(s, s.week, s.day);
   let count = orderCount(s.week, false, rand(ctx));
   // Rain keeps one customer home, but only on a busy day (sim: cutting quiet days too halves the win rate).
   if (todaysWeather(s) === 'rain' && count >= RAIN_MIN_ORDERS) count -= 1;
-  const harvest = festival === 'harvest-fair';
-  if (harvest) count += HARVEST_FAIR.extraOrders;
-  const bloomtide = festival === 'bloomtide';
   // Fortune Tent twists on this week: The Hermit (fewer, richer orders) and The Tower (harder, richer).
   const hermit = fortuneOn(s, 'fewer-orders');
   const tower = fortuneOn(s, 'harder-orders');
@@ -237,10 +234,8 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
     const ceiling = ceilingOf(r, request);
     postOrder(ctx, {
       customer: customer.id, request, minTier, ceiling,
-      payScale: weekScale(s, false) * customer.payMult * (harvest ? HARVEST_FAIR.payMult : 1) * (hermit ? HERMIT_PAY : 1) * (tower ? TOWER_PAY : 1),
+      payScale: weekScale(s, false) * customer.payMult * (hermit ? HERMIT_PAY : 1) * (tower ? TOWER_PAY : 1),
       bonus: rand(ctx) < customer.bonusChance ? pick(ctx, customer.bonusPool) : null,
-      quantity: harvest ? HARVEST_FAIR.quantity : 1,
-      tagBonus: bloomtide ? { tag: 'flower', mult: BLOOMTIDE_PAY } : null,
     });
   }
 }
@@ -254,7 +249,6 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
   const patron = patronOf(s)!;
   const twist = patron.twist;
   let count = patron.orderCount;
-  if (festivalOn(s, s.week, FESTIVAL_DAY) === 'longest-night') count += LONGEST_NIGHT.extraOrders;
   // Rain keeps a night customer home on a busy night; the patron always comes.
   if (todaysWeather(s) === 'rain' && count >= RAIN_MIN_ORDERS && !patron.ladder) count -= 1;
   const scale = weekScale(s, true) * patron.payMult;

@@ -40,10 +40,12 @@ function market(week: number, seed = 'relics', unlocks: string[] = []): RunState
 }
 
 describe('relics and curses in the codex', () => {
-  it('has the 12 relics and 6 curses from the balance tables', () => {
-    expect(codex.relics.size).toBe(12);
+  it('has the 12 relics and 6 curses from the balance tables, plus the fairs\' relics', () => {
+    const tables = [...codex.relics.values()].filter((r) => r.pool !== 'event');
+    expect(tables).toHaveLength(12);
+    expect([...codex.relics.values()].filter((r) => r.pool === 'event').map((r) => r.id)).toEqual(['may-crown']);
     expect(codex.curses.size).toBe(6);
-    expect([1, 2, 3].map((t) => [...codex.relics.values()].filter((r) => r.tier === t).length)).toEqual([6, 4, 2]);
+    expect([1, 2, 3].map((t) => tables.filter((r) => r.tier === t).length)).toEqual([6, 4, 2]);
     expect([1, 2, 3].map((n) => [...codex.curses.values()].filter((c) => c.severity === n).length)).toEqual([2, 2, 2]);
   });
 

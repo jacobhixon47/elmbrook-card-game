@@ -23,6 +23,8 @@ export type Action =
   | { type: 'skipReward' }
   | { type: 'chooseErrand'; errand: Errand }
   | { type: 'buy'; index: number }
+  /** Buy from a stall at the fair. */
+  | { type: 'buyAtFair'; stall: number; index: number }
   | { type: 'forage'; index: number }
   | { type: 'removeCard'; uid: number }
   /** At the Hearth, instead of burning a card. */
@@ -102,6 +104,7 @@ export type GameEvent =
   | { type: 'cardsDiscarded'; uids: number[] }
   | { type: 'tincturePlayed'; uid: number; card: string }
   | { type: 'cardInfused'; uid: number; bonus: number }
+  | { type: 'fairOpened'; fair: string }
   | { type: 'drawPileReordered'; uids: number[] }
   | { type: 'potionUpgraded'; uid: number; tier: Tier }
   /** A card left the deck by itself (Cobweb after its days, Fallen Star at week's end). */

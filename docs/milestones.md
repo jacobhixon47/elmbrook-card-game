@@ -71,12 +71,12 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - ✅ Reputation and cottage perks (the cottage: the out-of-run home where you set out for a season and buy perks); ✅ Almanac achievements that unlock pool content, relics included (eight starter relics).
 - ✅ A tiered perk board for the long game: more perks opening with Years reached and Almanac milestones, about 12 to 15 in all (GDD §13).
 - ✅ An early sound pass, pulled forward from M5 (Jacob, Oct 14: the game feels bland without it): sound effects made in code for slotting cards, the score climbing, brewing, coins, orders and buttons, with a volume and mute setting. Music stays in M5.
-- Six regulars with hearts, Ink dialogue, heart-milestone beats and unlocks.
+- Six regulars with hearts, Ink dialogue, heart-milestone beats and unlocks. A Townsfolk page in the Grimoire lists each regular and your hearts with them (Jacob, Oct 15).
 - Witch and cauldron selection; unlock flow.
 - ✅ Winter tuned into the win-rate band: week 1's rent is the same in every season and Winter pays ×1.2 (`docs/balance-m4.md`).
 - ✅ The ramp pass: a gentle week-1 rent ramp (20, 22, 24, 26 by season, decided with Jacob), heavier rent with pay trailing it by season, and rent rising in later Years. Year 1 wins about 40/34/29/23% by season, and Spring falls to about 15% by Year 10, simmed with the perks and unlocks a player would carry into each Year (`docs/balance-m4.md`).
 - Seasonal content: ✅ seven seasonal Night Market stalls (GDD §9); ✅ the Winter Night Market in place of the Frost Market (Snowed In nights, the Hearth Trader every night with the Yule Log and the Holly Crown, a Winter Fence and Tinker, the Ermine, and a Winter Lantern Seller with the Yule Candle; GDD §9).
-- Festivals rework (Jacob, Oct 14): festivals become events you take part in (traders with rare cards, carnival prizes, contests) rather than modifiers on the week. To brainstorm with Jacob.
+- Festivals rework (Jacob, Oct 14-15): festivals become seasonal market fairs after closing on festival day, with festival-only stock; no contests or games, and the old festival rules are dropped (GDD §4.2). ✅ The Bloomtide Fair. Firefly and Harvest Fairs proposed; Winter's Longest Night vigil being designed.
 - Seasonal scene screens: a short text screen with a seasonal background that says why a seasonal thing is happening (the fair in town, and the rest). ✅ The first, Snowed In, shipped with the Winter Night Market.
 - Playtest notes (Jacob, Oct 14, after a Spring run):
   - ✅ Orders repeat the same recipe (Elmbrook Panacea, again and again). Late weeks only ask for recipes the deck can bring to a high tier, and that is often one recipe. Six new three-card recipes, and no recipe named twice on one board (decided with Jacob: families and yesterday's requests may repeat).

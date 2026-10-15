@@ -33,9 +33,9 @@ const order = (o: Partial<Order> = {}): Order => ({
 });
 
 describe('familiars in the codex', () => {
-  it('has the 20 from the balance tables, 4 of them unlocked by meta-progression, plus Winter\'s Ermine', () => {
-    expect(codex.familiars.size).toBe(21);
-    expect([...codex.familiars.values()].filter((f) => f.pool === 'event').map((f) => f.id)).toEqual(['ermine']);
+  it('has the 20 from the balance tables, 4 of them unlocked by meta-progression, plus the Ermine and Bloomtide\'s Bumblebee', () => {
+    expect(codex.familiars.size).toBe(22);
+    expect([...codex.familiars.values()].filter((f) => f.pool === 'event').map((f) => f.id)).toEqual(['ermine', 'bumblebee']);
     expect([...codex.familiars.values()].filter((f) => f.pool === 'unlock').map((f) => f.id).sort()).toEqual(['fox', 'hob', 'magpie', 'old-hound']);
     for (const id of Object.keys(FAMILIAR_SCORE)) expect(codex.familiars.has(id), id).toBe(true);
   });
