@@ -94,14 +94,17 @@ describe('scoring with modifiers', () => {
     expect(p.kind === 'potion' && p.potency).toBe(plain.potency + 2 + 6);
   });
 
-  it('Cursed costs a heart with the customer; Blessed doubles a card\'s hearts and draws', () => {
+  it('a Cursed card earns the delivery no Friendship; Blessed doubles a card\'s Friendship and draws', () => {
     const plain = deliver(brewing('modifiers'), ['elmroot', 'creekwater']);
     const cursed = deliver(brewing('modifiers'), ['elmroot', 'creekwater'], ['cursed']);
-    const hearts = (r: typeof plain) => ofType(r.events, 'heartsChanged')[0]?.delta ?? 0;
-    expect(hearts(cursed)).toBe(hearts(plain) - 1);
+    const points = (r: typeof plain) => ofType(r.events, 'friendshipGained')[0]?.points ?? 0;
+    expect(points(plain)).toBeGreaterThan(0);
+    expect(points(cursed)).toBe(0);
     const card = (id: string, modifier?: ModifierId): CardInstance => ({ uid: 1, card: id, ...(modifier ? { modifier } : {}) });
     expect(heartDeltaOf([card('heartstone', 'blessed')])).toBe(2);
-    expect(heartDeltaOf([card('grave-moss', 'cursed')])).toBe(-2);
+    expect(heartDeltaOf([card('grave-moss', 'cursed')])).toBe(-1);
+    // One souring card spoils the delivery even beside a Heartstone.
+    expect(heartDeltaOf([card('heartstone'), card('grave-moss')])).toBe(-1);
     expect(drawOnBrewOf([card('stormseed', 'blessed'), card('fae-dust')])).toBe(5);
   });
 

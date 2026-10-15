@@ -1,24 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  festivalOn, migrateRun, NIGHT_SHIFT_DAY, previewBrew, RUN_VERSION, tierStep, VIGIL, VIGIL_DATE, WEEKS, type Calendar, type RunState, type Season,
+  festivalOn, FRIENDSHIP, migrateRun, NIGHT_SHIFT_DAY, previewBrew, RUN_VERSION, tierStep, VIGIL, VIGIL_DATE, WEEKS, type Calendar, type RunState, type Season,
 } from '../src/core';
 import { EFFECTS, type ScoreCtx } from '../src/core/effects';
 import { brewing, no, ofType, ok, slotAll, start, withHand } from './helpers';
 
 const clear: Calendar = { weather: Array.from({ length: WEEKS }, () => Array.from({ length: NIGHT_SHIFT_DAY }, () => 'clear' as const)), sky: null };
 
-/** A run on the vigil's day (or another), shop open, with these hearts. */
-function day(season: Season = 'winter', hearts: Record<string, number> = {}, week: number = VIGIL_DATE.week, d: number = VIGIL_DATE.day): RunState {
+/** A run on the vigil's day (or another), shop open, with this Friendship from the profile. */
+function day(season: Season = 'winter', friends: Record<string, number> = {}, week: number = VIGIL_DATE.week, d: number = VIGIL_DATE.day): RunState {
   let s = { ...start('vigil', season), calendar: clear };
   s = ok(s, { type: 'debug', op: 'jumpToDay', week, day: d }).state;
-  s = { ...s, hearts: { ...s.hearts, ...hearts } };
+  s = { ...s, friendshipBase: { ...s.friendshipBase, ...friends } };
   return ok(s, { type: 'openShop' }).state;
 }
 
-/** Close on the vigil's day, with every order filled so no hearts are lost. */
-function vigil(hearts: Record<string, number> = {}): RunState {
-  const s = day('winter', hearts);
+/** Close on the vigil's day, with no orders left open. */
+function vigil(friends: Record<string, number> = {}): RunState {
+  const s = day('winter', friends);
   return ok({ ...s, orders: [] }, { type: 'endDay' }).state;
 }
 
@@ -48,8 +48,9 @@ describe('the Longest Night vigil', () => {
     expect(ok({ ...day('spring'), orders: [] }, { type: 'endDay' }).state.offer?.kind).toBe('reward');
   });
 
-  it('brings a gift from each regular with enough hearts, into the Night Satchel', () => {
-    const s = vigil({ 'old-tobin': VIGIL.hearts, 'sister-alder': VIGIL.hearts + 2, 'bea-thornwick': VIGIL.hearts - 1 });
+  it('brings a gift from each regular at Friendship 2 or more, into the Night Satchel', () => {
+    const at2 = FRIENDSHIP.levels[FRIENDSHIP.vigilLevel - 1]!;
+    const s = vigil({ 'old-tobin': at2, 'sister-alder': at2 + 20, 'bea-thornwick': at2 - 1 });
     if (s.offer?.kind !== 'vigil') throw new Error('expected the vigil');
     expect(s.offer.gifts.map((g) => g.regular).sort()).toEqual(['old-tobin', 'sister-alder']);
     for (const g of s.offer.gifts) {

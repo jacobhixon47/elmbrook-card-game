@@ -18,3 +18,4 @@ export * from './almanac';
 export * from './year';
 export * from './fair';
 export * from './cauldrons';
+export * from './friendship';

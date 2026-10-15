@@ -47,7 +47,7 @@ export const TIPS: Tip[] = [
   },
   {
     id: 'order',
-    text: 'An order names a potion and the lowest quality the customer will take. Fill it today for gold and a heart. Go Back, then open the shop.',
+    text: 'An order names a potion and the lowest quality the customer will take. Fill it today for gold and Friendship. Go Back, then open the shop.',
     when: (s, v) => day1(s) && s.phase === 'morning' && v.dialog,
     until: (_, v) => !v.dialog,
     at: { x: 320, y: 228 },

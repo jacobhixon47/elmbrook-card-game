@@ -79,9 +79,9 @@ describe('dusk events', () => {
     expect(no(at('spilled-cauldron', 3), { type: 'chooseEvent', index: 1 })).toMatch(/4 gold/);
   });
 
-  it('the Found Coin Purse: a heart for returning it, gold and a Bad Omen for keeping it', () => {
+  it('the Found Coin Purse: Friendship for returning it, gold and a Bad Omen for keeping it', () => {
     const back = choose(at('found-coin-purse'), 0);
-    expect(ofType(back.events, 'heartsChanged')[0]!.delta).toBe(1);
+    expect(ofType(back.events, 'friendshipGained')[0]!.points).toBe(1);
     const kept = choose(at('found-coin-purse'), 1);
     expect(kept.state.gold).toBe(20 + EVENT_GOLD.purse);
     expect([...kept.state.satchel, ...allCards(kept.state)].some((c) => c.card === 'bad-omen')).toBe(true);

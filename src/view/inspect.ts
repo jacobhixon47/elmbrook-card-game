@@ -19,7 +19,7 @@ export const GLOSSARY: Record<string, string> = {
   Lunar: 'Moonlight essence. Lunar cards live in the Night Satchel and only come out on Night Shifts.',
   Satchel: 'The Night Satchel: Lunar cards and Omens, shuffled into your deck only on Night Shifts.',
   Omen: 'A Night Satchel Tincture: strong, with a drawback.',
-  Hearts: 'Hearts are a customer\'s fondness for you. Bonuses earn them.',
+  Friendship: 'How close a regular is to you. Every delivery adds to it, bonuses more, and it lasts the whole save.',
 };
 
 export type CardInfo = {

@@ -73,12 +73,13 @@ describe('orders', () => {
     expect(payout(potion(), order({ bonus: 'wychwood-ingredient' })).bonus).toBe(false);
   });
 
-  it('brewing straight into an order pays and earns a heart', () => {
+  it('brewing straight into an order pays and earns Friendship', () => {
     const [s, uids] = setup([order()], ['elmroot', 'creekwater']);
     const r = ok(slotAll(s, uids), { type: 'brew', deliverTo: 500 });
     expect(ofType(r.events, 'orderFilled')[0]).toMatchObject({ pay: 10, tip: 0 });
     expect(r.state.gold).toBe(s.gold + 10);
-    expect(r.state.hearts['old-tobin']).toBe(1);
+    expect(r.state.friendship['old-tobin']).toBe(1);
+    expect(ofType(r.events, 'friendshipGained')[0]).toMatchObject({ regular: 'old-tobin', points: 1, total: 1, level: 0, levelUp: false });
     expect(r.state.shelf).toHaveLength(0);
     expect(r.state.orders[0]!.status).toBe('filled');
   });
@@ -97,32 +98,40 @@ describe('orders', () => {
     const [s] = setup([order({ bonus: 'no-umbra' })], [], { shelf: [potion()] });
     const r = ok(s, { type: 'deliver', order: 500, potion: 600 });
     expect(r.state.shelf).toHaveLength(0);
-    expect(r.state.hearts['old-tobin']).toBe(2);
+    expect(r.state.friendship['old-tobin']).toBe(2);
     expect(no(r.state, { type: 'deliver', order: 500, potion: 600 })).toMatch(/already filled/);
     expect(no(s, { type: 'deliver', order: 500, potion: 1 })).toMatch(/not on the Shelf/);
     expect(no({ ...s, shelf: [potion({ tier: 'crude' })] }, { type: 'deliver', order: 500, potion: 600 })).toMatch(/does not fill/);
   });
 
-  it('Grave Moss potions cost the heart they would have earned', () => {
-    const [s] = setup([order()], [], { shelf: [potion({ heartDelta: -1 })], hearts: { 'old-tobin': 3 } });
+  it('Grave Moss potions earn no Friendship', () => {
+    const [s] = setup([order()], [], { shelf: [potion({ heartDelta: -1 })], friendship: { 'old-tobin': 3 } });
     const r = ok(s, { type: 'deliver', order: 500, potion: 600 });
-    expect(r.state.hearts['old-tobin']).toBe(3);
+    expect(r.state.friendship['old-tobin']).toBe(3);
+    expect(ofType(r.events, 'friendshipGained')).toHaveLength(0);
   });
 
-  it('declining, or leaving an order unfinished, costs a heart', () => {
-    const [s] = setup([order(), order({ id: 501, customer: 'bea-thornwick' })], [], { hearts: { 'old-tobin': 2, 'bea-thornwick': 1 } });
+  it('declining, or leaving an order unfinished, costs no Friendship', () => {
+    const [s] = setup([order(), order({ id: 501, customer: 'bea-thornwick' })], [], { friendship: { 'old-tobin': 2, 'bea-thornwick': 1 } });
     const declined = ok(s, { type: 'decline', order: 500 });
-    expect(declined.state.hearts['old-tobin']).toBe(1);
+    expect(declined.state.friendship['old-tobin']).toBe(2);
     const ended = ok(declined.state, { type: 'endDay' });
-    expect(ended.state.hearts['bea-thornwick']).toBe(0);
+    expect(ended.state.friendship['bea-thornwick']).toBe(1);
     expect(ofType(ended.events, 'orderDeclined')).toHaveLength(1);
     expect(no(s, { type: 'decline', order: 404 })).toMatch(/no order/);
   });
 
-  it('hearts stay between 0 and 10', () => {
-    const [s] = setup([order()], [], { shelf: [potion()], hearts: { 'old-tobin': 10 } });
-    expect(ok(s, { type: 'deliver', order: 500, potion: 600 }).state.hearts['old-tobin']).toBe(10);
-    expect(ok({ ...s, hearts: {} }, { type: 'decline', order: 500 }).state.hearts['old-tobin']).toBe(0);
+  it('Friendship has no cap, and counts on top of the profile\'s', () => {
+    const [s] = setup([order()], [], { shelf: [potion()], friendship: { 'old-tobin': 400 }, friendshipBase: { 'old-tobin': 12 } });
+    const r = ok(s, { type: 'deliver', order: 500, potion: 600 });
+    expect(r.state.friendship['old-tobin']).toBe(401);
+    expect(ofType(r.events, 'friendshipGained')[0]).toMatchObject({ total: 413, level: 10 });
+  });
+
+  it('only regulars have Friendship', () => {
+    const [s] = setup([order({ customer: 'wisp-courier' })], [], { shelf: [potion()] });
+    const r = ok(s, { type: 'deliver', order: 500, potion: 600 });
+    expect(r.state.friendship).toEqual({});
   });
 });
 

@@ -1,7 +1,7 @@
 import type { ModifierId } from '../codex/schema';
 import { codex } from '../codex';
 import {
-  allCards, cheapestPotion, CIDER_PRESS, commonCards, dueWeekOf, EVENT_GOLD, eventChoiceBlocked, eventChoiceCards, eventDone, fits, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER, HOLLY_CROWN, YULE_LOG,
+  allCards, cheapestPotion, CIDER_PRESS, commonCards, dueWeekOf, EVENT_GOLD, eventChoiceBlocked, eventChoiceCards, eventDone, fits, FIREFLY_GAMES, HARVEST_AUCTION, FRIENDSHIP, hearthOffers, HOLLY_CROWN, YULE_LOG,
   MIN_DECK, NECTAR_TRADER, NIGHT_SHIFT_DAY, payout, pressable, previewBrew, rentOf, SEED_SWAPPER, tierIndex, WEEKS,
   type Action, type BrewPreview, type CardInstance, type Errand, type Order, type Potion, type RunState, type StallState, type StockItem,
 } from '../core';
@@ -576,14 +576,14 @@ function stallAction(s: RunState, stall: StallState): Action | null {
       return bid ? { type: 'placeBid', amount: bid } : null;
     }
     case 'hearth-trader': {
-      const regular = Object.entries(s.hearts).filter(([, h]) => h >= HEARTH_TRADER.hearts).sort((a, b) => b[1] - a[1])[0]?.[0];
-      if (!stall.done && regular) {
+      const shown = hearthOffers(s, stall);
+      if (!stall.done && shown.regular && spare >= FRIENDSHIP.traderGold) {
         const fam = s.familiars.length < s.familiarSlots
-          ? stall.familiars.map((id, k) => ({ index: stall.cards.length + k, v: familiarValue(s, id) })).sort((a, b) => b.v - a.v)[0]
+          ? shown.familiars.map((id, k) => ({ index: shown.cards.length + k, v: familiarValue(s, id) })).sort((a, b) => b.v - a.v)[0]
           : undefined;
-        if (fam) return { type: 'tradeHearts', regular, index: fam.index };
-        const card = stall.cards.map((c, index) => ({ index, v: cardValue(s, c) })).sort((a, b) => b.v - a.v)[0];
-        if (card && card.v >= 7) return { type: 'tradeHearts', regular, index: card.index };
+        if (fam) return { type: 'hearthTrade', index: fam.index };
+        const card = shown.cards.map((c, index) => ({ index, v: cardValue(s, c) })).sort((a, b) => b.v - a.v)[0];
+        if (card && card.v >= 7) return { type: 'hearthTrade', index: card.index };
       }
       // The Holly Crown: a Frost familiar worth a slot.
       if (!stall.crowned && s.familiars.length < s.familiarSlots && spare >= HOLLY_CROWN.price) {
@@ -677,7 +677,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'tradeNectar', index: roll(3) },
     { type: 'pressCider', uid: any(deckUids) ?? 0 },
     { type: 'placeBid', amount: any(HARVEST_AUCTION.bids) ?? 12 },
-    { type: 'tradeHearts', regular: any(Object.keys(s.hearts)) ?? 'old-tobin', index: roll(4) },
+    { type: 'hearthTrade', index: roll(4) },
     { type: 'burnYule', uids: [any(allCards(s))?.uid ?? 0] },
     { type: 'wearCrown', index: roll(3) },
   );

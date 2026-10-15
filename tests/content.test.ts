@@ -93,18 +93,18 @@ describe('new ingredient effects', () => {
     expect(r.state.hand.length).toBe(s.handSize + 2);
   });
 
-  it('Heartstone potions earn an extra heart; Charm Sachet adds a heart and a tip once', () => {
+  it('Heartstone potions earn an extra Friendship; Charm Sachet adds Friendship and a tip once', () => {
     const order: Order = { id: 500, customer: 'old-tobin', request: { kind: 'family', family: 'healing' }, minTier: 'crude', pay: 10, bonus: null, status: 'open', quantity: 1, delivered: 0, tagBonus: null, needsUmbra: false, expiresIn: null };
     const potion = { uid: 600, recipe: 'healing-draught', family: 'healing' as const, quality: 14, tier: 'fine' as const, ingredients: ['elmroot', 'creekwater'], experiment: false };
-    const base: RunState = { ...brewing(), orders: [order], hearts: { 'old-tobin': 0 } };
+    const base: RunState = { ...brewing(), orders: [order] };
     const plain = ok({ ...base, shelf: [{ ...potion, heartDelta: 0 }] }, { type: 'deliver', order: 500, potion: 600 }).state;
     const hearty = ok({ ...base, shelf: [{ ...potion, heartDelta: 1 }] }, { type: 'deliver', order: 500, potion: 600 }).state;
-    expect(hearty.hearts['old-tobin']).toBe(plain.hearts['old-tobin']! + 1);
+    expect(hearty.friendship['old-tobin']).toBe(plain.friendship['old-tobin']! + 1);
 
-    const charmed = play(['charm-sachet'], undefined, (s) => Object.assign(s, { orders: [order], shelf: [{ ...potion, heartDelta: 0 }], hearts: { 'old-tobin': 0 } }));
+    const charmed = play(['charm-sachet'], undefined, (s) => Object.assign(s, { orders: [order], shelf: [{ ...potion, heartDelta: 0 }] }));
     expect(charmed.state.delivery).toEqual({ hearts: 1, tip: 3, payMult: 1 });
     const r = ok(charmed.state, { type: 'deliver', order: 500, potion: 600 });
-    expect(r.state.hearts['old-tobin']).toBe(plain.hearts['old-tobin']! + 1);
+    expect(r.state.friendship['old-tobin']).toBe(plain.friendship['old-tobin']! + 1);
     expect(r.state.gold - charmed.state.gold).toBe(plain.gold - base.gold + 3);
     expect(r.state.delivery).toEqual({ hearts: 0, tip: 0, payMult: 1 });
   });

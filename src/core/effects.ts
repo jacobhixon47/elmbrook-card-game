@@ -46,7 +46,7 @@ export type Effect = {
   agedRate?: number;
   /** Permanent Potency this copy gains each time it is brewed (Primrose). */
   growsOnBrew?: number;
-  /** Hearts it adds or costs with the customer it is delivered to. */
+  /** Friendship it adds on delivery to a regular; below 0, that delivery earns none. */
   heartDelta?: number;
   /** Discards it costs when drawn on a Night Shift. */
   nightDrawCost?: number;

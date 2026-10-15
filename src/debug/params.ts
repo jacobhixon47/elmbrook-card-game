@@ -24,13 +24,13 @@ export type Fixture = {
   /** Steps replayed after the run starts, to reach a UI state (see fixture-steps.ts). */
   steps?: FixtureStep[];
   /** Run scene UI state: an open order dialogue, or hand positions picked for a Discard. */
-  ui?: { dialog?: number; discard?: number[]; grimoire?: 'recipes' | 'deck' | 'calendar' | 'guide'; inspect?: number; tutorial?: string;
+  ui?: { dialog?: number; discard?: number[]; grimoire?: 'recipes' | 'deck' | 'calendar' | 'townsfolk' | 'guide'; inspect?: number; tutorial?: string;
     /** The Grimoire's page: on the Deck tab, 1 shows the draw pile and 2 the discard pile. */
     page?: number;
     /** A targeting Tincture at this hand index waiting for its targets; `picked` are hand indexes (draw pile indexes for Taste Test). */
     target?: { hand: number; picked?: number[] };
     /** At a Night Market stall: deck cards picked (positions in the sorted deck it shows), and the Black Market stock being traded for. */
-    stall?: { picked?: number[]; swap?: number; tab?: 'hearts' | 'yule' | 'crown' };
+    stall?: { picked?: number[]; swap?: number; tab?: 'trade' | 'yule' | 'crown' };
     /** Seasonal scene screens to count as already shown, e.g. `snowed-in-1`. */
     scenesSeen?: string[];
     /** The card of the familiar in this slot, open. */

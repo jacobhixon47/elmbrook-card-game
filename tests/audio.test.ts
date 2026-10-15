@@ -43,7 +43,7 @@ describe('which sounds an action plays', () => {
     expect(sounds(ev('cardSlotted'))).toEqual<SoundId[]>(['slot']);
     expect(sounds(ev('cardUnslotted'))).toEqual<SoundId[]>(['unslot']);
     expect(sounds(ev('cardsDiscarded', 'cardDrawn', 'cardDrawn'))).toEqual<SoundId[]>(['discard', 'draw']);
-    expect(sounds(ev('orderFilled', 'heartsChanged'))).toEqual<SoundId[]>(['filled']);
+    expect(sounds(ev('orderFilled', 'friendshipGained'))).toEqual<SoundId[]>(['filled']);
     expect(sounds(ev('rentPaid', 'dayStarted', 'cardDrawn'))).toEqual<SoundId[]>(['rent']);
     expect(sounds(ev('rentFailed', 'runLost'))).toEqual<SoundId[]>(['lose']);
     expect(sounds(ev('runWon'))).toEqual<SoundId[]>(['win']);

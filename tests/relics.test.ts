@@ -168,10 +168,10 @@ describe('relics and curses on a delivery', () => {
     expect(deliver(give(brewing('relics'), ['apprentice-ledger'])).state.gold).toBe(deliver(brewing('relics')).state.gold + RELIC_RULES.ledgerGold);
   });
 
-  it('the Silver Bell adds a heart for regulars, and Nameless stops hearts', () => {
-    const hearts = (s: RunState) => deliver(s).state.hearts['old-tobin'] ?? 0;
+  it('the Silver Bell adds Friendship for regulars, and Nameless stops it', () => {
+    const hearts = (s: RunState) => deliver(s).state.friendship['old-tobin'] ?? 0;
     const plain = hearts(brewing('relics'));
-    expect(hearts(give(brewing('relics'), ['silver-bell']))).toBe(plain + RELIC_RULES.bellHearts);
+    expect(hearts(give(brewing('relics'), ['silver-bell']))).toBe(plain + RELIC_RULES.bellFriendship);
     expect(hearts(give(brewing('relics'), ['silver-bell'], ['nameless']))).toBe(0);
   });
 });

@@ -76,7 +76,7 @@ Same as a day, but: the patron's rule twist is active, your **Night Satchel** (�
 
 ## 4. Orders and customers
 
-Each order shows on the Order Board as: portrait, name, hearts (relationship), and once you've opened it, the request and pay.
+Each order shows on the Order Board as: portrait, name, your Friendship level with a regular (♥ 2), and once you've opened it, the request and pay. The order's dialogue shows the progress to the next level (♥ 2 · 21/30).
 
 Carried over from 1.0: click an order to open its dialogue; choose **Fulfill**, **Decline**, or **Back**. Reopening returns to the choice without replaying dialogue. You choose which order to work on and in what order.
 
@@ -88,16 +88,16 @@ Carried over from 1.0: click an order to open its dialogue; choose **Fulfill**, 
 - **Request:** a specific potion ("Healing Draught") or a family ("anything Warming", "a Calming potion").
 - **Quality minimum:** a quality tier (§6.4). The minimum rises by week (Fine in week 1; mostly Superb by week 3; half Masterwork in week 4; the Night Shift's first order is one tier harder), but an order never asks for more than your deck could brew with a perfect draw and the Tinctures you own. A weak deck gets easier orders that pay less, so rent is what squeezes it.
 - **Pay:** base gold; tips scale with how far you exceed the minimum.
-- **Optional bonus condition:** "no Umbra ingredients", "brewed with exactly 3 ingredients", "use a Wychwood ingredient". Meeting it adds a tip and a heart. Each regular has their own bonus chance and conditions.
+- **Optional bonus condition:** "no Umbra ingredients", "brewed with exactly 3 ingredients", "use a Wychwood ingredient". Meeting it adds a tip and a point of Friendship. Each regular has their own bonus chance and conditions.
 - **Who comes in:** regulars have a weight (how often they visit), a pay multiplier and a tip multiplier, so Pip & Quill pay little but tip well and Marlowe pays more.
 
-**Delivering:** a matching potion from your Shelf or a fresh brew fulfils the order and earns a heart (two if the bonus condition is met). **Declining** costs a heart with that customer. Unfinished orders at end of day count as declined. Hearts run from 0 to 10.
+**Delivering:** a matching potion from your Shelf or a fresh brew fulfils the order and, for a regular, earns a point of Friendship (two if the bonus condition is met). **Declining** costs nothing. Unfinished orders at end of day count as declined. Friendship is the regulars' alone; see §13 for how it builds and what it opens.
 
 **Free brewing:** once every order is resolved, leftover Brews can make potions for the Shelf (from 1.0: "after requests are done you can brew with remaining cards").
 
 ### 4.1 Night customers
 
-A separate cast who only come after dark. Stranger and more formal than the day crowd, never horror. Their orders are odd ("a potion that tastes like a memory") and pay in odd things: Omens, a Curse lifted, Lunar cards, a stall discount at the Night Market. Each has hearts like a regular, with their own story beats.
+A separate cast who only come after dark. Stranger and more formal than the day crowd, never horror. Their orders are odd ("a potion that tastes like a memory") and pay in odd things: Omens, a Curse lifted, Lunar cards, a stall discount at the Night Market. They have no Friendship meter; their stories are for later.
 
 | ID | Name | Who | Tends to order | Gold | Pays in |
 |---|---|---|---|---|---|
@@ -172,7 +172,7 @@ Fruit (Sunberry, Blackberry, Hollyberry, Harvest Gourd and the Fruit fair cards)
 
 Familiars and relics you already hold stay off the stalls. Each stall lists its stock in codex `fairs` with `show: 2`, and the fair rolls which two come out on the run's seed. Winter has no fair on week 2, day 3.
 
-The Longest Night vigil (decided with Jacob, Oct 15): after closing on week 4, day 4, the vigil replaces the day's reward and errand. Each regular with 5 or more hearts (Friendship later) brings a gift, which goes into the Night Satchel for the finale: Roast Chestnuts (Ember+Stone, P6, +2 Harmony on a Night Shift), Holly Sprig (Vital+Umbra, P5, Frost, +2 Potency on a Night Shift), Gingerbread (Tincture: next brew +2 Harmony, draw 1), Mulled Wine (Tincture: +1 Brew), Wool Mittens (Tincture: +1 Discard, draw 1) or Snow Globe (Tincture: peek 3 and reorder). Gifts are festival-only. Then you choose one of three blessings for the finale's Night Shift:
+The Longest Night vigil (decided with Jacob, Oct 15): after closing on week 4, day 4, the vigil replaces the day's reward and errand. Each regular at Friendship level 2 or more brings a gift, which goes into the Night Satchel for the finale: Roast Chestnuts (Ember+Stone, P6, +2 Harmony on a Night Shift), Holly Sprig (Vital+Umbra, P5, Frost, +2 Potency on a Night Shift), Gingerbread (Tincture: next brew +2 Harmony, draw 1), Mulled Wine (Tincture: +1 Brew), Wool Mittens (Tincture: +1 Discard, draw 1) or Snow Globe (Tincture: peek 3 and reorder). Gifts are festival-only. Then you choose one of three blessings for the finale's Night Shift:
 - *Candle in the Window:* the Grimoire stays open, whatever the Moonless Patron says.
 - *Hearthfire:* +1 Brew.
 - *Warm Hands:* +2 Discards.
@@ -244,12 +244,12 @@ Some ask for a target: **Infuse** (a hand ingredient gains +2 Potency for the ru
 |---|---|
 | Blood Moon | Next brew: Harmony ×2. Lose 1 Discard. |
 | Black Cat Crossing | Draw 3, then discard a random card. |
-| Raven Call | Gain 1 Brew. -1 heart with the next customer you serve. |
+| Raven Call | Gain 1 Brew. Your next delivery earns no Friendship. |
 | Witching Hour | Next brew: Potency ×2. Add a Sludge to your deck. |
 | Howl | Next brew: every ingredient +2 Potency per Lunar card in the cauldron. |
 | Cracked Mirror | Add a copy of a card in hand to your deck. Lose 3 gold. |
 | Wishing Star | Your next delivery pays double. Lose 1 Discard. |
-| Moth Swarm | Every ingredient also counts as Lunar for your next brew. -1 heart with the next customer you serve. |
+| Moth Swarm | Every ingredient also counts as Lunar for your next brew. Your next delivery earns no Friendship. |
 
 ### 5.5 Card modifiers
 
@@ -261,8 +261,8 @@ Balatro-style editions applied by events/vendors: **Moonlit** (+Harmony), **Aged
 |---|---|---|
 | Moonlit | +2 Harmony when brewed. | 6g |
 | Aged | +2 Potency each day in the deck, reset when brewed. Not offered for a card that is already Aged (Amber Sap, Lunar Salt, whose own Aged gains 1 a day). | 3g |
-| Blessed | Retrigger: the card's own Potency (printed, Infused or tempered, and Aged days) counts again and its scoring effect runs again. Its hearts and draws on brewing count twice too. | 12g |
-| Cursed | The card's own Potency counts again. -1 heart with the customer it's delivered to. | not sold |
+| Blessed | Retrigger: the card's own Potency (printed, Infused or tempered, and Aged days) counts again and its scoring effect runs again. Its Friendship and draws on brewing count twice too. | 12g |
+| Cursed | The card's own Potency counts again. The delivery earns no Friendship. | not sold |
 
 Balance pass (Oct 9, from the balance tables): Aged went from +1 a day for 5g to +2 for 3g because a bot forced to buy it did worse than with the free temper; Moonlit and Blessed stay. Gilded (+gold when brewed, from the balance tables) is cut: forced to buy it every visit, the bot did no better than with the free temper even at +3 gold for 5, so it was a choice that never paid. Forced to buy one modifier every visit, the bot wins more per gold with Blessed than Moonlit, so Blessed isn't overpriced.
 
@@ -370,7 +370,7 @@ Phase flavour: First/Last Quarter nights have 3 stalls. Full Moon has all stalls
 | The Nectar Trader | Summer | Your lowest Superb-or-better Shelf potion for 1 of 3 Rare cards. One trade a night. |
 | The Cider Press | Autumn | Your lowest Shelf potion is pressed, and one ingredient in your deck gets +2 Potency for the run. Up to 3 a night. |
 | The Harvest Auction | Autumn | One sealed bid (12, 15, 18, 21 or 24 gold) for a tier 2 relic against the farmers' hidden bid of 12 to 24. Win at or above it and pay your bid; lose and pay nothing. |
-| The Hearth Trader | Winter | Open every Winter night, with three trades, each once a night. **Trade hearts:** 5 hearts with one regular, your choice, for 1 of 2 Rare cards or a familiar (the tables had 3 hearts and two familiars; see the balance note). **The Yule Log:** 4 gold to burn 1 or 2 cards from your deck for good; the deck can't drop below 8. **The Holly Crown:** 8 gold for 1 of 2 Frost familiars (the Frost Hare and the Ermine) you don't have, if a slot is free. |
+| The Hearth Trader | Winter | Open every Winter night, with three trades, each once a night. **Trade:** 6 gold, on the name of a regular at Friendship 2 or more, for 1 of 2 Rare cards or a familiar; once your best friend among the regulars reaches Friendship 6 he shows a third Rare card (Friendship, Oct 15: this was 5 hearts with one regular, spent; the tables had 3 hearts and two familiars). **The Yule Log:** 4 gold to burn 1 or 2 cards from your deck for good; the deck can't drop below 8. **The Holly Crown:** 8 gold for 1 of 2 Frost familiars (the Frost Hare and the Ermine) you don't have, if a slot is free. |
 
 Stalls that take a potion take your lowest one (by tier, then quality), and say which on their sign.
 
@@ -392,7 +392,7 @@ Relics are run-long passives with no slot limit, never sold for gold. They come 
 | Lucky Horseshoe | 1 | Reward picks offer 4 cards instead of 3. |
 | Pressed Flower | 1 | Flower ingredients +2 Potency. |
 | Apprentice's Ledger | 1 | +1 gold per order filled. |
-| Silver Bell | 1 | +1 heart on every delivery to a regular. |
+| Silver Bell | 1 | +1 Friendship on every delivery to a regular. |
 | Old Almanac | 2 | +1 Discard on Rain and Fog days. |
 | Spare Satchel | 2 | +1 hand size. |
 | Witch's Hatpin | 2 | Experiments brew at full quality. |
@@ -402,7 +402,7 @@ Relics are run-long passives with no slot limit, never sold for gold. They come 
 
 | Curse | Severity | Effect |
 |---|---|---|
-| Nameless | 1 | Regulars don't recognise you: no hearts this run, gained or lost. |
+| Nameless | 1 | Regulars don't recognise you: no Friendship this run. |
 | Leaky Roof | 1 | Shelf -1 slot (given back when lifted). |
 | Sour Luck | 2 | Reward picks offer 2 cards, and skipping no longer improves them. |
 | Moonsick | 2 | Night Satchel cards -2 Potency. |
@@ -425,7 +425,7 @@ In the build the whole month's patrons are rolled at run start (on their own see
 | Mother Hollow | 1, 3 | Each brew must use an ingredient from a different Origin than the last. | Pick 1 of 2 familiars |
 | The Twin Owls | 1, 3 | Every order needs two identical potions, and pays ×2. Two orders. | Pick 1 of 3 Rare cards |
 | Sir Bramble | 1, 3 | Ember ingredients have 0 Potency. | 6 gold |
-| The Clockless Man | 3 | Orders leave after 2 brews (1.0's "timed orders", as a twist). No heart is lost when they go. | Tier 1 relic |
+| The Clockless Man | 3 | Orders leave after 2 brews (1.0's "timed orders", as a twist). | Tier 1 relic |
 | The May Queen (spring) | 1, 3 | Each delivery must be a different family from the one before. | Tier 1 relic |
 | The Firefly Conductor (summer) | 1, 3 | After every brew, your hand is discarded and redrawn. | Pick 1 of 2 familiars |
 | The Tithe Reeve (autumn) | 1, 3 | Every brew costs 2 gold; orders pay ×1.5. | 10 gold |
@@ -520,7 +520,7 @@ Elmbrook is a roguelite: every run, won or lost, moves something forward.
   *The second page (decided with Jacob, Oct 15):* the first thirteen came too easily (a Legendary in a first Spring), so seven harder goals follow on a second page of the Almanac: A Legend Thrice (3 Legendary potions in one run), A Full Ledger (40 orders in one run), A Steady Hand (win a season without spending a Discard, by action or by a brew's cost), Every Witch's Way and Every Pot in the House (win a season with every witch, and in every cauldron, across runs; the profile keeps `witchWins` and `cauldronWins`, and the page shows how far along you are), Deep Winter (win Winter in Year 3 or later) and A Tidy Sum (win with 150 gold to spare). They pay in the strongest unlock content, moved off the first page: Starlight Elixir, Elmbrook Panacea, Kelpie Pearl, Taste of Memory, Black Cauldron Brew, Heartstone and the Lucky Horseshoe, and A Legend Thrice opens the Silver Cauldron. The thresholds that read Almanac counts keep their first-page values (looping at 4 entries, perk tier 4 at all 13), so the new page changes no gate. The goals' numbers (`HARD_ALMANAC` in `core/almanac.ts`) are for the M4 balance pass.
 - **Codex:** every ingredient, recipe, customer and patron you've met, with lore. Shared with the sibling game.
   *In the build (M4 part 5):* the cottage's Codex (button or C) has six tabs: Ingredients, Tinctures, Recipes, Familiars, Relics and Townsfolk (regulars, Night Shift customers and patrons). Everything starts as "???" and is written in once a run meets it: a card drawn, gained or offered, a recipe known, a familiar or relic held, a customer who posts an order. A run's finds are added to the profile when it ends, won or lost. Entries show what a thing does or who someone is; lore lines are still to write, and belong with the shared world data (`src/codex`) when the sibling game needs them.
-- **Regulars:** six townsfolk with hearts that persist across runs. *Friendship (Jacob, Oct 15):* each regular's Friendship builds over the whole save and never resets; it drives story beats, dialogue, unlocks and the Winter vigil's gifts, and is breadth more than power. Decided with Jacob (Oct 15), built with the regulars milestone: Friendship replaces the per-run hearts, one meter that only ever rises. Delivering to a regular and order bonuses grow it; a declined order just doesn't. About 10 levels per regular, filling slowly enough to last 10 Years. The Hearth Trader opens better trades (paid in gold) as Friendship grows instead of spending hearts; rewards are mostly breadth (story beats, recipes, the regular's own special orders, vigil gifts), with at most a small capped tip bonus at high Friendship. The Silver Bell, Grave Moss, the Nameless Year rule and the order ♥s get Friendship versions, each agreed with Jacob first. A Townsfolk page in the Grimoire lists each regular and your Friendship. Heart milestones unlock Ink story beats, new recipes, familiars, and their own special orders. Story finale per regular.
+- **Regulars:** six townsfolk with Friendship that persists across runs (see Friendship under the Regulars table). *Friendship (Jacob, Oct 15):* each regular's Friendship builds over the whole save and never resets; it drives story beats, dialogue, unlocks and the Winter vigil's gifts, and is breadth more than power. Decided with Jacob (Oct 15), built with the regulars milestone: Friendship replaces the per-run hearts, one meter that only ever rises. Delivering to a regular and order bonuses grow it; a declined order just doesn't. About 10 levels per regular, filling slowly enough to last 10 Years. The Hearth Trader opens better trades (paid in gold) as Friendship grows instead of spending hearts; rewards are mostly breadth (story beats, recipes, the regular's own special orders, vigil gifts), with at most a small capped tip bonus at high Friendship. The Silver Bell, Grave Moss, the Nameless Year rule and the order ♥s get Friendship versions, each agreed with Jacob first. A Townsfolk page in the Grimoire lists each regular and your Friendship. Friendship levels open story beats (plain scene screens; Ink was dropped, Jacob, Oct 15), new recipes, familiars and their favourite orders, and a story finale per regular.
 - **Unlocks:** witches, cauldrons, familiars and cards enter the pool via achievements and regulars' stories.
 - **Modes (later):** **Long Year** (unlocked by completing Year 1): one continuous run through all four seasons, 16 weeks, with mid-run saves; the deck, familiars and gold carry over between seasons. Also Endless (keep going past the finale), Daily seeded run, Challenge runs ("no Vital ingredients").
 
@@ -545,6 +545,26 @@ Junk: **Sludge** (does nothing), **Cobweb** (blows away after 3 days), **Bad Ome
 | marlowe-vance | Marlowe Vance | Travelling merchant, haggles | anything Rare | Pays ×1.25 |
 | the-gardener | The Gardener | Nobody's sure who they are | Lunar (only at night) | Pays ×1.5 |
 
+### Friendship
+
+Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts; part 1 (the meter, the replacements and the Townsfolk page) is in, and the rest follow.
+
+- **Points.** A delivery to a regular earns 1 point, 2 if the bonus condition is met, +1 from a Heartstone in the brew, +1 from the Silver Bell, +1 from a Charm Sachet. Declining or letting an order go costs nothing. Grave Moss, a Cursed card, the Raven Call and the Moth Swarm sour a delivery: it earns no Friendship at all. The Lovers (+2) and returning the Found Coin Purse (+1) give it to a random regular. Nameless: none this run. The Gardener counts like the others, only at night. Night customers and patrons have none.
+- **Across runs.** The points a run earns count at once on top of the profile's, and bank to the profile when the run ends, won or lost (`friendship` in the profile, version 10). They never go down and have no cap.
+- **Levels** (cumulative points): 5, 15, 30, 50, 75, 105, 140, 180, 230, 290, so level 10 takes about 10 Years of steady deliveries.
+
+| Level | Opens |
+|---|---|
+| 1 | Their Townsfolk entry. |
+| 2 | A gift at the Longest Night vigil; the Hearth Trader trades on their name. |
+| 3, 6, 9 | A story beat: a short scene screen, at most one a morning, never in the tutorial or the finale. *(Part 3.)* |
+| 4 | Their favourite order now and then, worth +1 more Friendship. *(Part 2.)* |
+| 5 | Their recipe joins the pools. *(Part 3.)* |
+| 6 | The Hearth Trader shows a third Rare card (your best friend's level counts). |
+| 7 | Their familiar joins the pools. *(Part 3.)* |
+| 8 | A better vigil gift. *(Part 4.)* |
+| 10 | Their finale, and +1 gold tip on their orders. *(Part 4.)* |
+
 ### Starting deck (Hedge Witch)
 
 3× Elmroot, 3× Creekwater, 2× Emberbloom, 2× Thistledown, 1× River Clay, 1× Nightshade, 1× Willow Bark, 1× Stir. Known recipes: Healing Draught, Hearthwarm Tonic, Calm Waters, Sleep Syrup.
@@ -560,9 +580,10 @@ Junk: **Sludge** (does nothing), **Cobweb** (blows away after 3 days), **Bad Ome
 Decided after the M2 playtest: the rules must explain themselves before M3 adds more of them. Cards stay clean, as in Slay the Spire; the detail lives one hover away.
 
 - **Card inspect.** Hovering any card (hand, cauldron, rewards, Market, Hearth) shows a tooltip: name, kind and rarity, essences by name, Potency, the effect text, and a one-line definition of each game term it mentions (Harmony, Aged, Discard...).
-- **Grimoire** (the G key, or the book button at the top of the screen), open at any time in a run. Three tabs:
+- **Grimoire** (the G key, or the book button at the top of the screen), open at any time in a run. Its tabs (the Calendar's is in §3):
   - *Recipes:* every recipe you know with its essence pattern, base Harmony and family; undiscovered ones show as "???" with their ingredient count. This is Balatro's Run Info, not a rules change.
   - *Deck:* every card in the run, with what is in the draw pile now, or just the draw pile or the discard pile. Clicking the draw pile opens it here; clicking the Discarded count under it opens the discard pile.
+  - *Townsfolk:* each regular, your Friendship level with them and a bar to the next, with what this run has added. A regular's entry (who they are) shows from level 1; before that they're "not a friend yet".
   - *How to play:* the run and the day, brewing, the scoring formula, quality tiers and the glossary.
 - **Where am I.** The top-left corner shows the Year and season above the week and day (Jacob's playtest, Oct 14). A ribbon at the top shows the week's days (four days, then the Night Shift) and the steps of the current one: Orders, Brew, Twilight, then Errand, or on a Night Shift, the Night Market. Every evening screen says in one line what it is for.
 - **Tutorial.** A player's first run is a guided week 1 on a fixed seed, and it can't be skipped. Tips appear as each part of the game first comes up; most wait for the player to do the thing (open an order, slot two cards, brew), the rest have a Got it button. Finishing week 1 marks the tutorial done in the player's profile (browser storage until M4 brings saves). Developers skip it with `?tutorial=0` or the dev overlay; fixtures and `pnpm e2e` never show it unless they ask for a tip. The Calendar, patrons and the Night Satchel have their own tips (weather, patron, gift); Night Market stalls add theirs in M3 part 4.

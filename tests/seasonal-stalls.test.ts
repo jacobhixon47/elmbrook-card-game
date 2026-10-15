@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  allCards, CIDER_PRESS, commonCards, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER, MIN_DECK, NIGHT_SHIFT_DAY, reduce,
+  allCards, CIDER_PRESS, hearthOffers, commonCards, FIREFLY_GAMES, FRIENDSHIP, HARVEST_AUCTION, MIN_DECK, NIGHT_SHIFT_DAY, reduce,
   type Potion, type RunState, type Season, type StallId, type StallState, type Tier,
 } from '../src/core';
 import { no, ofType, ok, start } from './helpers';
@@ -183,19 +183,36 @@ describe('the Harvest Auction', () => {
 });
 
 describe('the Hearth Trader', () => {
-  it("trades 5 of a regular's hearts for a Rare card or a familiar", () => {
-    const base = visit(market('winter', 2), 'hearth-trader');
+  const lv = (level: number) => FRIENDSHIP.levels[level - 1]!;
+
+  it('trades gold, on the name of a regular at Friendship 2, for a Rare card or a familiar', () => {
+    const base = visit(market('winter', 2, { gold: 20 }), 'hearth-trader');
     const stall = at(base, 'hearth-trader');
-    expect(stall.cards).toHaveLength(HEARTH_TRADER.cards);
-    expect(stall.familiars).toHaveLength(HEARTH_TRADER.familiars);
-    const s = { ...base, hearts: { ...base.hearts, 'old-tobin': 7 } };
-    expect(no({ ...s, hearts: { ...s.hearts, 'old-tobin': 4 } }, { type: 'tradeHearts', regular: 'old-tobin', index: 0 })).toMatch(/5 hearts/);
-    const card = ok(s, { type: 'tradeHearts', regular: 'old-tobin', index: 1 }).state;
-    expect(card.hearts['old-tobin']).toBe(2);
+    expect(stall.cards).toHaveLength(FRIENDSHIP.traderBigCards);
+    expect(stall.familiars).toHaveLength(FRIENDSHIP.traderFamiliars);
+    const s = { ...base, friendshipBase: { 'old-tobin': lv(FRIENDSHIP.traderLevel) } };
+    expect(no({ ...s, friendshipBase: { 'old-tobin': lv(FRIENDSHIP.traderLevel) - 1 } }, { type: 'hearthTrade', index: 0 })).toMatch(/Friendship level 2/);
+    expect(no({ ...s, gold: FRIENDSHIP.traderGold - 1 }, { type: 'hearthTrade', index: 0 })).toMatch(/gold/);
+    const card = ok(s, { type: 'hearthTrade', index: 1 }).state;
+    expect(card.gold).toBe(s.gold - FRIENDSHIP.traderGold);
+    expect(card.friendshipBase).toEqual(s.friendshipBase);
     expect(allCards(card).some((c) => c.card === stall.cards[1])).toBe(true);
-    expect(no(card, { type: 'tradeHearts', regular: 'old-tobin', index: 0 })).toMatch(/once/);
-    const fam = ok(s, { type: 'tradeHearts', regular: 'old-tobin', index: HEARTH_TRADER.cards }).state;
+    expect(no(card, { type: 'hearthTrade', index: 0 })).toMatch(/once/);
+    // Two cards shown below level 6: index 2 is the familiar, not the third card.
+    const fam = ok(s, { type: 'hearthTrade', index: FRIENDSHIP.traderCards }).state;
     expect(fam.familiars).toContain(stall.familiars[0]);
+  });
+
+  it('shows all three cards once a regular is at Friendship 6', () => {
+    const base = visit(market('winter', 2, { gold: 20 }), 'hearth-trader');
+    const stall = at(base, 'hearth-trader');
+    const s = { ...base, friendshipBase: { 'old-tobin': lv(FRIENDSHIP.traderBigLevel) } };
+    expect(hearthOffers(s, stall).cards).toEqual(stall.cards);
+    expect(hearthOffers({ ...s, friendshipBase: { 'old-tobin': lv(FRIENDSHIP.traderBigLevel) - 1 } }, stall).cards).toEqual(stall.cards.slice(0, 2));
+    const third = ok(s, { type: 'hearthTrade', index: 2 }).state;
+    expect(allCards(third).some((c) => c.card === stall.cards[2])).toBe(true);
+    // The Gardener counts like any regular.
+    expect(hearthOffers({ ...s, friendshipBase: { 'the-gardener': lv(FRIENDSHIP.traderLevel) } }, stall).regular).toBe('the-gardener');
   });
 });
 

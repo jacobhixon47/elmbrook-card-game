@@ -43,7 +43,7 @@ export const ingredients: In<typeof Ingredient>[] = [
   { id: 'salamander-scale', name: 'Salamander Scale', essences: ['ember'], potency: 7, rarity: 'rare', origin: 'market', effects: ['harmony-per-ember-in-brew'], text: '+1 Harmony per Ember ingredient in the brew.', tags: ['scale'] },
   { id: 'kelpie-pearl', name: 'Kelpie Pearl', essences: ['tide'], potency: 7, rarity: 'rare', origin: 'creek', effects: ['brew-makes-2'], text: 'A brew with it makes 2 potions.', tags: ['pearl'], pool: 'unlock' },
   { id: 'stormseed', name: 'Stormseed', essences: ['gale'], potency: 8, rarity: 'rare', origin: 'wychwood', effects: ['on-brew-draw-2'], text: 'When brewed, draw 2.', tags: ['seed'] },
-  { id: 'heartstone', name: 'Heartstone', essences: ['stone'], potency: 9, rarity: 'rare', origin: 'mine', effects: ['gain-heart'], text: '+1 heart with the customer.', tags: ['mineral'], pool: 'unlock' },
+  { id: 'heartstone', name: 'Heartstone', essences: ['stone'], potency: 9, rarity: 'rare', origin: 'mine', effects: ['gain-heart'], text: '+1 Friendship with the regular it\'s delivered to.', tags: ['mineral'], pool: 'unlock' },
   { id: 'shadowroot', name: 'Shadowroot', essences: ['umbra'], potency: 7, rarity: 'rare', origin: 'wychwood', effects: ['harmony-x1.5-if-secrets'], text: 'x1.5 Harmony in a Secrets potion.', tags: ['root'], inSeason: ['autumn'] },
   { id: 'harvest-gourd', name: 'Harvest Gourd', essences: ['vital', 'stone'], potency: 6, rarity: 'rare', origin: 'garden', effects: ['potency-2-per-order-today'], text: '+2 Potency for each order filled today.', tags: ['fruit'], inSeason: ['autumn'], pool: 'unlock' },
   // Bloomtide's fair (Spring): found only at the Flower Grower's stall.
@@ -68,7 +68,7 @@ export const ingredients: In<typeof Ingredient>[] = [
   { id: 'ice-lily', name: 'Ice Lily', essences: ['tide'], potency: 8, rarity: 'rare', origin: 'creek', effects: ['harmony-per-frost-in-brew'], text: '+1 Harmony per Frost ingredient in the brew.', tags: ['flower', 'frost'], inSeason: ['winter'] },
   { id: 'starlit-dew', name: 'Starlit Dew', essences: ['lunar', 'tide'], potency: 9, rarity: 'lunar', origin: 'night', nightOnly: true, tags: ['water'] },
   { id: 'moonmoth-wing', name: 'Moonmoth Wing', essences: ['lunar', 'gale'], potency: 8, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['wild-essence'], text: 'Counts as any essence.', tags: ['feather'] },
-  { id: 'grave-moss', name: 'Grave Moss', essences: ['lunar', 'umbra'], potency: 10, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['lose-heart'], text: '-1 heart with the customer.', tags: ['herb'] },
+  { id: 'grave-moss', name: 'Grave Moss', essences: ['lunar', 'umbra'], potency: 10, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['lose-heart'], text: 'The customer earns you no Friendship.', tags: ['herb'] },
   { id: 'moonpetal', name: 'Moonpetal', essences: ['lunar', 'vital'], potency: 9, rarity: 'lunar', origin: 'night', nightOnly: true, tags: ['flower'], inSeason: ['spring'], pool: 'unlock' },
   { id: 'lantern-ember', name: 'Lantern Ember', essences: ['lunar', 'ember'], potency: 9, rarity: 'lunar', origin: 'night', nightOnly: true, tags: ['mineral'], inSeason: ['summer'] },
   { id: 'lunar-salt', name: 'Lunar Salt', essences: ['lunar', 'stone'], potency: 8, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['aged'], text: 'Aged.', tags: ['mineral'] },
@@ -89,7 +89,7 @@ export const tinctures: In<typeof Tincture>[] = [
   { id: 'tidy-up', name: 'Tidy Up', rarity: 'uncommon', effects: ['gain-discard'], text: 'Gain 1 Discard today.' },
   { id: 'decant', name: 'Decant', rarity: 'uncommon', effects: ['upgrade-shelf-potion'], text: 'Raise a Shelf potion one tier (up to Superb).', pool: 'unlock' },
   { id: 'infuse', name: 'Infuse', rarity: 'uncommon', effects: ['card-potency-plus-2'], text: 'A card in hand gains +2 Potency for the rest of the run.' },
-  { id: 'charm-sachet', name: 'Charm Sachet', rarity: 'uncommon', effects: ['next-delivery-heart-tip'], text: 'Your next delivery earns +1 heart and +3 gold.' },
+  { id: 'charm-sachet', name: 'Charm Sachet', rarity: 'uncommon', effects: ['next-delivery-heart-tip'], text: 'Your next delivery earns +1 Friendship and +3 gold.' },
   { id: 'double-boil', name: 'Double Boil', rarity: 'rare', effects: ['next-brew-harmony-x1.5'], text: 'Next brew: Harmony x1.5.' },
   { id: 'bottle-spare', name: 'Bottle Spare', rarity: 'rare', effects: ['next-brew-double'], text: 'Your next brew makes 2 potions.' },
   { id: 'second-wind', name: 'Second Wind', rarity: 'rare', effects: ['gain-brew'], text: 'Gain 1 Brew today.', pool: 'unlock' },
@@ -113,13 +113,13 @@ export const tinctures: In<typeof Tincture>[] = [
   // Omens: Night Satchel Tinctures (GDD §5.4), strong with a drawback. They only come out on Night Shifts.
   { id: 'blood-moon', name: 'Blood Moon', rarity: 'lunar', effects: ['next-brew-harmony-x2', 'lose-discard'], text: 'Next brew: Harmony x2. Lose 1 Discard.' },
   { id: 'black-cat-crossing', name: 'Black Cat Crossing', rarity: 'lunar', effects: ['draw-3', 'discard-random-1'], text: 'Draw 3, then discard a random card.' },
-  { id: 'raven-call', name: 'Raven Call', rarity: 'lunar', effects: ['gain-brew', 'next-customer-lose-heart'], text: 'Gain 1 Brew. -1 heart with the next customer you serve.' },
+  { id: 'raven-call', name: 'Raven Call', rarity: 'lunar', effects: ['gain-brew', 'next-customer-lose-heart'], text: 'Gain 1 Brew. Your next delivery earns no Friendship.' },
   { id: 'witching-hour', name: 'Witching Hour', rarity: 'lunar', effects: ['next-brew-potency-x2', 'add-sludge'], text: 'Next brew: Potency x2. Add a Sludge to your deck.' },
   { id: 'howl', name: 'Howl', rarity: 'lunar', effects: ['potency-2-per-lunar-in-brew'], text: 'Next brew: every ingredient +2 Potency per Lunar card in the cauldron.' },
   { id: 'cracked-mirror', name: 'Cracked Mirror', rarity: 'lunar', effects: ['copy-card-permanent', 'lose-gold-3'], text: 'Add a copy of a card in hand to your deck. Lose 3 gold.', pool: 'unlock' },
   { id: 'wishing-star', name: 'Wishing Star', rarity: 'lunar', effects: ['next-delivery-pay-x2', 'lose-discard'], text: 'Your next delivery pays double. Lose 1 Discard.' },
   { id: 'yule-candle', name: 'Yule Candle', rarity: 'lunar', effects: ['gain-brew', 'lose-gold-5'], text: 'Gain 1 Brew. Lose 5 gold. It burns through the long night.', pool: 'event' },
-  { id: 'moth-swarm', name: 'Moth Swarm', rarity: 'lunar', effects: ['hand-counts-lunar', 'next-customer-lose-heart'], text: 'Every ingredient also counts as Lunar for your next brew. -1 heart with the next customer you serve.', pool: 'unlock' },
+  { id: 'moth-swarm', name: 'Moth Swarm', rarity: 'lunar', effects: ['hand-counts-lunar', 'next-customer-lose-heart'], text: 'Every ingredient also counts as Lunar for your next brew. Your next delivery earns no Friendship.', pool: 'unlock' },
 ];
 
 export const junk: In<typeof Junk>[] = [
@@ -246,7 +246,7 @@ export const relics: In<typeof Relic>[] = [
   { id: 'lucky-horseshoe', name: 'Lucky Horseshoe', tier: 1, text: 'Reward picks offer 4 cards instead of 3.', pool: 'unlock' },
   { id: 'pressed-flower', name: 'Pressed Flower', tier: 1, text: 'Flower ingredients +2 Potency.', pool: 'unlock' },
   { id: 'apprentice-ledger', name: 'Apprentice\'s Ledger', tier: 1, text: '+1 gold per order filled.' },
-  { id: 'silver-bell', name: 'Silver Bell', tier: 1, text: '+1 heart on every delivery to a regular.', pool: 'unlock' },
+  { id: 'silver-bell', name: 'Silver Bell', tier: 1, text: '+1 Friendship on every delivery to a regular.', pool: 'unlock' },
   { id: 'old-almanac', name: 'Old Almanac', tier: 2, text: '+1 Discard on Rain and Fog days.', pool: 'unlock' },
   { id: 'spare-satchel', name: 'Spare Satchel', tier: 2, text: '+1 hand size.' },
   { id: 'may-crown', name: 'May Crown', tier: 2, text: 'Deliveries with a Flower ingredient pay ×1.25.', pool: 'event' },
@@ -275,7 +275,7 @@ export const relics: In<typeof Relic>[] = [
 ];
 
 export const curses: In<typeof Curse>[] = [
-  { id: 'nameless', name: 'Nameless', severity: 1, text: 'Regulars don\'t recognise you: no hearts this run.' },
+  { id: 'nameless', name: 'Nameless', severity: 1, text: 'Regulars don\'t recognise you: no Friendship this run.' },
   { id: 'leaky-roof', name: 'Leaky Roof', severity: 1, text: 'Shelf -1 slot.' },
   { id: 'sour-luck', name: 'Sour Luck', severity: 2, text: 'Reward picks offer 2 cards, and skipping no longer improves them.' },
   { id: 'moonsick', name: 'Moonsick', severity: 2, text: 'Night Satchel cards -2 Potency.' },
@@ -288,7 +288,7 @@ export const modifiers: In<typeof Modifier>[] = [
   { id: 'moonlit', name: 'Moonlit', text: '+2 Harmony when brewed.', price: 6 },
   { id: 'aged', name: 'Aged', text: '+2 Potency for each day in the deck, reset when brewed.', price: 3 },
   { id: 'blessed', name: 'Blessed', text: 'Retrigger: its Potency and effect count twice.', price: 12 },
-  { id: 'cursed', name: 'Cursed', text: 'Potency x2. -1 heart with the customer it is delivered to.', price: null },
+  { id: 'cursed', name: 'Cursed', text: 'Potency x2. The delivery earns no Friendship.', price: null },
 ];
 
 // Guild Commissions (GDD §7), from the balance tables. Goals are counted in core/commissions.ts.
@@ -322,7 +322,7 @@ export const stalls: In<typeof Stall>[] = [
   { id: 'nectar-trader', name: 'The Nectar Trader', currency: 'Potions', text: 'A Superb or better potion buys a Rare card of your choice.', opens: 'season', season: 'summer' },
   { id: 'cider-press', name: 'The Cider Press', currency: 'Potions', text: 'Press a Shelf potion: one ingredient gets +2 Potency for the run.', opens: 'season', season: 'autumn' },
   { id: 'harvest-auction', name: 'The Harvest Auction', currency: 'Gold, a bid', text: 'Bid against the farmers for a tier 2 relic. You pay only if you win.', opens: 'season', season: 'autumn' },
-  { id: 'hearth-trader', name: 'The Hearth Trader', currency: 'Hearts and gold', text: "A regular's hearts for a Rare card or a familiar, the Yule Log, and the Holly Crown.", opens: 'season', season: 'winter', everyNight: true },
+  { id: 'hearth-trader', name: 'The Hearth Trader', currency: 'Gold', text: 'Trades with friends of the town (Friendship 2): a Rare card or a familiar, the Yule Log, and the Holly Crown.', opens: 'season', season: 'winter', everyNight: true },
 ];
 
 // The Fortune Tent's tarot deck (GDD §9).
@@ -330,7 +330,7 @@ export const tarot: In<typeof Tarot>[] = [
   { id: 'the-sun', name: 'The Sun', kind: 'boon', weight: 10, effect: 'gold', amount: 15, text: '+15 gold.' },
   { id: 'the-star', name: 'The Star', kind: 'boon', weight: 10, effect: 'lunar-card', text: 'A random Lunar ingredient for your Night Satchel.' },
   { id: 'the-magician', name: 'The Magician', kind: 'boon', weight: 8, effect: 'learn-recipe', text: 'Learn a random recipe you don\'t know.' },
-  { id: 'the-lovers', name: 'The Lovers', kind: 'boon', weight: 8, effect: 'hearts', amount: 2, text: '+2 hearts with a random regular.' },
+  { id: 'the-lovers', name: 'The Lovers', kind: 'boon', weight: 8, effect: 'hearts', amount: 2, text: '+2 Friendship with a random regular.' },
   { id: 'the-chariot', name: 'The Chariot', kind: 'boon', weight: 6, effect: 'familiar', amount: 10, text: 'A random familiar, if you have a free slot. If not, +10 gold.' },
   { id: 'wheel-of-fortune', name: 'Wheel of Fortune', kind: 'boon', weight: 8, effect: 'bless', amount: 8, text: 'Blessed on a random ingredient in your deck. If none can take it, +8 gold.' },
   { id: 'the-world', name: 'The World', kind: 'boon', weight: 3, effect: 'relic', amount: 12, text: 'A tier 2 relic. If you hold them all, +12 gold.' },
@@ -473,7 +473,7 @@ export const duskEvents: In<typeof DuskEvent>[] = [
   {
     id: 'found-coin-purse', name: 'A Found Coin Purse', tags: ['town'], weight: 4,
     text: 'A plump purse lies in the gutter, embroidered with a name you half know.',
-    choices: [{ label: 'Return it', text: '+1 heart with a random regular.' }, { label: 'Keep it', text: '+10 gold. A Bad Omen joins your deck.' }],
+    choices: [{ label: 'Return it', text: '+1 Friendship with a random regular.' }, { label: 'Keep it', text: '+10 gold. A Bad Omen joins your deck.' }],
   },
   {
     id: 'bargain-bin', name: 'The Bargain Bin', tags: ['market'], weight: 5,

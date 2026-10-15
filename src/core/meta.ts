@@ -1,5 +1,6 @@
 import { codex } from '../codex';
 import { ALMANAC_FIRST_PAGE, almanacMet } from './almanac';
+import { bankFriendship } from './friendship';
 import { seedRng, shuffle } from './rng';
 import { MAX_YEAR, reputationMult } from './year';
 import { SEASONS, WEATHERS, type Season } from './calendar';
@@ -9,7 +10,7 @@ import { RUN_VERSION, type RunState } from './state';
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 9;
+export const PROFILE_VERSION = 10;
 
 /** Sound settings: volume 0 to 1, and mute. */
 export type SoundSettings = { volume: number; muted: boolean };
@@ -54,6 +55,8 @@ export type Profile = {
   /** The witches and cauldrons that have won a season, for the Almanac's Every Witch's Way and Every Pot in the House. */
   witchWins: string[];
   cauldronWins: string[];
+  /** Friendship points with each regular over the whole save (GDD §4.1). They only ever rise. */
+  friendship: Record<string, number>;
 };
 
 export function newProfile(): Profile {
@@ -80,6 +83,7 @@ export function newProfile(): Profile {
     cauldron: 'copper',
     witchWins: [],
     cauldronWins: [],
+    friendship: {},
   };
 }
 
@@ -110,6 +114,8 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
     const won = Object.values((p.wins ?? {}) as Record<string, unknown>).some((n) => Number(n) > 0);
     return { ...p, witchWins: won ? ['hedge-witch'] : [], cauldronWins: won ? ['copper'] : [] };
   },
+  // 9 → 10: Friendship, from none. Hearts lasted only a run, so there is nothing to carry over.
+  9: (p) => ({ ...p, friendship: {} }),
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -165,6 +171,7 @@ function sanitize(p: Raw): Profile {
     cauldron: typeof p.cauldron === 'string' && codex.cauldrons.has(p.cauldron) ? p.cauldron : fresh.cauldron,
     witchWins: Array.isArray(p.witchWins) ? [...codex.witches.keys()].filter((id) => (p.witchWins as unknown[]).includes(id)) : [],
     cauldronWins: Array.isArray(p.cauldronWins) ? [...codex.cauldrons.keys()].filter((id) => (p.cauldronWins as unknown[]).includes(id)) : [],
+    friendship: Object.fromEntries([...codex.regulars.keys()].map((id) => [id, count((p.friendship as Raw | undefined)?.[id])] as const).filter(([, n]) => n > 0)),
   };
 }
 
@@ -247,7 +254,7 @@ function newlyOpen(before: Profile, after: Profile): Pick<RunOutcome, 'witches' 
 }
 
 /** Count a finished run. A run still going, or one already counted, changes nothing. */
-export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year' | 'gold' | 'witch' | 'cauldronKind'>>): RunOutcome {
+export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year' | 'gold' | 'witch' | 'cauldronKind' | 'friendship'>>): RunOutcome {
   const same = { profile, reputation: 0, opened: null, yearDone: false, newYear: null, almanac: [], perkTiers: [], witches: [], cauldrons: [] };
   if ((s.phase !== 'victory' && s.phase !== 'game-over') || profile.lastRun === s.seed) return same;
   const reputation = reputationFor(s);
@@ -259,6 +266,8 @@ export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' 
     ...profile, yearSeasons: profile.yearSeasons.map((y) => [...y]), boons: [...profile.boons], wins: { ...profile.wins }, perks: [...profile.perks], runs: profile.runs + 1, lastRun: s.seed,
     reputation: profile.reputation + reputation, reputationEarned: profile.reputationEarned + reputation, almanac: [...profile.almanac, ...almanac],
     codex: [...profile.codex, ...codexMet(profile.codex, s)], witchWins, cauldronWins,
+    // Friendship earned this run banks, won or lost.
+    friendship: bankFriendship(profile.friendship, s.friendship ?? {}),
   };
   if (s.phase === 'game-over') return { ...same, profile: p, reputation, almanac, perkTiers: tiersOpened(profile, p), ...newlyOpen(profile, p) };
   p.wins[s.season]++;
@@ -398,6 +407,13 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
   18: (s) => {
     const stats = s.stats as Raw;
     return { ...s, stats: { ...stats, legendaries: Number(stats.bestTier) >= 4 ? 1 : 0, discardsUsed: Number(s.discardCount) || 0 } };
+  },
+  // 19 → 20: Friendship in place of hearts. The regulars' hearts so far count as Friendship earned this
+  // run; the profile had none before this run, so its base is empty.
+  19: ({ hearts, ...s }) => {
+    const old = (hearts && typeof hearts === 'object' ? hearts : {}) as Raw;
+    const friendship = Object.fromEntries(Object.entries(old).filter(([id, n]) => codex.regulars.has(id) && typeof n === 'number' && n > 0));
+    return { ...s, friendship, friendshipBase: {} };
   },
 };
 

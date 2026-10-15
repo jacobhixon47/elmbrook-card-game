@@ -2,9 +2,9 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, blessingTonight, BLACK_MARKET, VIGIL, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, blessingTonight, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
-  HARVEST_AUCTION, HEARTH_TRADER, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
+  HARVEST_AUCTION, FRIENDSHIP, friendLevelOf, friendshipOf, hearthOffers, isRegular, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
   type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome, almanacUnlocks, boonOf, runStartChoice, cauldronOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
 } from '../core';
@@ -17,6 +17,7 @@ import { store } from '../store';
 import { gradedView, shopBackdrop, viewOverrides } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
+import { friendshipLine } from '../view/townsfolk';
 import {
   BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, orderNeeds, orderTerms, recipeName,
   requestText, TIER_NAME, newRecipeHint, unknownRecipe,
@@ -40,14 +41,14 @@ import { isIntroWeather, patronArrival, SEASON_OPENING, WEATHER_INTRO, type Intr
 import { openSettings } from '../view/settings';
 
 /** The Hearth Trader's three trades (Winter). */
-type HearthTab = 'hearts' | 'yule' | 'crown';
+type HearthTab = 'trade' | 'yule' | 'crown';
 
 type Mode =
   | { kind: 'idle' }
   | { kind: 'dialog'; order: number }
   | { kind: 'select'; purpose: Purpose; tincture?: number; picked: number[] }
   /** Deck cards picked at a Night Market stall: the Hollow Tailor's two, or the Black Market's trade for stock `swap`. */
-  | { kind: 'stall'; picked: number[]; swap?: number; regular?: string; tab?: HearthTab }
+  | { kind: 'stall'; picked: number[]; swap?: number; tab?: HearthTab }
   /** A familiar's card, to sell it or move it. */
   | { kind: 'familiar'; index: number }
   /** At the Creek Bank: tempering, or which modifier to buy. */
@@ -670,10 +671,10 @@ export class Run extends Phaser.Scene {
       const patron = isPatron(o.customer);
       const bg = this.add2(panel(this, ORDERS.x, y, ORDERS.w, TICKET_H, patron ? 'W' : 'w', 0.95, o.id === this.pinned ? 'y' : patron ? 'v' : 'n'));
       if (o.id === this.pinned || patron) bg.setStrokeStyle(2, hex(o.id === this.pinned ? 'y' : 'v'));
-      const hearts = s.hearts[o.customer] ?? 0;
+      const friend = isRegular(o.customer) ? friendLevelOf(s, o.customer) : null;
       this.text(ORDERS.x + 5, y + 3, customerName(o.customer), { size: 8, color: patron ? 'P' : 'k' });
       if (o.expiresIn !== null && open) this.text(ORDERS.x + ORDERS.w - 5, y + 3, `${o.expiresIn} brew${o.expiresIn === 1 ? '' : 's'} left`, { size: 7, color: 'r' }).setOrigin(1, 0);
-      else if (!patron) this.text(ORDERS.x + ORDERS.w - 5, y + 3, `${'♥'.repeat(Math.min(hearts, 5))}${hearts > 5 ? '+' : ''}`, { size: 7, color: 'R' }).setOrigin(1, 0);
+      else if (friend !== null) this.text(ORDERS.x + ORDERS.w - 5, y + 3, `♥ ${friend}`, { size: 7, color: 'R' }).setOrigin(1, 0);
       if (s.fog && open) {
         this.text(ORDERS.x + 5, y + 14, 'Hidden in the fog', { size: 8, color: 'h' });
         this.text(ORDERS.x + 5, y + 26, 'Brew or Discard to see it', { size: 7, color: 'h' });
@@ -1018,7 +1019,7 @@ export class Run extends Phaser.Scene {
     const w = 300;
     this.add2(panel(this, x0, y0, w, 150, 'k', 0.97, 'n'));
     this.text(x0 + 12, y0 + 10, customerName(o.customer), { size: 12, color: isPatron(o.customer) ? 'v' : 'y' });
-    this.text(x0 + w - 12, y0 + 12, `${'♥'.repeat(Math.min(s.hearts[o.customer] ?? 0, 10)) || '♡'}`, { size: 8, color: 'R' }).setOrigin(1, 0);
+    if (isRegular(o.customer)) this.text(x0 + w - 12, y0 + 12, friendshipLine(friendshipOf(s, o.customer)), { size: 8, color: 'R' }).setOrigin(1, 0);
     this.text(x0 + 12, y0 + 28, customerBlurb(o.customer), { size: 7, color: 'a' });
     this.text(x0 + 12, y0 + 44, `"${customerLine(o)}"`, { size: 8, color: 'W', wrap: w - 24 });
     this.text(x0 + 12, y0 + 70, `Wants: ${requestText(o)}`, { size: 8, color: 'w' });
@@ -1028,7 +1029,7 @@ export class Run extends Phaser.Scene {
     const hint = newRecipeHint(s, o);
     const notes = [
       ...(hint ? [{ t: hint, c: 'l' as const }] : []),
-      ...(o.bonus ? [{ t: `★ Bonus: ${BONUS_TEXT[o.bonus]} (+2g, +1 heart)`, c: 'o' as const }] : []),
+      ...(o.bonus ? [{ t: `★ Bonus: ${BONUS_TEXT[o.bonus]} (+2g, +1 Friendship)`, c: 'o' as const }] : []),
       ...(extra ? [{ t: `Also pays: ${extra}`, c: 'l' as const }] : []),
       ...(needs ? [{ t: needs, c: 'I' as const }] : []),
     ];
@@ -1269,7 +1270,7 @@ export class Run extends Phaser.Scene {
     title('The Longest Night', 'The town keeps watch by the Solstice Fire until morning. Tomorrow night the Moonless Patron comes.');
     this.text(320, 86, 'Gifts from the town', { size: 8, color: 'y', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
     if (offer.gifts.length === 0) {
-      this.text(320, 116, `No one is close enough to bring a gift yet. Regulars with ${VIGIL.hearts} or more hearts bring one.`, { size: 7, color: 'a', stroke: 'k', align: 'center', wrap: 360 }).setOrigin(0.5, 0);
+      this.text(320, 116, `No one is close enough to bring a gift yet. Regulars at Friendship ${FRIENDSHIP.vigilLevel} or more bring one.`, { size: 7, color: 'a', stroke: 'k', align: 'center', wrap: 360 }).setOrigin(0.5, 0);
     } else {
       this.text(320, 97, 'They go in your Night Satchel, for tomorrow night.', { size: 6, color: 'a', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
       offer.gifts.forEach((g, i) => {
@@ -1751,9 +1752,9 @@ export class Run extends Phaser.Scene {
       }
       case 'hearth-trader': {
         const mode = this.mode.kind === 'stall' ? this.mode : null;
-        const tab = mode?.tab ?? 'hearts';
+        const tab = mode?.tab ?? 'trade';
         const tabs: [HearthTab, string, boolean][] = [
-          ['hearts', 'Trade hearts', stall.done],
+          ['trade', `Trade ${FRIENDSHIP.traderGold}g`, stall.done],
           ['yule', `The Yule Log ${YULE_LOG.price}g`, stall.burned],
           ['crown', `The Holly Crown ${HOLLY_CROWN.price}g`, stall.crowned || !stall.crown.length],
         ];
@@ -1800,27 +1801,18 @@ export class Run extends Phaser.Scene {
           head('He warms his hands and nods. One trade a night.');
           break;
         }
-        const able = [...codex.regulars.values()].filter((r) => !r.nightOnly && (s.hearts[r.id] ?? 0) >= HEARTH_TRADER.hearts);
-        const chosen = mode?.regular && able.some((r) => r.id === mode.regular)
-          ? mode.regular
-          : [...able].sort((a, b) => (s.hearts[b.id] ?? 0) - (s.hearts[a.id] ?? 0))[0]?.id;
-        head(chosen
-          ? `Spend ${HEARTH_TRADER.hearts} of a regular's hearts on a Rare card or a familiar. Paying with ${customerName(chosen)}.`
-          : `He trades in hearts: ${HEARTH_TRADER.hearts} with one regular. No one likes you that much yet.`);
-        able.forEach((r, i) => {
-          const x = 320 + (i - (able.length - 1) / 2) * 104;
-          const on = r.id === chosen;
-          const b = this.add2(button(this, x, 110, `${r.name}: ${s.hearts[r.id]} hearts`, () => {
-            this.mode = { kind: 'stall', picked: [], regular: r.id };
-            this.render();
-          }, { w: 100, color: on ? 'Y' : 'W' }));
-          if (on) (b.list[0] as Phaser.GameObjects.Rectangle).setStrokeStyle(1, hex('y'));
-        });
-        const n = stall.cards.length + stall.familiars.length;
+        // He trades on the name of your best friend among the regulars (GDD §4.1): level 2 to trade, level 6 to see all three cards.
+        const shown = hearthOffers(s, stall);
+        const friend = shown.regular;
+        head(friend
+          ? `A friend of ${customerName(friend)}'s? ${FRIENDSHIP.traderGold}g for a Rare card or a familiar.${shown.cards.length < stall.cards.length ? ` At Friendship ${FRIENDSHIP.traderBigLevel} he shows a third card.` : ''}`
+          : `He trades only with friends of the town: Friendship ${FRIENDSHIP.traderLevel} with a regular.`);
+        const n = shown.cards.length + shown.familiars.length;
         const x = (i: number) => 320 + (i - (n - 1) / 2) * 76;
-        const trade = (index: number) => chosen && this.dispatch({ type: 'tradeHearts', regular: chosen, index });
-        stall.cards.forEach((id, i) => this.offerCard(x(i), 170, id, () => void trade(i), !chosen));
-        stall.familiars.forEach((id, k) => this.offerFamiliar(x(stall.cards.length + k), 170, id, () => void trade(stall.cards.length + k), !chosen || s.familiars.length >= s.familiarSlots));
+        const shut = !friend || s.gold < FRIENDSHIP.traderGold;
+        const trade = (index: number) => this.dispatch({ type: 'hearthTrade', index });
+        shown.cards.forEach((id, i) => this.offerCard(x(i), 170, id, () => void trade(i), shut));
+        shown.familiars.forEach((id, k) => this.offerFamiliar(x(shown.cards.length + k), 170, id, () => void trade(shown.cards.length + k), shut || s.familiars.length >= s.familiarSlots));
         break;
       }
       case 'fortune-tent': {
@@ -1875,8 +1867,13 @@ export class Run extends Phaser.Scene {
    * What the profile brings to a new run: cottage perks, and what the Almanac added to the pools.
    * Neither in the tutorial, which plays a fixed deal, or in fixtures.
    */
-  private fromProfile(fixture: boolean): { perks?: string[]; unlocks?: string[]; year?: number; boon?: string } {
-    if (fixture || this.tutorial) return {};
+  private fromProfile(fixture: boolean): { perks?: string[]; unlocks?: string[]; year?: number; boon?: string; friendship?: Record<string, number> } {
+    // A fixture's own profile can bring Friendship from earlier runs (the Townsfolk page).
+    if (fixture) {
+      const friendship = this.fixture?.profile ? migrateProfile(this.fixture.profile).friendship : {};
+      return Object.keys(friendship).length ? { friendship } : {};
+    }
+    if (this.tutorial) return {};
     const p = loadProfile();
     const unlocks = almanacUnlocks(p.almanac);
     return {
@@ -1884,6 +1881,7 @@ export class Run extends Phaser.Scene {
       ...(unlocks.length ? { unlocks } : {}),
       ...(p.year > 1 ? { year: p.year } : {}),
       ...(boonOf(p) ? { boon: boonOf(p)! } : {}),
+      ...(Object.keys(p.friendship).length ? { friendship: p.friendship } : {}),
     };
   }
 

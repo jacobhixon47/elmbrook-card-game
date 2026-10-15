@@ -24,7 +24,7 @@ describe('card inspect', () => {
     expect(info.terms.map(([t]) => t)).toEqual(['Essence', 'Potency', 'Discard']);
     expect(cardInfo('stir').terms.map(([t]) => t)).toContain('Harmony');
     expect(cardInfo('grave-moss').text).toMatch(/Night Shifts only/);
-    expect(termsIn('-1 heart with the customer').map(([t]) => t)).toEqual(['Hearts']);
+    expect(termsIn('+1 Friendship with the regular').map(([t]) => t)).toEqual(['Friendship']);
     expect(cardInfo('sludge').kind).toBe('Junk');
   });
 

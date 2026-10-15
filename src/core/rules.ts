@@ -17,7 +17,6 @@ export const MIN_DECK = 8;
 /** Rent after each week's Night Shift, before the season multiplier (GDD §3). Week 1's is `weekOneRent`. */
 export const RENT = [20, 71, 161, 307] as const;
 export const SKIP_GOLD = 2;
-export const MAX_HEARTS = 10;
 
 export type Tier = 'crude' | 'fine' | 'superb' | 'masterwork' | 'legendary';
 export const TIERS: readonly Tier[] = ['crude', 'fine', 'superb', 'masterwork', 'legendary'];
@@ -88,8 +87,6 @@ export const NECTAR_TRADER = { cards: 3, minTier: 'superb' as Tier };
 export const CIDER_PRESS = { potency: 2, max: 3 };
 /** The farmers' best bid is rolled between these; your bids are the steps. */
 export const HARVEST_AUCTION = { tier: 2, rival: [12, 24] as const, bids: [12, 15, 18, 21, 24] as const };
-/** Hearts with one regular for a pick of Rare cards and familiars (the tables' 3 hearts and two familiars made Winter easier than Autumn). */
-export const HEARTH_TRADER = { hearts: 5, cards: 2, familiars: 1 };
 /**
  * Winter at the Night Market (decided with Jacob, Oct 14). A snowy quarter-moon night is Snowed In
  * half the time: only the Hearth Trader opens. He also keeps the Yule Log (burn up to 2 cards) and
@@ -210,9 +207,8 @@ export const BROKER_FAMILIARS = 2;
  */
 export const FINALE_ORDERS: number = 3;
 
-/** The Longest Night vigil (GDD §4.2): regulars with this many hearts bring a gift from the Winter set; the Solstice Fire offers this many blessings. */
+/** The Longest Night vigil (GDD §4.2): regulars at Friendship level 2 or more (FRIENDSHIP.vigilLevel) bring a gift from the Winter set; the Solstice Fire offers this many blessings. */
 export const VIGIL = {
-  hearts: 5,
   gifts: ['gingerbread', 'mulled-wine', 'wool-mittens', 'snow-globe', 'roast-chestnuts', 'holly-sprig'],
   blessingsOffered: 3,
   hearthfireBrews: 1,
