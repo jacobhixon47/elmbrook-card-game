@@ -1,5 +1,5 @@
 import { codex } from '../codex';
-import { almanacMet } from './almanac';
+import { ALMANAC_FIRST_PAGE, almanacMet } from './almanac';
 import { seedRng, shuffle } from './rng';
 import { MAX_YEAR, reputationMult } from './year';
 import { SEASONS, WEATHERS, type Season } from './calendar';
@@ -9,7 +9,7 @@ import { RUN_VERSION, type RunState } from './state';
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 8;
+export const PROFILE_VERSION = 9;
 
 /** Sound settings: volume 0 to 1, and mute. */
 export type SoundSettings = { volume: number; muted: boolean };
@@ -51,6 +51,9 @@ export type Profile = {
   /** The witch and cauldron last chosen at the cottage (GDD §12); runs set out with them. */
   witch: string;
   cauldron: string;
+  /** The witches and cauldrons that have won a season, for the Almanac's Every Witch's Way and Every Pot in the House. */
+  witchWins: string[];
+  cauldronWins: string[];
 };
 
 export function newProfile(): Profile {
@@ -75,6 +78,8 @@ export function newProfile(): Profile {
     weatherSeen: [],
     witch: 'hedge-witch',
     cauldron: 'copper',
+    witchWins: [],
+    cauldronWins: [],
   };
 }
 
@@ -100,6 +105,11 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   6: (p) => ({ ...p, seasonOpenings: true, weatherSeen: [] }),
   // 7 → 8: witches and cauldrons, starting from the Hedge Witch and Copper.
   7: (p) => ({ ...p, witch: 'hedge-witch', cauldron: 'copper' }),
+  // 8 → 9: which witches and cauldrons have won. Every win before them was the Hedge Witch's, in Copper.
+  8: (p) => {
+    const won = Object.values((p.wins ?? {}) as Record<string, unknown>).some((n) => Number(n) > 0);
+    return { ...p, witchWins: won ? ['hedge-witch'] : [], cauldronWins: won ? ['copper'] : [] };
+  },
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -153,6 +163,8 @@ function sanitize(p: Raw): Profile {
     weatherSeen: Array.isArray(p.weatherSeen) ? WEATHERS.filter((w) => (p.weatherSeen as unknown[]).includes(w)) : [],
     witch: typeof p.witch === 'string' && codex.witches.has(p.witch) ? p.witch : fresh.witch,
     cauldron: typeof p.cauldron === 'string' && codex.cauldrons.has(p.cauldron) ? p.cauldron : fresh.cauldron,
+    witchWins: Array.isArray(p.witchWins) ? [...codex.witches.keys()].filter((id) => (p.witchWins as unknown[]).includes(id)) : [],
+    cauldronWins: Array.isArray(p.cauldronWins) ? [...codex.cauldrons.keys()].filter((id) => (p.cauldronWins as unknown[]).includes(id)) : [],
   };
 }
 
@@ -235,15 +247,18 @@ function newlyOpen(before: Profile, after: Profile): Pick<RunOutcome, 'witches' 
 }
 
 /** Count a finished run. A run still going, or one already counted, changes nothing. */
-export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year'>>): RunOutcome {
+export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year' | 'gold' | 'witch' | 'cauldronKind'>>): RunOutcome {
   const same = { profile, reputation: 0, opened: null, yearDone: false, newYear: null, almanac: [], perkTiers: [], witches: [], cauldrons: [] };
   if ((s.phase !== 'victory' && s.phase !== 'game-over') || profile.lastRun === s.seed) return same;
   const reputation = reputationFor(s);
-  const almanac = almanacMet(profile.almanac, s);
+  const won = s.phase === 'victory';
+  const witchWins = won && s.witch && !profile.witchWins.includes(s.witch) ? [...profile.witchWins, s.witch] : profile.witchWins;
+  const cauldronWins = won && s.cauldronKind && !profile.cauldronWins.includes(s.cauldronKind) ? [...profile.cauldronWins, s.cauldronKind] : profile.cauldronWins;
+  const almanac = almanacMet(profile.almanac, { ...s, witchWins, cauldronWins });
   const p: Profile = {
     ...profile, yearSeasons: profile.yearSeasons.map((y) => [...y]), boons: [...profile.boons], wins: { ...profile.wins }, perks: [...profile.perks], runs: profile.runs + 1, lastRun: s.seed,
     reputation: profile.reputation + reputation, reputationEarned: profile.reputationEarned + reputation, almanac: [...profile.almanac, ...almanac],
-    codex: [...profile.codex, ...codexMet(profile.codex, s)],
+    codex: [...profile.codex, ...codexMet(profile.codex, s)], witchWins, cauldronWins,
   };
   if (s.phase === 'game-over') return { ...same, profile: p, reputation, almanac, perkTiers: tiersOpened(profile, p), ...newlyOpen(profile, p) };
   p.wins[s.season]++;
@@ -263,12 +278,12 @@ export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' 
   return { profile: p, reputation, opened, yearDone, newYear, almanac, perkTiers: tiersOpened(profile, p), ...newlyOpen(profile, p) };
 }
 
-/** Almanac entries done that open looping before a second Year is won (GDD §13: a quarter of the Almanac). */
-export const LOOP_ALMANAC = Math.ceil(codex.almanac.size / 4);
+/** Almanac entries done that open looping before a second Year is won (GDD §13): a quarter of the first page, kept when the harder entries came. */
+export const LOOP_ALMANAC = 4;
 
 /**
  * Whether winning Winter in your top Year opens the next: Year 1 always just ends with the ending, so
- * from the second Year completed on, or once a quarter of the Almanac is done. Never past MAX_YEAR.
+ * from the second Year completed on, or once LOOP_ALMANAC entries are done. Never past MAX_YEAR.
  */
 export function loopOpen(p: Pick<Profile, 'years' | 'yearSeasons' | 'almanac'>): boolean {
   return p.yearSeasons.length < MAX_YEAR && (p.years >= 2 || p.almanac.length >= LOOP_ALMANAC);
@@ -307,7 +322,8 @@ export function pickBoon(p: Profile, id: string): Profile {
 export const PERK_TIERS = [
   { tier: 2, years: 1, almanac: 4 },
   { tier: 3, year: 3, almanac: 8 },
-  { tier: 4, year: 6, almanac: codex.almanac.size },
+  // The first page, as when the board was tuned; the harder entries came later.
+  { tier: 4, year: 6, almanac: ALMANAC_FIRST_PAGE },
 ] as const;
 
 type TierRule = { tier: number; years?: number; year?: number; almanac: number };
@@ -378,6 +394,11 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
   16: (s) => ({ ...s, blessing: null }),
   // 17 → 18: witches and cauldrons. Every run before them was the Hedge Witch's, in Copper.
   17: (s) => ({ ...s, cauldronKind: 'copper', quirkUsed: false }),
+  // 18 → 19: the harder Almanac goals' stats. A Legendary already brewed counts once; Discards so far count the Discard actions.
+  18: (s) => {
+    const stats = s.stats as Raw;
+    return { ...s, stats: { ...stats, legendaries: Number(stats.bestTier) >= 4 ? 1 : 0, discardsUsed: Number(s.discardCount) || 0 } };
+  },
 };
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */

@@ -248,6 +248,7 @@ function brew(ctx: Ctx, deliverTo: number | undefined, pick: string | undefined)
   s.brewsToday += 1;
   liftFog(ctx);
   s.discardsLeft -= preview.discardCost;
+  s.stats.discardsUsed += preview.discardCost;
   for (const c of used) delete c.aged;
   s.discardPile.push(...used);
   s.lastBrew = used.map((c) => c.card);
@@ -490,6 +491,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       const thrown = uids.map((uid) => takeFromHand(ctx, uid));
       s.discardPile.push(...thrown);
       s.discardsLeft -= 1;
+      s.stats.discardsUsed += 1;
       ctx.ev.push({ type: 'cardsDiscarded', uids });
       liftFog(ctx);
       s.discardCount += 1;
@@ -914,7 +916,7 @@ export function reduce(state: RunState | null, action: Action): ReduceResult {
   return { state: ctx.s, events: ctx.ev };
 }
 
-export const newStats = (): RunStats => ({ ordersFilled: 0, potionsSold: 0, rentsPaid: 0, bestTier: -1, mostFamiliars: 0, mostRelics: 0, cursesTaken: 0, met: [] });
+export const newStats = (): RunStats => ({ ordersFilled: 0, potionsSold: 0, rentsPaid: 0, bestTier: -1, mostFamiliars: 0, mostRelics: 0, cursesTaken: 0, legendaries: 0, discardsUsed: 0, met: [] });
 
 /** Codex ids an event shows the player. */
 function metBy(e: GameEvent): string[] {
@@ -938,6 +940,7 @@ function tally(s: RunState, events: readonly GameEvent[]): void {
     if (e.type === 'rentPaid') st.rentsPaid++;
     if (e.type === 'curseTaken') st.cursesTaken++;
     if (e.type === 'brewed') st.bestTier = Math.max(st.bestTier, tierIndex(e.potion.tier));
+    if (e.type === 'brewed' && e.potion.tier === 'legendary') st.legendaries++;
     for (const id of metBy(e)) if (!st.met.includes(id)) st.met.push(id);
   }
   st.mostFamiliars = Math.max(st.mostFamiliars, s.familiars.length);

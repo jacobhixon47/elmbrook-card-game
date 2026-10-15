@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { SEASONS, type Season, allCards, almanacMet, CODEX_TABLES, codexMet, almanacUnlocks, ALMANAC_GOALS, buyPerk, newStats, relicPool, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, migrateRun, newProfile, nextSeason, perkBlocked, perkTierOpen, perkTierGoal, PERK_TIERS, CAULDRON_SLOTS, PROFILE_VERSION, recordRun, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
+import { SEASONS, type Season, allCards, almanacMet, CODEX_TABLES, codexMet, almanacUnlocks, ALMANAC_GOALS, buyPerk, newStats, relicPool, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, migrateRun, newProfile, nextSeason, perkBlocked, perkTierOpen, perkTierGoal, PERK_TIERS, CAULDRON_SLOTS, PROFILE_VERSION, recordRun, reduce, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
 import { loadProfile, recordFinishedRun, saveProfile } from '../src/profile';
 import { playRun } from '../src/sim/run';
-import { brewing } from './helpers';
+import { brewing, withHand } from './helpers';
 import { codex } from '../src/codex';
 
 const end = (season: 'spring' | 'summer' | 'autumn' | 'winter', phase: 'victory' | 'game-over' | 'morning', seed = 'r1', week = 4) =>
@@ -140,7 +140,7 @@ describe('the tiered perk board', () => {
     expect(perkTierOpen({ ...fresh, almanac: almanac(codex.almanac.size) }, 4)).toBe(true);
     expect(perkTierOpen({ ...fresh, yearSeasons: Array.from({ length: 6 }, () => ['spring' as const]) }, 4)).toBe(true);
     expect(perkTierGoal(2)).toBe('Win a Year or 4 Almanac entries to open.');
-    expect(perkTierGoal(4)).toBe('Reach Year 6 or the whole Almanac to open.');
+    expect(perkTierGoal(4)).toBe('Reach Year 6 or 13 Almanac entries to open.');
   });
 
   it("a locked tier's perks can't be bought, and say what opens them", () => {
@@ -215,9 +215,9 @@ describe('the Almanac', () => {
     const lost = recordRun(newProfile(), { ...end('spring', 'game-over', 'r1', 3), stats: { ...newStats(), bestTier: 3, mostFamiliars: 3 } });
     expect(lost.almanac).toEqual(['superb-work', 'masterwork', 'menagerie']);
     expect(lost.profile.almanac).toEqual(lost.almanac);
-    const won = recordRun(lost.profile, { ...end('spring', 'victory', 'r2'), stats: { ...newStats(), bestTier: 3, rentsPaid: 4 } });
+    const won = recordRun(lost.profile, { ...end('spring', 'victory', 'r2'), stats: { ...newStats(), bestTier: 3, rentsPaid: 4, discardsUsed: 2 } });
     expect(won.almanac).toEqual(['paid-up', 'spring-won']);
-    expect(almanacMet(won.profile.almanac, { season: 'spring', phase: 'victory', stats: { ...newStats(), bestTier: 4 } })).toEqual(['legendary']);
+    expect(almanacMet(won.profile.almanac, { season: 'spring', phase: 'victory', stats: { ...newStats(), bestTier: 4, discardsUsed: 1 } })).toEqual(['legendary']);
     expect(almanacUnlocks(['spring-won'])).toEqual(codex.almanac.get('spring-won')!.unlocks);
   });
 
@@ -303,5 +303,55 @@ describe('the stored profile', () => {
     delete g.localStorage;
     expect(loadProfile()).toEqual(newProfile());
     expect(saveProfile({ tutorialDone: true }).tutorialDone).toBe(true);
+  });
+});
+
+describe('the Almanac\'s second page', () => {
+  const win = (o: Partial<Parameters<typeof almanacMet>[1]> = {}) => ({ season: 'spring' as const, phase: 'victory' as const, stats: { ...newStats(), discardsUsed: 3 }, ...o });
+  const met = (o: Partial<Parameters<typeof almanacMet>[1]> = {}) => almanacMet([...codex.almanac.keys()].slice(0, 13), win(o));
+
+  it('has seven harder goals after the first thirteen, each paying out', () => {
+    expect([...codex.almanac.keys()].slice(13)).toEqual(['legend-thrice', 'full-ledger', 'steady-hand', 'every-witch', 'every-cauldron', 'deep-winter', 'tidy-sum']);
+    expect(met()).toEqual([]);
+  });
+
+  it('counts Legendaries, orders, gold and the Year', () => {
+    expect(met({ stats: { ...newStats(), discardsUsed: 3, legendaries: 3 } })).toEqual(['legend-thrice']);
+    expect(met({ stats: { ...newStats(), discardsUsed: 3, ordersFilled: 40 } })).toEqual(['full-ledger']);
+    expect(met({ gold: 150 })).toEqual(['tidy-sum']);
+    expect(met({ season: 'winter', year: 3 })).toEqual(['deep-winter']);
+    expect(met({ season: 'winter', year: 2 })).toEqual([]);
+  });
+
+  it('A Steady Hand needs a win with no Discard spent, by action or by a brew\'s cost', () => {
+    expect(met({ stats: newStats() })).toEqual(['steady-hand']);
+    expect(met({ phase: 'game-over', stats: newStats() })).toEqual([]);
+    const [h, uids] = withHand(brewing('steady'), ['elmroot', 'creekwater', 'nightshade']);
+    expect(reduce(h, { type: 'discard', uids: [uids[2]!] }).state.stats.discardsUsed).toBe(1);
+  });
+
+  it('remembers which witches and cauldrons have won, for Every Witch\'s Way and Every Pot in the House', () => {
+    let p = newProfile();
+    const witches = [...codex.witches.keys()];
+    const pots = [...codex.cauldrons.keys()];
+    witches.forEach((witch, i) => {
+      p = recordRun(p, { ...end('spring', 'victory', `w${i}`), witch, cauldronKind: pots[i]! }).profile;
+    });
+    expect(p.witchWins).toEqual(witches);
+    expect(p.cauldronWins).toEqual(pots);
+    expect(p.almanac).toEqual(expect.arrayContaining(['every-witch', 'every-cauldron']));
+    // A loss counts for neither.
+    expect(recordRun(newProfile(), { ...end('spring', 'game-over'), witch: 'alchemist', cauldronKind: 'iron' }).profile.witchWins).toEqual([]);
+  });
+
+  it('a version 8 profile counts its past wins as the Hedge Witch\'s, in Copper', () => {
+    expect(migrateProfile({ version: 8, wins: { spring: 2 } })).toMatchObject({ witchWins: ['hedge-witch'], cauldronWins: ['copper'] });
+    expect(migrateProfile({ version: 8 })).toMatchObject({ witchWins: [], cauldronWins: [] });
+  });
+
+  it('a version 18 run gains the new stats from what it has', () => {
+    const s = brewing('migrate');
+    const old: Record<string, unknown> = { ...s, version: 18, discardCount: 2, stats: { ...s.stats, bestTier: 4, legendaries: undefined, discardsUsed: undefined } };
+    expect(migrateRun(old)?.stats).toMatchObject({ legendaries: 1, discardsUsed: 2 });
   });
 });
