@@ -140,7 +140,7 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 14;
+export const RUN_VERSION = 15;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -215,6 +215,10 @@ export type RunState = {
   curses: string[];
   /** Brews today that made Sludge, for the Iron Lid. */
   sludgeToday: number;
+  /** Discards made today, for the Hive Smoker. */
+  discardsToday: number;
+  /** Potency each Flower ingredient gets today (Garland). */
+  flowerPotencyToday: number;
   /** Guild Commissions taken and not yet done or failed (GDD §7). */
   commissions: ActiveCommission[];
   /** Fortune Tent twists on a later week (The Hermit, The Tower, The Moon). */

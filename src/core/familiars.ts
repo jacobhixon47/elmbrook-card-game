@@ -43,6 +43,7 @@ export const FAMILIAR_SCORE: Record<string, (b: FamiliarBrew) => FamiliarStep | 
   firefly: (b) => harmony(b.night ? 3 : 0, 'Night Shift'),
   ermine: potencyPer(3, (i) => i.tags.includes('frost'), 'Frost'),
   bumblebee: potencyPer(3, (i) => i.tags.includes('flower'), 'Flower'),
+  'queen-bee': (b) => (count(b.ingredients, (i) => i.tags.includes('flower')) >= 2 ? mult(1.5, 'two Flowers') : null),
   'frost-hare': (b) => harmony(count(b.ingredients, (i) => i.tags.includes('frost')), 'Frost'),
   jackdaw: (b) => harmony(new Set(b.ingredients.flatMap((i) => i.essences)).size, 'distinct essences'),
   'will-o-wisp': (b) => (b.firstBrew ? mult(2, 'first brew today') : null),

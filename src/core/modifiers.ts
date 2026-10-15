@@ -2,6 +2,7 @@ import { codex } from '../codex';
 import type { Ingredient, ModifierId } from '../codex/schema';
 import type { GameEvent } from './actions';
 import { changeGold, reject, type Ctx } from './ctx';
+import { RELIC_RULES } from './relics';
 import { effectsOf, hasEffect, sumEffect, type ScoreCtx } from './effects';
 import { allCards, type CardInstance, type RunState } from './state';
 
@@ -70,7 +71,8 @@ export function modifierSteps(c: ScoreCtx, cards: readonly CardInstance[], ings:
       }
       case 'blessed': {
         // A retrigger: the card's Potency again, then its effects again.
-        const n = cardPotency(card, ing);
+        // The Daisy Chain: Blessed cards also get a flat bonus.
+        const n = cardPotency(card, ing) + (c.relics.includes('daisy-chain') ? RELIC_RULES.daisyPotency : 0);
         c.potency += n;
         const notes = [`+${n} Potency`];
         for (const e of effectsOf(ing.id)) {

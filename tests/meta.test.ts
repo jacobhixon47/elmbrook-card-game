@@ -247,6 +247,13 @@ describe('saved run migrations', () => {
     expect(new Set(met).size).toBe(met.length);
   });
 
+  it('a version 14 run gains the day counters for the Hive Smoker and Garland', () => {
+    const old: Record<string, unknown> = { ...brewing('migrate'), version: 14 };
+    delete old.discardsToday;
+    delete old.flowerPotencyToday;
+    expect(migrateRun(old)).toMatchObject({ version: RUN_VERSION, discardsToday: 0, flowerPotencyToday: 0 });
+  });
+
   it('a version 10 run gains empty stats', () => {
     const old: Record<string, unknown> = { ...brewing('migrate'), version: 10 };
     delete old.stats;

@@ -116,7 +116,7 @@ export function ingredientsOf(cards: readonly CardInstance[]): Ingredient[] | nu
  * What brewing these cards would make, with every scoring step (GDD §6.3). Pure; used by the
  * cauldron preview, the bot and `brew` itself, so the preview is never wrong.
  */
-export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf' | 'relics' | 'curses'>>;
+export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf' | 'relics' | 'curses' | 'flowerPotencyToday'>>;
 
 export function previewBrew(state: BrewState, cards: readonly CardInstance[], hand: readonly CardInstance[], pick?: string): BrewPreview {
   const raw = ingredientsOf(cards);
@@ -142,6 +142,7 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     firstBrew: state.brewsToday === 0,
     filledToday: state.orders.filter((o) => o.status === 'filled').length,
     weather: todaysWeather(state),
+    relics: state.relics ?? [],
   };
   steps.push({ type: 'scoreStep', source: 'recipe', id: recipe.id, potency: 0, harmony: c.harmony });
 
@@ -171,6 +172,13 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
   if (shift !== 0) {
     c.potency = Math.max(0, c.potency + shift);
     steps.push({ type: 'scoreStep', source: 'weather', id: weather, potency: c.potency, harmony: c.harmony, note: `${shift > 0 ? '+' : ''}${shift} Potency` });
+  }
+
+  // Garland: Flower ingredients get extra Potency today.
+  const garland = (state.flowerPotencyToday ?? 0) * raw.filter((i) => i.tags.includes('flower')).length;
+  if (garland > 0) {
+    c.potency += garland;
+    steps.push({ type: 'scoreStep', source: 'tincture', id: 'garland', potency: c.potency, harmony: c.harmony, note: `+${garland} Potency (Garland)` });
   }
 
   // Relics and curses that change ingredients (the Pressed Flower, the Copper Ladle, Moonsick).
