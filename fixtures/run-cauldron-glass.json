@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "witch": "bloom-witch", "cauldron": "glass", "steps": ["openShop", { "slot": 0 }, { "slot": 1 }] }

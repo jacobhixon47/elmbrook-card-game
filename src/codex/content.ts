@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon, Fair, Blessing } from './schema';
+import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon, Fair, Blessing, Cauldron } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -360,6 +360,92 @@ export const witches: In<typeof Witch>[] = [
     ],
     knownRecipes: ['healing-draught', 'hearthwarm-tonic', 'calm-waters', 'sleep-syrup'],
   },
+  {
+    id: 'bloom-witch',
+    name: 'Bloom Witch',
+    focus: 'Vital and Gale; Flowers',
+    quirk: 'The day\'s first brew with a Flower in it: +2 Harmony.',
+    handSize: 7,
+    startingDeck: [
+      { card: 'elmroot', count: 3 },
+      { card: 'thistledown', count: 3 },
+      { card: 'dandelion-fluff', count: 2 },
+      { card: 'creekwater', count: 2 },
+      { card: 'emberbloom', count: 1 },
+      { card: 'sunflower', count: 1 },
+      { card: 'mint-sprig', count: 1 },
+      { card: 'stir', count: 1 },
+    ],
+    knownRecipes: ['four-leaf-tea', 'healing-draught', 'calm-waters', 'fleetfoot-elixir'],
+    unlockSeason: 'spring',
+  },
+  {
+    id: 'alchemist',
+    name: 'Alchemist',
+    focus: 'Stone and Ember; transformation',
+    quirk: 'The day\'s first Experiment brews at full quality.',
+    handSize: 7,
+    startingDeck: [
+      { card: 'river-clay', count: 3 },
+      { card: 'iron-filings', count: 2 },
+      { card: 'emberbloom', count: 3 },
+      { card: 'hearth-coal', count: 1 },
+      { card: 'elmroot', count: 2 },
+      { card: 'creekwater', count: 1 },
+      { card: 'honeycomb', count: 1 },
+      { card: 'simmer', count: 1 },
+    ],
+    knownRecipes: ['courage-cordial', 'ironhide-salve', 'hearthwarm-tonic', 'mudbath-salve'],
+    unlockSeason: 'summer',
+  },
+  {
+    id: 'illusionist',
+    name: 'Illusionist',
+    focus: 'Umbra and Gale; glamours',
+    quirk: 'Once a day, a potion can fill an order for another recipe of the same family.',
+    handSize: 7,
+    startingDeck: [
+      { card: 'nightshade', count: 3 },
+      { card: 'inkcap', count: 2 },
+      { card: 'thistledown', count: 3 },
+      { card: 'creekwater', count: 2 },
+      { card: 'emberbloom', count: 1 },
+      { card: 'elmroot', count: 1 },
+      { card: 'mistcap', count: 1 },
+      { card: 'taste-test', count: 1 },
+    ],
+    knownRecipes: ['whisper-ink', 'sleep-syrup', 'fleetfoot-elixir', 'restful-tonic'],
+    unlockSeason: 'autumn',
+  },
+  {
+    id: 'frost-witch',
+    name: 'Frost Witch',
+    focus: 'Tide and Umbra; Frost',
+    quirk: 'On Snow days, +1 card in hand.',
+    handSize: 7,
+    startingDeck: [
+      { card: 'creekwater', count: 3 },
+      { card: 'nightshade', count: 2 },
+      { card: 'frostcap', count: 1 },
+      { card: 'hollyberry', count: 1 },
+      { card: 'pine-resin', count: 1 },
+      { card: 'elmroot', count: 2 },
+      { card: 'inkcap', count: 1 },
+      { card: 'thistledown', count: 2 },
+      { card: 'stir', count: 1 },
+    ],
+    knownRecipes: ['sleep-syrup', 'calm-waters', 'healing-draught', 'restful-tonic'],
+    unlockSeason: 'winter',
+  },
+];
+
+/** Cauldrons (GDD §12): Copper is open from the start, the rest open with Almanac entries. */
+export const cauldrons: In<typeof Cauldron>[] = [
+  { id: 'copper', name: 'Copper Cauldron', text: 'No surprises.' },
+  { id: 'iron', name: 'Iron Cauldron', text: '3 cauldron slots from the start. -1 Brew a day.', unlock: 'open-for-business', slots: 3, brews: -1 },
+  { id: 'glass', name: 'Glass Cauldron', text: '+2 Harmony on every brew. -1 card in hand.', unlock: 'masterwork', harmony: 2, hand: -1 },
+  { id: 'bone', name: 'Bone Cauldron', text: '2 Lunar ingredients in your Night Satchel from the start. Rent +25%.', unlock: 'nameless-deal', lunarCards: 2, rent: 1.25 },
+  { id: 'silver', name: 'Silver Cauldron', text: '+1 Discard a day. Orders pay 10% less.', unlock: 'legendary', discards: 1, pay: 0.9 },
 ];
 
 // Dusk events (GDD §7), the first 8 from the balance tables. Each choice's rule is in core/dusk-events.ts.

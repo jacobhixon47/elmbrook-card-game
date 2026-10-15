@@ -180,8 +180,36 @@ export const Witch = z.object({
   handSize: z.number().int().min(1),
   startingDeck: z.array(DeckEntry).min(1),
   knownRecipes: z.array(Id).min(1),
+  /** The season whose first win opens this witch (GDD §12); null for the Hedge Witch, open from the start. */
+  unlockSeason: Season.nullable().default(null),
 });
 export type Witch = z.infer<typeof Witch>;
+
+/**
+ * A cauldron: a run modifier chosen at the cottage, like a Balatro deck (GDD §12). Each one trades
+ * one thing for another; what it changes is data here, read by core/cauldrons.ts.
+ */
+export const Cauldron = z.object({
+  id: Id,
+  name: z.string().min(1),
+  text: z.string().min(1),
+  /** The Almanac entry that opens it; null for Copper, open from the start. */
+  unlock: Id.nullable().default(null),
+  /** Cauldron slots at the start, in place of the usual 2. */
+  slots: z.number().int().min(2).optional(),
+  /** Brews and Discards each day, and cards in hand, added to the usual (negative takes away). */
+  brews: z.number().int().optional(),
+  discards: z.number().int().optional(),
+  hand: z.number().int().optional(),
+  /** Harmony on every brew. */
+  harmony: z.number().int().optional(),
+  /** Random Lunar ingredients in the Night Satchel at the start. */
+  lunarCards: z.number().int().positive().optional(),
+  /** Multipliers on rent and on every order's pay. */
+  rent: z.number().positive().optional(),
+  pay: z.number().positive().optional(),
+});
+export type Cauldron = z.infer<typeof Cauldron>;
 
 /** The Night Market's stalls (GDD §9). Their trades need code, so each id is handled in core/market.ts. */
 export const STALLS = [

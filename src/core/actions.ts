@@ -4,7 +4,7 @@ import type { Essence, ModifierId, StallId } from '../codex/schema';
 import type { Errand, GiftSource, Order, Potion } from './state';
 
 export type Action =
-  | { type: 'startRun'; seed: string; witch: string; season?: Season; unlocks?: string[]; perks?: string[]; year?: number; boon?: string }
+  | { type: 'startRun'; seed: string; witch: string; season?: Season; unlocks?: string[]; perks?: string[]; year?: number; boon?: string; cauldron?: string }
   // Afternoon: read the Order Board, then open the shop to draw a hand.
   | { type: 'openShop' }
   // Sunset: brewing.
@@ -88,13 +88,14 @@ export type Action =
   | { type: 'debug'; op: 'givePotion'; recipe: string; tier: Tier }
   | { type: 'debug'; op: 'setHearts'; regular: string; hearts: number };
 
-export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'relic' | 'tincture' | 'modifier' | 'familiar' | 'cauldron' | 'blessing';
+export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'relic' | 'tincture' | 'modifier' | 'familiar' | 'cauldron' | 'blessing' | 'witch';
 
 /** Where a gained card came from. */
 export type CardSource = 'reward' | 'market' | 'forage' | 'sludge' | 'gift' | 'payment' | 'copy' | 'fortune' | 'event';
 
 export type GameEvent =
   | { type: 'runStarted'; seed: string; witch: string; season: Season }
+  | { type: 'glamourUsed'; order: number; potion: number }
   | { type: 'dayStarted'; week: number; day: number; nightShift: boolean }
   | { type: 'orderPosted'; order: Order }
   | { type: 'shopOpened' }

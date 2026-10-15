@@ -10,6 +10,9 @@ export type Fixture = {
   /** The profile a Title fixture shows (core/meta.ts), instead of this browser's. */
   profile?: unknown;
   season?: string;
+  /** The witch and cauldron a Run fixture starts with (default the Hedge Witch, in Copper). */
+  witch?: string;
+  cauldron?: string;
   /** The Year a Run fixture plays in (its modifiers), from 2. */
   year?: number;
   time?: string;
@@ -49,6 +52,8 @@ export type Fixture = {
     codexPage?: number;
     /** The cottage's perk board, at this tier. */
     perkTier?: number;
+    /** The cottage's witch and cauldron picker, showing these (open or locked). */
+    kit?: { witch?: string; cauldron?: string };
     /** The Settings panel, open. */
     settings?: boolean;
     /** A scene screen to show that otherwise shows only on a real run: a season's opening, or a weather's first time. */

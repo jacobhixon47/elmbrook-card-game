@@ -14,7 +14,7 @@ const runFixtures = readdirSync(dir)
 
 describe('fixtures', () => {
   it.each(runFixtures)('%s replays without a rejected step', (_, fx) => {
-    let s: RunState = reduce(null, { type: 'startRun', seed: fx.seed ?? 'fixture', witch: 'hedge-witch', ...(fx.season ? { season: fx.season as Season } : {}) }).state;
+    let s: RunState = reduce(null, { type: 'startRun', seed: fx.seed ?? 'fixture', witch: fx.witch ?? 'hedge-witch', cauldron: fx.cauldron ?? 'copper', ...(fx.season ? { season: fx.season as Season } : {}) }).state;
     const today = () => {
       if (fx.today) s = reduce(s, { type: 'debug', op: 'setWeather', weather: fx.today as Weather }).state;
     };
@@ -24,5 +24,7 @@ describe('fixtures', () => {
       expect(r.events.find((e) => e.type === 'rejected'), JSON.stringify(step)).toBeUndefined();
       s = r.state;
     }
+    // The victory fixtures snap the end screens of a won month: they must still win (they had quietly lost the finale).
+    if (_.startsWith('run-victory')) expect(s.phase).toBe('victory');
   });
 });

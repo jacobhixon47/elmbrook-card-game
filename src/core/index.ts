@@ -17,3 +17,4 @@ export * from './meta';
 export * from './almanac';
 export * from './year';
 export * from './fair';
+export * from './cauldrons';

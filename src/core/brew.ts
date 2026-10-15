@@ -8,6 +8,7 @@ import { blessingTonight } from './fair';
 import { cardPotency, isAged, modifierSteps } from './modifiers';
 import { hasRelic, relicSteps } from './relics';
 import { FROST_WARDEN_POTENCY, HEATWAVE_EMBER_POTENCY, RAIN_POTENCY, tierOf, tierStep, VIGIL, type Tier } from './rules';
+import { cauldronOf, quirkReady, WITCH_RULES } from './cauldrons';
 import { twistNow } from './night';
 import type { CardInstance, RunState } from './state';
 
@@ -117,7 +118,7 @@ export function ingredientsOf(cards: readonly CardInstance[]): Ingredient[] | nu
  * What brewing these cards would make, with every scoring step (GDD §6.3). Pure; used by the
  * cauldron preview, the bot and `brew` itself, so the preview is never wrong.
  */
-export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf' | 'relics' | 'curses' | 'flowerPotencyToday' | 'emberPotencyToday' | 'blessing'>>;
+export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf' | 'relics' | 'curses' | 'flowerPotencyToday' | 'emberPotencyToday' | 'blessing' | 'witch' | 'quirkUsed' | 'cauldronKind'>>;
 
 export function previewBrew(state: BrewState, cards: readonly CardInstance[], hand: readonly CardInstance[], pick?: string): BrewPreview {
   const raw = ingredientsOf(cards);
@@ -195,6 +196,12 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     steps.push({ type: 'scoreStep', source, id, potency: c.potency, harmony: c.harmony, note: step.note });
   }
 
+  // The Bloom Witch: the day's first brew with a Flower in it.
+  if (quirkReady(state, 'bloom-witch') && raw.some((i) => i.tags.includes('flower'))) {
+    c.harmony += WITCH_RULES.bloomHarmony;
+    steps.push({ type: 'scoreStep', source: 'witch', id: 'bloom-witch', potency: c.potency, harmony: c.harmony, note: `+${WITCH_RULES.bloomHarmony} Harmony (the day's first Flower brew)` });
+  }
+
   // Old Songs, from the Longest Night vigil: every brew on the finale night.
   if (blessingTonight(state, 'old-songs')) {
     c.harmony += VIGIL.oldSongsHarmony;
@@ -256,13 +263,19 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     steps.push({ type: 'scoreStep', source: 'familiar', id, potency: c.potency, harmony: c.harmony, note: step.note });
   }
 
-  // 5. The cauldron resolves here once cauldrons exist (M4's run starts).
+  // 5. The cauldron (GDD §12): the Glass Cauldron's Harmony.
+  const pot = cauldronOf(state);
+  if (pot.harmony) {
+    c.harmony += pot.harmony;
+    steps.push({ type: 'scoreStep', source: 'cauldron', id: pot.id, potency: c.potency, harmony: c.harmony, note: `+${pot.harmony} Harmony (${pot.name})` });
+  }
 
   // Harmony can be fractional after a ×1.5; quality rounds down.
   const quality = Math.floor(c.potency * c.harmony);
   const known = state.knownRecipes.includes(recipe.id);
   // An Experiment discovers the recipe but brews one tier lower (GDD §6.2), unless a Grimoire Page helps.
-  const tier = known || p.fullExperiment || hasRelic(state, 'witchs-hatpin') ? tierOf(quality) : tierStep(tierOf(quality), -1);
+  // The Alchemist's first Experiment of the day brews at full quality too.
+  const tier = known || p.fullExperiment || hasRelic(state, 'witchs-hatpin') || quirkReady(state, 'alchemist') ? tierOf(quality) : tierStep(tierOf(quality), -1);
   const copies = Math.max(p.copies, ...cards.flatMap((card) => effectsOf(card.card).map((e) => e.copies ?? 1)));
   return {
     kind: 'potion',
