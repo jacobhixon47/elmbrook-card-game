@@ -25,6 +25,7 @@ export type Action =
   | { type: 'buy'; index: number }
   /** Buy from a stall at the fair. */
   | { type: 'buyAtFair'; stall: number; index: number }
+  | { type: 'chooseBlessing'; index: number }
   | { type: 'forage'; index: number }
   | { type: 'removeCard'; uid: number }
   /** At the Hearth, instead of burning a card. */
@@ -87,7 +88,7 @@ export type Action =
   | { type: 'debug'; op: 'givePotion'; recipe: string; tier: Tier }
   | { type: 'debug'; op: 'setHearts'; regular: string; hearts: number };
 
-export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'relic' | 'tincture' | 'modifier' | 'familiar' | 'cauldron';
+export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'relic' | 'tincture' | 'modifier' | 'familiar' | 'cauldron' | 'blessing';
 
 /** Where a gained card came from. */
 export type CardSource = 'reward' | 'market' | 'forage' | 'sludge' | 'gift' | 'payment' | 'copy' | 'fortune' | 'event';
@@ -105,6 +106,8 @@ export type GameEvent =
   | { type: 'tincturePlayed'; uid: number; card: string }
   | { type: 'cardInfused'; uid: number; bonus: number }
   | { type: 'fairOpened'; fair: string }
+  | { type: 'vigilOpened'; gifts: { regular: string; card: string }[] }
+  | { type: 'blessingChosen'; blessing: string }
   | { type: 'drawPileReordered'; uids: number[] }
   | { type: 'potionUpgraded'; uid: number; tier: Tier }
   /** A card left the deck by itself (Cobweb after its days, Fallen Star at week's end). */

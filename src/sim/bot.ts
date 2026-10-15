@@ -91,6 +91,7 @@ const TINCTURE_VALUE: Record<string, number> = {
   'blood-moon': 9, 'witching-hour': 8, 'wishing-star': 7, howl: 6, 'raven-call': 6, 'moth-swarm': 6, 'cracked-mirror': 5, 'black-cat-crossing': 4, 'yule-candle': 6,
   'royal-jelly': 6, 'beeswax-candle': 6, 'spring-mead': 9, garland: 4,
   'firefly-jar': 6, 'sun-bottle': 6, prism: 6, 'paper-fan': 4, 'spiced-cider': 8, perry: 6, 'mulling-spice': 4, 'threshing-flail': 5,
+  gingerbread: 6, 'mulled-wine': 9, 'wool-mittens': 6, 'snow-globe': 4,
 };
 
 /** Sell the weakest familiar when one worth `v` would be clearly better and every slot is taken. */
@@ -380,6 +381,13 @@ function greedyDusk(s: RunState): Action {
         .sort((a, b) => b.v - a.v)[0];
       return best && best.v >= 8 ? { type: 'buyAtFair', stall: best.stall, index: best.index } : { type: 'leaveErrand' };
     }
+    case 'vigil': {
+      // Any blessing helps the finale; prefer the ones that add Brews or ease the last order.
+      if (offer.chose) return { type: 'leaveErrand' };
+      const rank = ['hearthfire', 'starlight', 'old-songs', 'warm-hands', 'the-long-watch', 'candle-in-the-window'];
+      const best = offer.blessings.map((id, index) => ({ index, r: rank.indexOf(id) })).sort((a, b) => a.r - b.r)[0]!;
+      return { type: 'chooseBlessing', index: best.index };
+    }
   }
 }
 
@@ -642,6 +650,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'chooseErrand', errand: any(['market', 'forage', 'creek', 'guild', 'hearth', 'event'] as const)! },
     { type: 'buy', index: roll(7) },
     { type: 'buyAtFair', stall: roll(4), index: roll(4) },
+    { type: 'chooseBlessing', index: roll(4) },
     { type: 'forage', index: roll(5) },
     { type: 'chooseEvent', index: roll(3), uid: any(deckUids) ?? 0 },
     { type: 'removeCard', uid: any([...s.drawPile, ...s.hand, ...s.discardPile].map((c) => c.uid)) ?? 0 },

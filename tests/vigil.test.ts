@@ -1,0 +1,139 @@
+import { describe, expect, it } from 'vitest';
+import { codex } from '../src/codex';
+import {
+  festivalOn, migrateRun, NIGHT_SHIFT_DAY, previewBrew, RUN_VERSION, tierStep, VIGIL, VIGIL_DATE, WEEKS, type Calendar, type RunState, type Season,
+} from '../src/core';
+import { EFFECTS, type ScoreCtx } from '../src/core/effects';
+import { brewing, no, ofType, ok, slotAll, start, withHand } from './helpers';
+
+const clear: Calendar = { weather: Array.from({ length: WEEKS }, () => Array.from({ length: NIGHT_SHIFT_DAY }, () => 'clear' as const)), sky: null };
+
+/** A run on the vigil's day (or another), shop open, with these hearts. */
+function day(season: Season = 'winter', hearts: Record<string, number> = {}, week: number = VIGIL_DATE.week, d: number = VIGIL_DATE.day): RunState {
+  let s = { ...start('vigil', season), calendar: clear };
+  s = ok(s, { type: 'debug', op: 'jumpToDay', week, day: d }).state;
+  s = { ...s, hearts: { ...s.hearts, ...hearts } };
+  return ok(s, { type: 'openShop' }).state;
+}
+
+/** Close on the vigil's day, with every order filled so no hearts are lost. */
+function vigil(hearts: Record<string, number> = {}): RunState {
+  const s = day('winter', hearts);
+  return ok({ ...s, orders: [] }, { type: 'endDay' }).state;
+}
+
+/** Choose a blessing by id and walk on to the finale's Night Shift. */
+function finale(blessing: string | null): RunState {
+  let s = vigil();
+  if (s.offer?.kind !== 'vigil') throw new Error('expected the vigil');
+  if (blessing) s = { ...s, offer: { ...s.offer, blessings: [blessing] } };
+  s = ok(s, { type: 'chooseBlessing', index: 0 }).state;
+  s = ok(s, { type: 'leaveErrand' }).state;
+  return ok(s, { type: 'openShop' }).state;
+}
+
+describe('the Longest Night vigil', () => {
+  it('is Winter\'s festival, on the eve of the finale', () => {
+    expect(VIGIL_DATE).toEqual({ week: WEEKS, day: NIGHT_SHIFT_DAY - 1 });
+    expect(festivalOn({ season: 'winter' }, VIGIL_DATE.week, VIGIL_DATE.day)).toBe('longest-night');
+    expect(festivalOn({ season: 'winter' }, 2, 3)).toBeNull();
+    expect(festivalOn({ season: 'spring' }, VIGIL_DATE.week, VIGIL_DATE.day)).toBeNull();
+  });
+
+  it('replaces the reward and the errand after closing', () => {
+    const r = ok({ ...day(), orders: [] }, { type: 'endDay' });
+    expect(r.state.offer?.kind).toBe('vigil');
+    expect(ofType(r.events, 'vigilOpened')).toHaveLength(1);
+    // Other seasons close that day as usual.
+    expect(ok({ ...day('spring'), orders: [] }, { type: 'endDay' }).state.offer?.kind).toBe('reward');
+  });
+
+  it('brings a gift from each regular with enough hearts, into the Night Satchel', () => {
+    const s = vigil({ 'old-tobin': VIGIL.hearts, 'sister-alder': VIGIL.hearts + 2, 'bea-thornwick': VIGIL.hearts - 1 });
+    if (s.offer?.kind !== 'vigil') throw new Error('expected the vigil');
+    expect(s.offer.gifts.map((g) => g.regular).sort()).toEqual(['old-tobin', 'sister-alder']);
+    for (const g of s.offer.gifts) {
+      expect(VIGIL.gifts).toContain(g.card);
+      expect(s.satchel.some((c) => c.card === g.card)).toBe(true);
+    }
+    const alone = vigil();
+    expect(alone.offer?.kind === 'vigil' && alone.offer.gifts).toEqual([]);
+  });
+
+  it('offers three blessings; one is chosen, then you can head home', () => {
+    let s = vigil();
+    if (s.offer?.kind !== 'vigil') throw new Error('expected the vigil');
+    expect(s.offer.blessings).toHaveLength(VIGIL.blessingsOffered);
+    expect(no(s, { type: 'leaveErrand' })).toMatch(/blessing/);
+    const id = s.offer.blessings[1]!;
+    s = ok(s, { type: 'chooseBlessing', index: 1 }).state;
+    expect(s.blessing).toBe(id);
+    expect(no(s, { type: 'chooseBlessing', index: 0 })).toMatch(/already/);
+    s = ok(s, { type: 'leaveErrand' }).state;
+    expect([s.week, s.day]).toEqual([WEEKS, NIGHT_SHIFT_DAY]);
+  });
+
+  it('Hearthfire, Warm Hands and The Long Watch on the finale night', () => {
+    const plain = finale(null);
+    expect(finale('hearthfire').brewsLeft).toBe(plain.brewsLeft + VIGIL.hearthfireBrews);
+    expect(finale('warm-hands').discardsLeft).toBe(plain.discardsLeft + VIGIL.warmHandsDiscards);
+    expect(finale('the-long-watch').hand.length).toBe(Math.min(plain.hand.length + VIGIL.longWatchDraw, plain.hand.length + plain.drawPile.length));
+  });
+
+  it('Old Songs adds Harmony to every brew that night', () => {
+    const harmony = (blessing: string | null) => {
+      const [h, uids] = withHand(finale(blessing), ['elmroot', 'creekwater']);
+      const s = slotAll(h, uids);
+      const p = previewBrew(s, s.cauldron, s.hand);
+      return p.kind === 'potion' ? p.harmony : 0;
+    };
+    expect(harmony('old-songs') - harmony('hearthfire')).toBe(VIGIL.oldSongsHarmony);
+  });
+
+  it('Starlight lowers the Moonless Patron\'s last order by a tier', () => {
+    const patronTiers = (s: RunState) => s.orders.filter((o) => o.customer === 'moonless-patron').map((o) => o.minTier);
+    const plain = patronTiers(finale('hearthfire'));
+    const eased = patronTiers(finale('starlight'));
+    expect(eased.slice(0, -1)).toEqual(plain.slice(0, -1));
+    expect(eased.at(-1)).toBe(tierStep(plain.at(-1)!, -1));
+  });
+
+  it('Candle in the Window is a blessing the Grimoire reads', () => {
+    expect(codex.blessings.has('candle-in-the-window')).toBe(true);
+    expect(finale('candle-in-the-window').blessing).toBe('candle-in-the-window');
+  });
+});
+
+describe('the Winter gifts', () => {
+  it('Roast Chestnuts and Holly Sprig help on Night Shifts only', () => {
+    const run = (id: string, night: boolean) => {
+      const c = { potency: 0, harmony: 0, night } as unknown as ScoreCtx;
+      EFFECTS[id]!.onScore!(c);
+      return [c.potency, c.harmony];
+    };
+    expect(run('harmony-2-on-night-shift', true)).toEqual([0, 2]);
+    expect(run('harmony-2-on-night-shift', false)).toEqual([0, 0]);
+    expect(run('potency-2-on-night-shift', true)).toEqual([2, 0]);
+  });
+
+  it('Gingerbread and Wool Mittens', () => {
+    const [s, [ginger, mittens]] = withHand(brewing('vigil'), ['gingerbread', 'wool-mittens']);
+    let r = ok(s, { type: 'playTincture', uid: ginger! }).state;
+    expect(r.pending.harmony).toBe(2);
+    expect(r.hand).toHaveLength(2);
+    r = ok(r, { type: 'playTincture', uid: mittens! }).state;
+    expect(r.discardsLeft).toBe(s.discardsLeft + 1);
+  });
+
+  it('every gift is festival-only', () => {
+    for (const id of VIGIL.gifts) expect((codex.ingredients.get(id) ?? codex.tinctures.get(id))?.pool, id).toBe('event');
+  });
+});
+
+describe('saves', () => {
+  it('a version 16 run gains no blessing', () => {
+    const old: Record<string, unknown> = { ...brewing('migrate'), version: 16 };
+    delete old.blessing;
+    expect(migrateRun(old)).toMatchObject({ version: RUN_VERSION, blessing: null });
+  });
+});

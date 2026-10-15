@@ -4,9 +4,10 @@ import type { GameEvent } from './actions';
 import { effectsOf, hasEffect, sumEffect, type ScoreCtx } from './effects';
 import { activeEvents, NIGHT_SHIFT_DAY, todaysWeather, type Weather } from './calendar';
 import { FAMILIAR_SCORE } from './familiars';
+import { blessingTonight } from './fair';
 import { cardPotency, isAged, modifierSteps } from './modifiers';
 import { hasRelic, relicSteps } from './relics';
-import { FROST_WARDEN_POTENCY, HEATWAVE_EMBER_POTENCY, RAIN_POTENCY, tierOf, tierStep, type Tier } from './rules';
+import { FROST_WARDEN_POTENCY, HEATWAVE_EMBER_POTENCY, RAIN_POTENCY, tierOf, tierStep, VIGIL, type Tier } from './rules';
 import { twistNow } from './night';
 import type { CardInstance, RunState } from './state';
 
@@ -116,7 +117,7 @@ export function ingredientsOf(cards: readonly CardInstance[]): Ingredient[] | nu
  * What brewing these cards would make, with every scoring step (GDD §6.3). Pure; used by the
  * cauldron preview, the bot and `brew` itself, so the preview is never wrong.
  */
-export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf' | 'relics' | 'curses' | 'flowerPotencyToday' | 'emberPotencyToday'>>;
+export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf' | 'relics' | 'curses' | 'flowerPotencyToday' | 'emberPotencyToday' | 'blessing'>>;
 
 export function previewBrew(state: BrewState, cards: readonly CardInstance[], hand: readonly CardInstance[], pick?: string): BrewPreview {
   const raw = ingredientsOf(cards);
@@ -143,6 +144,7 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     filledToday: state.orders.filter((o) => o.status === 'filled').length,
     weather: todaysWeather(state),
     relics: state.relics ?? [],
+    night: state.day === NIGHT_SHIFT_DAY,
   };
   steps.push({ type: 'scoreStep', source: 'recipe', id: recipe.id, potency: 0, harmony: c.harmony });
 
@@ -191,6 +193,12 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     c.potency = Math.max(0, c.potency + step.potency);
     c.harmony += step.harmony;
     steps.push({ type: 'scoreStep', source, id, potency: c.potency, harmony: c.harmony, note: step.note });
+  }
+
+  // Old Songs, from the Longest Night vigil: every brew on the finale night.
+  if (blessingTonight(state, 'old-songs')) {
+    c.harmony += VIGIL.oldSongsHarmony;
+    steps.push({ type: 'scoreStep', source: 'blessing', id: 'old-songs', potency: c.potency, harmony: c.harmony, note: `+${VIGIL.oldSongsHarmony} Harmony (Old Songs)` });
   }
 
   // Tonight's patron (GDD §10): Sir Bramble douses Ember, the Frost Warden chills the rest.

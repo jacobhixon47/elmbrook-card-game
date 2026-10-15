@@ -209,3 +209,14 @@ export const BROKER_FAMILIARS = 2;
  * Oct 8). Until familiars and the Night Market land the sim wins about 5% this way (1 of 3: 25%).
  */
 export const FINALE_ORDERS: number = 3;
+
+/** The Longest Night vigil (GDD §4.2): regulars with this many hearts bring a gift from the Winter set; the Solstice Fire offers this many blessings. */
+export const VIGIL = {
+  hearts: 5,
+  gifts: ['gingerbread', 'mulled-wine', 'wool-mittens', 'snow-globe', 'roast-chestnuts', 'holly-sprig'],
+  blessingsOffered: 3,
+  hearthfireBrews: 1,
+  warmHandsDiscards: 2,
+  oldSongsHarmony: 2,
+  longWatchDraw: 2,
+} as const;
