@@ -60,6 +60,32 @@ export const CAULDRON_METAL = {
 } as const satisfies Record<string, readonly PaletteKey[]>;
 
 /**
+ * The line-drawn marks for the ingredient tags rules read (GDD §5.1), 7x7 at card resolution,
+ * one colour each: a flower, a snowflake, a fruit. They sit in the card's top-left corner like a suit.
+ */
+export const TAG_GLYPHS: Record<string, { rows: readonly string[]; color: PaletteKey }> = {
+  flower: {
+    color: 'i',
+    rows: ['#..#..#', '##.#.##', '#.#.#.#', '#.....#', '.#...#.', '..###..', '...#...'],
+  },
+  frost: {
+    color: 'U',
+    rows: ['#..#..#', '.#.#.#.', '..#.#..', '###.###', '..#.#..', '.#.#.#.', '#..#..#'],
+  },
+  fruit: {
+    color: 'o',
+    rows: ['....##.', '...#...', '.##.##.', '#.....#', '#.....#', '.#...#.', '..###..'],
+  },
+};
+
+export function tagGlyph(tag: string): Pixmap {
+  const g = TAG_GLYPHS[tag]!;
+  const p = new Pixmap(7, 7);
+  g.rows.forEach((row, y) => [...row].forEach((ch, x) => ch === '#' && p.set(x, y, g.color)));
+  return p;
+}
+
+/**
  * A cauldron on three legs with a glowing brew. Shaded as a sphere lit from
  * the upper left, with a warm lamplight rim on the right and the brew's colour
  * reflected under the lip.
