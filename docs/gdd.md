@@ -203,7 +203,7 @@ The bulk of the deck. Each has:
 - **Rarity:** Common, Uncommon, Rare, Lunar.
 - **Origin:** Garden, Wychwood, Creek, Mine, Market, Night (flavour + bonus conditions + shared codex with game 2).
 - **Optional text effect:** "+2 Harmony if brewed with a Tide ingredient", "When discarded, draw 1".
-- **Tags** (flower, root, frost, mineral…) that effects and later systems key on, e.g. Ice Lily's "+1 Harmony per Frost ingredient". Tags a rule reads (today Frost, Flower and Fruit) show as coloured chips across the foot of the card's art, so a Frost card reads as Frost at a glance whatever its essences (Jacob, Oct 14). Every tag is listed when you inspect a card.
+- **Tags** (flower, root, frost, mineral…) that effects and later systems key on, e.g. Ice Lily's "+1 Harmony per Frost ingredient". Tags a rule reads (today Frost, Flower and Fruit) show as small line-drawn marks in the card's top-left corner, like a suit: a tulip for Flower, a snowflake for Frost, a fruit for Fruit, one colour each. A card with two stacks them. So a Frost card reads as Frost at a glance whatever its essences (Jacob, Oct 14; marks in place of the first coloured chips, Oct 15). Every tag is listed when you inspect a card.
 - **In season:** the seasons it grows in. In-season ingredients are three times as likely in rewards, the Market and the Forage.
 - **Pool:** base (offered from the first run), unlock (offered once unlocked, §13) or event (only from its calendar event).
 

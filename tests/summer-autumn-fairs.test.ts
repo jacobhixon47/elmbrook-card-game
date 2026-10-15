@@ -71,7 +71,7 @@ describe('Firefly Fair stock', () => {
     expect(effect('harmony-per-fruit-in-brew', ['starfruit', 'sunberry', 'elmroot']).harmony).toBe(2);
   });
 
-  it('Fruit shows as a chip on the cards that have it', () => {
+  it('Fruit shows as a mark on the cards that have it', () => {
     expect(['sunberry', 'blackberry', 'hollyberry', 'sunpeach', 'starfruit'].every((id) => ing(id).tags.includes('fruit'))).toBe(true);
   });
 

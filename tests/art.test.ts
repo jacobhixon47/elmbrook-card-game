@@ -4,7 +4,8 @@ import { PNG } from 'pngjs';
 import { BACKDROPS } from '../src/art/backdrops';
 import { gradeView } from '../src/art/window';
 import { PALETTE } from '../src/art/palette';
-import { proceduralTextures } from '../src/art/procedural';
+import { proceduralTextures, TAG_GLYPHS, tagGlyph } from '../src/art/procedural';
+import { codex } from '../src/codex';
 import { spriteSize, validateSprite } from '../src/art/sprite';
 import { SPRITES } from '../src/art/sprites';
 
@@ -15,6 +16,17 @@ describe('art', () => {
 
   it('icons are 16x16', () => {
     for (const def of SPRITES) expect(spriteSize(def)).toEqual({ width: 16, height: 16 });
+  });
+
+  it('tag marks are 7x7 line drawings in one palette colour, for tags cards carry', () => {
+    const tags = new Set([...codex.ingredients.values()].flatMap((i) => i.tags));
+    for (const [tag, g] of Object.entries(TAG_GLYPHS)) {
+      expect(tags.has(tag), tag).toBe(true);
+      expect(g.rows).toHaveLength(7);
+      expect(g.rows.every((r) => r.length === 7 && /^[.#]+$/.test(r))).toBe(true);
+      expect(PALETTE[g.color]).toBeDefined();
+      expect(tagGlyph(tag).width).toBe(7);
+    }
   });
 
   it('sprite ids are unique', () => {
