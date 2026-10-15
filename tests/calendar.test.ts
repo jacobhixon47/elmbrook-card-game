@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  activeEvents, FESTIVAL_DAY, FESTIVAL_WEEK, HARVEST_FAIR, matchRecipe, NIGHT_SHIFT_DAY, payout, previewBrew, recipeAvailable, rollCalendar,
-  SEASON_WEATHER, SEASONS, weatherPotency, WEEKS, type Calendar, type Order, type RunState, type Season, type Weather,
+  activeEvents, FESTIVAL_DAY, FESTIVAL_WEEK, matchRecipe, NIGHT_SHIFT_DAY, previewBrew, recipeAvailable, rollCalendar,
+  SEASON_WEATHER, SEASONS, weatherPotency, WEEKS, type Calendar, type RunState, type Season, type Weather,
 } from '../src/core';
 import { dayPool } from '../src/core/dusk';
 import { no, ofType, ok, slotAll, start, withHand } from './helpers';
@@ -115,36 +115,14 @@ describe('weather', () => {
 });
 
 describe('festivals', () => {
-  const potion = (ingredients: string[]) => ({ tier: 'fine' as const, ingredients });
-
-  it('Bloomtide doubles pay for potions with a Flower ingredient', () => {
-    const s = on(sky('clear'), FESTIVAL_WEEK, FESTIVAL_DAY, 'spring');
-    expect(s.orders.every((o) => o.tagBonus?.tag === 'flower')).toBe(true);
-    const o = s.orders[0]!;
-    const plain = payout(potion(['elmroot', 'creekwater']), { ...o, minTier: 'fine' });
-    const flower = payout(potion(['thistledown', 'creekwater']), { ...o, minTier: 'fine' });
-    expect(flower.pay).toBe(plain.pay * 2);
-    expect(on(sky('clear'), FESTIVAL_WEEK, FESTIVAL_DAY - 1, 'spring').orders.every((x) => x.tagBonus === null)).toBe(true);
-  });
-
-  it('Harvest Fair orders want two potions and pay on the second', () => {
-    const s = on(sky('clear'), FESTIVAL_WEEK, FESTIVAL_DAY, 'autumn');
-    expect(s.orders.every((o) => o.quantity === HARVEST_FAIR.quantity)).toBe(true);
-    const order: Order = { ...s.orders[0]!, request: { kind: 'family', family: 'healing' }, minTier: 'fine' };
-    const p = (uid: number) => ({ uid, recipe: 'healing-draught', family: 'healing' as const, quality: 14, tier: 'fine' as const, ingredients: ['elmroot'], experiment: false, heartDelta: 0 });
-    let r = ok({ ...s, orders: [order], shelf: [p(701), p(702)] }, { type: 'deliver', order: order.id, potion: 701 });
-    expect(ofType(r.events, 'orderProgress')[0]).toMatchObject({ delivered: 1, quantity: 2 });
-    expect(r.state.gold).toBe(s.gold);
-    r = ok(r.state, { type: 'deliver', order: order.id, potion: 702 });
-    expect(r.state.orders[0]!.status).toBe('filled');
-    expect(r.state.gold).toBeGreaterThan(s.gold);
-  });
-
-  it('Longest Night gives the festival week’s Night Shift more Brews, Discards and orders', () => {
+  it('festival day plays like any other day: the old pay and order rules are gone', () => {
+    for (const season of SEASONS) {
+      const s = on(sky('clear'), FESTIVAL_WEEK, FESTIVAL_DAY, season);
+      expect(s.orders.every((o) => o.tagBonus === null && o.quantity === 1)).toBe(true);
+    }
     const winter = on(sky('clear'), FESTIVAL_WEEK, NIGHT_SHIFT_DAY, 'winter');
     const other = on(sky('clear'), FESTIVAL_WEEK - 1, NIGHT_SHIFT_DAY, 'winter');
-    expect(winter.brewsLeft).toBe(other.brewsLeft + 2);
-    expect(winter.discardsLeft).toBe(other.discardsLeft + 1);
+    expect([winter.brewsLeft, winter.discardsLeft]).toEqual([other.brewsLeft, other.discardsLeft]);
   });
 });
 
@@ -184,12 +162,14 @@ describe('Calendar view', () => {
     expect(weeks[0]!.cells[1]!.mark).toBe('next');
     expect(todayLine(s)).toBe('Rain: Creek, Tide +2 · Eclipse');
     expect(todayRules(s)).toHaveLength(2);
-    const autumn = on(sky('fog'), FESTIVAL_WEEK, FESTIVAL_DAY, 'autumn');
-    expect(todayLine(autumn)).toMatch(/Harvest Fair/);
+    const spring = on(sky('fog'), FESTIVAL_WEEK, FESTIVAL_DAY, 'spring');
+    expect(todayLine(spring)).toMatch(/Bloomtide/);
+    // Seasons whose fair isn't built yet mark nothing.
+    expect(todayLine(on(sky('fog'), FESTIVAL_WEEK, FESTIVAL_DAY, 'autumn'))).not.toMatch(/Harvest/);
     const winter = { ...start('w', 'winter'), calendar: sky('fog') };
     const patron = codex.patrons.get(winter.patrons[FESTIVAL_WEEK - 1]!)!;
     expect(dayRules(winter, { week: FESTIVAL_WEEK, day: NIGHT_SHIFT_DAY, weather: 'fog' })).toEqual([
-      `${patron.name}: ${patron.text}`, 'Fog: it never hides a Night Shift\'s orders.', expect.stringMatching(/^Longest Night/),
+      `${patron.name}: ${patron.text}`, 'Fog: it never hides a Night Shift\'s orders.',
     ]);
     // Each Night cell names its patron; the HUD line leads with tonight's.
     expect(calendarWeeks(winter).map((w) => w.cells[NIGHT_SHIFT_DAY - 1]!.marks[0])).toEqual(winter.patrons.map((id) => codex.patrons.get(id)!.name.replace(/^The /, '')));

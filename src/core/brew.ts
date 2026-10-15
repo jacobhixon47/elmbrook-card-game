@@ -141,6 +141,7 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     week: state.week,
     firstBrew: state.brewsToday === 0,
     filledToday: state.orders.filter((o) => o.status === 'filled').length,
+    weather: todaysWeather(state),
   };
   steps.push({ type: 'scoreStep', source: 'recipe', id: recipe.id, potency: 0, harmony: c.harmony });
 

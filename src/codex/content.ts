@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon } from './schema';
+import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon, Fair } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -46,6 +46,10 @@ export const ingredients: In<typeof Ingredient>[] = [
   { id: 'heartstone', name: 'Heartstone', essences: ['stone'], potency: 9, rarity: 'rare', origin: 'mine', effects: ['gain-heart'], text: '+1 heart with the customer.', tags: ['mineral'], pool: 'unlock' },
   { id: 'shadowroot', name: 'Shadowroot', essences: ['umbra'], potency: 7, rarity: 'rare', origin: 'wychwood', effects: ['harmony-x1.5-if-secrets'], text: 'x1.5 Harmony in a Secrets potion.', tags: ['root'], inSeason: ['autumn'] },
   { id: 'harvest-gourd', name: 'Harvest Gourd', essences: ['vital', 'stone'], potency: 6, rarity: 'rare', origin: 'garden', effects: ['potency-2-per-order-today'], text: '+2 Potency for each order filled today.', tags: ['fruit'], inSeason: ['autumn'], pool: 'unlock' },
+  // Bloomtide's fair (Spring): found only at the Flower Grower's stall.
+  { id: 'maybloom', name: 'Maybloom', essences: ['vital', 'gale'], potency: 7, rarity: 'rare', origin: 'garden', effects: ['harmony-per-flower-in-brew'], text: '+1 Harmony per Flower ingredient in the brew.', tags: ['flower'], pool: 'event' },
+  { id: 'primrose', name: 'Primrose', essences: ['vital'], potency: 6, rarity: 'rare', origin: 'garden', effects: ['grows'], text: 'Grows: +1 Potency for the run each time it is brewed.', tags: ['flower'], pool: 'event' },
+  { id: 'bluebell', name: 'Bluebell', essences: ['tide', 'umbra'], potency: 5, rarity: 'uncommon', origin: 'wychwood', effects: ['potency-3-if-rain'], text: '+3 Potency on Rain days.', tags: ['flower'], pool: 'event' },
   { id: 'ice-lily', name: 'Ice Lily', essences: ['tide'], potency: 8, rarity: 'rare', origin: 'creek', effects: ['harmony-per-frost-in-brew'], text: '+1 Harmony per Frost ingredient in the brew.', tags: ['flower', 'frost'], inSeason: ['winter'] },
   { id: 'starlit-dew', name: 'Starlit Dew', essences: ['lunar', 'tide'], potency: 9, rarity: 'lunar', origin: 'night', nightOnly: true, tags: ['water'] },
   { id: 'moonmoth-wing', name: 'Moonmoth Wing', essences: ['lunar', 'gale'], potency: 8, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['wild-essence'], text: 'Counts as any essence.', tags: ['feather'] },
@@ -75,6 +79,7 @@ export const tinctures: In<typeof Tincture>[] = [
   { id: 'bottle-spare', name: 'Bottle Spare', rarity: 'rare', effects: ['next-brew-double'], text: 'Your next brew makes 2 potions.' },
   { id: 'second-wind', name: 'Second Wind', rarity: 'rare', effects: ['gain-brew'], text: 'Gain 1 Brew today.', pool: 'unlock' },
   { id: 'grimoire-page', name: 'Grimoire Page', rarity: 'rare', effects: ['next-experiment-full', 'draw-2'], text: 'Your next Experiment brews at full quality. Draw 2.', pool: 'unlock' },
+  { id: 'royal-jelly', name: 'Royal Jelly', rarity: 'rare', effects: ['bless-in-hand'], text: 'Bless an ingredient in your hand for the run.', pool: 'event' },
   // Omens: Night Satchel Tinctures (GDD §5.4), strong with a drawback. They only come out on Night Shifts.
   { id: 'blood-moon', name: 'Blood Moon', rarity: 'lunar', effects: ['next-brew-harmony-x2', 'lose-discard'], text: 'Next brew: Harmony x2. Lose 1 Discard.' },
   { id: 'black-cat-crossing', name: 'Black Cat Crossing', rarity: 'lunar', effects: ['draw-3', 'discard-random-1'], text: 'Draw 3, then discard a random card.' },
@@ -189,6 +194,7 @@ export const familiars: In<typeof Familiar>[] = [
   { id: 'fox', name: 'Fox', rarity: 'uncommon', text: 'Tips for beating an order\'s minimum tier are doubled.', pool: 'unlock' },
   { id: 'frost-hare', name: 'Frost Hare', rarity: 'uncommon', text: '+1 Harmony per Frost ingredient in the brew.' },
   { id: 'ermine', name: 'Ermine', rarity: 'uncommon', text: 'Frost ingredients +3 Potency.', pool: 'event' },
+  { id: 'bumblebee', name: 'Bumblebee', rarity: 'uncommon', text: 'Flower ingredients +3 Potency.', pool: 'event' },
   { id: 'jackdaw', name: 'Jackdaw', rarity: 'uncommon', text: '+1 Harmony per distinct essence in the brew.' },
   { id: 'moth', name: 'Moth', rarity: 'rare', text: 'Lunar ingredients count as every essence.' },
   { id: 'will-o-wisp', name: 'Will-o\'-Wisp', rarity: 'rare', text: 'First brew each day: ×2 Harmony.' },
@@ -207,6 +213,7 @@ export const relics: In<typeof Relic>[] = [
   { id: 'silver-bell', name: 'Silver Bell', tier: 1, text: '+1 heart on every delivery to a regular.', pool: 'unlock' },
   { id: 'old-almanac', name: 'Old Almanac', tier: 2, text: '+1 Discard on Rain and Fog days.', pool: 'unlock' },
   { id: 'spare-satchel', name: 'Spare Satchel', tier: 2, text: '+1 hand size.' },
+  { id: 'may-crown', name: 'May Crown', tier: 2, text: 'Deliveries with a Flower ingredient pay ×1.25.', pool: 'event' },
   { id: 'witchs-hatpin', name: 'Witch\'s Hatpin', tier: 2, text: 'Experiments brew at full quality.' },
   { id: 'iron-lid', name: 'Iron Lid', tier: 2, text: 'The first failed brew each day makes no Sludge.' },
   { id: 'moon-locket', name: 'Moon Locket', tier: 3, text: '+1 Brew on Night Shifts.' },
@@ -389,4 +396,20 @@ export const boons: In<typeof Boon>[] = [
   { id: 'another-perch', name: 'Another Perch', text: 'Room for one more familiar.', start: { familiarSlots: 1 } },
   { id: 'winter-savings', name: 'Winter Savings', text: 'Start every run with 15 more gold.', start: { gold: 15 } },
   { id: 'tall-shelf', name: 'A Taller Shelf', text: 'One more Shelf slot.', start: { shelf: 1 } },
+];
+
+export const fairs: In<typeof Fair>[] = [
+  {
+    id: 'bloomtide',
+    name: 'The Bloomtide Fair',
+    intro: [
+      'Bloomtide: the first warm week, when the whole valley flowers at once.',
+      'After the shops close the square fills with lanterns, and growers from the hill farms set out what they only bring down once a year.',
+    ],
+    stalls: [
+      { id: 'flower-grower', name: 'The Flower Grower', text: 'Flowers from the glasshouses up the hill.', stock: [{ card: 'maybloom', price: 10 }, { card: 'primrose', price: 10 }, { card: 'bluebell', price: 7 }] },
+      { id: 'beekeeper', name: 'The Beekeeper', text: 'Honey, wax, and a bee that took a liking to you.', stock: [{ familiar: 'bumblebee', price: 14 }, { card: 'royal-jelly', price: 9 }] },
+      { id: 'garland-weaver', name: 'The Garland Weaver', text: 'Crowns of may blossom for the season.', stock: [{ relic: 'may-crown', price: 18 }] },
+    ],
+  },
 ];

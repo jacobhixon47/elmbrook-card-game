@@ -1,6 +1,6 @@
 import { codex } from '../codex';
 import {
-  patronOf, patronKnown, FESTIVAL_WEEK, festivalOn, MOON_NAME, NIGHT_SHIFT_DAY, SEASON_FESTIVAL, snowedIn, todaysWeather, WEATHER_RULE, weatherOn,
+  patronOf, patronKnown, festivalOn, MOON_NAME, NIGHT_SHIFT_DAY, snowedIn, todaysWeather, WEATHER_RULE, weatherOn,
   WEEK_MOONS, WEEKS, type Festival, type RunState, type SkyEvent, type Weather,
 } from '../core';
 
@@ -21,12 +21,12 @@ export const FESTIVAL_NAME: Record<Festival, string> = {
   bloomtide: 'Bloomtide', 'firefly-fair': 'Firefly Fair', 'harvest-fair': 'Harvest Fair', 'longest-night': 'Longest Night',
 };
 
-/** What each festival does in this build. Contests, the gift exchange and the Firefly Fair's stalls come with relics and stalls. */
+/** What each festival brings. Seasons whose fair isn't built yet show nothing on their festival day. */
 export const FESTIVAL_RULE: Record<Festival, string> = {
-  bloomtide: 'Potions brewed with a Flower ingredient pay double.',
-  'firefly-fair': 'A summer fair in the square. (Its games arrive with the Night Market stalls.)',
-  'harvest-fair': 'One more order. Every order wants two potions and pays ×2.5.',
-  'longest-night': 'This week\'s Night Shift has +2 Brews, +1 Discard and +2 orders.',
+  bloomtide: 'After closing, the Bloomtide Fair fills the square: festival-only flowers, a beekeeper and a garland weaver.',
+  'firefly-fair': 'After closing, a summer fair in the square.',
+  'harvest-fair': 'After closing, a harvest fair in the square.',
+  'longest-night': 'The longest night of the year.',
 };
 
 export const SKY_NAME: Record<SkyEvent, string> = { eclipse: 'Eclipse', 'meteor-shower': 'Meteor Shower' };
@@ -56,12 +56,10 @@ function skyOn(s: Pick<RunState, 'calendar'>, week: number, day: number): SkyEve
   return e.event;
 }
 
-/** The festival that changes this day's rules (Longest Night acts on the festival week's Night Shift). */
+/** The festival held on this day, when its season has a fair (GDD §4.2). */
 function festivalToday(s: When, week: number, day: number): Festival | null {
   const f = festivalOn(s, week, day);
-  if (f && f !== 'longest-night') return f;
-  if (week === FESTIVAL_WEEK && day === NIGHT_SHIFT_DAY && SEASON_FESTIVAL[s.season] === 'longest-night') return 'longest-night';
-  return null;
+  return f && codex.fairs.has(f) ? f : null;
 }
 
 /** One short line for the HUD: the weather, plus a festival or sky event when there is one. */

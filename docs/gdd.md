@@ -26,13 +26,13 @@ Touchstones: Balatro (scoring juice, run structure, jokers), Slay the Spire (dec
 
 ```
 Week 1 (Waxing Crescent)  Day · Day · Day · Day · Night Shift (First Quarter)   → Rent
-Week 2 (Waxing Gibbous)   Day · Day · Day · Day · Night Shift (FULL MOON)       → Rent
-Week 3 (Waning Gibbous)   Day · Day · Day · Day · Night Shift (Last Quarter)    → Rent   (festival week)
+Week 2 (Waxing Gibbous)   Day · Day · Day · Day · Night Shift (FULL MOON)       → Rent   (festival week)
+Week 3 (Waning Gibbous)   Day · Day · Day · Day · Night Shift (Last Quarter)    → Rent
 Week 4 (Waning Crescent)  Day · Day · Day · Day · Night Shift (NEW MOON finale) → Win
 ```
 
 - **20 encounters per run** (16 days + 4 nights), about 60-75 minutes, still one sitting. Days per week is a single tuning constant (`DAYS_PER_WEEK` in `src/core/calendar.ts`); 3 vs 4 gets compared in the sim before it is locked.
-- **The Calendar is seeded at run start:** each day's weather, the week's town event, the festival in week 3, and any rare sky event, so you can plan around them.
+- **The Calendar is seeded at run start:** each day's weather, the week's town event, the festival in week 2, and any rare sky event, so you can plan around them.
 - **The Calendar is the run map.** It shows the current week, each day's weather/event icon, and the upcoming Night Shift's patron and rule twist (revealed in advance, like Balatro's boss blind). In the build it is the Grimoire's Calendar tab: four weeks of five days with each week's moon, every day's weather, the festival and any sky event; hovering a day gives its rules. Today's weather and events also sit under the Brews in the HUD.
 - The Calendar rolls from its own random stream (`seed:calendar`), so the same seed deals the same cards whatever the weather.
 - **Rent** is paid automatically after each Night Shift: 20 / 71 / 161 / 307 gold in Spring. Week 1's rent ramps gently by season (20, 22, 24, 26); later weeks take the season's multiplier, and later Years add to it (§13). Can't pay = run over ("the Guild reclaims your stall").
@@ -144,16 +144,18 @@ The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; th
 - The Guild inspector visits: a Superb potion that day earns a rent discount.
 - Plus the ~20 small Events from §7 (fae visits, shop mishaps).
 
-**Seasonal festivals** (fixed, week 3 of every run, visible from the start):
+**Seasonal festivals** are market fairs (fixed on week 2, day 3 of every run, visible from the start; moved from week 3 with Jacob on Oct 15 so what you buy lasts about half the run. Winter's vigil may sit later, closer to the solstice, and is decided with its design). The day plays as normal; after closing, the fair replaces the twilight reward pick and the errand. It is held at twilight, lantern-lit in the square: a short scene screen the first time, then a row of festival-only stalls selling cards, familiars and relics for gold (all `pool: 'event'`, so they never turn up anywhere else). You buy what you like and head home. No contests, games or tickets (decided with Jacob, Oct 15: a festival means one thing, a market). The old festival rules (Bloomtide's double Flower pay, the Harvest Fair's two-potion orders, Longest Night's bigger Night Shift) are dropped.
 
-| Season | Festival | What changes |
+| Season | Fair | Stalls |
 |---|---|---|
-| Spring | Bloomtide | Potions with a Flower ingredient pay double; a petal-crown contest order |
-| Summer | Firefly Fair | A Night Market on a day, with games |
-| Autumn | Harvest Fair | One more order; every order wants two potions and pays ×2.5; a pie contest |
-| Winter | Longest Night | The week's Night Shift gets +2 Brews, +1 Discard and +2 orders; a gift exchange of cards |
+| Spring | The Bloomtide Fair | The Flower Grower (Maybloom, Primrose, Bluebell), the Beekeeper (the Bumblebee, Royal Jelly), the Garland Weaver (the May Crown) |
+| Summer | Firefly Fair | Proposed, waiting on Jacob |
+| Autumn | Harvest Fair | Proposed, waiting on Jacob |
+| Winter | Longest Night | A vigil rather than a fair, to be more unique; being designed with Jacob |
 
-As of M3 part 2 the festivals' rule changes are in. The contests (relic rewards), the gift exchange and the Firefly Fair's games arrive with the dusk events in M3 part 6.
+Bloomtide's stock: Maybloom (Rare, Vital+Gale, Potency 7, +1 Harmony per Flower in the brew, 10g), Primrose (Rare, Vital, Potency 6, +1 Potency for the run each time it is brewed, 10g), Bluebell (Uncommon, Tide+Umbra, Potency 5, +3 Potency on rain days, 7g), Royal Jelly (Rare Tincture: Bless a card in hand, 9g), the Bumblebee (Uncommon familiar: Flower ingredients +3 Potency, 14g) and the May Crown (tier 2 relic: deliveries with a Flower ingredient pay ×1.25, 18g). Familiars and relics you already hold stay off the stalls. A stall can list more stock than it sets out (`show` in codex `fairs`); it then rolls a different few each fair, so multi-Year runs don't see the same stalls every time. Seasons whose fair isn't built yet hold nothing on festival day.
+
+Planned with Jacob: each stall grows to a pool of several items with two set out per fair (the count is being settled), so multi-Year runs see a different spread.
 
 **Sky events** (rare, at most one per run, announced on the Calendar). Eclipse and Meteor Shower are each in about 6% of runs; Blue Moon and the Fae Ring arrive with patrons and fae bargains:
 
@@ -164,7 +166,7 @@ As of M3 part 2 the festivals' rule changes are in. The contests (relic rewards)
 | Meteor Shower | Fallen Star can turn up in rewards, the Market and the Forage for a week |
 | Fae Ring | A forage errand becomes a fae bargain |
 
-Sky events and festivals feed the Almanac ("brew during an Eclipse", "win the Harvest Fair pie contest").
+Sky events and festivals feed the Almanac ("brew during an Eclipse", "visit the Bloomtide Fair").
 
 ## 5. Cards
 
@@ -356,7 +358,7 @@ Stalls that take a potion take your lowest one (by tier, then quality), and say 
 
 ### Relics and curses
 
-Relics are run-long passives with no slot limit, never sold for gold. They come from patron rewards, the Name-Taker, the Black Market, The World and Guild Commissions (later also festival contests). Curses are run debuffs, taken only at the Name-Taker; the Sleepless Miller and the Hearth lift them. Both are in the codex (`relics`, `curses`) with their numbers in `core/relics.ts`, and show as tokens between the Grimoire button and your gold; hover one for what it does.
+Relics are run-long passives with no slot limit, never sold for gold. They come from patron rewards, the Name-Taker, the Black Market, The World and Guild Commissions, and festival fairs sell a few of their own. Curses are run debuffs, taken only at the Name-Taker; the Sleepless Miller and the Hearth lift them. Both are in the codex (`relics`, `curses`) with their numbers in `core/relics.ts`, and show as tokens between the Grimoire button and your gold; hover one for what it does.
 
 | Relic | Tier | Effect |
 |---|---|---|
@@ -390,7 +392,7 @@ Relics are run-long passives with no slot limit, never sold for gold. They come 
 
 Each Night Shift has one featured patron with a rule twist, shown on the Calendar a week ahead.
 
-In the build the whole month's patrons are rolled at run start (on their own seed stream, so a seed's weather doesn't change) and shown on the Calendar's Night cells, in the HUD line and in the morning side panel. Week 2 is always the Pale Courier and week 4 the Moonless Patron; weeks 1 and 3 draw from the rest that fit the season, never the same one twice. The patron's order is the first on the board, one tier harder (capped by what the deck can reach, like every order), and filling it pays their reward on top. Night customers fill the other orders. A Night Shift posts the patron's `orderCount` orders in all (Longest Night adds 2; Rain keeps one night customer home on a 3-order night).
+In the build the whole month's patrons are rolled at run start (on their own seed stream, so a seed's weather doesn't change) and shown on the Calendar's Night cells, in the HUD line and in the morning side panel. Week 2 is always the Pale Courier and week 4 the Moonless Patron; weeks 1 and 3 draw from the rest that fit the season, never the same one twice. The patron's order is the first on the board, one tier harder (capped by what the deck can reach, like every order), and filling it pays their reward on top. Night customers fill the other orders. A Night Shift posts the patron's `orderCount` orders in all (Rain keeps one night customer home on a 3-order night).
 
 | Patron | Weeks | Twist | Reward for their order |
 |---|---|---|---|

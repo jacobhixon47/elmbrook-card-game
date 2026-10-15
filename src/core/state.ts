@@ -46,10 +46,10 @@ export type Order = {
   pay: number;
   bonus: OrderBonus | null;
   status: 'open' | 'filled' | 'declined';
-  /** Potions it takes; pay comes with the last one (Harvest Fair). */
+  /** Potions it takes; pay comes with the last one. */
   quantity: number;
   delivered: number;
-  /** Pay multiplier when the potion has an ingredient with this tag (Bloomtide). */
+  /** Pay multiplier when the potion has an ingredient with this tag (the May Crown). */
   tagBonus: { tag: string; mult: number } | null;
   /** The potion needs an Umbra ingredient in it (Granny Bogwort). */
   needsUmbra: boolean;
@@ -98,6 +98,8 @@ export type Offer =
   /** A dusk event: `chose` is the choice made (one per event) and `outcome` what came of it. */
   | { kind: 'event'; event: string; chose: number | null; outcome: string | null }
   | { kind: 'night-market'; stalls: StallState[]; at: number | null }
+  /** A seasonal fair after closing on festival day: its stalls and what's left on them (GDD §4.2). */
+  | { kind: 'fair'; fair: string; stalls: { id: string; stock: StockItem[] }[] }
   | Gift;
 
 /** One Night Market stall tonight and what's left of its trade (GDD §9). */

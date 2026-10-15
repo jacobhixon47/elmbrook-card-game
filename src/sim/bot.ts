@@ -89,6 +89,7 @@ const TINCTURE_VALUE: Record<string, number> = {
   stir: 5, simmer: 5, 'grimoire-page': 5, 'charm-sachet': 5, forage: 4, sift: 4, 'taste-test': 3,
   // Omens: Night Satchel only, so they never thin the day deck.
   'blood-moon': 9, 'witching-hour': 8, 'wishing-star': 7, howl: 6, 'raven-call': 6, 'moth-swarm': 6, 'cracked-mirror': 5, 'black-cat-crossing': 4, 'yule-candle': 6,
+  'royal-jelly': 6,
 };
 
 /** Sell the weakest familiar when one worth `v` would be clearly better and every slot is taken. */
@@ -135,6 +136,7 @@ export function familiarValue(s: RunState, id: string): number {
     case 'fox': return 6;
     case 'ferret': return 5;
     case 'moth': return 3 + 4 * s.satchel.length;
+    case 'bumblebee': return 2 + 30 * share((i) => i.tags.includes('flower'));
     default: return 2;
   }
 }
@@ -356,6 +358,21 @@ function greedyDusk(s: RunState): Action {
       const next = offer.stalls.findIndex((x) => wants(x) !== null);
       return next >= 0 ? { type: 'visitStall', index: next } : { type: 'leaveMarket' };
     }
+    case 'fair': {
+      // Buy the best thing worth having that leaves rent covered, then go home.
+      const spare = s.gold - reserve;
+      const best = offer.stalls
+        .flatMap((stall, si) => stall.stock.map((item, index) => ({ stall: si, index, item })))
+        .filter(({ item }) => !item.sold && item.price <= spare)
+        .map(({ stall, index, item }) => ({
+          stall, index, item,
+          v: item.kind === 'card' ? (deck.length < 24 ? cardValue(s, item.card) : 0)
+            : item.kind === 'familiar' ? (s.familiars.length < s.familiarSlots ? familiarValue(s, item.familiar) : 0)
+            : item.kind === 'relic' ? relicValue(s, item.relic) : 0,
+        }))
+        .sort((a, b) => b.v - a.v)[0];
+      return best && best.v >= 8 ? { type: 'buyAtFair', stall: best.stall, index: best.index } : { type: 'leaveErrand' };
+    }
   }
 }
 
@@ -375,6 +392,7 @@ export function relicValue(s: RunState, id: string): number {
     case 'pressed-flower': return 6;
     case 'apprentice-ledger': return 2 * weeksLeft;
     case 'silver-bell': return 2;
+    case 'may-crown': return 2 * weeksLeft;
     default: return 0;
   }
 }
@@ -609,6 +627,7 @@ export function randomAction(s: RunState, rng: RngState): [Action, RngState] {
     { type: 'passGift' },
     { type: 'chooseErrand', errand: any(['market', 'forage', 'creek', 'guild', 'hearth', 'event'] as const)! },
     { type: 'buy', index: roll(7) },
+    { type: 'buyAtFair', stall: roll(4), index: roll(4) },
     { type: 'forage', index: roll(5) },
     { type: 'chooseEvent', index: roll(3), uid: any(deckUids) ?? 0 },
     { type: 'removeCard', uid: any([...s.drawPile, ...s.hand, ...s.discardPile].map((c) => c.uid)) ?? 0 },

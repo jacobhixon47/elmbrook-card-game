@@ -358,3 +358,28 @@ export const Boon = z.object({
   start: RunStart,
 });
 export type Boon = z.infer<typeof Boon>;
+
+/** One thing a fair stall sells, for gold: a card, a familiar or a relic. */
+export const FairItem = z.union([
+  z.object({ card: Id, price: z.number().int().positive() }),
+  z.object({ familiar: Id, price: z.number().int().positive() }),
+  z.object({ relic: Id, price: z.number().int().positive() }),
+]);
+export type FairItem = z.infer<typeof FairItem>;
+
+/**
+ * A seasonal fair (GDD §4.2, decided with Jacob, Oct 15): after closing on festival day, a market of
+ * local stalls replaces the dusk reward and the errand. What they sell is `pool: 'event'`, found only here.
+ */
+export const Fair = z.object({
+  id: z.enum(['bloomtide', 'firefly-fair', 'harvest-fair', 'longest-night']),
+  name: z.string().min(1),
+  /** The scene on the way in: a few short lines on why the town is out. */
+  intro: z.array(z.string().min(1)).min(1),
+  stalls: z.array(z.object({
+    id: Id, name: z.string().min(1), text: z.string().min(1), stock: z.array(FairItem).min(1),
+    /** How many of `stock` the stall sets out each fair, rolled; all of it when left out. */
+    show: z.number().int().positive().optional(),
+  })).min(1),
+});
+export type Fair = z.infer<typeof Fair>;

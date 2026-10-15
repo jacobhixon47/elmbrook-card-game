@@ -49,12 +49,12 @@ export type Moon = 'first-quarter' | 'full' | 'last-quarter' | 'new';
 export const WEEK_MOONS: readonly Moon[] = ['first-quarter', 'full', 'last-quarter', 'new'];
 export const MOON_NAME: Record<Moon, string> = { 'first-quarter': 'First Quarter', full: 'Full Moon', 'last-quarter': 'Last Quarter', new: 'New Moon' };
 
-/** Each season's festival, fixed on week 3, day 3 (GDD §4.2). */
+/** Each season's festival, fixed on week 2, day 3 (GDD §4.2). */
 export type Festival = 'bloomtide' | 'firefly-fair' | 'harvest-fair' | 'longest-night';
 export const SEASON_FESTIVAL: Record<Season, Festival> = {
   spring: 'bloomtide', summer: 'firefly-fair', autumn: 'harvest-fair', winter: 'longest-night',
 };
-export const FESTIVAL_WEEK = 3;
+export const FESTIVAL_WEEK = 2;
 export const FESTIVAL_DAY = 3;
 
 /**
