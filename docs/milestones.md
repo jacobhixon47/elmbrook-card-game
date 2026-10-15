@@ -77,7 +77,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - ✅ The ramp pass: a gentle week-1 rent ramp (20, 22, 24, 26 by season, decided with Jacob), heavier rent with pay trailing it by season, and rent rising in later Years. Year 1 wins about 40/34/29/23% by season, and Spring falls to about 15% by Year 10, simmed with the perks and unlocks a player would carry into each Year (`docs/balance-m4.md`).
 - Seasonal content: ✅ seven seasonal Night Market stalls (GDD §9); ✅ the Winter Night Market in place of the Frost Market (Snowed In nights, the Hearth Trader every night with the Yule Log and the Holly Crown, a Winter Fence and Tinker, the Ermine, and a Winter Lantern Seller with the Yule Candle; GDD §9).
 - Festivals rework (Jacob, Oct 14-15): festivals become seasonal market fairs after closing on festival day, with festival-only stock; no contests or games, and the old festival rules are dropped (GDD §4.2). ✅ The Bloomtide Fair, six items per stall with two set out. ✅ The Firefly and Harvest Fairs, with a Fruit chip on card faces; ✅ Winter's Longest Night vigil on the eve of the finale: regulars' gifts into the Night Satchel and a blessing for the Moonless Patron's night.
-- Seasonal scene screens: a short text screen with a seasonal background that says why a seasonal thing is happening (the fair in town, and the rest). ✅ The first, Snowed In, shipped with the Winter Night Market.
+- ✅ Seasonal scene screens: a short text screen that says why a seasonal thing is happening. Snowed In shipped with the Winter Night Market; the fairs and the vigil with theirs. Then season openings each run (with Don't show again), weather firsts once a save, and the Moonless Patron's arrival, plus a Settings panel (volume, sound, season openings; GDD §15.1).
 - Playtest notes (Jacob, Oct 14, after a Spring run):
   - ✅ Orders repeat the same recipe (Elmbrook Panacea, again and again). Late weeks only ask for recipes the deck can bring to a high tier, and that is often one recipe. Six new three-card recipes, and no recipe named twice on one board (decided with Jacob: families and yesterday's requests may repeat).
   - ✅ A way to view the discard pile, next to the deck and draw pile in the Grimoire.
@@ -111,7 +111,7 @@ Later, the Night Market becomes a walkable street the same way (Jacob, Oct 14): 
 
 ## M6 — Ship prep
 
-- Tutorial tips for the M3+ systems, tooltips on anything new since M2.5, settings menu (volume, fullscreen, scale), achievements (10).
+- Tutorial tips for the M3+ systems, tooltips on anything new since M2.5, settings menu (✅ volume and season openings in M4; fullscreen and scale still to add), achievements (10).
 - Endless, Daily seed, Challenge runs.
 - Tauri desktop builds (Windows, Mac, Linux) from CI, ready for Steam; the game is sold on Steam, with no free public or browser version. Private builds for friends come from CI as a download link. The GitHub repo goes private before release.
 - Optional: Claude Code terminal preview mod.

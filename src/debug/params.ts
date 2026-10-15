@@ -48,7 +48,11 @@ export type Fixture = {
     codex?: string;
     codexPage?: number;
     /** The cottage's perk board, at this tier. */
-    perkTier?: number };
+    perkTier?: number;
+    /** The Settings panel, open. */
+    settings?: boolean;
+    /** A scene screen to show that otherwise shows only on a real run: a season's opening, or a weather's first time. */
+    intro?: 'season' | 'fog' | 'heatwave' | 'snow' };
 };
 
 const fixtures = import.meta.glob<Fixture>('/fixtures/*.json', { eager: true, import: 'default' });

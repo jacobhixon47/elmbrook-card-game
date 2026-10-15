@@ -27,9 +27,15 @@ type TextOpts = {
   shadow?: boolean;
 };
 
+/**
+ * Pixelify Sans draws "fi" and "fl" as ligatures that read as "A" in the game ("Arst", "Are"). A
+ * zero-width non-joiner between the letters keeps them apart; it has no width and no glyph.
+ */
+export const noLigatures = (str: string) => str.replace(/f(?=[il])/g, 'f\u200C');
+
 /** All game text goes through here so fonts, sizes and colours stay on-palette. */
 export function pixelText(scene: Phaser.Scene, x: number, y: number, str: string, opts: TextOpts = {}) {
-  const t = scene.add.text(x, y, str, {
+  const t = scene.add.text(x, y, noLigatures(str), {
     fontFamily: opts.font === 'display' ? FONT_DISPLAY : FONT_BODY,
     fontSize: `${opts.size ?? 8}px`,
     color: PALETTE[opts.color ?? 'w'],
