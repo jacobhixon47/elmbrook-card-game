@@ -143,9 +143,10 @@ export function drawGrimoire(
     townsfolkRows(s).forEach((r, i) => {
       const y = top + 22 + i * rh;
       add(scene.add.rectangle(X + 12, y, W - 24, rh - 6, hex('K'), 0.6).setOrigin(0)).setStrokeStyle(1, hex('n'), 0.6);
-      text(X + 20, y + 4, r.name, { size: 9, color: r.level ? 'y' : 'W' });
+      text(X + 20, y + 4, r.unmet ? '???' : r.name, { size: 9, color: r.level ? 'y' : 'W' });
       if (r.nightOnly) text(X + 20, y + 17, 'Night Shifts only', { size: 6, color: 'v' });
-      text(X + 150, y + 5, r.blurb ?? 'Not a friend yet. Fill their orders to get to know them.', { size: 7, color: r.blurb ? 'W' : 'a', wrap: 240 });
+      text(X + 150, y + 5, r.unmet ? 'You haven\'t met them yet.' : r.blurb ?? 'Not a friend yet. Fill their orders to get to know them.', { size: 7, color: r.blurb ? 'W' : 'a', wrap: 240 });
+      if (r.nextOpens) text(X + 150, y + 17, `Next: ${r.nextOpens}`, { size: 6, color: 'l', wrap: 240 });
       // The meter: level, then a bar through it.
       const bx = X + 400;
       text(bx, y + 4, `♥ ${r.level}`, { size: 9, color: 'R' });

@@ -4,7 +4,7 @@ import {
   type Order, type RunState,
 } from '../src/core';
 import { brewing, ofType, ok, slotAll, withHand } from './helpers';
-import { townsfolkRows, friendshipLine } from '../src/view/townsfolk';
+import { townsfolkRows, friendshipLine, levelUpNote } from '../src/view/townsfolk';
 
 const order = (o: Partial<Order> = {}): Order => ({
   id: 500, customer: 'old-tobin', request: { kind: 'family', family: 'healing' }, minTier: 'crude', pay: 10, bonus: null, status: 'open',
@@ -88,5 +88,23 @@ describe('the Townsfolk page', () => {
     expect(rows.find((r) => r.id === 'the-gardener')!.nightOnly).toBe(true);
     expect(friendshipLine(20)).toBe('♥ 2 · 20/30');
     expect(friendshipLine(300)).toBe('♥ 10 · best friends');
+  });
+
+  it('says what the next level opens, and hides regulars you have never met', () => {
+    const rows = townsfolkRows({ friendship: {}, friendshipBase: { 'old-tobin': 6 }, stats: { met: ['sister-alder'] } });
+    expect(rows.find((r) => r.id === 'old-tobin')).toMatchObject({ level: 1, unmet: false, nextOpens: expect.stringMatching(/Longest Night/) as unknown as string });
+    expect(rows.find((r) => r.id === 'sister-alder')).toMatchObject({ unmet: false, nextOpens: expect.stringMatching(/Townsfolk/) as unknown as string });
+    expect(rows.find((r) => r.id === 'bea-thornwick')!.unmet).toBe(true);
+    // Level 3 opens nothing yet.
+    expect(townsfolkRows({ friendship: {}, friendshipBase: { 'old-tobin': 20 } }).find((r) => r.id === 'old-tobin')!.nextOpens).toBeNull();
+  });
+});
+
+describe('level-up toasts', () => {
+  it('names the regular, the level and what it opens', () => {
+    const s = { ...brewing('friends'), friendshipBase: { 'old-tobin': 14 } };
+    expect(levelUpNote(deliver(s).events)).toBe('Old Tobin: Friendship 2! A gift at the Longest Night, and the Hearth Trader knows their name.');
+    expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': 29 } }).events)).toBe('Old Tobin: Friendship 3!');
+    expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': 20 } }).events)).toBeNull();
   });
 });
