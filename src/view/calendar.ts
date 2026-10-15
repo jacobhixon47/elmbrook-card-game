@@ -26,7 +26,7 @@ export const FESTIVAL_RULE: Record<Festival, string> = {
   bloomtide: 'After closing, the Bloomtide Fair fills the square: festival-only flowers, a beekeeper and a garland weaver.',
   'firefly-fair': 'After closing, the Firefly Fair fills the square: an orchard keeper, a glassblower and a hatter.',
   'harvest-fair': 'After closing, the Harvest Fair fills the square: a farmer, a cider maker and a straw weaver.',
-  'longest-night': 'The longest night of the year.',
+  'longest-night': 'After closing, the town keeps vigil in the square: gifts from the regulars you\'re close to, and a blessing from the Solstice Fire for the Moonless Patron\'s night.',
 };
 
 export const SKY_NAME: Record<SkyEvent, string> = { eclipse: 'Eclipse', 'meteor-shower': 'Meteor Shower' };
@@ -35,7 +35,7 @@ export const SKY_RULE: Record<SkyEvent, string> = {
   'meteor-shower': 'Fallen Stars can turn up in rewards, the Market and the Forage all week.',
 };
 
-type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'> & Partial<Pick<RunState, 'patrons' | 'fortunes' | 'year' | 'seed'>>;
+type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'> & Partial<Pick<RunState, 'patrons' | 'fortunes' | 'year' | 'seed' | 'blessing'>>;
 
 const buried = (s: When, week: number) => s.seed !== undefined && snowedIn({ ...s, seed: s.seed }, week);
 const SNOWED_IN_RULE = 'Snowed In: drifts bury the Night Market, and only the Hearth Trader opens.';
@@ -56,10 +56,9 @@ function skyOn(s: Pick<RunState, 'calendar'>, week: number, day: number): SkyEve
   return e.event;
 }
 
-/** The festival held on this day, when its season has a fair (GDD §4.2). */
+/** The festival held on this day (GDD §4.2): a fair, or Winter's vigil on the eve of the finale. */
 function festivalToday(s: When, week: number, day: number): Festival | null {
-  const f = festivalOn(s, week, day);
-  return f && codex.fairs.has(f) ? f : null;
+  return festivalOn(s, week, day);
 }
 
 /** One short line for the HUD: the weather, plus a festival or sky event when there is one. */
@@ -90,6 +89,9 @@ export function dayRules(s: When, c: Pick<CalendarCell, 'week' | 'day' | 'weathe
   const e = skyOn(s, c.week, c.day);
   if (e) out.push(`${SKY_NAME[e]}: ${SKY_RULE[e]}`);
   if (c.day === NIGHT_SHIFT_DAY && buried(s, c.week)) out.push(SNOWED_IN_RULE);
+  // The vigil's blessing acts on the finale's Night Shift.
+  const blessing = s.blessing ? codex.blessings.get(s.blessing) : undefined;
+  if (blessing && c.day === NIGHT_SHIFT_DAY && c.week === WEEKS) out.push(`${blessing.name}: ${blessing.text}`);
   // Fortune Tent twists on this week's days (The Moon's fog already shows as the weather).
   if (c.day < NIGHT_SHIFT_DAY) {
     for (const f of s.fortunes ?? []) {

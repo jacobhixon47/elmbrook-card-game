@@ -383,3 +383,6 @@ export const Fair = z.object({
   })).min(1),
 });
 export type Fair = z.infer<typeof Fair>;
+
+/** A Solstice Fire blessing at the Longest Night vigil: it lasts the finale's Night Shift (GDD §4.2). */
+export const Blessing = z.object({ id: Id, name: z.string().min(1), text: z.string().min(1) });

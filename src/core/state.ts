@@ -102,6 +102,8 @@ export type Offer =
   | { kind: 'night-market'; stalls: StallState[]; at: number | null }
   /** A seasonal fair after closing on festival day: its stalls and what's left on them (GDD §4.2). */
   | { kind: 'fair'; fair: string; stalls: { id: string; stock: StockItem[] }[] }
+  /** The Longest Night vigil: the regulars' gifts (already in the Night Satchel) and the Solstice Fire's blessings. */
+  | { kind: 'vigil'; gifts: { regular: string; card: string }[]; blessings: string[]; chose: string | null }
   | Gift;
 
 /** One Night Market stall tonight and what's left of its trade (GDD §9). */
@@ -142,7 +144,7 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 16;
+export const RUN_VERSION = 17;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -225,6 +227,8 @@ export type RunState = {
   emberPotencyToday: number;
   /** Orders filled this week, for the Corn Dolly. */
   weekDeliveries: number;
+  /** The Solstice Fire blessing chosen at the Longest Night vigil; it acts on the finale's Night Shift. */
+  blessing: string | null;
   /** Guild Commissions taken and not yet done or failed (GDD §7). */
   commissions: ActiveCommission[];
   /** Fortune Tent twists on a later week (The Hermit, The Tower, The Moon). */

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, blessingTonight, BLACK_MARKET, VIGIL, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
   HARVEST_AUCTION, HEARTH_TRADER, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
@@ -559,7 +559,7 @@ export class Run extends Phaser.Scene {
 
   /** The Moonless Patron hides the Grimoire for the finale's Night Shift (GDD §10). */
   private grimoireHidden(s: RunState) {
-    return twistNow(s) === 'grimoire-hidden' && (s.phase === 'morning' || s.phase === 'brewing');
+    return twistNow(s) === 'grimoire-hidden' && !blessingTonight(s, 'candle-in-the-window') && (s.phase === 'morning' || s.phase === 'brewing');
   }
 
   private toggleBook(s: RunState) {
@@ -1186,7 +1186,48 @@ export class Run extends Phaser.Scene {
         return this.drawNightMarket(s, offer, title);
       case 'fair':
         return this.drawFair(s, offer, title);
+      case 'vigil':
+        return this.drawVigil(s, offer, title);
     }
+  }
+
+  /** The Longest Night vigil (GDD §4.2): the regulars' gifts, then a blessing from the Solstice Fire for the finale. */
+  private drawVigil(s: RunState, offer: Extract<Offer, { kind: 'vigil' }>, title: (t: string, sub: string) => void) {
+    if (!this.scenesSeen.has('vigil')) {
+      this.seasonScene('The Longest Night', VIGIL_SCENE, () => this.scenesSeen.add('vigil'));
+      return;
+    }
+    title('The Longest Night', 'The town keeps watch by the Solstice Fire until morning. Tomorrow night the Moonless Patron comes.');
+    this.text(320, 86, 'Gifts from the town', { size: 8, color: 'y', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
+    if (offer.gifts.length === 0) {
+      this.text(320, 116, `No one is close enough to bring a gift yet. Regulars with ${VIGIL.hearts} or more hearts bring one.`, { size: 7, color: 'a', stroke: 'k', align: 'center', wrap: 360 }).setOrigin(0.5, 0);
+    } else {
+      this.text(320, 97, 'They go in your Night Satchel, for tomorrow night.', { size: 6, color: 'a', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
+      offer.gifts.forEach((g, i) => {
+        const x = 320 + (i - (offer.gifts.length - 1) / 2) * 56;
+        this.text(x, 108, customerName(g.regular), { size: 6, color: 'W', stroke: 'k', align: 'center', wrap: 54 }).setOrigin(0.5, 0);
+        const c = this.add2(createCard(this, x, 146, g.card).setScale(0.6));
+        c.setInteractive();
+        this.inspect(c, g.card, 0.6);
+      });
+    }
+    this.text(320, 178, offer.chose ? 'The fire burns low and warm.' : 'The Solstice Fire: choose a blessing for the Moonless Patron\'s night.', { size: 8, color: 'y', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
+    offer.blessings.forEach((id, i) => {
+      const b = codex.blessings.get(id)!;
+      const x = 320 + (i - (offer.blessings.length - 1) / 2) * 160;
+      const chosen = offer.chose === id;
+      const tile = this.add2(panel(this, x - 74, 194, 148, 44, 'k', 0.95, chosen ? 'y' : 'n'));
+      this.text(x, 200, b.name, { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
+      this.text(x, 214, b.text, { size: 6, color: 'w', align: 'center', wrap: 136 }).setOrigin(0.5, 0);
+      if (offer.chose) {
+        if (!chosen) tile.setAlpha(0.4);
+        return;
+      }
+      tile.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'chooseBlessing', index: i }));
+      tile.on('pointerover', () => tile.setStrokeStyle(2, hex('y')));
+      tile.on('pointerout', () => tile.setStrokeStyle(1, hex('n')));
+    });
+    if (offer.chose) this.add2(button(this, 320, 262, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
   }
 
   /** A seasonal fair after closing on festival day (GDD §4.2): lantern-lit stalls in the square, then home. */
@@ -1869,6 +1910,12 @@ const SNOWED_IN_SCENE = [
   'Snow came down all through the Night Shift, and the lane is drifted to the shutters.',
   'The stalls are buried tonight. Only one fire is lit: the Hearth Trader has dug himself out, as he always does.',
 ];
+/** The scene screen for the Longest Night vigil (GDD §4.2). */
+const VIGIL_SCENE = [
+  'The solstice: the longest night of the year, and the last before the new moon.',
+  'Nobody in Elmbrook sleeps tonight. The square fills with lanterns around the Solstice Fire, and the people you have come to know bring something to see you through tomorrow.',
+];
+
 const SNOWED_IN_LINE = 'Snow has buried the stalls. Only the Hearth Trader\'s fire is lit.';
 
 const MOON_LINE: Record<ReturnType<typeof moonOf>, string> = {

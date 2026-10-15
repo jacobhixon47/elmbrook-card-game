@@ -151,7 +151,7 @@ The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; th
 | Spring | The Bloomtide Fair | The Flower Grower (Flower ingredients), the Beekeeper (bee familiars, honey Tinctures, the Hive Smoker), the Garland Weaver (garland relics) |
 | Summer | The Firefly Fair | The Orchard Keeper (Fruit), the Glassblower (light and glass Tinctures, the Dragonfly, Shelf and night relics), the Hatter (sunny-day relics, the Cricket) |
 | Autumn | The Harvest Fair | The Farmer (harvest ingredients, the Scarecrow), the Cider Maker (cider Tinctures, the Badger, Fence and rent relics), the Straw Weaver (straw relics, the Harvest Hare) |
-| Winter | Longest Night | A vigil rather than a fair, to be more unique, tuned toward the Moonless Patron finale; being designed with Jacob |
+| Winter | The Longest Night | A vigil rather than a fair, on the eve of the finale (week 4, day 4): regulars bring gifts and you choose a blessing for the Moonless Patron's night |
 
 Bloomtide's stock, six per stall with two set out each fair:
 - *The Flower Grower:* Maybloom (Rare, Vital+Gale, Potency 7, +1 Harmony per Flower in the brew, 10g), Primrose (Rare, Vital, Potency 6, +1 Potency for the run each time it is brewed, 10g), Bluebell (Uncommon, Tide+Umbra, Potency 5, +3 Potency on rain days, 7g), Snowdrop (Uncommon, Vital+Tide, Potency 5, +2 Harmony on the day's first brew, 7g), Cowslip (Uncommon, Gale, Potency 5, draw a card when brewed, 7g), Daffodil (Rare, Ember+Vital, Potency 7, +2 Potency per other Flower in the brew, 10g).
@@ -170,7 +170,15 @@ Harvest Fair stock (approved Oct 15):
 
 Fruit (Sunberry, Blackberry, Hollyberry, Harvest Gourd and the Fruit fair cards) is read only by Starfruit and the Orchard Basket for now; a season-wide hook like Snow's for Frost is left to the systems review (decided with Jacob, Oct 15).
 
-Familiars and relics you already hold stay off the stalls. Each stall lists its stock in codex `fairs` with `show: 2`, and the fair rolls which two come out on the run's seed. Winter holds nothing on festival day until the Longest Night vigil is built.
+Familiars and relics you already hold stay off the stalls. Each stall lists its stock in codex `fairs` with `show: 2`, and the fair rolls which two come out on the run's seed. Winter has no fair on week 2, day 3.
+
+The Longest Night vigil (decided with Jacob, Oct 15): after closing on week 4, day 4, the vigil replaces the day's reward and errand. Each regular with 5 or more hearts (Friendship later) brings a gift, which goes into the Night Satchel for the finale: Roast Chestnuts (Ember+Stone, P6, +2 Harmony on a Night Shift), Holly Sprig (Vital+Umbra, P5, Frost, +2 Potency on a Night Shift), Gingerbread (Tincture: next brew +2 Harmony, draw 1), Mulled Wine (Tincture: +1 Brew), Wool Mittens (Tincture: +1 Discard, draw 1) or Snow Globe (Tincture: peek 3 and reorder). Gifts are festival-only. Then you choose one of three blessings for the finale's Night Shift:
+- *Candle in the Window:* the Grimoire stays open, whatever the Moonless Patron says.
+- *Hearthfire:* +1 Brew.
+- *Warm Hands:* +2 Discards.
+- *Old Songs:* +2 Harmony on every brew.
+- *The Long Watch:* draw 2 more when the shop opens.
+- *Starlight:* the Patron's last order asks one tier lower.
 
 Decided with Jacob (Oct 15): six items per stall with two set out per fair, about 15 different pairs per stall, so multi-Year runs see a different spread.
 

@@ -3,6 +3,7 @@ import type { Ingredient, Recipe, Regular } from '../codex/schema';
 import { fillsPattern, recipeAvailable } from './brew';
 import { todaysWeather } from './calendar';
 import { pick, pickWeighted, rand, type Ctx } from './ctx';
+import { blessingTonight } from './fair';
 import { FAMILIAR_RULES } from './familiars';
 import { fortuneOn } from './market';
 import { patronOf, twistNow } from './night';
@@ -257,13 +258,17 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
 
   // The patron's order(s).
   const ladder = patron.ladder ?? [];
-  for (const tier of ladder) {
+  ladder.forEach((tier, i) => {
     const asked = requestFor(ctx, r, ['lunar', 'rare']);
     // Year 10: the Moonless Patron asks higher (still no higher than the deck can reach).
     const minTier = finaleTier(s, tier);
     const request = freshRecipe(ctx, r, ['lunar', 'rare'], fitRequest(ctx, r, ['lunar', 'rare'], asked, minTier), minTier, s.orders);
-    postOrder(ctx, { customer: patron.id, request, minTier, ceiling: ceilingOf(r, request), payScale: scale, bonus: null, ...every });
-  }
+    const ceiling = ceilingOf(r, request);
+    // Starlight, from the Longest Night vigil: the last order asks one tier below what it would have.
+    const asks = tierIndex(minTier) > tierIndex(ceiling) ? ceiling : minTier;
+    const starlight = i === ladder.length - 1 && blessingTonight(s, 'starlight');
+    postOrder(ctx, { customer: patron.id, request, minTier: starlight ? tierStep(asks, -1) : asks, ceiling, payScale: scale, bonus: null, ...every });
+  });
   if (!ladder.length) {
     const fixed = patron.fixedOrder;
     let request: OrderRequest;

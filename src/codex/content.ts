@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon, Fair } from './schema';
+import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon, Fair, Blessing } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -62,6 +62,8 @@ export const ingredients: In<typeof Ingredient>[] = [
   { id: 'golden-wheat', name: 'Golden Wheat', essences: ['vital'], potency: 5, rarity: 'uncommon', origin: 'garden', effects: ['harmony-per-stone-in-brew'], text: '+1 Harmony per Stone ingredient in the brew.', pool: 'event' },
   { id: 'russet-apple', name: 'Russet Apple', essences: ['vital', 'ember'], potency: 5, rarity: 'uncommon', origin: 'garden', effects: ['on-brew-draw-1'], text: 'Draw a card when brewed.', tags: ['fruit'], pool: 'event' },
   { id: 'chestnut', name: 'Chestnut', essences: ['ember', 'stone'], potency: 6, rarity: 'uncommon', origin: 'wychwood', effects: ['potency-3-if-warming'], text: '+3 Potency in Warming potions.', pool: 'event' },
+  { id: 'roast-chestnuts', name: 'Roast Chestnuts', essences: ['ember', 'stone'], potency: 6, rarity: 'uncommon', origin: 'garden', effects: ['harmony-2-on-night-shift'], text: '+2 Harmony on Night Shifts.', pool: 'event' },
+  { id: 'holly-sprig', name: 'Holly Sprig', essences: ['vital', 'umbra'], potency: 5, rarity: 'uncommon', origin: 'wychwood', effects: ['potency-2-on-night-shift'], text: '+2 Potency on Night Shifts.', tags: ['frost'], pool: 'event' },
   { id: 'bluebell', name: 'Bluebell', essences: ['tide', 'umbra'], potency: 5, rarity: 'uncommon', origin: 'wychwood', effects: ['potency-3-if-rain'], text: '+3 Potency on Rain days.', tags: ['flower'], pool: 'event' },
   { id: 'ice-lily', name: 'Ice Lily', essences: ['tide'], potency: 8, rarity: 'rare', origin: 'creek', effects: ['harmony-per-frost-in-brew'], text: '+1 Harmony per Frost ingredient in the brew.', tags: ['flower', 'frost'], inSeason: ['winter'] },
   { id: 'starlit-dew', name: 'Starlit Dew', essences: ['lunar', 'tide'], potency: 9, rarity: 'lunar', origin: 'night', nightOnly: true, tags: ['water'] },
@@ -103,6 +105,10 @@ export const tinctures: In<typeof Tincture>[] = [
   { id: 'perry', name: 'Perry', rarity: 'uncommon', effects: ['next-brew-harmony-x1.5'], text: 'Next brew: Harmony ×1.5.', pool: 'event' },
   { id: 'mulling-spice', name: 'Mulling Spice', rarity: 'uncommon', effects: ['ember-potency-2-today'], text: 'Ember ingredients get +2 Potency today.', pool: 'event' },
   { id: 'threshing-flail', name: 'Threshing Flail', rarity: 'common', effects: ['draw-2'], text: 'Draw 2.', pool: 'event' },
+  { id: 'gingerbread', name: 'Gingerbread', rarity: 'uncommon', effects: ['next-brew-harmony-2', 'draw-1'], text: 'Next brew: +2 Harmony. Draw 1.', pool: 'event' },
+  { id: 'mulled-wine', name: 'Mulled Wine', rarity: 'uncommon', effects: ['gain-brew'], text: '+1 Brew.', pool: 'event' },
+  { id: 'wool-mittens', name: 'Wool Mittens', rarity: 'uncommon', effects: ['gain-discard', 'draw-1'], text: '+1 Discard. Draw 1.', pool: 'event' },
+  { id: 'snow-globe', name: 'Snow Globe', rarity: 'uncommon', effects: ['peek-3-reorder'], text: 'Look at the top 3 cards of your deck and reorder them.', pool: 'event' },
   { id: 'royal-jelly', name: 'Royal Jelly', rarity: 'rare', effects: ['bless-in-hand'], text: 'Bless an ingredient in your hand for the run.', pool: 'event' },
   // Omens: Night Satchel Tinctures (GDD §5.4), strong with a drawback. They only come out on Night Shifts.
   { id: 'blood-moon', name: 'Blood Moon', rarity: 'lunar', effects: ['next-brew-harmony-x2', 'lose-discard'], text: 'Next brew: Harmony x2. Lose 1 Discard.' },
@@ -495,4 +501,14 @@ export const fairs: In<typeof Fair>[] = [
         stock: [{ relic: 'corn-dolly', price: 18 }, { relic: 'harvest-wreath', price: 18 }, { relic: 'wicker-basket', price: 14 }, { relic: 'rush-lantern', price: 14 }, { familiar: 'harvest-hare', price: 14 }, { card: 'threshing-flail', price: 5 }] },
     ],
   },
+];
+
+// The Solstice Fire at the Longest Night vigil (GDD §4.2): three are offered, one is chosen, and it lasts the finale's Night Shift.
+export const blessings: In<typeof Blessing>[] = [
+  { id: 'candle-in-the-window', name: 'Candle in the Window', text: 'Your Grimoire stays open tonight, whatever the Moonless Patron says.' },
+  { id: 'hearthfire', name: 'Hearthfire', text: '+1 Brew tonight.' },
+  { id: 'warm-hands', name: 'Warm Hands', text: '+2 Discards tonight.' },
+  { id: 'old-songs', name: 'Old Songs', text: 'Every brew tonight: +2 Harmony.' },
+  { id: 'the-long-watch', name: 'The Long Watch', text: 'Draw 2 more cards when tonight starts.' },
+  { id: 'starlight', name: 'Starlight', text: 'The Moonless Patron\'s last order asks for one tier lower.' },
 ];
