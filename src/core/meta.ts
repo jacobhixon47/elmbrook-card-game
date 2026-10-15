@@ -9,7 +9,7 @@ import { RUN_VERSION, type RunState } from './state';
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 7;
+export const PROFILE_VERSION = 8;
 
 /** Sound settings: volume 0 to 1, and mute. */
 export type SoundSettings = { volume: number; muted: boolean };
@@ -48,6 +48,9 @@ export type Profile = {
   seasonOpenings: boolean;
   /** Weathers whose first-time scene screen has been shown: each shows once per save. */
   weatherSeen: string[];
+  /** The witch and cauldron last chosen at the cottage (GDD §12); runs set out with them. */
+  witch: string;
+  cauldron: string;
 };
 
 export function newProfile(): Profile {
@@ -70,6 +73,8 @@ export function newProfile(): Profile {
     settings: { volume: 0.7, muted: false },
     seasonOpenings: true,
     weatherSeen: [],
+    witch: 'hedge-witch',
+    cauldron: 'copper',
   };
 }
 
@@ -93,6 +98,8 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   5: (p) => ({ ...p, settings: newProfile().settings }),
   // 6 → 7: season openings on, and no weather met yet.
   6: (p) => ({ ...p, seasonOpenings: true, weatherSeen: [] }),
+  // 7 → 8: witches and cauldrons, starting from the Hedge Witch and Copper.
+  7: (p) => ({ ...p, witch: 'hedge-witch', cauldron: 'copper' }),
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -144,7 +151,26 @@ function sanitize(p: Raw): Profile {
     },
     seasonOpenings: p.seasonOpenings !== false,
     weatherSeen: Array.isArray(p.weatherSeen) ? WEATHERS.filter((w) => (p.weatherSeen as unknown[]).includes(w)) : [],
+    witch: typeof p.witch === 'string' && codex.witches.has(p.witch) ? p.witch : fresh.witch,
+    cauldron: typeof p.cauldron === 'string' && codex.cauldrons.has(p.cauldron) ? p.cauldron : fresh.cauldron,
   };
+}
+
+/** Whether a witch is open (GDD §12): the Hedge Witch always; each other the first time her season is won. */
+export function witchOpen(p: Pick<Profile, 'wins'>, id: string): boolean {
+  const w = codex.witches.get(id);
+  return !!w && (w.unlockSeason === null || p.wins[w.unlockSeason] > 0);
+}
+
+/** Whether a cauldron is open: Copper always; each other once its Almanac entry is done. */
+export function cauldronOpen(p: Pick<Profile, 'almanac'>, id: string): boolean {
+  const c = codex.cauldrons.get(id);
+  return !!c && (c.unlock === null || p.almanac.includes(c.unlock));
+}
+
+/** The witch and cauldron a run sets out with: the profile's choice, or the defaults if it is no longer open. */
+export function runStartChoice(p: Pick<Profile, 'wins' | 'almanac' | 'witch' | 'cauldron'>): { witch: string; cauldron: string } {
+  return { witch: witchOpen(p, p.witch) ? p.witch : 'hedge-witch', cauldron: cauldronOpen(p, p.cauldron) ? p.cauldron : 'copper' };
 }
 
 /** The tables the cottage's Codex shows, in its order (GDD §13). */
@@ -195,11 +221,22 @@ export type RunOutcome = {
   almanac: string[];
   /** Perk board tiers this run opened. */
   perkTiers: number[];
+  /** Witches and cauldrons this run opened (GDD §12). */
+  witches: string[];
+  cauldrons: string[];
 };
+
+/** Witches and cauldrons open after a run that were not before it. */
+function newlyOpen(before: Profile, after: Profile): Pick<RunOutcome, 'witches' | 'cauldrons'> {
+  return {
+    witches: [...codex.witches.keys()].filter((id) => witchOpen(after, id) && !witchOpen(before, id)),
+    cauldrons: [...codex.cauldrons.keys()].filter((id) => cauldronOpen(after, id) && !cauldronOpen(before, id)),
+  };
+}
 
 /** Count a finished run. A run still going, or one already counted, changes nothing. */
 export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year'>>): RunOutcome {
-  const same = { profile, reputation: 0, opened: null, yearDone: false, newYear: null, almanac: [], perkTiers: [] };
+  const same = { profile, reputation: 0, opened: null, yearDone: false, newYear: null, almanac: [], perkTiers: [], witches: [], cauldrons: [] };
   if ((s.phase !== 'victory' && s.phase !== 'game-over') || profile.lastRun === s.seed) return same;
   const reputation = reputationFor(s);
   const almanac = almanacMet(profile.almanac, s);
@@ -208,7 +245,7 @@ export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' 
     reputation: profile.reputation + reputation, reputationEarned: profile.reputationEarned + reputation, almanac: [...profile.almanac, ...almanac],
     codex: [...profile.codex, ...codexMet(profile.codex, s)],
   };
-  if (s.phase === 'game-over') return { ...same, profile: p, reputation, almanac, perkTiers: tiersOpened(profile, p) };
+  if (s.phase === 'game-over') return { ...same, profile: p, reputation, almanac, perkTiers: tiersOpened(profile, p), ...newlyOpen(profile, p) };
   p.wins[s.season]++;
   const year = Math.min(p.yearSeasons.length, s.year ?? 1);
   const open = p.yearSeasons[year - 1]!;
@@ -223,7 +260,7 @@ export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' 
     p.yearSeasons.push(['spring']);
     p.boons.push(null);
   }
-  return { profile: p, reputation, opened, yearDone, newYear, almanac, perkTiers: tiersOpened(profile, p) };
+  return { profile: p, reputation, opened, yearDone, newYear, almanac, perkTiers: tiersOpened(profile, p), ...newlyOpen(profile, p) };
 }
 
 /** Almanac entries done that open looping before a second Year is won (GDD §13: a quarter of the Almanac). */
@@ -339,6 +376,8 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
   15: (s) => ({ ...s, emberPotencyToday: 0, weekDeliveries: 0, pending: { ...(s.pending as Raw), essenceHarmony: 0 } }),
   // 16 → 17: the Longest Night vigil's blessing.
   16: (s) => ({ ...s, blessing: null }),
+  // 17 → 18: witches and cauldrons. Every run before them was the Hedge Witch's, in Copper.
+  17: (s) => ({ ...s, cauldronKind: 'copper', quirkUsed: false }),
 };
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */

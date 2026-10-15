@@ -471,32 +471,28 @@ Scoring familiars resolve after Tinctures, one step each, in slot order. Choices
 
 Pick a **Witch** (starting deck, 4 known recipes, a quirk) and a **Cauldron** (run modifier, like Balatro decks). From 1.0's specialisation tree.
 
-| Witch | Focus | Quirk |
+*In the build (decided with Jacob, Oct 15):* five witches, each mildly themed on a season, and five cauldrons. Only the Hedge Witch and Copper are open at first. Each season's first win opens its witch; the cauldrons open with Almanac entries. The cottage has a Witch and Cauldron panel with arrows for each: a locked one shows dimmed with what opens it, and the last open pick is remembered for later runs. The end screen says when a run opened one, and hovering the Year line in a run shows the witch's quirk and the cauldron's effect. Unlocks add breadth, not power: every quirk trades or narrows something. The tutorial and fixtures play the Hedge Witch in Copper. The once-a-day quirks (Bloom, Alchemist, Illusionist) share one daily flag, `quirkUsed`, reset each morning.
+
+| Witch | Opens | Focus | Starting deck (14 cards) | Quirk |
+|---|---|---|---|---|
+| Hedge Witch | start | Vital, Tide; healing | §14 | Hand size 8 (the others 7). |
+| Bloom Witch | win Spring | Vital, Gale; Flowers | Elmroot ×3, Thistledown ×3, Dandelion Fluff ×2, Creekwater ×2, Emberbloom, Sunflower, Mint Sprig, Stir | The day's first brew with a Flower in it: +2 Harmony. |
+| Alchemist | win Summer | Stone, Ember; transformation | River Clay ×3, Emberbloom ×3, Iron Filings ×2, Elmroot ×2, Hearth Coal, Creekwater, Honeycomb, Simmer | The first Experiment each day brews at full quality. |
+| Illusionist | win Autumn | Umbra, Gale; glamours | Nightshade ×3, Thistledown ×3, Inkcap ×2, Creekwater ×2, Emberbloom, Elmroot, Mistcap, Taste Test | Once a day, a potion can fill an order for another recipe of the same family. |
+| Frost Witch | win Winter | Tide, Umbra; Frost | Creekwater ×3, Nightshade ×2, Elmroot ×2, Thistledown ×2, Frostcap, Hollyberry, Pine Resin, Inkcap, Stir | +1 card in hand on Snow days. |
+
+Known recipes: Bloom Witch Four-leaf Tea, Healing Draught, Calm Waters, Fleetfoot Elixir; Alchemist Courage Cordial, Ironhide Salve, Hearthwarm Tonic, Mudbath Salve; Illusionist Whisper Ink, Sleep Syrup, Fleetfoot Elixir, Restful Tonic; Frost Witch Sleep Syrup, Calm Waters, Healing Draught, Restful Tonic.
+
+| Cauldron | Opens (Almanac) | Effect |
 |---|---|---|
-| Hedge Witch (start) | Vital, Tide; healing | +1 card in hand. |
-| Alchemist | Stone, Ember; transformation | Experiments brew at full quality. |
-| Illusionist | Umbra, Gale; glamours | Can disguise one potion as another once per day. |
+| Copper | start | No surprises. |
+| Iron | Open for Business | 3 slots from the start, -1 Brew a day. |
+| Glass | A Masterwork | +2 Harmony on every brew (a cauldron step, last), -1 card in hand. |
+| Bone | A Nameless Deal | 2 Lunar ingredients in the Night Satchel from the start; rent +25%. |
+| Silver | The Stuff of Legend | +1 Discard a day; orders pay 10% less (set when the order is posted). |
 
-| Cauldron | Effect |
-|---|---|
-| Copper (start) | No effect. |
-| Iron | 3 slots from the start, -1 Brew per day. |
-| Glass | Previews show exact final quality including familiars. |
-| Bone | Starts with 2 Lunar cards; rent +25%. |
+Glass first showed exact previews, but the previews already do; and an "always see the next 3 cards" cauldron was dropped because it makes Taste Test pointless (Jacob, Oct 15). Silver opens with a Legendary potion: Shopkeeper was too easy a goal for it. Each cauldron has its own metal on the shop counter (`CAULDRON_METAL` in `art/procedural.ts`). How the witches do in their own seasons is a question for the M4 balance pass.
 
-## 13. Meta-progression
-
-Elmbrook is a roguelite: every run, won or lost, moves something forward.
-
-- **The Year:** Spring is open from the start. Winning a season unlocks the next (Summer, then Autumn, then Winter). Clearing Winter completes **Year 1** and shows a short "year in Elmbrook" ending. Each later Year is a difficulty level, like Ascension in Slay the Spire or Heat in Hades: it keeps every earlier Year's rule and adds one of its own, up to Year 10.
-- **Choosing a Year** (decided with Jacob, Oct 9; replaces the earlier retire-or-loop choice): every Year you have reached is a level you pick at the cottage, and each Year keeps its own open seasons, starting again at Spring. Winning Winter in your top Year opens the next Year. That is locked at first: Year 1 always just ends with the ending, and the next Year opens from the second Year won, or earlier once 25% of the Almanac is done. The first time you choose a new Year you pick a **boon** from three, and it stays with that Year (a starting relic, +1 familiar slot, a Blessed card in the starting deck and the like). Each Year multiplies the Reputation it earns (×1.5 for Year 2, ×2 for Year 3), so climbing is worth more than replaying Year 1. A Year is not a replay of the month: a single run always ends at its new moon.
-  *In the build (M4 part 1):* the profile (`core/meta.ts`) records the open seasons, runs, wins by season and Years done. A win opens the next season with a line on the victory screen. After the tutorial, every run starts and ends at **the cottage** (the `Cottage` scene, a painted backdrop): its Year panel lists the four seasons, and you set out for an open one (or press 1-4); a locked one says which win opens it. The end screens offer the same season again or Home, and say how much Reputation the run earned.
-
-  *The ending and the Years (M4 part 6):* every Winter win plays the short ending ("A Year in Elmbrook") and counts a Year; there is no choice on that screen. When the win opens a new Year the ending says so and points to the cottage (`RunOutcome.newYear`). The profile keeps each Year's open seasons (`yearSeasons`), the Year chosen (`year`) and each Year's boon (`boons`). The cottage's Year panel has arrows (or the left and right keys) to change Year, and lists the Year's Reputation multiplier, its rules and its boon. Choosing a Year above 1 with no boon yet opens a must-pick of three from A Lucky Find (a random tier 1 relic), Blessed Hands (a random starting card Blessed), Another Perch (+1 familiar slot), Winter Savings (+15 gold) and A Taller Shelf (+1 Shelf slot); boons are codex data (`boons`). Each Year adds one rule and keeps the ones before it (`core/year.ts`, `YEAR_MODIFIERS`; decided with Jacob in place of rent and pay multipliers): Year 2, patrons stay hidden until the day before their Night Shift; Year 3, a Cobweb in the starting deck; Year 4, one fewer Night Market stall; Year 5, one fewer Discard a day; Year 6, week 2 orders ask for Superb or better (week 1 orders are already Fine, so this replaced the first idea of "week 1 Fine"); Year 7, a random Curse at the start; Year 8, the Shelf holds one less potion; Year 9, reward picks offer one card fewer; Year 10, the Moonless Patron asks one tier higher (the finale already needs all three orders, so this replaced "all three orders"). Rent also rises 5% from Year 2 and 25% from Year 4 (the ramp pass): the rules alone kept pace with perks up to tier 3, but tier 4 perks add about 25 points of win rate. The bot's Spring win rate falls from 40% in Year 1 to about 15% in Year 10.
-
-  *Reputation and perks (M4 part 3):* a run earns 4 Reputation per week's rent paid, 1 per order filled, 1 per potion sold and 10 for a win (`REPUTATION` in `core/meta.ts`). The cottage's perk board sells four perks, once each: Nest Egg (+5 starting gold, 15), A Deeper Shelf (5 Shelf slots, 20), Gran's Spoon (a Stir in the starting deck, 25) and A Spare Perch (+1 familiar slot, 35). Perks are codex data (`perks`) and apply at run start, never to the tutorial. The Night Market reroll from the list above needs a reroll mechanic first and is left for later. A Winter win counts a Year.
-
-  *Perks for the long game (decided Oct 9; built in M4 part 7):* four perks are bought within two or three runs, and later Years multiply Reputation, so the board grows in tiers. The cottage's perk board shows one tier at a time with arrows; a tier not yet open shows its perks dimmed and what opens it, and the end screen says when a run opened one. Tier 1 is open from the start (the four perks above). Tier 2 opens when you win a Year or finish 4 Almanac entries: A Full Purse (+5 gold, 45), A Blessed Ladle (a random starting card Blessed, 55), Tidy Habits (two Tidy Ups in the deck, 60) and Gran's Charm (a random tier 1 relic, 70). Tier 3 opens at Year 3 or 8 Almanac entries: A Wide Shelf (+1 Shelf slot, 120), Gran's Notes (a Steep and a Sift in the deck, 130) and Twice Blessed (another Blessed starting card, 150). Tier 4 opens at Year 6 or the whole Almanac: A Savings Jar (+10 gold, 220), The Heirloom (another random tier 1 relic, 260) and A Bigger Cauldron (+1 cauldron slot, 320). That is 14 perks; the tiers are `PERK_TIERS` in `core/meta.ts`, and perks and boons share one set of start effects (`RunStart` in the codex schema). Variety in the endgame comes from the Almanac, Year boons and the regulars rather than from perks; a cosmetic Reputation sink (cottage decorations) fits the walkable cottage. Endgame players own every perk, so Years are tuned against an all-perks profile.
 - **The walkable cottage** (decided with Jacob, Oct 9; built after the cross-run systems, see milestones M4.5). The cottage grows from a menu over a painting into a small top-down home you walk around, like the House of Hades in Hades and Hades II, but a single open-plan room. The look is top-down Stardew Valley: pixel art that is whimsical, quaint and cozy, in the game's own palette and lighting. You play a simple amorphous little being in wizard's robes and a pointed hat, with no stats or progression of its own. Each corner or nook of the room is where one cross-run system lives, so the house is the menu:
   - the hearth or workbench for Reputation perks;
   - the bookshelf for the Codex and known recipes;

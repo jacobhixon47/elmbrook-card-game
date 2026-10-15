@@ -33,7 +33,7 @@ function summary(s: RunState): string {
     .join('');
   const deck = s.drawPile.length + s.hand.length + s.discardPile.length + s.cauldron.length;
   return `
-    <div>seed <b>${esc(s.seed)}</b> · ${s.season} · ${s.witch}</div>
+    <div>seed <b>${esc(s.seed)}</b> · ${s.season} · ${s.witch} · ${s.cauldronKind}</div>
     <div>week ${s.week} · ${s.day === NIGHT_SHIFT_DAY ? 'Night Shift' : `day ${s.day}`} · ${s.phase} · sky ${skyTime(s)}</div>
     <div>gold <b>${s.gold}</b> · rent due ${rentOf(s)}</div>
     <div>brews ${s.brewsLeft} · discards ${s.discardsLeft} · cauldron ${s.cauldron.length}/${s.cauldronSlots} · shelf ${s.shelf.length}/${s.shelfSize}</div>

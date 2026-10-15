@@ -7,6 +7,7 @@ import { blessingTonight } from './fair';
 import { FAMILIAR_RULES } from './familiars';
 import { fortuneOn } from './market';
 import { patronOf, twistNow } from './night';
+import { cauldronOf, glamourReady, needsGlamour } from './cauldrons';
 import { hasRelic, RELIC_RULES } from './relics';
 import {
   BONUS_TIP, CLOCKLESS_BREWS, RAIN_MIN_ORDERS, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount,
@@ -188,7 +189,7 @@ function postOrder(ctx: Ctx, o: OrderOpts): void {
     customer: o.customer,
     request: o.request,
     minTier,
-    pay: Math.round(ORDER_PAY[minTier] * o.payScale),
+    pay: Math.round(ORDER_PAY[minTier] * o.payScale * (cauldronOf(ctx.s).pay ?? 1)),
     bonus: o.bonus,
     status: 'open',
     quantity: o.quantity ?? 1,
@@ -307,22 +308,24 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
   }
 }
 
-export function matchesRequest(potion: Pick<Potion, 'recipe' | 'family'>, request: OrderRequest): boolean {
-  return request.kind === 'recipe' ? potion.recipe === request.recipe : potion.family === request.family;
+/** Whether a potion is what the order asks for; with `glamour` (the Illusionist), any recipe of the named recipe's family is. */
+export function matchesRequest(potion: Pick<Potion, 'recipe' | 'family'>, request: OrderRequest, glamour = false): boolean {
+  if (request.kind === 'family') return potion.family === request.family;
+  return potion.recipe === request.recipe || (glamour && needsGlamour(potion, { request }));
 }
 
 type PotionLike = Pick<Potion, 'recipe' | 'family' | 'tier' | 'ingredients'>;
 
 const hasUmbra = (p: Pick<Potion, 'ingredients'>) => p.ingredients.some((id) => codex.ingredients.get(id)?.essences.includes('umbra'));
 
-export function satisfies(potion: PotionLike, order: Order): boolean {
-  return order.status === 'open' && matchesRequest(potion, order.request) && tierIndex(potion.tier) >= tierIndex(order.minTier)
+export function satisfies(potion: PotionLike, order: Order, glamour = false): boolean {
+  return order.status === 'open' && matchesRequest(potion, order.request, glamour) && tierIndex(potion.tier) >= tierIndex(order.minTier)
     && (!order.needsUmbra || hasUmbra(potion));
 }
 
 /** `satisfies`, plus tonight's twist: The May Queen won't take the same family twice running. */
-export function fits(s: Partial<Pick<RunState, 'patrons' | 'week' | 'day' | 'lastFamily'>>, potion: PotionLike, order: Order): boolean {
-  if (!satisfies(potion, order)) return false;
+export function fits(s: Partial<Pick<RunState, 'patrons' | 'week' | 'day' | 'lastFamily' | 'witch' | 'quirkUsed'>>, potion: PotionLike, order: Order): boolean {
+  if (!satisfies(potion, order, glamourReady(s))) return false;
   return !(twistNow(s) === 'family-chain' && s.lastFamily === potion.family);
 }
 

@@ -50,17 +50,26 @@ export function essencePip(essence: keyof typeof ESSENCE_COLOR): Pixmap {
   return p;
 }
 
+/** Each cauldron's metal, dark to light (GDD §12): the same pot, cast in a different material. */
+export const CAULDRON_METAL = {
+  copper: ['K', 'b', 'B', 'n', 'o', 'Y'],
+  iron: ['K', 'k', 's', 'S', 'e', 'm'],
+  glass: ['K', 'T', 'u', 't', 'c', 'W'],
+  bone: ['K', 'J', 'h', 'a', 'w', 'W'],
+  silver: ['K', 's', 'S', 'e', 'm', 'W'],
+} as const satisfies Record<string, readonly PaletteKey[]>;
+
 /**
- * Iron cauldron on three legs with a glowing brew. Shaded as a sphere lit from
+ * A cauldron on three legs with a glowing brew. Shaded as a sphere lit from
  * the upper left, with a warm lamplight rim on the right and the brew's colour
  * reflected under the lip.
  */
-export function cauldron(brew: PaletteKey = 'P', brewLight: PaletteKey = 'c'): Pixmap {
+export function cauldron(brew: PaletteKey = 'P', brewLight: PaletteKey = 'c', metal: readonly PaletteKey[] = CAULDRON_METAL.iron): Pixmap {
   const w = 72;
   const h = 58;
   const p = new Pixmap(w, h);
   const cx = w / 2;
-  const IRON: readonly PaletteKey[] = ['K', 'k', 's', 'S', 'e', 'm'];
+  const IRON = metal;
   // Legs: little cast-iron claws.
   for (const lx of [15, w - 20, cx - 2]) {
     for (let y = 44; y < h - 1; y++) {
@@ -89,16 +98,16 @@ export function cauldron(brew: PaletteKey = 'P', brewLight: PaletteKey = 'c'): P
     }
   }
   // Specular highlight.
-  p.fillEllipse(bcx - 13, bcy - 8, 4.5, 2.6, 'e');
-  p.fillEllipse(bcx - 14, bcy - 9, 2.2, 1.2, 'm');
+  p.fillEllipse(bcx - 13, bcy - 8, 4.5, 2.6, IRON[4]!);
+  p.fillEllipse(bcx - 14, bcy - 9, 2.2, 1.2, IRON[5]!);
   p.set(bcx - 15, bcy - 9, 'W');
   // A rivetted band around the belly.
   for (let x = bcx - rx + 3; x <= bcx + rx - 3; x++) {
     const nx = (x - bcx) / rx;
     const by = Math.round(bcy + 4 + Math.sqrt(Math.max(0, 1 - nx * nx)) * 3);
     p.set(x, by, 'k');
-    p.set(x, by - 1, nx < -0.2 ? 'e' : nx < 0.5 ? 'S' : 's');
-    if ((x - bcx) % 10 === 0) p.set(x, by - 1, 'm');
+    p.set(x, by - 1, nx < -0.2 ? IRON[4]! : nx < 0.5 ? IRON[3]! : IRON[2]!);
+    if ((x - bcx) % 10 === 0) p.set(x, by - 1, IRON[5]!);
   }
   // Lip: a thick rolled rim, lit along its top edge.
   p.fillEllipse(cx, 15, 33, 7.5, 'k');
@@ -239,7 +248,7 @@ export function proceduralTextures(): Record<string, Pixmap> {
   const out: Record<string, Pixmap> = {
     'card/frame': cardFrame(),
     'card/back': cardBack(),
-    'prop/cauldron': cauldron(),
+    ...Object.fromEntries(Object.entries(CAULDRON_METAL).map(([id, metal]) => [`prop/cauldron-${id}`, cauldron('P', 'c', metal)])),
     'prop/cauldron-lunar': cauldron('v', 'm'),
     'bg/night': nightBackdrop(),
     'bg/shop': shopBackdrop(),

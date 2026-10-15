@@ -19,6 +19,7 @@ import {
 import { cursePool, dayAllowance, gainRelic, grantRelic, handSizeToday, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
 import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
+import { cauldronOf, glamourReady, needsGlamour, quirkReady } from './cauldrons';
 import {
   BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, WINTER_FENCE, MAX_DISCARD, MAX_HEARTS, MIN_DECK, TIER_MIN,
   SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
@@ -32,9 +33,10 @@ export type ReduceResult = { state: RunState; events: GameEvent[] };
 const freshPending = (): Pending => ({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false, essenceHarmony: 0 });
 const noBoost = () => ({ hearts: 0, tip: 0, payMult: 1 });
 
-export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string): ReduceResult {
+export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string, cauldronId = 'copper'): ReduceResult {
   const witch = codex.witches.get(witchId);
   if (!witch) throw new Error(`unknown witch: ${witchId}`);
+  if (!codex.cauldrons.has(cauldronId)) throw new Error(`unknown cauldron: ${cauldronId}`);
 
   let uid = 1;
   const deck: CardInstance[] = [];
@@ -89,6 +91,8 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     emberPotencyToday: 0,
     weekDeliveries: 0,
     blessing: null,
+    cauldronKind: cauldronId,
+    quirkUsed: false,
     fortunes: [],
     fog: false,
     offer: null,
@@ -96,6 +100,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     nextUid: uid,
   };
   const ctx: Ctx = { s, ev: [{ type: 'runStarted', seed, witch: witch.id, season }] };
+  applyCauldron(ctx);
   applyPerks(ctx, perks);
   if (boon) applyBoon(ctx, boon);
   applyYear(ctx);
@@ -135,11 +140,13 @@ function startDay(ctx: Ctx): void {
   s.discardsToday = 0;
   s.flowerPotencyToday = 0;
   s.emberPotencyToday = 0;
+  s.quirkUsed = false;
   s.phase = 'morning';
   const rules = SEASON_RULES[s.season];
   const allowance = dayAllowance(s, { brews: BREWS_PER_DAY + (night ? 0 : rules.dayBrews), discards: Math.max(0, DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0) - yearDiscards(s)) }, night, weather);
-  s.brewsLeft = allowance.brews + (blessingTonight(s, 'hearthfire') ? VIGIL.hearthfireBrews : 0);
-  s.discardsLeft = allowance.discards + (blessingTonight(s, 'warm-hands') ? VIGIL.warmHandsDiscards : 0);
+  const pot = cauldronOf(s);
+  s.brewsLeft = Math.max(1, allowance.brews + (pot.brews ?? 0)) + (blessingTonight(s, 'hearthfire') ? VIGIL.hearthfireBrews : 0);
+  s.discardsLeft = Math.max(0, allowance.discards + (pot.discards ?? 0)) + (blessingTonight(s, 'warm-hands') ? VIGIL.warmHandsDiscards : 0);
   ctx.ev.push({ type: 'dayStarted', week: s.week, day: s.day, nightShift: night });
   ctx.ev.push({ type: 'deckShuffled', size: s.drawPile.length });
   postOrders(ctx, night);
@@ -180,6 +187,11 @@ function fill(ctx: Ctx, order: Order, potion: Potion): void {
   if (order.delivered < order.quantity) {
     ctx.ev.push({ type: 'orderProgress', order: order.id, potion: potion.uid, delivered: order.delivered, quantity: order.quantity });
     return;
+  }
+  // The Illusionist's glamour: a potion passed off as another recipe of its family, once a day.
+  if (needsGlamour(potion, order)) {
+    ctx.s.quirkUsed = true;
+    ctx.ev.push({ type: 'glamourUsed', order: order.id, potion: potion.uid });
   }
   const paid = payout(potion, order, ctx.s.familiars);
   const { bonus } = paid;
@@ -241,6 +253,8 @@ function brew(ctx: Ctx, deliverTo: number | undefined, pick: string | undefined)
   s.lastBrew = used.map((c) => c.card);
   // A Grimoire Page waits for the next Experiment; every other tincture lasts one brew.
   const experiment = preview.kind === 'potion' && !preview.known;
+  // The witch's once-a-day quirk: the Alchemist's first Experiment, the Bloom Witch's first Flower brew.
+  if ((experiment && quirkReady(s, 'alchemist')) || (preview.kind === 'potion' && preview.steps.some((st) => st.type === 'scoreStep' && st.source === 'witch'))) s.quirkUsed = true;
   s.pending = { ...freshPending(), fullExperiment: s.pending.fullExperiment && !experiment };
 
   if (preview.kind === 'sludge') {
@@ -509,7 +523,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       const i = s.shelf.findIndex((p) => p.uid === action.potion);
       if (i < 0) reject(`potion ${action.potion} is not on the Shelf`);
       const potion = s.shelf[i]!;
-      if (!satisfies(potion, order)) reject('that potion does not fill this order');
+      if (!satisfies(potion, order, glamourReady(s))) reject('that potion does not fill this order');
       if (!fits(s, potion, order)) reject('The May Queen wants a different family from your last delivery');
       s.shelf.splice(i, 1);
       fill(ctx, order, potion);
@@ -855,6 +869,18 @@ function applyStart(ctx: Ctx, start: RunStart, source: string): void {
   }
 }
 
+/** The cauldron's start (GDD §12): its slots, a smaller or larger hand, Lunar cards in the Night Satchel. */
+function applyCauldron(ctx: Ctx): void {
+  const s = ctx.s;
+  const pot = cauldronOf(s);
+  if (pot.slots) s.cauldronSlots = Math.min(MAX_CAULDRON_SLOTS, Math.max(s.cauldronSlots, pot.slots));
+  s.handSize = Math.max(1, s.handSize + (pot.hand ?? 0));
+  if (pot.lunarCards) {
+    const lunar = [...codex.ingredients.values()].filter((i) => i.rarity === 'lunar' && i.pool === 'base').map((i) => i.id);
+    for (const card of shuffled(ctx, lunar).slice(0, pot.lunarCards)) s.satchel.push({ uid: s.nextUid++, card });
+  }
+}
+
 /** The run's Year rules that act at the start (GDD §13): junk in the deck, a Curse, a smaller Shelf. */
 function applyYear(ctx: Ctx): void {
   const s = ctx.s;
@@ -875,7 +901,7 @@ function applyBoon(ctx: Ctx, id: string): void {
 
 /** The single entry point for game rules. Pure: same input, same output. A broken rule returns the old state and a `rejected` event. */
 export function reduce(state: RunState | null, action: Action): ReduceResult {
-  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks, action.year, action.boon);
+  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks, action.year, action.boon, action.cauldron);
   if (!state) throw new Error('no run in progress');
   const ctx: Ctx = { s: structuredClone(state), ev: [] };
   try {

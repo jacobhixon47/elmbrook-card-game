@@ -3,10 +3,10 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { boonOf, CODEX_TABLES, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
+import { boonOf, cauldronOpen, CODEX_TABLES, runStartChoice, witchOpen, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
 import { CODEX_TABS, codexEntries } from '../view/codex';
 import { unlockName } from '../view/describe';
-import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow } from '../profile';
+import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
 import { cottageBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { cap } from '../view/describe';
@@ -64,6 +64,7 @@ export class Cottage extends Phaser.Scene {
     };
     this.add.existing(button(this, 420, 300, 'Settings', settings, { w: 96 }));
     this.drawYearRules(profile);
+    this.drawKit(profile, data.fixture?.ui?.kit, !data.fixture);
     const ui = data.fixture?.ui;
     // A new Year's boon is chosen before anything else.
     if (profile.boonOffer) this.openBoons(profile, data.fixture ? null : (id) => {
@@ -163,6 +164,53 @@ export class Cottage extends Phaser.Scene {
       const b = this.add.existing(button(this, x + 136, ty + 12, `${perk.cost}`, () => buy?.(perk.id), { w: 40, color: 'y' }));
       if (why) b.setEnabled(false);
     });
+  }
+
+  /**
+   * The witch and the cauldron the next run sets out with (GDD §12). Arrows step through all of
+   * them; a locked one says what opens it, and choosing an open one remembers it for later runs.
+   */
+  private drawKit(p: Profile, view: { witch?: string; cauldron?: string } | undefined, save: boolean) {
+    const x = 196;
+    const y = 180;
+    this.add.existing(panel(this, x, y, 248, 106, 'k', 0.9, 'n'));
+    const chosen = runStartChoice(p);
+    const witches = [...codex.witches.values()];
+    const pots = [...codex.cauldrons.values()];
+    let w = Math.max(0, witches.findIndex((e) => e.id === (view?.witch ?? chosen.witch)));
+    let c = Math.max(0, pots.findIndex((e) => e.id === (view?.cauldron ?? chosen.cauldron)));
+    const rows = this.add.container(0, 0);
+    const draw = () => {
+      rows.removeAll(true);
+      const witch = witches[w]!;
+      const wOpen = witchOpen(p, witch.id);
+      rows.add(this.add.rectangle(x + 8, y + 6, 232, 44, hex(wOpen ? 'b' : 'q'), wOpen ? 0.6 : 0.4).setOrigin(0));
+      rows.add(pixelText(this, x + 124, y + 10, wOpen ? witch.name : `${witch.name} · locked`, { size: 8, color: wOpen ? 'W' : 'S', align: 'center' }).setOrigin(0.5, 0));
+      const wNote = wOpen ? `${witch.focus}. ${witch.quirk}` : `Win ${cap(witch.unlockSeason!)} to open. ${witch.quirk}`;
+      rows.add(pixelText(this, x + 124, y + 22, wNote, { size: 6, color: wOpen ? 'a' : 'S', align: 'center', wrap: 176 }).setOrigin(0.5, 0));
+
+      const pot = pots[c]!;
+      const cOpen = cauldronOpen(p, pot.id);
+      rows.add(this.add.rectangle(x + 8, y + 54, 232, 46, hex(cOpen ? 'b' : 'q'), cOpen ? 0.6 : 0.4).setOrigin(0));
+      rows.add(this.add.image(x + 48, y + 77, `prop/cauldron-${pot.id}`).setScale(0.5).setAlpha(cOpen ? 1 : 0.4));
+      rows.add(pixelText(this, x + 72, y + 58, cOpen ? pot.name : `${pot.name} · locked`, { size: 8, color: cOpen ? 'W' : 'S' }));
+      const entry = pot.unlock ? codex.almanac.get(pot.unlock)! : null;
+      const cNote = cOpen ? pot.text : `Almanac: ${entry!.goal} ${pot.text}`;
+      rows.add(pixelText(this, x + 72, y + 70, cNote, { size: 6, color: cOpen ? 'a' : 'S', wrap: 138 }));
+    };
+    const step = (row: 'w' | 'c', by: number) => {
+      if (row === 'w') w = (w + by + witches.length) % witches.length;
+      else c = (c + by + pots.length) % pots.length;
+      const witch = witches[w]!.id;
+      const pot = pots[c]!.id;
+      if (save) saveProfile({ ...(witchOpen(p, witch) ? { witch } : {}), ...(cauldronOpen(p, pot) ? { cauldron: pot } : {}) });
+      draw();
+    };
+    for (const [row, cy] of [['w', y + 28], ['c', y + 77]] as const) {
+      this.add.existing(button(this, x + 20, cy, '<', () => step(row, -1), { w: 16 }));
+      this.add.existing(button(this, x + 228, cy, '>', () => step(row, 1), { w: 16 }));
+    }
+    draw();
   }
 
   /** After a loop: the Year's modifiers and boon, under the title. */

@@ -72,7 +72,7 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 - ✅ A tiered perk board for the long game: more perks opening with Years reached and Almanac milestones, about 12 to 15 in all (GDD §13).
 - ✅ An early sound pass, pulled forward from M5 (Jacob, Oct 14: the game feels bland without it): sound effects made in code for slotting cards, the score climbing, brewing, coins, orders and buttons, with a volume and mute setting. Music stays in M5.
 - Six regulars with hearts, Ink dialogue, heart-milestone beats and unlocks. A Townsfolk page in the Grimoire lists each regular and your hearts with them (Jacob, Oct 15).
-- Witch and cauldron selection; unlock flow.
+- ✅ Witch and cauldron selection (Jacob, Oct 15): five witches, one opened by each season's first win, and five cauldrons opened by the Almanac, chosen at the cottage, which remembers the last pick (GDD §12).
 - ✅ Winter tuned into the win-rate band: week 1's rent is the same in every season and Winter pays ×1.2 (`docs/balance-m4.md`).
 - ✅ The ramp pass: a gentle week-1 rent ramp (20, 22, 24, 26 by season, decided with Jacob), heavier rent with pay trailing it by season, and rent rising in later Years. Year 1 wins about 40/34/29/23% by season, and Spring falls to about 15% by Year 10, simmed with the perks and unlocks a player would carry into each Year (`docs/balance-m4.md`).
 - Seasonal content: ✅ seven seasonal Night Market stalls (GDD §9); ✅ the Winter Night Market in place of the Frost Market (Snowed In nights, the Hearth Trader every night with the Yule Log and the Holly Crown, a Winter Fence and Tinker, the Ermine, and a Winter Lantern Seller with the Yule Candle; GDD §9).
@@ -83,8 +83,8 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
   - ✅ A way to view the discard pile, next to the deck and draw pile in the Grimoire.
   - ✅ The Year and season shown above the day and week in the top-left HUD.
 
-- ✅ Tags a rule reads (Frost, Flower) shown as chips on card faces (Jacob, Oct 14).
-- Balance holds until the M4 features are in (Jacob, Oct 14): no sim passes mid-build. Then one balance pass with a systems review: each system (familiars, Omens, seasonal stalls, rent, recipes and the rest) on its own and as a whole, compared with similar games, so the game is neither bloated nor bare. Known drift going in: the six unlock recipes make later Years easier (they add power, not just breadth), and Winter Year 1 rose to about 30% with the Winter Night Market.
+- ✅ Tags a rule reads (Frost, Flower) shown as chips on card faces (Jacob, Oct 14). Next (Jacob, Oct 15): small line-drawn icons (a flower, a snowflake, a fruit) in place of the chips.
+- Balance holds until the M4 features are in (Jacob, Oct 14): no sim passes mid-build. Then one balance pass with a systems review: each system (familiars, Omens, seasonal stalls, rent, recipes and the rest) on its own and as a whole, compared with similar games, so the game is neither bloated nor bare. The review also sims every witch in every season (does a witch win more in its own season?), checks the Bone Cauldron's trade, and settles card tags: show every card's tags as icons, and which tags rules should read (Jacob, Oct 15). Known drift going in: the six unlock recipes make later Years easier (they add power, not just breadth), and Winter Year 1 rose to about 30% with the Winter Night Market.
 
 **Accept:** a second run feels different from the first because of unlocks and regulars' stories.
 

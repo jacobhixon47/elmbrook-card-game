@@ -144,7 +144,7 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 17;
+export const RUN_VERSION = 18;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -229,6 +229,10 @@ export type RunState = {
   weekDeliveries: number;
   /** The Solstice Fire blessing chosen at the Longest Night vigil; it acts on the finale's Night Shift. */
   blessing: string | null;
+  /** The cauldron chosen at the cottage (codex `cauldrons`, GDD §12). */
+  cauldronKind: string;
+  /** Whether the witch's once-a-day quirk has been used today (the Bloom Witch, the Alchemist, the Illusionist). */
+  quirkUsed: boolean;
   /** Guild Commissions taken and not yet done or failed (GDD §7). */
   commissions: ActiveCommission[];
   /** Fortune Tent twists on a later week (The Hermit, The Tower, The Moon). */

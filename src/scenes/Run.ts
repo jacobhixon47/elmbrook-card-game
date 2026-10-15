@@ -6,7 +6,7 @@ import {
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
   HARVEST_AUCTION, HEARTH_TRADER, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
-  type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome, almanacUnlocks, boonOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
+  type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome, almanacUnlocks, boonOf, runStartChoice, cauldronOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
 } from '../core';
 import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
@@ -150,7 +150,7 @@ export class Run extends Phaser.Scene {
       this.tutorial = fixture ? null : wantsTutorial() ? new TutorialProgress() : null;
       const seed = fixture?.seed ?? params.get('seed') ?? (this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`);
       const season = data.season ?? (fixture?.season as Season | undefined) ?? viewOverrides().season;
-      store.dispatch({ type: 'startRun', seed, witch: 'hedge-witch', ...(season ? { season } : {}), ...(fixture?.year ? { year: fixture.year } : {}), ...this.fromProfile(!!fixture) });
+      store.dispatch({ type: 'startRun', seed, ...this.kit(fixture), ...(season ? { season } : {}), ...(fixture?.year ? { year: fixture.year } : {}), ...this.fromProfile(!!fixture) });
       // `today` sets the weather of the day the fixture starts on and of the day its steps end on.
       const today = () => fixture?.today && store.dispatch({ type: 'debug', op: 'setWeather', weather: fixture.today as Weather });
       today();
@@ -243,7 +243,7 @@ export class Run extends Phaser.Scene {
       if (!noAnim) this.tweens.add({ targets: glow, alpha: 0.42, scale: l.scale * 0.95, duration: 900 + l.x, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
     this.cauldronY = bg.counterTop - 27;
-    this.add.image(320, this.cauldronY, 'prop/cauldron');
+    this.add.image(320, this.cauldronY, `prop/cauldron-${state.cauldronKind}`);
     const steam = this.add.image(320, this.cauldronY - 18, 'fx/glow').setTint(hex('v')).setBlendMode(Phaser.BlendModes.ADD).setScale(0.6).setAlpha(0.35);
     if (!noAnim) this.tweens.add({ targets: steam, alpha: 0.2, duration: 1200, yoyo: true, repeat: -1 });
   }
@@ -565,7 +565,12 @@ export class Run extends Phaser.Scene {
   }
 
   private drawHud(s: RunState) {
-    this.text(10, 2, `Year ${s.year} · ${s.season[0]!.toUpperCase()}${s.season.slice(1)}`, { size: 7, color: SEASON_COLOR[s.season], shadow: true });
+    const year = this.text(10, 2, `Year ${s.year} · ${s.season[0]!.toUpperCase()}${s.season.slice(1)}`, { size: 7, color: SEASON_COLOR[s.season], shadow: true });
+    // Hover for who is brewing and in what (GDD §12).
+    const witch = codex.witches.get(s.witch)!;
+    const pot = cauldronOf(s);
+    year.setInteractive().on('pointerover', () => this.tip.text(`${witch.name}, ${pot.name}`, [`${witch.name}: ${witch.quirk}`, `${pot.name}: ${pot.text}`], year.x + year.width / 2, year.y + 10));
+    year.on('pointerout', () => this.tip.hide());
     this.text(10, 10, dayLabel(s), { size: 12, color: 'a', shadow: true });
     this.text(630, 8, `${s.gold} gold`, { size: 12, color: 'y', shadow: true }).setOrigin(1, 0);
     if (s.phase === 'brewing') this.text(10, 24, `Brews ${s.brewsLeft} · Discards ${s.discardsLeft}`, { size: 8, color: 'w', shadow: true });
@@ -1852,8 +1857,18 @@ export class Run extends Phaser.Scene {
     this.tutorial = wantsTutorial() ? new TutorialProgress() : null;
     this.scenesSeen.clear();
     this.openingPending = !this.fixtureRun && wantsIntros() && !this.tutorial && loadProfile().seasonOpenings;
-    store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, witch: 'hedge-witch', season, ...this.fromProfile(this.fixtureRun) });
+    store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, ...this.kit(this.fixtureRun ? this.fixture : null), season, ...this.fromProfile(this.fixtureRun) });
     this.scene.restart({ resume: true });
+  }
+
+  /**
+   * The witch and cauldron a new run starts with: the cottage's pick (GDD §12), a fixture's own,
+   * or the Hedge Witch in Copper for the tutorial and fixtures that name none.
+   */
+  private kit(fixture: Fixture | null | undefined): { witch: string; cauldron: string } {
+    if (fixture) return { witch: fixture.witch ?? 'hedge-witch', cauldron: fixture.cauldron ?? 'copper' };
+    if (this.tutorial) return { witch: 'hedge-witch', cauldron: 'copper' };
+    return runStartChoice(loadProfile());
   }
 
   /**
@@ -1899,7 +1914,8 @@ export class Run extends Phaser.Scene {
         ? null
         : `Win another Year, or finish ${LOOP_ALMANAC} Almanac entries, and your next Winter win opens Year ${top + 1}.`;
     if (news) this.text(320, 222, news, { size: 7, color: out.newYear ? 'L' : 'a', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
-    if (out.perkTiers.length) this.text(320, news ? 240 : 222, perkNews(out), { size: 7, color: 'Y', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
+    const more = [perkNews(out), kitNews(out)].filter(Boolean).join(' ');
+    if (more) this.text(320, news ? 240 : 222, more, { size: 7, color: 'Y', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
     this.add2(button(this, 270, 296, 'Play again', () => this.newRun(s.season), { w: 80 }));
     this.add2(button(this, 370, 296, 'Home', () => this.scene.start('Cottage', {}), { w: 80, color: 'Y' }));
   }
@@ -1913,6 +1929,7 @@ export class Run extends Phaser.Scene {
       const tiers = out.perkTiers.length ? ` ${perkNews(out)}` : '';
       this.text(320, 160, `New in your Almanac: ${listOf(names)}. More joins the pools next run.${tiers}`, { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);
     }
+    if (kitNews(out)) this.text(320, 132, kitNews(out), { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5);
     this.add2(button(this, 270, 190, again, () => this.newRun(s.season), { w: 80, color: 'Y' }));
     this.add2(button(this, 370, 190, 'Home', () => this.scene.start('Cottage', {}), { w: 80 }));
   }
@@ -2005,6 +2022,7 @@ function relicNote(events: readonly GameEvent[]): string | null {
     if (e.type === 'relicGained' && e.source !== 'debug') lines.push(`Relic: ${codex.relics.get(e.relic)!.name}. ${codex.relics.get(e.relic)!.text}`);
     if (e.type === 'curseLifted') lines.push(`${codex.curses.get(e.curse)!.name} is lifted.`);
     if (e.type === 'relicFired' && e.relic === 'iron-lid') lines.push('The Iron Lid caught the Sludge.');
+    if (e.type === 'glamourUsed') lines.push('A little glamour: it passes for what they asked. (Once a day.)');
     if (e.type === 'commissionDone') lines.push(`Commission done: ${codex.commissions.get(e.commission)!.name}.`);
     if (e.type === 'commissionFailed') lines.push(`${codex.commissions.get(e.commission)!.name} ran out of time.`);
     if (e.type === 'cardModified' && e.by !== 'debug' && e.by !== 'event') lines.push(`${cardName(e.card)} is ${codex.modifiers.get(e.modifier)!.name}.`);
@@ -2064,8 +2082,16 @@ function wantsIntros(): boolean {
   return !params.get('seed');
 }
 
+/** A line for the witches and cauldrons a run opened, to choose at the cottage. */
+function kitNews(out: RunOutcome): string {
+  const names = [...out.witches.map((id) => codex.witches.get(id)!.name), ...out.cauldrons.map((id) => codex.cauldrons.get(id)!.name)];
+  if (!names.length) return '';
+  return `${cap(listOf(names.map((n) => `the ${n}`)))} ${names.length === 1 ? 'is' : 'are'} waiting at your cottage.`;
+}
+
 /** A line for perk board tiers a run opened. */
 function perkNews(out: RunOutcome): string {
+  if (!out.perkTiers.length) return '';
   const tiers = out.perkTiers.map((t) => `tier ${t}`);
   return `New perks at your cottage: ${listOf(tiers)} of the perk board is open.`;
 }
