@@ -89,7 +89,7 @@ const TINCTURE_VALUE: Record<string, number> = {
   stir: 5, simmer: 5, 'grimoire-page': 5, 'charm-sachet': 5, forage: 4, sift: 4, 'taste-test': 3,
   // Omens: Night Satchel only, so they never thin the day deck.
   'blood-moon': 9, 'witching-hour': 8, 'wishing-star': 7, howl: 6, 'raven-call': 6, 'moth-swarm': 6, 'cracked-mirror': 5, 'black-cat-crossing': 4, 'yule-candle': 6,
-  'royal-jelly': 6,
+  'royal-jelly': 6, 'beeswax-candle': 6, 'spring-mead': 9, garland: 4,
 };
 
 /** Sell the weakest familiar when one worth `v` would be clearly better and every slot is taken. */
@@ -137,6 +137,7 @@ export function familiarValue(s: RunState, id: string): number {
     case 'ferret': return 5;
     case 'moth': return 3 + 4 * s.satchel.length;
     case 'bumblebee': return 2 + 30 * share((i) => i.tags.includes('flower'));
+    case 'queen-bee': return 2 + 25 * share((i) => i.tags.includes('flower'));
     default: return 2;
   }
 }
@@ -260,13 +261,13 @@ function greedyBrewing(s: RunState): Action {
   const room = s.shelf.length < s.shelfSize;
   const shelfPlan = options
     .filter((p) => p.preview.known)
-    .map((p) => ({ ...p, value: fencePrice(asPotion(p), s.season) + p.preview.quality / 100 }))
+    .map((p) => ({ ...p, value: fencePrice(asPotion(p), s) + p.preview.quality / 100 }))
     .sort((a, b) => b.value - a.value)[0];
   if (shelfPlan && (room || open.length > 0)) return stepToward(s, shelfPlan);
   // A full Shelf: pour away its cheapest potion when the new one would fetch clearly more.
   if (shelfPlan && !room && s.brewsLeft > 0) {
-    const worst = s.shelf.slice().sort((a, b) => fencePrice(a, s.season) - fencePrice(b, s.season))[0]!;
-    if (fencePrice(asPotion(shelfPlan), s.season) > fencePrice(worst, s.season) + 1) return { type: 'pourOut', uid: worst.uid };
+    const worst = s.shelf.slice().sort((a, b) => fencePrice(a, s) - fencePrice(b, s))[0]!;
+    if (fencePrice(asPotion(shelfPlan), s) > fencePrice(worst, s) + 1) return { type: 'pourOut', uid: worst.uid };
   }
   return { type: 'endDay' };
 }
@@ -393,6 +394,9 @@ export function relicValue(s: RunState, id: string): number {
     case 'apprentice-ledger': return 2 * weeksLeft;
     case 'silver-bell': return 2;
     case 'may-crown': return 2 * weeksLeft;
+    case 'hive-smoker': case 'maypole': case 'flower-basket': return 6;
+    case 'ivy-wreath': return 3;
+    case 'daisy-chain': return 2;
     default: return 0;
   }
 }
@@ -476,7 +480,7 @@ function keptPotions(s: RunState): Set<number> {
       if (p) keep.add(p.uid);
     }
     if (st.id === 'cider-press') {
-      const cheap = s.shelf.filter((p) => !keep.has(p.uid) && fencePrice(p, s.season) <= CIDER_PRESS_MAX_PRICE);
+      const cheap = s.shelf.filter((p) => !keep.has(p.uid) && fencePrice(p, s) <= CIDER_PRESS_MAX_PRICE);
       for (const p of cheap.slice(0, CIDER_PRESS.max - st.pressed)) keep.add(p.uid);
     }
   }
@@ -544,7 +548,7 @@ function stallAction(s: RunState, stall: StallState): Action | null {
     }
     case 'cider-press': {
       const potion = cheapestPotion(s);
-      if (stall.pressed >= CIDER_PRESS.max || !potion || fencePrice(potion, s.season) > CIDER_PRESS_MAX_PRICE) return null;
+      if (stall.pressed >= CIDER_PRESS.max || !potion || fencePrice(potion, s) > CIDER_PRESS_MAX_PRICE) return null;
       const best = pressable(s).sort((a, b) => cardPotency(b) - cardPotency(a))[0];
       return best ? { type: 'pressCider', uid: best.uid } : null;
     }

@@ -1,7 +1,8 @@
 import type { CardSource, GameEvent } from './actions';
-import { NIGHT_SHIFT_DAY } from './calendar';
+import { NIGHT_SHIFT_DAY, todaysWeather } from './calendar';
 import { sumEffect } from './effects';
 import { isSatchelCard } from './night';
+import { handSizeToday } from './relics';
 import { nextFloat, shuffle } from './rng';
 import { MAX_HEARTS } from './rules';
 import type { CardInstance, RunState } from './state';
@@ -70,7 +71,7 @@ export function draw(ctx: Ctx, n: number): void {
 }
 
 export function drawToHandSize(ctx: Ctx): void {
-  draw(ctx, Math.max(0, ctx.s.handSize - ctx.s.hand.length));
+  draw(ctx, Math.max(0, handSizeToday(ctx.s, todaysWeather(ctx.s)) - ctx.s.hand.length));
 }
 
 /** A new card for the deck, or for the Night Satchel if it is a Lunar ingredient or an Omen (GDD §5.4). */

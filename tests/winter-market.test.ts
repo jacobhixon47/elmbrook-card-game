@@ -117,9 +117,9 @@ describe('Winter\'s Fence and Tinker', () => {
 
   it('pays half again for Warming potions in Winter, and a little less for the rest', () => {
     const base = fencePrice(potion('warming'));
-    expect(fencePrice(potion('warming'), 'winter')).toBe(Math.round(base * WINTER_FENCE.warming));
-    expect(fencePrice(potion('healing'), 'winter')).toBe(Math.round(base * WINTER_FENCE.other));
-    expect(fencePrice(potion('healing'), 'autumn')).toBe(base);
+    expect(fencePrice(potion('warming'), { season: 'winter' })).toBe(Math.round(base * WINTER_FENCE.warming));
+    expect(fencePrice(potion('healing'), { season: 'winter' })).toBe(Math.round(base * WINTER_FENCE.other));
+    expect(fencePrice(potion('healing'), { season: 'autumn' })).toBe(base);
   });
 
   it('the full-moon Tinker carries a Frost familiar in Winter', () => {

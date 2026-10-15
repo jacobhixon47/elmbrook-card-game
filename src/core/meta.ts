@@ -323,6 +323,8 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
   },
   // 13 → 14: the Year; every run before looping existed was in Year 1.
   13: (s) => ({ ...s, year: 1 }),
+  // 14 → 15: day counters for the Bloomtide Fair's Hive Smoker and Garland.
+  14: (s) => ({ ...s, discardsToday: 0, flowerPotencyToday: 0 }),
 };
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */

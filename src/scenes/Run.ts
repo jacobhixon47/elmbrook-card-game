@@ -1435,7 +1435,7 @@ export class Run extends Phaser.Scene {
         s.shelf.forEach((p, i) => {
           const x = 320 + (i - (s.shelf.length - 1) / 2) * 50;
           const img = this.add2(this.add.image(x, 140, `potion/${p.family}`).setScale(2));
-          this.text(x, 160, `${TIER_NAME[p.tier]}\n${fencePrice(p, s.season)}g`, { size: 7, color: 'y', align: 'center' }).setOrigin(0.5, 0);
+          this.text(x, 160, `${TIER_NAME[p.tier]}\n${fencePrice(p, s)}g`, { size: 7, color: 'y', align: 'center' }).setOrigin(0.5, 0);
           img.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'sellPotion', uid: p.uid }));
         });
         break;

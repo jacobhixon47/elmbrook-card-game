@@ -22,6 +22,10 @@ export const RELIC_RULES = {
   satchelHand: 1,
   locketBrews: 1,
   mayCrownPay: 1.25,
+  smokerDraw: 1,
+  daisyPotency: 2,
+  basketHand: 1,
+  wreathFence: 1.25,
 } as const;
 
 export const CURSE_RULES = {
@@ -107,6 +111,11 @@ export function rewardCount(s: Held & Partial<Pick<RunState, 'year'>>): number {
   return Math.max(1, n - (yearRule(s, 9) ? YEAR_RULES.rewardCards : 0));
 }
 
+/** Cards a full hand holds today: the Flower Basket adds one on Clear days. */
+export function handSizeToday(s: Pick<RunState, 'handSize' | 'relics'>, weather: string): number {
+  return s.handSize + (weather === 'clear' && hasRelic(s, 'flower-basket') ? RELIC_RULES.basketHand : 0);
+}
+
 /** Reward rarity weights: Sour Luck turns off skip pity. */
 export function rewardWeights(s: Held & Pick<RunState, 'skipStreak'>): [ShopRarity, number][] {
   return rarityWeights(hasCurse(s, 'sour-luck') ? 0 : s.skipStreak);
@@ -124,7 +133,7 @@ export function dayAllowance(s: Held, base: { brews: number; discards: number },
 export type RelicStep = { potency: number; harmony: number; note: string };
 
 /** Relic and curse changes to a brew's score, after the ingredients (GDD §6.3). */
-export function relicSteps(s: Partial<Held>, raw: readonly Ingredient[]): { id: string; source: 'relic' | 'curse'; step: RelicStep }[] {
+export function relicSteps(s: Partial<Held> & Partial<Pick<RunState, 'brewsToday'>>, raw: readonly Ingredient[]): { id: string; source: 'relic' | 'curse'; step: RelicStep }[] {
   const out: { id: string; source: 'relic' | 'curse'; step: RelicStep }[] = [];
   if (hasRelic(s, 'pressed-flower')) {
     const k = raw.filter((i) => i.tags.includes('flower')).length;
@@ -133,6 +142,10 @@ export function relicSteps(s: Partial<Held>, raw: readonly Ingredient[]): { id: 
   }
   if (hasRelic(s, 'copper-ladle') && raw.length === 3) {
     out.push({ id: 'copper-ladle', source: 'relic', step: { potency: 0, harmony: RELIC_RULES.ladleHarmony, note: `+${RELIC_RULES.ladleHarmony} Harmony (three ingredients)` } });
+  }
+  if (hasRelic(s, 'maypole') && s.brewsToday === 0) {
+    const n = new Set(raw.flatMap((i) => i.essences)).size;
+    out.push({ id: 'maypole', source: 'relic', step: { potency: 0, harmony: n, note: `+${n} Harmony (first brew, distinct essences)` } });
   }
   if (hasCurse(s, 'moonsick')) {
     const k = raw.filter((i) => isSatchelCard(i.id)).length;

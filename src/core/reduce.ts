@@ -16,7 +16,7 @@ import {
   atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, placeBid, pressCider, readPetals, seedSwap, stallStock, swapForCard, takeDeal, takePrize,
   tossRing, tradeHearts, burnYule, wearCrown, tradeNectar, weave,
 } from './market';
-import { cursePool, dayAllowance, gainRelic, grantRelic, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
+import { cursePool, dayAllowance, gainRelic, grantRelic, handSizeToday, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
 import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import {
@@ -84,6 +84,8 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     commissions: [],
     curses: [],
     sludgeToday: 0,
+    discardsToday: 0,
+    flowerPotencyToday: 0,
     fortunes: [],
     fog: false,
     offer: null,
@@ -127,6 +129,8 @@ function startDay(ctx: Ctx): void {
   s.pending = freshPending();
   s.brewsToday = 0;
   s.sludgeToday = 0;
+  s.discardsToday = 0;
+  s.flowerPotencyToday = 0;
   s.phase = 'morning';
   const rules = SEASON_RULES[s.season];
   const allowance = dayAllowance(s, { brews: BREWS_PER_DAY + (night ? 0 : rules.dayBrews), discards: Math.max(0, DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0) - yearDiscards(s)) }, night, weather);
@@ -462,11 +466,14 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       ctx.ev.push({ type: 'cardsDiscarded', uids });
       liftFog(ctx);
       s.discardCount += 1;
+      s.discardsToday += 1;
+      const smoker = s.discardsToday === 1 && hasRelic(s, 'hive-smoker') ? RELIC_RULES.smokerDraw : 0;
+      if (smoker) ctx.ev.push({ type: 'relicFired', relic: 'hive-smoker' });
       // The Ferret: every third Discard of the run draws one more.
       const ferret = hasFamiliar(s, 'ferret') && s.discardCount % FAMILIAR_RULES.ferretEvery === 0 ? 1 : 0;
       if (ferret) ctx.ev.push({ type: 'familiarFired', familiar: 'ferret' });
-      const extra = thrown.reduce((n, c) => n + sumEffect(c.card, 'drawOnDiscard'), 0) + ferret;
-      draw(ctx, Math.max(0, s.handSize - s.hand.length) + extra);
+      const extra = thrown.reduce((n, c) => n + sumEffect(c.card, 'drawOnDiscard'), 0) + ferret + smoker;
+      draw(ctx, Math.max(0, handSizeToday(s, todaysWeather(s)) - s.hand.length) + extra);
       return;
     }
 
@@ -719,7 +726,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       const i = s.shelf.findIndex((p) => p.uid === action.uid);
       if (i < 0) reject(`potion ${action.uid} is not on the Shelf`);
       const [potion] = s.shelf.splice(i, 1);
-      const price = fencePrice(potion!, s.season);
+      const price = fencePrice(potion!, s);
       ctx.ev.push({ type: 'potionSold', uid: potion!.uid, price });
       changeGold(ctx, price, 'fence');
       return;
@@ -793,14 +800,16 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
 }
 
 /** The Fence pays by tier, and half again for potions with Umbra or Lunar in them (GDD §9). */
-export function fencePrice(potion: Pick<Potion, 'tier' | 'ingredients' | 'family'>, season?: Season): number {
+export function fencePrice(potion: Pick<Potion, 'tier' | 'ingredients' | 'family'>, s?: Pick<RunState, 'season'> & Partial<Pick<RunState, 'relics'>>): number {
+  const season = s?.season;
   const shadowy = potion.ingredients.some((id) => {
     const e = codex.ingredients.get(id)?.essences ?? [];
     return e.includes('umbra') || e.includes('lunar');
   });
   // Winter: folks want warmth, so Warming potions fetch more and the rest a little less.
   const winter = season === 'winter' ? (potion.family === 'warming' ? WINTER_FENCE.warming : WINTER_FENCE.other) : 1;
-  return Math.round(FENCE_PRICE[potion.tier] * (shadowy ? FENCE_SHADOW_BONUS : 1) * winter);
+  const wreath = s && hasRelic(s, 'ivy-wreath') ? RELIC_RULES.wreathFence : 1;
+  return Math.round(FENCE_PRICE[potion.tier] * (shadowy ? FENCE_SHADOW_BONUS : 1) * winter * wreath);
 }
 
 /** Cottage perks change how a run starts (GDD §13). */

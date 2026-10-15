@@ -21,6 +21,8 @@ export type ScoreCtx = {
   filledToday: number;
   /** Today's weather. */
   weather: Weather;
+  /** Relics held, for those that change card modifiers (the Daisy Chain). */
+  relics: readonly string[];
 };
 
 export type Effect = {
@@ -120,6 +122,14 @@ export const EFFECTS: Record<string, Effect> = {
   'harmony-per-frost-in-brew': harmonyPer((i) => i.tags.includes('frost')),
   'harmony-per-flower-in-brew': harmonyPer((i) => i.tags.includes('flower')),
   grows: { growsOnBrew: 1 },
+  'potency-2-per-other-flower': {
+    onScore: (c) => {
+      const n = 2 * Math.max(0, c.ingredients.filter((i) => i.tags.includes('flower')).length - 1);
+      if (n === 0) return undefined;
+      c.potency += n;
+      return `+${n} Potency (Flowers)`;
+    },
+  },
   'potency-3-if-rain': {
     onScore: (c) => {
       if (c.weather !== 'rain') return undefined;
@@ -170,6 +180,8 @@ export const EFFECTS: Record<string, Effect> = {
   // Tinctures
   'next-brew-harmony-1': nextBrew((p) => (p.harmony += 1)),
   'next-brew-potency-3': nextBrew((p) => (p.potency += 3)),
+  'next-brew-harmony-3': nextBrew((p) => (p.harmony += 3)),
+  'flower-potency-2-today': { onPlay: (ctx) => void (ctx.s.flowerPotencyToday += 2) },
   'next-brew-potency-x1.5': nextBrew((p) => (p.potencyMult *= 1.5)),
   'next-brew-harmony-x1.5': nextBrew((p) => (p.harmonyMult *= 1.5)),
   'next-brew-double': nextBrew((p) => (p.copies = Math.max(p.copies, 2))),
