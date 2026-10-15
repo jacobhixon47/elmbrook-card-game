@@ -8,6 +8,7 @@ import { FRIENDSHIP, friendLevel, friendshipOf, levelStartAt, nextLevelAt, type 
 export const LEVEL_OPENS: Partial<Record<number, string>> = {
   1: 'Their Townsfolk entry, in the Grimoire.',
   [FRIENDSHIP.vigilLevel]: 'A gift at the Longest Night, and the Hearth Trader knows their name.',
+  [FRIENDSHIP.favouriteLevel]: 'Their favourite order turns up now and then, for +1 Friendship.',
   [FRIENDSHIP.traderBigLevel]: 'The Hearth Trader shows a third card on their name.',
 };
 

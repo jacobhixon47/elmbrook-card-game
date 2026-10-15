@@ -19,7 +19,7 @@ import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
 import { friendshipLine, levelUpNote } from '../view/townsfolk';
 import {
-  BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, orderNeeds, orderTerms, recipeName,
+  BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, favouriteNote, orderNeeds, orderTerms, recipeName,
   requestText, TIER_NAME, newRecipeHint, unknownRecipe,
   cap, listOf,
 } from '../view/describe';
@@ -1030,12 +1030,13 @@ export class Run extends Phaser.Scene {
     if (isRegular(o.customer)) this.text(x0 + w - 12, y0 + 12, friendshipLine(friendshipOf(s, o.customer)), { size: 8, color: 'R' }).setOrigin(1, 0);
     this.text(x0 + 12, y0 + 28, customerBlurb(o.customer), { size: 7, color: 'a' });
     this.text(x0 + 12, y0 + 44, `"${customerLine(o)}"`, { size: 8, color: 'W', wrap: w - 24 });
-    this.text(x0 + 12, y0 + 70, `Wants: ${requestText(o)}`, { size: 8, color: 'w' });
+    this.text(x0 + 12, y0 + 70, `Wants: ${requestText(o, true)}`, { size: 8, color: 'w' });
     this.text(x0 + 12, y0 + 82, orderTerms(o), { size: 8, color: 'c' });
     const extra = extraPay(o.customer);
     const needs = orderNeeds(o);
     const hint = newRecipeHint(s, o);
     const notes = [
+      ...(favouriteNote(o) ? [{ t: favouriteNote(o)!, c: 'R' as const }] : []),
       ...(hint ? [{ t: hint, c: 'l' as const }] : []),
       ...(o.bonus ? [{ t: `★ Bonus: ${BONUS_TEXT[o.bonus]} (+2g, +1 Friendship)`, c: 'o' as const }] : []),
       ...(extra ? [{ t: `Also pays: ${extra}`, c: 'l' as const }] : []),

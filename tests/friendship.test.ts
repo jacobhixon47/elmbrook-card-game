@@ -1,6 +1,7 @@
+import { codex } from '../src/codex';
 import { describe, expect, it } from 'vitest';
 import {
-  bankFriendship, bestFriend, friendLevel, FRIENDSHIP, levelStartAt, migrateProfile, migrateRun, newProfile, newStats, nextLevelAt, recordRun, reduce,
+  bankFriendship, bestFriend, satisfies, friendLevel, FRIENDSHIP, levelStartAt, migrateProfile, migrateRun, newProfile, newStats, nextLevelAt, recordRun, reduce,
   type Order, type RunState,
 } from '../src/core';
 import { brewing, ofType, ok, slotAll, withHand } from './helpers';
@@ -106,5 +107,44 @@ describe('level-up toasts', () => {
     expect(levelUpNote(deliver(s).events)).toBe('Old Tobin: Friendship 2! A gift at the Longest Night, and the Hearth Trader knows their name.');
     expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': 29 } }).events)).toBe('Old Tobin: Friendship 3!');
     expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': 20 } }).events)).toBeNull();
+  });
+});
+
+describe('favourite orders (Friendship level 4)', () => {
+  const all = (points: number) => Object.fromEntries([...codex.regulars.keys()].map((id) => [id, points]));
+  const day1 = (seed: string, points: number) => reduce(null, { type: 'startRun', seed, witch: 'hedge-witch', friendship: all(points) }).state;
+
+  it('every regular has one: a family the recipes have and a tag some ingredient has', () => {
+    for (const r of codex.regulars.values()) {
+      expect(r.favourite, r.id).toBeDefined();
+      expect([...codex.recipes.values()].some((x) => x.family === r.favourite!.family), r.id).toBe(true);
+      expect([...codex.ingredients.values()].some((i) => i.tags.includes(r.favourite!.tag)), r.id).toBe(true);
+    }
+  });
+
+  it('turn up from level 4, at most one a day, and never below', () => {
+    const seeds = Array.from({ length: 40 }, (_, i) => `fav-${i}`);
+    const below = seeds.flatMap((x) => day1(x, FRIENDSHIP.levels[FRIENDSHIP.favouriteLevel - 1]! - 1).orders);
+    expect(below.some((o) => o.favourite)).toBe(false);
+    const boards = seeds.map((x) => day1(x, FRIENDSHIP.levels[FRIENDSHIP.favouriteLevel - 1]!).orders);
+    expect(boards.every((b) => b.filter((o) => o.favourite).length <= 1)).toBe(true);
+    const favs = boards.flat().filter((o) => o.favourite);
+    expect(favs.length).toBeGreaterThan(0);
+    for (const o of favs) {
+      const fav = codex.regulars.get(o.customer)!.favourite!;
+      expect(o.request).toEqual({ kind: 'family', family: fav.family });
+      expect(o.favourite).toEqual({ tag: fav.tag });
+    }
+  });
+
+  it('need an ingredient of their tag, and earn +1 Friendship', () => {
+    const fav = order({ request: { kind: 'family', family: 'healing' }, favourite: { tag: 'herb' } });
+    const potion = { recipe: 'healing-draught', family: 'healing' as const, tier: 'fine' as const };
+    expect(satisfies({ ...potion, ingredients: ['elmroot', 'creekwater'] }, fav)).toBe(false);
+    const herb = [...codex.ingredients.values()].find((i) => i.tags.includes('herb'))!.id;
+    expect(satisfies({ ...potion, ingredients: ['elmroot', herb] }, fav)).toBe(true);
+    const s = { ...brewing('friends'), orders: [fav], shelf: [{ uid: 600, ...potion, quality: 14, ingredients: ['elmroot', herb], experiment: false, heartDelta: 0 }] };
+    const r = ok(s, { type: 'deliver', order: 500, potion: 600 });
+    expect(r.state.friendship['old-tobin']).toBe(1 + FRIENDSHIP.favouriteFriendship);
   });
 });

@@ -25,7 +25,7 @@ import {
   SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
   MAX_CAULDRON_SLOTS, MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex, VIGIL,
 } from './rules';
-import { befriend } from './friendship';
+import { befriend, FRIENDSHIP } from './friendship';
 import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState, type RunStats, type StockItem } from './state';
 import { YEAR_RULES, yearDiscards, yearRule } from './year';
 
@@ -206,7 +206,7 @@ function fill(ctx: Ctx, order: Order, potion: Potion): void {
   // Friendship (GDD §4.1): a point a delivery, one more for the bonus, more from the Heartstone and the
   // Silver Bell. Grave Moss, a Cursed card or the Raven Call sours it, and the delivery earns none.
   const bell = hasRelic(ctx.s, 'silver-bell') ? RELIC_RULES.bellFriendship : 0;
-  if (potion.heartDelta >= 0 && boost.hearts >= 0) befriend(ctx, order.customer, (bonus ? 2 : 1) + potion.heartDelta + boost.hearts + bell);
+  if (potion.heartDelta >= 0 && boost.hearts >= 0) befriend(ctx, order.customer, (bonus ? 2 : 1) + potion.heartDelta + boost.hearts + bell + (order.favourite ? FRIENDSHIP.favouriteFriendship : 0));
   ctx.s.lastFamily = potion.family;
   const patron = codex.patrons.get(order.customer);
   if (patron) patronReward(ctx, patron);

@@ -55,6 +55,8 @@ export type Order = {
   needsUmbra: boolean;
   /** Brews left before the customer gives up and leaves (The Clockless Man); null when they wait all day. */
   expiresIn: number | null;
+  /** A regular's favourite order (Friendship level 4): it needs an ingredient with this tag, and earns +1 Friendship. */
+  favourite?: { tag: string } | null;
 };
 
 /** Effects queued by Tinctures for the next brew. */

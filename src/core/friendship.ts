@@ -20,6 +20,10 @@ export const FRIENDSHIP = {
   traderCards: 2,
   traderBigCards: 3,
   traderFamiliars: 1,
+  /** From this level, each order of theirs may be their favourite: 1 in 4, at most one a day, +1 Friendship. */
+  favouriteLevel: 4,
+  favouriteChance: 0.25,
+  favouriteFriendship: 1,
 } as const;
 
 export const MAX_FRIEND_LEVEL = FRIENDSHIP.levels.length;
