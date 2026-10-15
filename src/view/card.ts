@@ -84,6 +84,7 @@ export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essenc
 const FACE_TAGS: { tag: string; label: string; fill: PaletteKey; edge: PaletteKey }[] = [
   { tag: 'frost', label: 'FROST', fill: 'c', edge: 'u' },
   { tag: 'flower', label: 'FLOWER', fill: 'I', edge: 'r' },
+  { tag: 'fruit', label: 'FRUIT', fill: 'o', edge: 'B' },
 ];
 
 function chipWidth(ctx: CanvasRenderingContext2D, t: (typeof FACE_TAGS)[number], Z: number): number {

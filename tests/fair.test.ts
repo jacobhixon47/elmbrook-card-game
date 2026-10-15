@@ -33,9 +33,9 @@ describe('the Bloomtide Fair', () => {
   });
 
   it('is not held in seasons whose fair isn\'t built yet', () => {
-    for (const season of ['summer', 'autumn', 'winter'] as const) {
-      expect(ok(on(season), { type: 'endDay' }).state.offer?.kind).toBe('reward');
-    }
+    expect(ok(on('winter'), { type: 'endDay' }).state.offer?.kind).toBe('reward');
+    expect(ok(on('summer'), { type: 'endDay' }).state.offer).toMatchObject({ kind: 'fair', fair: 'firefly-fair' });
+    expect(ok(on('autumn'), { type: 'endDay' }).state.offer).toMatchObject({ kind: 'fair', fair: 'harvest-fair' });
   });
 
   /** The open fair's stalls. */

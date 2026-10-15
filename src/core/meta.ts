@@ -325,6 +325,8 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
   13: (s) => ({ ...s, year: 1 }),
   // 14 → 15: day counters for the Bloomtide Fair's Hive Smoker and Garland.
   14: (s) => ({ ...s, discardsToday: 0, flowerPotencyToday: 0 }),
+  // 15 → 16: the Firefly and Harvest Fairs' counters (Mulling Spice, the Corn Dolly, the Prism).
+  15: (s) => ({ ...s, emberPotencyToday: 0, weekDeliveries: 0, pending: { ...(s.pending as Raw), essenceHarmony: 0 } }),
 };
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */

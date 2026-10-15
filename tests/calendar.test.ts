@@ -164,8 +164,9 @@ describe('Calendar view', () => {
     expect(todayRules(s)).toHaveLength(2);
     const spring = on(sky('fog'), FESTIVAL_WEEK, FESTIVAL_DAY, 'spring');
     expect(todayLine(spring)).toMatch(/Bloomtide/);
-    // Seasons whose fair isn't built yet mark nothing.
-    expect(todayLine(on(sky('fog'), FESTIVAL_WEEK, FESTIVAL_DAY, 'autumn'))).not.toMatch(/Harvest/);
+    expect(todayLine(on(sky('fog'), FESTIVAL_WEEK, FESTIVAL_DAY, 'autumn'))).toMatch(/Harvest Fair/);
+    // Winter's vigil isn't built yet, so its festival day marks nothing.
+    expect(todayLine(on(sky('fog'), FESTIVAL_WEEK, FESTIVAL_DAY, 'winter'))).not.toMatch(/Longest/);
     const winter = { ...start('w', 'winter'), calendar: sky('fog') };
     const patron = codex.patrons.get(winter.patrons[FESTIVAL_WEEK - 1]!)!;
     expect(dayRules(winter, { week: FESTIVAL_WEEK, day: NIGHT_SHIFT_DAY, weather: 'fog' })).toEqual([

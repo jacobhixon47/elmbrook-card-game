@@ -29,7 +29,7 @@ import { YEAR_RULES, yearDiscards, yearRule } from './year';
 
 export type ReduceResult = { state: RunState; events: GameEvent[] };
 
-const freshPending = (): Pending => ({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false });
+const freshPending = (): Pending => ({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false, essenceHarmony: 0 });
 const noBoost = () => ({ hearts: 0, tip: 0, payMult: 1 });
 
 export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string): ReduceResult {
@@ -86,6 +86,8 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     sludgeToday: 0,
     discardsToday: 0,
     flowerPotencyToday: 0,
+    emberPotencyToday: 0,
+    weekDeliveries: 0,
     fortunes: [],
     fog: false,
     offer: null,
@@ -117,7 +119,7 @@ function startDay(ctx: Ctx): void {
   // Snow: Frost cards are drawn first (GDD §4.2).
   if (weather === 'snow') s.drawPile = [...s.drawPile.filter(isFrost), ...s.drawPile.filter((c) => !isFrost(c))];
   // Fog hides the Order Board until the first brew or Discard; it never hides a Night Shift.
-  s.fog = weather === 'fog' && !night;
+  s.fog = weather === 'fog' && !night && !hasRelic(s, 'rush-lantern');
   s.hand = [];
   s.discardPile = [];
   s.cauldron = [];
@@ -131,6 +133,7 @@ function startDay(ctx: Ctx): void {
   s.sludgeToday = 0;
   s.discardsToday = 0;
   s.flowerPotencyToday = 0;
+  s.emberPotencyToday = 0;
   s.phase = 'morning';
   const rules = SEASON_RULES[s.season];
   const allowance = dayAllowance(s, { brews: BREWS_PER_DAY + (night ? 0 : rules.dayBrews), discards: Math.max(0, DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0) - yearDiscards(s)) }, night, weather);
@@ -179,10 +182,15 @@ function fill(ctx: Ctx, order: Order, potion: Potion): void {
   }
   const paid = payout(potion, order, ctx.s.familiars);
   const { bonus } = paid;
+  const s = ctx.s;
   // A Ribbon or similar boosts the next delivery once (GDD §6.4).
-  const boost = ctx.s.delivery;
-  const pay = Math.round(paid.pay * boost.payMult);
-  const tip = paid.tip + boost.tip;
+  const boost = s.delivery;
+  // The Corn Dolly doubles the week's first delivery; the Picnic Blanket adds to the day's first.
+  const dolly = s.weekDeliveries === 0 && hasRelic(s, 'corn-dolly') ? RELIC_RULES.dollyPay : 1;
+  const picnic = !s.orders.some((o) => o.status === 'filled') && hasRelic(s, 'picnic-blanket') ? RELIC_RULES.picnicGold : 0;
+  const pay = Math.round(paid.pay * boost.payMult * dolly) + picnic;
+  const tip = paid.tip + boost.tip + (hasRelic(s, 'feathered-cap') ? RELIC_RULES.capTip : 0);
+  s.weekDeliveries += 1;
   ctx.s.delivery = noBoost();
   order.status = 'filled';
   ctx.ev.push({ type: 'orderFilled', order: order.id, customer: order.customer, potion: potion.uid, tier: potion.tier, pay, tip, bonus });
@@ -309,7 +317,7 @@ function endDay(ctx: Ctx): void {
     changeHearts(ctx, o.customer, -1);
   }
   commissionsOnDayEnd(ctx, isNightShift(s));
-  for (const c of allCards(s)) if (isAged(c)) c.aged = (c.aged ?? 0) + (c.modifier === 'aged' ? MODIFIER_RULES.agedPerDay : 1);
+  for (const c of allCards(s)) if (isAged(c)) c.aged = (c.aged ?? 0) + Math.max(c.modifier === 'aged' ? MODIFIER_RULES.agedPerDay : 1, sumEffect(c.card, 'agedRate'));
   expireCards(ctx);
   if (isNightShift(s)) queueFirstNightGift(ctx);
   ctx.ev.push({ type: 'dayEnded', week: s.week, day: s.day });
@@ -376,6 +384,7 @@ function collectRent(ctx: Ctx): void {
   }
   changeGold(ctx, -due, 'rent');
   ctx.ev.push({ type: 'rentPaid', week: s.week, amount: due });
+  if (hasRelic(s, 'cider-barrel')) changeGold(ctx, RELIC_RULES.barrelGold, 'relic');
   if (!finaleMet(s)) {
     // GDD §1: the month is won by surviving every rent and satisfying the Moonless Patron.
     ctx.ev.push({ type: 'finaleFailed', patron: s.patrons[s.week - 1]! });
@@ -391,6 +400,7 @@ function collectRent(ctx: Ctx): void {
   }
   removeWeekCards(ctx);
   s.week += 1;
+  s.weekDeliveries = 0;
   s.day = 1;
   startDay(ctx);
 }
@@ -809,7 +819,8 @@ export function fencePrice(potion: Pick<Potion, 'tier' | 'ingredients' | 'family
   // Winter: folks want warmth, so Warming potions fetch more and the rest a little less.
   const winter = season === 'winter' ? (potion.family === 'warming' ? WINTER_FENCE.warming : WINTER_FENCE.other) : 1;
   const wreath = s && hasRelic(s, 'ivy-wreath') ? RELIC_RULES.wreathFence : 1;
-  return Math.round(FENCE_PRICE[potion.tier] * (shadowy ? FENCE_SHADOW_BONUS : 1) * winter * wreath);
+  const press = s && hasRelic(s, 'apple-press') && tierIndex(potion.tier) >= tierIndex('fine') ? RELIC_RULES.pressGold : 0;
+  return Math.round(FENCE_PRICE[potion.tier] * (shadowy ? FENCE_SHADOW_BONUS : 1) * winter * wreath) + press;
 }
 
 /** Cottage perks change how a run starts (GDD §13). */

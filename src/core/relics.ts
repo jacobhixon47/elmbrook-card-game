@@ -26,6 +26,18 @@ export const RELIC_RULES = {
   daisyPotency: 2,
   basketHand: 1,
   wreathFence: 1.25,
+  orchardPotency: 1,
+  lanternDiscards: 1,
+  rackShelf: 1,
+  hatDiscards: 1,
+  bonnetHarmony: 3,
+  capTip: 1,
+  picnicGold: 3,
+  pressGold: 3,
+  barrelGold: 3,
+  dollyPay: 2,
+  wreathHarmony: 1,
+  wickerPicks: 1,
 } as const;
 
 export const CURSE_RULES = {
@@ -69,6 +81,7 @@ export function gainRelic(ctx: Ctx, id: string, source: string): void {
   if (s.relics.includes(id)) reject(`you already have the ${codex.relics.get(id)!.name}`);
   s.relics.push(id);
   if (id === 'spare-satchel') s.handSize += RELIC_RULES.satchelHand;
+  if (id === 'bottle-rack') s.shelfSize += RELIC_RULES.rackShelf;
   ctx.ev.push({ type: 'relicGained', relic: id, source });
 }
 
@@ -126,6 +139,8 @@ export function dayAllowance(s: Held, base: { brews: number; discards: number },
   let { brews, discards } = base;
   if (night && hasRelic(s, 'moon-locket')) brews += RELIC_RULES.locketBrews;
   if ((weather === 'rain' || weather === 'fog') && hasRelic(s, 'old-almanac')) discards += RELIC_RULES.almanacDiscards;
+  if (night && hasRelic(s, 'lantern-glass')) discards += RELIC_RULES.lanternDiscards;
+  if ((weather === 'clear' || weather === 'heatwave') && hasRelic(s, 'straw-hat')) discards += RELIC_RULES.hatDiscards;
   if (hasCurse(s, 'heavy-hands')) discards = Math.max(0, discards - CURSE_RULES.heavyDiscards);
   return { brews, discards };
 }
@@ -133,7 +148,7 @@ export function dayAllowance(s: Held, base: { brews: number; discards: number },
 export type RelicStep = { potency: number; harmony: number; note: string };
 
 /** Relic and curse changes to a brew's score, after the ingredients (GDD §6.3). */
-export function relicSteps(s: Partial<Held> & Partial<Pick<RunState, 'brewsToday'>>, raw: readonly Ingredient[]): { id: string; source: 'relic' | 'curse'; step: RelicStep }[] {
+export function relicSteps(s: Partial<Held> & Partial<Pick<RunState, 'brewsToday' | 'week'>>, raw: readonly Ingredient[], weather = 'clear'): { id: string; source: 'relic' | 'curse'; step: RelicStep }[] {
   const out: { id: string; source: 'relic' | 'curse'; step: RelicStep }[] = [];
   if (hasRelic(s, 'pressed-flower')) {
     const k = raw.filter((i) => i.tags.includes('flower')).length;
@@ -142,6 +157,16 @@ export function relicSteps(s: Partial<Held> & Partial<Pick<RunState, 'brewsToday
   }
   if (hasRelic(s, 'copper-ladle') && raw.length === 3) {
     out.push({ id: 'copper-ladle', source: 'relic', step: { potency: 0, harmony: RELIC_RULES.ladleHarmony, note: `+${RELIC_RULES.ladleHarmony} Harmony (three ingredients)` } });
+  }
+  if (hasRelic(s, 'orchard-basket')) {
+    const n = raw.filter((i) => i.tags.includes('fruit')).length * RELIC_RULES.orchardPotency;
+    if (n) out.push({ id: 'orchard-basket', source: 'relic', step: { potency: n, harmony: 0, note: `+${n} Potency (Fruit)` } });
+  }
+  if (hasRelic(s, 'sun-bonnet') && weather === 'heatwave' && s.brewsToday === 0) {
+    out.push({ id: 'sun-bonnet', source: 'relic', step: { potency: 0, harmony: RELIC_RULES.bonnetHarmony, note: `+${RELIC_RULES.bonnetHarmony} Harmony (first brew, Heatwave)` } });
+  }
+  if (hasRelic(s, 'harvest-wreath') && s.week === 4) {
+    out.push({ id: 'harvest-wreath', source: 'relic', step: { potency: 0, harmony: RELIC_RULES.wreathHarmony, note: `+${RELIC_RULES.wreathHarmony} Harmony (week 4)` } });
   }
   if (hasRelic(s, 'maypole') && s.brewsToday === 0) {
     const n = new Set(raw.flatMap((i) => i.essences)).size;

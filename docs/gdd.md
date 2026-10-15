@@ -149,8 +149,8 @@ The allowed weather per season is `SEASON_WEATHER` in `src/core/calendar.ts`; th
 | Season | Fair | Stalls |
 |---|---|---|
 | Spring | The Bloomtide Fair | The Flower Grower (Flower ingredients), the Beekeeper (bee familiars, honey Tinctures, the Hive Smoker), the Garland Weaver (garland relics) |
-| Summer | Firefly Fair | Proposed, waiting on Jacob |
-| Autumn | Harvest Fair | Proposed, waiting on Jacob |
+| Summer | The Firefly Fair | The Orchard Keeper (Fruit), the Glassblower (light and glass Tinctures, the Dragonfly, Shelf and night relics), the Hatter (sunny-day relics, the Cricket) |
+| Autumn | The Harvest Fair | The Farmer (harvest ingredients, the Scarecrow), the Cider Maker (cider Tinctures, the Badger, Fence and rent relics), the Straw Weaver (straw relics, the Harvest Hare) |
 | Winter | Longest Night | A vigil rather than a fair, to be more unique, tuned toward the Moonless Patron finale; being designed with Jacob |
 
 Bloomtide's stock, six per stall with two set out each fair:
@@ -158,7 +158,19 @@ Bloomtide's stock, six per stall with two set out each fair:
 - *The Beekeeper:* the Bumblebee (Uncommon familiar: Flower ingredients +3 Potency, 14g), the Queen Bee (Rare familiar: brews with 2+ Flowers get ×1.5 Harmony, 18g), Royal Jelly (Rare Tincture: Bless a card in hand, 9g), Beeswax Candle (Tincture: next brew +3 Harmony, 6g), Spring Mead (Tincture: +1 Brew today, 9g), the Hive Smoker (tier 2 relic: your first Discard each day draws 1 extra card, 18g).
 - *The Garland Weaver:* the May Crown (tier 2: deliveries with a Flower ingredient pay ×1.25, 18g), the Daisy Chain (tier 1: Blessed cards also get +2 Potency, 14g), the Maypole (tier 2: the day's first brew gets +1 Harmony per distinct essence, 18g), the Flower Basket (tier 2: +1 hand size on Clear days, 18g), the Ivy Wreath (tier 1: the Fence pays +25%, 14g), Garland (Tincture: Flower ingredients get +2 Potency today, 7g).
 
-Familiars and relics you already hold stay off the stalls. Each stall lists its stock in codex `fairs` with `show: 2`, and the fair rolls which two come out on the run's seed. Seasons whose fair isn't built yet hold nothing on festival day.
+Firefly Fair stock (approved Oct 15):
+- *The Orchard Keeper:* Sunpeach (Rare, Vital+Ember, P7, +3 Potency on Heatwave days, 10g), Starfruit (Rare, Gale, P8, +1 Harmony per Fruit in the brew, 10g), Wild Cherry (Uncommon, Ember+Umbra, P5, +2 Potency in a three-ingredient brew, 7g), Plum (Uncommon, Tide+Vital, P5, Aged, 7g), Melon (Uncommon, Tide, P6, +2 Harmony on Heatwave days, 7g), the Orchard Basket (tier 1: Fruit ingredients +1 Potency, 14g).
+- *The Glassblower:* Firefly Jar (Tincture: draw 3, or 4 on a Night Shift, 6g), Sun Bottle (Tincture: next brew +4 Potency, +8 on a Heatwave, 7g), Prism (Rare Tincture: next brew +1 Harmony per distinct essence, 8g), the Dragonfly (familiar: Gale +3 Potency, 14g), Lantern Glass (tier 2: Night Shifts +1 Discard, 18g), the Bottle Rack (tier 1: +1 Shelf slot, 14g).
+- *The Hatter:* the Straw Hat (tier 2: +1 Discard on Clear and Heatwave days, 18g), the Sun Bonnet (tier 1: the first brew on a Heatwave day +3 Harmony, 14g), the Feathered Cap (tier 1: every delivery tips +1 gold, 14g), the Picnic Blanket (tier 2: the day's first filled order pays +3 gold, 18g), the Cricket (familiar: +2 Harmony on Clear and Heatwave days, 14g), Paper Fan (Common Tincture: +1 Discard, 5g).
+
+Harvest Fair stock (approved Oct 15):
+- *The Farmer:* Prize Pumpkin (Rare, Vital+Stone, P6, Aged +2 a day, 10g), Hazelnut (Uncommon, Stone+Umbra, P5, +2 Harmony in Protection potions, 7g), Golden Wheat (Uncommon, Vital, P5, +1 Harmony per Stone in the brew, 7g), Russet Apple (Uncommon, Vital+Ember, P5, Fruit, draw a card when brewed, 7g), Chestnut (Uncommon, Ember+Stone, P6, +3 Potency in Warming potions, 7g), the Scarecrow (familiar: +1 Harmony per Vital ingredient, 14g).
+- *The Cider Maker:* Spiced Cider (Rare Tincture: next brew +3 Potency and +3 Harmony, 9g), Perry (Tincture: next brew Harmony ×1.5, 7g), Mulling Spice (Tincture: Ember ingredients +2 Potency today, 6g), the Badger (familiar: Umbra +3 Potency, 14g), the Apple Press (tier 2: the Fence pays +3 gold for Fine or better, 18g), the Cider Barrel (tier 1: +3 gold each time you pay rent, 14g).
+- *The Straw Weaver:* the Corn Dolly (tier 2: the week's first delivery pays double, 18g), the Harvest Wreath (tier 2: +1 Harmony on every brew in week 4, 18g), the Wicker Basket (tier 1: the Forage gives one more pick, 14g), the Rush Lantern (tier 1: Fog never hides your orders, 14g), the Harvest Hare (familiar: three-ingredient brews +3 Potency, 14g), Threshing Flail (Common Tincture: draw 2, 5g).
+
+Fruit (Sunberry, Blackberry, Hollyberry, Harvest Gourd and the Fruit fair cards) is read only by Starfruit and the Orchard Basket for now; a season-wide hook like Snow's for Frost is left to the systems review (decided with Jacob, Oct 15).
+
+Familiars and relics you already hold stay off the stalls. Each stall lists its stock in codex `fairs` with `show: 2`, and the fair rolls which two come out on the run's seed. Winter holds nothing on festival day until the Longest Night vigil is built.
 
 Decided with Jacob (Oct 15): six items per stall with two set out per fair, about 15 different pairs per stall, so multi-Year runs see a different spread.
 
@@ -183,7 +195,7 @@ The bulk of the deck. Each has:
 - **Rarity:** Common, Uncommon, Rare, Lunar.
 - **Origin:** Garden, Wychwood, Creek, Mine, Market, Night (flavour + bonus conditions + shared codex with game 2).
 - **Optional text effect:** "+2 Harmony if brewed with a Tide ingredient", "When discarded, draw 1".
-- **Tags** (flower, root, frost, mineral…) that effects and later systems key on, e.g. Ice Lily's "+1 Harmony per Frost ingredient". Tags a rule reads (today Frost and Flower) show as coloured chips across the foot of the card's art, so a Frost card reads as Frost at a glance whatever its essences (Jacob, Oct 14). Every tag is listed when you inspect a card.
+- **Tags** (flower, root, frost, mineral…) that effects and later systems key on, e.g. Ice Lily's "+1 Harmony per Frost ingredient". Tags a rule reads (today Frost, Flower and Fruit) show as coloured chips across the foot of the card's art, so a Frost card reads as Frost at a glance whatever its essences (Jacob, Oct 14). Every tag is listed when you inspect a card.
 - **In season:** the seasons it grows in. In-season ingredients are three times as likely in rewards, the Market and the Forage.
 - **Pool:** base (offered from the first run), unlock (offered once unlocked, §13) or event (only from its calendar event).
 
