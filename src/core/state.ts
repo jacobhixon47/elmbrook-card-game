@@ -70,6 +70,8 @@ export type Pending = {
   lunarPotency: number;
   /** Every ingredient also counts as Lunar (Moth Swarm). */
   allLunar: boolean;
+  /** Harmony per distinct essence in the brew (Prism). */
+  essenceHarmony: number;
 };
 
 /** Extras for the next delivery (Charm Sachet). */
@@ -140,7 +142,7 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 15;
+export const RUN_VERSION = 16;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -219,6 +221,10 @@ export type RunState = {
   discardsToday: number;
   /** Potency each Flower ingredient gets today (Garland). */
   flowerPotencyToday: number;
+  /** Potency each Ember ingredient gets today (Mulling Spice). */
+  emberPotencyToday: number;
+  /** Orders filled this week, for the Corn Dolly. */
+  weekDeliveries: number;
   /** Guild Commissions taken and not yet done or failed (GDD §7). */
   commissions: ActiveCommission[];
   /** Fortune Tent twists on a later week (The Hermit, The Tower, The Moon). */

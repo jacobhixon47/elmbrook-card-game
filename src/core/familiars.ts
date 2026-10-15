@@ -16,6 +16,8 @@ export type FamiliarBrew = {
   shelf: number;
   night: boolean;
   firstBrew: boolean;
+  /** Today's weather (the Cricket). */
+  weather?: string;
 };
 
 export type FamiliarStep = { potency: number; harmony: number; harmonyMult: number; note: string };
@@ -43,6 +45,11 @@ export const FAMILIAR_SCORE: Record<string, (b: FamiliarBrew) => FamiliarStep | 
   firefly: (b) => harmony(b.night ? 3 : 0, 'Night Shift'),
   ermine: potencyPer(3, (i) => i.tags.includes('frost'), 'Frost'),
   bumblebee: potencyPer(3, (i) => i.tags.includes('flower'), 'Flower'),
+  dragonfly: potencyPer(3, essence('gale'), 'Gale'),
+  badger: potencyPer(3, essence('umbra'), 'Umbra'),
+  cricket: (b) => harmony(b.weather === 'clear' || b.weather === 'heatwave' ? 2 : 0, 'sunny day'),
+  scarecrow: (b) => harmony(count(b.ingredients, essence('vital')), 'Vital'),
+  'harvest-hare': (b) => (b.ingredients.length === 3 ? { potency: 3, harmony: 0, harmonyMult: 1, note: '+3 Potency (three ingredients)' } : null),
   'queen-bee': (b) => (count(b.ingredients, (i) => i.tags.includes('flower')) >= 2 ? mult(1.5, 'two Flowers') : null),
   'frost-hare': (b) => harmony(count(b.ingredients, (i) => i.tags.includes('frost')), 'Frost'),
   jackdaw: (b) => harmony(new Set(b.ingredients.flatMap((i) => i.essences)).size, 'distinct essences'),

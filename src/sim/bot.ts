@@ -90,6 +90,7 @@ const TINCTURE_VALUE: Record<string, number> = {
   // Omens: Night Satchel only, so they never thin the day deck.
   'blood-moon': 9, 'witching-hour': 8, 'wishing-star': 7, howl: 6, 'raven-call': 6, 'moth-swarm': 6, 'cracked-mirror': 5, 'black-cat-crossing': 4, 'yule-candle': 6,
   'royal-jelly': 6, 'beeswax-candle': 6, 'spring-mead': 9, garland: 4,
+  'firefly-jar': 6, 'sun-bottle': 6, prism: 6, 'paper-fan': 4, 'spiced-cider': 8, perry: 6, 'mulling-spice': 4, 'threshing-flail': 5,
 };
 
 /** Sell the weakest familiar when one worth `v` would be clearly better and every slot is taken. */
@@ -137,6 +138,11 @@ export function familiarValue(s: RunState, id: string): number {
     case 'ferret': return 5;
     case 'moth': return 3 + 4 * s.satchel.length;
     case 'bumblebee': return 2 + 30 * share((i) => i.tags.includes('flower'));
+    case 'dragonfly': return 4 + 30 * has('gale');
+    case 'badger': return 4 + 30 * has('umbra');
+    case 'scarecrow': return 4 + 15 * has('vital');
+    case 'cricket': return 6;
+    case 'harvest-hare': return s.cauldronSlots >= 3 ? 8 : 2;
     case 'queen-bee': return 2 + 25 * share((i) => i.tags.includes('flower'));
     default: return 2;
   }
@@ -396,6 +402,10 @@ export function relicValue(s: RunState, id: string): number {
     case 'may-crown': return 2 * weeksLeft;
     case 'hive-smoker': case 'maypole': case 'flower-basket': return 6;
     case 'ivy-wreath': return 3;
+    case 'orchard-basket': case 'sun-bonnet': case 'feathered-cap': case 'rush-lantern': case 'wicker-basket': case 'cider-barrel': return 3;
+    case 'lantern-glass': case 'straw-hat': case 'bottle-rack': return 6;
+    case 'picnic-blanket': case 'apple-press': case 'harvest-wreath': return 5;
+    case 'corn-dolly': return 2 * weeksLeft;
     case 'daisy-chain': return 2;
     default: return 0;
   }

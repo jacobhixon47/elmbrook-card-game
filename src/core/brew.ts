@@ -116,7 +116,7 @@ export function ingredientsOf(cards: readonly CardInstance[]): Ingredient[] | nu
  * What brewing these cards would make, with every scoring step (GDD §6.3). Pure; used by the
  * cauldron preview, the bot and `brew` itself, so the preview is never wrong.
  */
-export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf' | 'relics' | 'curses' | 'flowerPotencyToday'>>;
+export type BrewState = Pick<RunState, 'knownRecipes' | 'unlocks' | 'pending' | 'week' | 'day' | 'calendar' | 'brewsToday' | 'orders'> & Partial<Pick<RunState, 'patrons' | 'familiars' | 'shelf' | 'relics' | 'curses' | 'flowerPotencyToday' | 'emberPotencyToday'>>;
 
 export function previewBrew(state: BrewState, cards: readonly CardInstance[], hand: readonly CardInstance[], pick?: string): BrewPreview {
   const raw = ingredientsOf(cards);
@@ -174,15 +174,20 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     steps.push({ type: 'scoreStep', source: 'weather', id: weather, potency: c.potency, harmony: c.harmony, note: `${shift > 0 ? '+' : ''}${shift} Potency` });
   }
 
-  // Garland: Flower ingredients get extra Potency today.
+  // Garland and Mulling Spice: Flower or Ember ingredients get extra Potency today.
   const garland = (state.flowerPotencyToday ?? 0) * raw.filter((i) => i.tags.includes('flower')).length;
   if (garland > 0) {
     c.potency += garland;
     steps.push({ type: 'scoreStep', source: 'tincture', id: 'garland', potency: c.potency, harmony: c.harmony, note: `+${garland} Potency (Garland)` });
   }
+  const spice = (state.emberPotencyToday ?? 0) * raw.filter((i) => i.essences.includes('ember')).length;
+  if (spice > 0) {
+    c.potency += spice;
+    steps.push({ type: 'scoreStep', source: 'tincture', id: 'mulling-spice', potency: c.potency, harmony: c.harmony, note: `+${spice} Potency (Mulling Spice)` });
+  }
 
   // Relics and curses that change ingredients (the Pressed Flower, the Copper Ladle, Moonsick).
-  for (const { id, source, step } of relicSteps(state, raw)) {
+  for (const { id, source, step } of relicSteps(state, raw, weather)) {
     c.potency = Math.max(0, c.potency + step.potency);
     c.harmony += step.harmony;
     steps.push({ type: 'scoreStep', source, id, potency: c.potency, harmony: c.harmony, note: step.note });
@@ -214,9 +219,11 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
   const p = state.pending;
   // Howl: every ingredient gets Potency for each Lunar card in the brew.
   const howl = p.lunarPotency * ings.length * raw.filter((i) => i.essences.includes('lunar')).length;
-  if (p.harmony !== 0 || p.potency !== 0 || howl !== 0 || p.potencyMult !== 1 || p.harmonyMult !== 1) {
+  // Prism: Harmony for each distinct essence in the brew.
+  const prism = (p.essenceHarmony ?? 0) * new Set(raw.flatMap((i) => i.essences)).size;
+  if (p.harmony !== 0 || p.potency !== 0 || howl !== 0 || prism !== 0 || p.potencyMult !== 1 || p.harmonyMult !== 1) {
     c.potency = Math.floor((c.potency + p.potency + howl) * p.potencyMult);
-    c.harmony = (c.harmony + p.harmony) * p.harmonyMult;
+    c.harmony = (c.harmony + p.harmony + prism) * p.harmonyMult;
     steps.push({ type: 'scoreStep', source: 'tincture', id: 'pending', potency: c.potency, harmony: c.harmony });
   }
 
@@ -231,6 +238,7 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
     shelf: state.shelf?.length ?? 0,
     night: state.day === NIGHT_SHIFT_DAY,
     firstBrew: c.firstBrew,
+    weather,
   };
   for (const id of state.familiars ?? []) {
     const step = FAMILIAR_SCORE[id]?.(familiarBrew);

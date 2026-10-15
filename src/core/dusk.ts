@@ -5,7 +5,7 @@ import { guildOpen, offerCommissions } from './commissions';
 import { openEvent, rollEvent } from './dusk-events';
 import { pickWeighted, shuffled, type Ctx } from './ctx';
 import { familiarPrice, rollFamiliars } from './familiars';
-import { rewardCount, rewardWeights } from './relics';
+import { hasRelic, RELIC_RULES, rewardCount, rewardWeights } from './relics';
 import {
   CARD_PRICE, CAULDRON_SLOT_PRICE, FORAGE_CARDS, FORAGE_PICKS, MARKET_CARDS, MARKET_FAMILIARS, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS,
   rarityWeights, SHELF_SLOT_PRICE, type ShopRarity,
@@ -97,7 +97,7 @@ export function openErrand(ctx: Ctx, errand: Errand): void {
         const left = pool.filter((c) => !cards.includes(c.id));
         cards.push(pickWeighted(ctx, left.map((c) => [c.id, (c.wychwood ? 3 : 1) * seasonWeight(c)] as const)));
       }
-      s.offer = { kind: 'forage', cards, picksLeft: FORAGE_PICKS };
+      s.offer = { kind: 'forage', cards, picksLeft: FORAGE_PICKS + (hasRelic(s, 'wicker-basket') ? RELIC_RULES.wickerPicks : 0) };
       return;
     }
     case 'creek':

@@ -24,8 +24,8 @@ export const FESTIVAL_NAME: Record<Festival, string> = {
 /** What each festival brings. Seasons whose fair isn't built yet show nothing on their festival day. */
 export const FESTIVAL_RULE: Record<Festival, string> = {
   bloomtide: 'After closing, the Bloomtide Fair fills the square: festival-only flowers, a beekeeper and a garland weaver.',
-  'firefly-fair': 'After closing, a summer fair in the square.',
-  'harvest-fair': 'After closing, a harvest fair in the square.',
+  'firefly-fair': 'After closing, the Firefly Fair fills the square: an orchard keeper, a glassblower and a hatter.',
+  'harvest-fair': 'After closing, the Harvest Fair fills the square: a farmer, a cider maker and a straw weaver.',
   'longest-night': 'The longest night of the year.',
 };
 

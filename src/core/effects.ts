@@ -3,7 +3,7 @@ import type { Essence, Ingredient, Recipe } from '../codex/schema';
 import { changeGold, draw, gainCard, randInt, reject, takeFromHand, type Ctx } from './ctx';
 import { tierIndex, tierStep } from './rules';
 import type { CardInstance } from './state';
-import type { Weather } from './calendar';
+import { NIGHT_SHIFT_DAY, todaysWeather, type Weather } from './calendar';
 import { addModifier } from './modifiers';
 
 /** Running totals while a brew is scored; ingredient effects adjust them in slot order. */
@@ -40,6 +40,8 @@ export type Effect = {
   copies?: number;
   /** +1 Potency for each day in the deck, reset when brewed. */
   aged?: boolean;
+  /** Potency an Aged card gains each day, when more than 1 (Prize Pumpkin). */
+  agedRate?: number;
   /** Permanent Potency this copy gains each time it is brewed (Primrose). */
   growsOnBrew?: number;
   /** Hearts it adds or costs with the customer it is delivered to. */
@@ -130,6 +132,25 @@ export const EFFECTS: Record<string, Effect> = {
       return `+${n} Potency (Flowers)`;
     },
   },
+  'potency-3-if-heatwave': {
+    onScore: (c) => {
+      if (c.weather !== 'heatwave') return undefined;
+      c.potency += 3;
+      return '+3 Potency (Heatwave)';
+    },
+  },
+  'harmony-2-if-heatwave': harmonyIf(2, (c) => c.weather === 'heatwave'),
+  'harmony-per-fruit-in-brew': harmonyPer((i) => i.tags.includes('fruit')),
+  'harmony-per-stone-in-brew': harmonyPer((i) => hasEssence(i, 'stone')),
+  'harmony-2-if-protection': harmonyIf(2, (c) => c.recipe.family === 'protection'),
+  'potency-3-if-warming': {
+    onScore: (c) => {
+      if (c.recipe.family !== 'warming') return undefined;
+      c.potency += 3;
+      return '+3 Potency (Warming)';
+    },
+  },
+  'aged-2': { aged: true, agedRate: 2 },
   'potency-3-if-rain': {
     onScore: (c) => {
       if (c.weather !== 'rain') return undefined;
@@ -182,6 +203,10 @@ export const EFFECTS: Record<string, Effect> = {
   'next-brew-potency-3': nextBrew((p) => (p.potency += 3)),
   'next-brew-harmony-3': nextBrew((p) => (p.harmony += 3)),
   'flower-potency-2-today': { onPlay: (ctx) => void (ctx.s.flowerPotencyToday += 2) },
+  'ember-potency-2-today': { onPlay: (ctx) => void (ctx.s.emberPotencyToday += 2) },
+  'draw-3-night-4': { onPlay: (ctx) => draw(ctx, ctx.s.day === NIGHT_SHIFT_DAY ? 4 : 3) },
+  'next-brew-potency-4-heatwave-8': { onPlay: (ctx) => void (ctx.s.pending.potency += todaysWeather(ctx.s) === 'heatwave' ? 8 : 4) },
+  'next-brew-harmony-per-essence': nextBrew((p) => (p.essenceHarmony += 1)),
   'next-brew-potency-x1.5': nextBrew((p) => (p.potencyMult *= 1.5)),
   'next-brew-harmony-x1.5': nextBrew((p) => (p.harmonyMult *= 1.5)),
   'next-brew-double': nextBrew((p) => (p.copies = Math.max(p.copies, 2))),
@@ -302,7 +327,7 @@ export function hasEffect(cardId: string, flag: keyof Effect): boolean {
   return effectsOf(cardId).some((e) => e[flag] !== undefined && e[flag] !== false);
 }
 
-type NumberKey = 'discardCost' | 'drawOnDiscard' | 'drawOnBrew' | 'heartDelta' | 'nightDrawCost' | 'inHandHarmony' | 'growsOnBrew';
+type NumberKey = 'discardCost' | 'drawOnDiscard' | 'drawOnBrew' | 'heartDelta' | 'nightDrawCost' | 'inHandHarmony' | 'growsOnBrew' | 'agedRate';
 
 export function sumEffect(cardId: string, key: NumberKey): number {
   return effectsOf(cardId).reduce((n, e) => n + (e[key] ?? 0), 0);
