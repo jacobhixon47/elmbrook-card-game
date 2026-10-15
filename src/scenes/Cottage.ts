@@ -10,6 +10,7 @@ import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow } from '../profile'
 import { cottageBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { cap } from '../view/describe';
+import { openSettings } from '../view/settings';
 import { pixelText } from '../view/text';
 import { button, panel } from '../view/ui';
 
@@ -54,8 +55,14 @@ export class Cottage extends Phaser.Scene {
 
     const met = profile.codex.length;
     const all = Object.values(CODEX_TABLES).reduce((n, t) => n + t.size, 0);
-    this.add.existing(button(this, 270, 300, `Codex ${met}/${all}`, () => this.openCodex(profile), { w: 96, color: 'y' }));
-    this.add.existing(button(this, 370, 300, `Almanac ${profile.almanac.length}/${codex.almanac.size}`, () => this.openAlmanac(profile), { w: 96, color: 'y' }));
+    this.add.existing(button(this, 220, 300, `Codex ${met}/${all}`, () => this.openCodex(profile), { w: 96, color: 'y' }));
+    this.add.existing(button(this, 320, 300, `Almanac ${profile.almanac.length}/${codex.almanac.size}`, () => this.openAlmanac(profile), { w: 96, color: 'y' }));
+    let settingsOpen = false;
+    const settings = () => {
+      settingsOpen = true;
+      openSettings(this, () => (settingsOpen = false));
+    };
+    this.add.existing(button(this, 420, 300, 'Settings', settings, { w: 96 }));
     this.drawYearRules(profile);
     const ui = data.fixture?.ui;
     // A new Year's boon is chosen before anything else.
@@ -65,9 +72,10 @@ export class Cottage extends Phaser.Scene {
     });
     if (ui?.almanac) this.openAlmanac(profile);
     if (ui?.codex) this.openCodex(profile, ui.codex as CodexTable, ui.codexPage ?? 0);
+    if (ui?.settings) settings();
 
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
-      if (profile.boonOffer) return; // the boon comes first
+      if (profile.boonOffer || settingsOpen) return; // the boon comes first; Settings handles its own Esc
       if (!this.overlay && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         const year = profile.year + (e.key === 'ArrowLeft' ? -1 : 1);
         if (year >= 1 && year <= profile.yearSeasons.length) choose?.(year);

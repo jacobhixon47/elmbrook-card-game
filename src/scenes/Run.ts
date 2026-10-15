@@ -36,6 +36,8 @@ import { button, panel } from '../view/ui';
 import { play, playEvents } from '../audio/sfx';
 import { TIER_SOUND, tickPitch } from '../audio/sounds';
 import { addWeather } from '../view/weather';
+import { isIntroWeather, patronArrival, SEASON_OPENING, WEATHER_INTRO, type Intro } from '../view/intros';
+import { openSettings } from '../view/settings';
 
 /** The Hearth Trader's three trades (Winter). */
 type HearthTab = 'hearts' | 'yule' | 'crown';
@@ -105,6 +107,11 @@ export class Run extends Phaser.Scene {
   private bookPage = 0;
   /** Seasonal scene screens already shown this run, so each shows once (Snowed In, by week). */
   private scenesSeen = new Set<string>();
+  /** The season's opening scene, still to show on a new run's first morning. */
+  private openingPending = false;
+  /** The scene screen over the shop right now (Enter walks on); null when none. */
+  private intro: { done: () => void } | null = null;
+  private settingsOpen = false;
   private tip!: Tooltip;
   /** The first-run tutorial, while it lasts (GDD §15.1). Kept across restarts for a new sky. */
   private tutorial: TutorialProgress | null = null;
@@ -150,6 +157,8 @@ export class Run extends Phaser.Scene {
       for (const step of fixture?.steps ?? []) store.dispatch(stepAction(store.getState()!, step));
       today();
     }
+    // A new run opens with its season's scene (not in the tutorial, with a chosen ?seed=, or once turned off).
+    if (!data.saved && !data.resume) this.openingPending = fixture ? fixture.ui?.intro === 'season' : wantsIntros() && !this.tutorial && loadProfile().seasonOpenings;
     this.save();
     const state = store.getState()!;
     if (fixture?.ui?.dialog !== undefined) {
@@ -210,6 +219,8 @@ export class Run extends Phaser.Scene {
     this.events.once('shutdown', off);
     this.input.mouse?.disableContextMenu();
     this.bindKeys();
+    this.settingsOpen = false;
+    if (fixture?.ui?.settings) this.openSettings();
     this.time.delayedCall(noAnim ? 0 : 400, () => markReady(this));
   }
 
@@ -315,7 +326,50 @@ export class Run extends Phaser.Scene {
         },
       }, this.bookPage);
     }
+    this.drawIntro(s);
     this.drawTutorial(s);
+  }
+
+  /**
+   * A scene screen over the morning: the season's opening on a new run, a weather's first time in
+   * this save, or the Moonless Patron arriving for the finale. One at a time, in that order.
+   */
+  private drawIntro(s: RunState) {
+    this.intro = null;
+    if (s.phase !== 'morning' && s.phase !== 'brewing') return;
+    const show = (intro: Intro, onDone: () => void, dontShow?: () => void) => {
+      this.intro = { done: onDone };
+      // Swallows clicks meant for the shop underneath.
+      this.add2(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.35).setOrigin(0).setInteractive());
+      this.seasonScene(intro.name, intro.lines, onDone, dontShow && { label: 'Don\'t show again', onClick: dontShow });
+    };
+    if (this.openingPending) {
+      const done = () => (this.openingPending = false);
+      return show(SEASON_OPENING[s.season], done, () => {
+        if (!this.fixtureRun) saveProfile({ seasonOpenings: false });
+        done();
+      });
+    }
+    const w = todaysWeather(s);
+    const seen = `weather-${w}`;
+    if (isIntroWeather(w) && !(w === 'fog' && s.day === NIGHT_SHIFT_DAY) && !this.scenesSeen.has(seen)) {
+      const wanted = this.fixture ? this.fixture.ui?.intro === w : wantsIntros() && !this.tutorial && !loadProfile().weatherSeen.includes(w);
+      if (wanted) {
+        return show(WEATHER_INTRO[w], () => {
+          this.scenesSeen.add(seen);
+          if (!this.fixtureRun) saveProfile({ weatherSeen: [...loadProfile().weatherSeen, w] });
+        });
+      }
+    }
+    if (s.week === WEEKS && s.day === NIGHT_SHIFT_DAY && patronOf(s)?.id === 'moonless-patron' && !this.scenesSeen.has('moonless-patron')) {
+      return show(patronArrival(this.grimoireHidden(s), s), () => this.scenesSeen.add('moonless-patron'));
+    }
+  }
+
+  /** Settings over the run (Esc, or the button at the bottom right). */
+  private openSettings() {
+    this.settingsOpen = true;
+    openSettings(this, () => (this.settingsOpen = false));
   }
 
   private openBook(tab: GrimoireTab | null, page?: number) {
@@ -430,14 +484,23 @@ export class Run extends Phaser.Scene {
   }
 
   /** A short seasonal scene screen over the window: why something seasonal is happening, then on. */
-  private seasonScene(name: string, lines: readonly string[], onDone: () => void) {
-    this.add2(panel(this, 150, 70, 340, 150, 'k', 0.9, 'c'));
+  private seasonScene(name: string, lines: readonly string[], onDone: () => void, extra?: { label: string; onClick: () => void }) {
+    const box = this.add2(panel(this, 150, 70, 340, 150, 'k', 0.9, 'c'));
     this.text(320, 84, name, { size: 14, color: 'c', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
-    this.text(320, 112, lines.join('\n\n'), { size: 8, color: 'W', stroke: 'k', align: 'center', wrap: 300 }).setOrigin(0.5, 0);
-    this.add2(button(this, 320, 198, 'Walk on', () => {
+    const body = this.text(320, 112, lines.join('\n\n'), { size: 8, color: 'W', stroke: 'k', align: 'center', wrap: 300 }).setOrigin(0.5, 0);
+    // Longer scenes grow the panel down; the buttons sit under the words.
+    const y = Math.max(198, 112 + body.height + 22);
+    box.setSize(340, y - 70 + 22);
+    const walkOn = () => {
       onDone();
       this.render();
-    }, { w: 72, color: 'Y' }));
+    };
+    if (!extra) return void this.add2(button(this, 320, y, 'Walk on', walkOn, { w: 72, color: 'Y' }));
+    this.add2(button(this, 270, y, 'Walk on', walkOn, { w: 72, color: 'Y' }));
+    this.add2(button(this, 370, y, extra.label, () => {
+      extra.onClick();
+      this.render();
+    }, { w: 104 }));
   }
 
   /** A familiar on offer: a tile with its sprite, name and rule. */
@@ -518,6 +581,7 @@ export class Run extends Phaser.Scene {
     if (s.phase !== 'game-over' && s.phase !== 'victory') this.drawRibbon(s);
     const hidden = this.grimoireHidden(s);
     this.add2(button(this, 478, 16, hidden ? 'Grimoire hidden' : 'Grimoire (G)', () => this.toggleBook(s), { w: 74, enabled: !hidden }));
+    this.add2(button(this, 606, 348, 'Settings', () => this.openSettings(), { w: 56 }));
     this.drawRelics(s);
   }
 
@@ -1786,6 +1850,8 @@ export class Run extends Phaser.Scene {
 
   private newRun(season: Season = 'spring') {
     this.tutorial = wantsTutorial() ? new TutorialProgress() : null;
+    this.scenesSeen.clear();
+    this.openingPending = !this.fixtureRun && wantsIntros() && !this.tutorial && loadProfile().seasonOpenings;
     store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, witch: 'hedge-witch', season, ...this.fromProfile(this.fixtureRun) });
     this.scene.restart({ resume: true });
   }
@@ -1869,14 +1935,22 @@ export class Run extends Phaser.Scene {
 
   private bindKeys() {
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
-      if (this.busy) return;
+      if (this.busy || this.settingsOpen) return;
       const s = store.getState()!;
+      if (this.intro) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          this.intro.done();
+          this.render();
+        }
+        return;
+      }
       if (e.key === 'g' || e.key === 'G') return this.toggleBook(s);
       if (this.book) {
         if (e.key === 'Escape') this.openBook(null);
         return;
       }
       if (e.key === 'Escape') {
+        if (this.mode.kind === 'idle' && !this.confirm) return this.openSettings();
         this.mode = { kind: 'idle' };
         this.confirm = null;
         return this.render();
@@ -1983,6 +2057,11 @@ function wantsTutorial(): boolean {
   const flag = params.get('tutorial');
   if (flag) return flag === '1';
   return !params.get('seed') && !loadProfile().tutorialDone;
+}
+
+/** Season openings and weather firsts show on real runs: a chosen ?seed= skips them, like the tutorial. */
+function wantsIntros(): boolean {
+  return !params.get('seed');
 }
 
 /** A line for perk board tiers a run opened. */

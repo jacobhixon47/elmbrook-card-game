@@ -16,7 +16,7 @@ Touchstones: Balatro (scoring juice, run structure, jokers), Slay the Spire (dec
 
 ## 2. Design pillars
 
-1. **Every brew is a little puzzle with a satisfying payoff.** The score counter should feel like Balatro's: numbers climbing, sounds stacking, cauldron bubbling over. In the build, the score ticks up a semitone per step, each tier has its own jingle, and slotting, discarding, coins and rent all have a sound made in code (`docs/art-pipeline.md`, Audio). Volume is on the title screen and M mutes anywhere; music comes in M5.
+1. **Every brew is a little puzzle with a satisfying payoff.** The score counter should feel like Balatro's: numbers climbing, sounds stacking, cauldron bubbling over. In the build, the score ticks up a semitone per step, each tier has its own jingle, and slotting, discarding, coins and rent all have a sound made in code (`docs/art-pipeline.md`, Audio). Volume is in Settings (§15.1) and M mutes anywhere; music comes in M5.
 2. **Cozy surface, real stakes.** Warm art and gentle characters, but rent is real and a bad week ends the run.
 3. **The town remembers you.** Regulars carry relationships and stories across runs; that's the meta-progression, not just unlock lists.
 4. **Night is different.** Moon nights change the rules, the customers and the economy.
@@ -556,6 +556,12 @@ Decided after the M2 playtest: the rules must explain themselves before M3 adds 
   - *How to play:* the run and the day, brewing, the scoring formula, quality tiers and the glossary.
 - **Where am I.** The top-left corner shows the Year and season above the week and day (Jacob's playtest, Oct 14). A ribbon at the top shows the week's days (four days, then the Night Shift) and the steps of the current one: Orders, Brew, Twilight, then Errand, or on a Night Shift, the Night Market. Every evening screen says in one line what it is for.
 - **Tutorial.** A player's first run is a guided week 1 on a fixed seed, and it can't be skipped. Tips appear as each part of the game first comes up; most wait for the player to do the thing (open an order, slot two cards, brew), the rest have a Got it button. Finishing week 1 marks the tutorial done in the player's profile (browser storage until M4 brings saves). Developers skip it with `?tutorial=0` or the dev overlay; fixtures and `pnpm e2e` never show it unless they ask for a tip. The Calendar, patrons and the Night Satchel have their own tips (weather, patron, gift); Night Market stalls add theirs in M3 part 4.
+- **Scene screens** (decided with Jacob, Oct 15). A short text panel over the shop says why something seasonal is happening, with a Walk on button (or Enter):
+  - *Season openings:* every run opens with its season's scene: the weather to expect, the fair, the season's Night Market stalls, and the Moonless Patron at the end. It has a "Don't show again" button, and Settings turns it back on.
+  - *Weather firsts:* the first Fog, Heatwave and Snow day in a save each get a scene with the rule. After that only the HUD's weather line says it ("Foggy: orders hidden", "Raining", "Snowing"), with the full rules on hover.
+  - *Once a run:* the fair, the Longest Night vigil, the Moonless Patron arriving for the finale, and Snowed In (once a week).
+  - Fixtures, `?seed=` runs and the tutorial skip season openings and weather firsts; a fixture shows one with `ui.intro`.
+- **Settings** (the title screen, the cottage, Esc or the button at the bottom right in a run): a volume slider, sound on or off, and season openings shown or hidden. M still mutes anywhere.
 
 ## 16. Out of scope for v1
 

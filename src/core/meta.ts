@@ -2,14 +2,14 @@ import { codex } from '../codex';
 import { almanacMet } from './almanac';
 import { seedRng, shuffle } from './rng';
 import { MAX_YEAR, reputationMult } from './year';
-import { SEASONS, type Season } from './calendar';
+import { SEASONS, WEATHERS, type Season } from './calendar';
 import { WEEKS } from './rules';
 import { RUN_VERSION, type RunState } from './state';
 
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 6;
+export const PROFILE_VERSION = 7;
 
 /** Sound settings: volume 0 to 1, and mute. */
 export type SoundSettings = { volume: number; muted: boolean };
@@ -44,6 +44,10 @@ export type Profile = {
   /** Codex entries met in any run (cards, recipes, familiars, relics, customers), in the order first met. */
   codex: string[];
   settings: SoundSettings;
+  /** Whether each run opens with its season's scene screen (Settings, or "Don't show again" on the screen). */
+  seasonOpenings: boolean;
+  /** Weathers whose first-time scene screen has been shown: each shows once per save. */
+  weatherSeen: string[];
 };
 
 export function newProfile(): Profile {
@@ -64,6 +68,8 @@ export function newProfile(): Profile {
     almanac: [],
     codex: [],
     settings: { volume: 0.7, muted: false },
+    seasonOpenings: true,
+    weatherSeen: [],
   };
 }
 
@@ -85,6 +91,8 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   4: (p) => ({ ...p, yearSeasons: p.yearSeasons ?? [p.seasons ?? ['spring']], year: 1, boons: [null], boonOffer: null }),
   // 5 → 6: sound settings, at the default volume.
   5: (p) => ({ ...p, settings: newProfile().settings }),
+  // 6 → 7: season openings on, and no weather met yet.
+  6: (p) => ({ ...p, seasonOpenings: true, weatherSeen: [] }),
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -134,6 +142,8 @@ function sanitize(p: Raw): Profile {
       volume: typeof sound.volume === 'number' && Number.isFinite(sound.volume) ? Math.min(1, Math.max(0, sound.volume)) : fresh.settings.volume,
       muted: sound.muted === true,
     },
+    seasonOpenings: p.seasonOpenings !== false,
+    weatherSeen: Array.isArray(p.weatherSeen) ? WEATHERS.filter((w) => (p.weatherSeen as unknown[]).includes(w)) : [],
   };
 }
 

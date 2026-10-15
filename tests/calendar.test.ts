@@ -160,7 +160,7 @@ describe('Calendar view', () => {
     expect(weeks[1]!.moon).toBe('Full Moon');
     expect(weeks[0]!.cells[0]).toMatchObject({ mark: 'now', weather: 'rain', marks: ['Eclipse'] });
     expect(weeks[0]!.cells[1]!.mark).toBe('next');
-    expect(todayLine(s)).toBe('Rain: Creek, Tide +2 · Eclipse');
+    expect(todayLine(s)).toBe('Raining: Creek, Tide +2 · Eclipse');
     expect(todayRules(s)).toHaveLength(2);
     const spring = on(sky('fog'), FESTIVAL_WEEK, FESTIVAL_DAY, 'spring');
     expect(todayLine(spring)).toMatch(/Bloomtide/);
