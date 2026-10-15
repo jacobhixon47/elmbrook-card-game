@@ -93,6 +93,8 @@ export const Regular = z.object({
   tipMult: z.number().positive().default(1),
   bonusChance: z.number().min(0).max(1).default(0.25),
   bonusPool: z.array(z.enum(['no-umbra', 'three-ingredients', 'wychwood-ingredient'])).min(1).default(['no-umbra', 'three-ingredients', 'wychwood-ingredient']),
+  /** Their favourite order (GDD §13, Friendship level 4): a potion of this family with an ingredient of this tag. */
+  favourite: z.object({ name: z.string().min(1), family: PotionFamily, tag: z.string().min(1) }).optional(),
 });
 export type Regular = z.infer<typeof Regular>;
 

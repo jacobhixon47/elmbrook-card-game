@@ -96,11 +96,23 @@ function PATRON_REWARD_TEXT(r: PatronReward): string {
   }
 }
 
-export function requestText(order: Pick<Order, 'request'> & Partial<Pick<Order, 'quantity' | 'delivered'>>): string {
+export function requestText(order: Pick<Order, 'request'> & Partial<Pick<Order, 'quantity' | 'delivered' | 'favourite'>>, long = false): string {
+  // A favourite order: the family and the tag it needs, marked with a heart on the board (GDD §13).
+  if (order.favourite && order.request.kind === 'family') {
+    const family = familyName(order.request.family);
+    return long ? `any ${family} potion with a ${cap(order.favourite.tag)} ingredient` : `♥ ${family} + ${cap(order.favourite.tag)}`;
+  }
   const what = order.request.kind === 'recipe' ? recipeName(order.request.recipe) : `any ${familyName(order.request.family)} potion`;
   const n = order.quantity ?? 1;
   if (n <= 1) return what;
   return `${n}× ${what}${order.delivered ? ` (${order.delivered}/${n})` : ''}`;
+}
+
+/** A favourite order's note for its dialogue: what it needs and what it earns. */
+export function favouriteNote(order: Pick<Order, 'request' | 'customer'> & Partial<Pick<Order, 'favourite'>>): string | null {
+  const fav = order.favourite ? codex.regulars.get(order.customer)?.favourite : undefined;
+  if (!fav || !order.favourite) return null;
+  return `♥ Their favourite, the ${fav.name}: +1 Friendship.`;
 }
 
 /** The recipe an order names, if it isn't in your Grimoire yet. */
@@ -118,8 +130,10 @@ export function newRecipeHint(s: Pick<RunState, 'knownRecipes' | 'relics'>, orde
 }
 
 /** The customer's line, in character (GDD §15: customers speak, the UI states it plainly). */
-export function customerLine(order: Pick<Order, 'request'> & Partial<Pick<Order, 'customer'>>): string {
+export function customerLine(order: Pick<Order, 'request'> & Partial<Pick<Order, 'customer' | 'favourite'>>): string {
   if (order.customer && codex.patrons.has(order.customer)) return PATRON_LINE[order.customer] ?? 'You know what I came for.';
+  const fav = order.favourite && order.customer ? codex.regulars.get(order.customer)?.favourite : undefined;
+  if (fav) return `The usual, if you've got it: my ${fav.name}.`;
   if (order.request.kind === 'recipe') return `A ${recipeName(order.request.recipe)}, if you'd be so kind.`;
   return FAMILY_LINE[order.request.family];
 }

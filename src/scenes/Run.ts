@@ -17,9 +17,9 @@ import { store } from '../store';
 import { gradedView, shopBackdrop, viewOverrides } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
-import { friendshipLine } from '../view/townsfolk';
+import { friendshipLine, levelUpNote } from '../view/townsfolk';
 import {
-  BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, orderNeeds, orderTerms, recipeName,
+  BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, favouriteNote, orderNeeds, orderTerms, recipeName,
   requestText, TIER_NAME, newRecipeHint, unknownRecipe,
   cap, listOf,
 } from '../view/describe';
@@ -267,7 +267,15 @@ export class Run extends Phaser.Scene {
     const after = store.getState()!;
     const note = relicNote(events);
     if (note) this.toast(note);
-    const resky = () => this.afterChange();
+    // A level of Friendship reached: toasted once the brew has played, so it isn't lost under it.
+    const levelUp = levelUpNote(events);
+    const resky = () => {
+      this.afterChange();
+      if (levelUp) {
+        this.toast(levelUp, 'R', 128);
+        play('levelUp');
+      }
+    };
     const brewing = events.some((e) => e.type === 'brewed' || e.type === 'sludge');
     // A brew's sounds play with its animation, in time with the numbers; everything else plays now.
     if (!brewing) playEvents(events);
@@ -293,9 +301,9 @@ export class Run extends Phaser.Scene {
     else this.render();
   }
 
-  private toast(message: string, color: PaletteKey = 'Y') {
-    const t = pixelText(this, 320, 92, message, { size: 8, color, stroke: 'k', align: 'center', wrap: 300 }).setOrigin(0.5);
-    this.tweens.add({ targets: t, y: 80, alpha: 0, delay: noAnim ? 0 : 1400, duration: 500, onComplete: () => t.destroy() });
+  private toast(message: string, color: PaletteKey = 'Y', y = 92) {
+    const t = pixelText(this, 320, y, message, { size: 8, color, stroke: 'k', align: 'center', wrap: 300 }).setOrigin(0.5);
+    this.tweens.add({ targets: t, y: y - 12, alpha: 0, delay: noAnim ? 0 : 1400, duration: 500, onComplete: () => t.destroy() });
   }
 
   // ---------------------------------------------------------------- render
@@ -1022,12 +1030,13 @@ export class Run extends Phaser.Scene {
     if (isRegular(o.customer)) this.text(x0 + w - 12, y0 + 12, friendshipLine(friendshipOf(s, o.customer)), { size: 8, color: 'R' }).setOrigin(1, 0);
     this.text(x0 + 12, y0 + 28, customerBlurb(o.customer), { size: 7, color: 'a' });
     this.text(x0 + 12, y0 + 44, `"${customerLine(o)}"`, { size: 8, color: 'W', wrap: w - 24 });
-    this.text(x0 + 12, y0 + 70, `Wants: ${requestText(o)}`, { size: 8, color: 'w' });
+    this.text(x0 + 12, y0 + 70, `Wants: ${requestText(o, true)}`, { size: 8, color: 'w' });
     this.text(x0 + 12, y0 + 82, orderTerms(o), { size: 8, color: 'c' });
     const extra = extraPay(o.customer);
     const needs = orderNeeds(o);
     const hint = newRecipeHint(s, o);
     const notes = [
+      ...(favouriteNote(o) ? [{ t: favouriteNote(o)!, c: 'R' as const }] : []),
       ...(hint ? [{ t: hint, c: 'l' as const }] : []),
       ...(o.bonus ? [{ t: `★ Bonus: ${BONUS_TEXT[o.bonus]} (+2g, +1 Friendship)`, c: 'o' as const }] : []),
       ...(extra ? [{ t: `Also pays: ${extra}`, c: 'l' as const }] : []),

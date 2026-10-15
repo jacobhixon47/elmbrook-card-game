@@ -69,6 +69,8 @@ export const SOUNDS = {
     { wave: 'triangle', freq: 220, dur: 0.07, volume: 0.3 },
     { wave: 'triangle', freq: 196, dur: 0.09, delay: 0.09, volume: 0.3 },
   ],
+  /** A level of Friendship with a regular: a warm chime. */
+  levelUp: arpeggio([NOTE.E5, NOTE.A5, NOTE.C6, NOTE.E6], { step: 0.09, dur: 0.3, wave: 'sine', volume: 0.28, delay: 0.25 }),
   /** A Curse taken. */
   curse: [{ wave: 'saw', freq: 220, to: 150, dur: 0.35, volume: 0.14 }, { wave: 'sine', freq: 233, to: 155, dur: 0.35, volume: 0.2 }],
   /** The month won. */

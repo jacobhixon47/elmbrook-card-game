@@ -5,6 +5,7 @@ import { todaysWeather } from './calendar';
 import { pick, pickWeighted, rand, type Ctx } from './ctx';
 import { blessingTonight } from './fair';
 import { FAMILIAR_RULES } from './familiars';
+import { FRIENDSHIP, friendLevelOf } from './friendship';
 import { fortuneOn } from './market';
 import { patronOf, twistNow } from './night';
 import { cauldronOf, glamourReady, needsGlamour } from './cauldrons';
@@ -161,6 +162,21 @@ function freshRecipe(ctx: Ctx, r: Reach, prefers: readonly string[], request: Or
   return pool.length ? { kind: 'recipe', recipe: pick(ctx, pool).id } : { kind: 'family', family: codex.recipes.get(request.recipe)!.family };
 }
 
+/**
+ * A regular's favourite order (GDD §13): from Friendship level 4, a 1 in 4 chance per order of theirs,
+ * at most one on the board a day, and only when the deck can brew their family and holds an ingredient
+ * of their tag. Rolls only for a regular who could ask, so other orders stay as they were.
+ */
+function favouriteFor(ctx: Ctx, r: Reach, customer: string): { request: OrderRequest; favourite: { tag: string } } | null {
+  const s = ctx.s;
+  const fav = codex.regulars.get(customer)?.favourite;
+  if (!fav || friendLevelOf(s, customer) < FRIENDSHIP.favouriteLevel || s.orders.some((o) => o.favourite)) return null;
+  if (!r.recipes.some((x) => x.family === fav.family)) return null;
+  if (![...allCards(s), ...s.satchel].some((c) => codex.ingredients.get(c.card)?.tags.includes(fav.tag))) return null;
+  if (rand(ctx) >= FRIENDSHIP.favouriteChance) return null;
+  return { request: { kind: 'family', family: fav.family }, favourite: { tag: fav.tag } };
+}
+
 /** Can the deck put an Umbra ingredient into a potion of this request? */
 function umbraFits(s: RunState, request: OrderRequest, r: Reach): boolean {
   const hasUmbra = allCards(s).some((c) => codex.ingredients.get(c.card)?.essences.includes('umbra'));
@@ -179,6 +195,7 @@ type OrderOpts = {
   tagBonus?: Order['tagBonus'];
   needsUmbra?: boolean;
   expiresIn?: number | null;
+  favourite?: Order['favourite'];
 };
 
 function postOrder(ctx: Ctx, o: OrderOpts): void {
@@ -198,6 +215,7 @@ function postOrder(ctx: Ctx, o: OrderOpts): void {
     tagBonus: o.tagBonus ?? (hasRelic(s, 'may-crown') ? { tag: 'flower', mult: RELIC_RULES.mayCrownPay } : null),
     needsUmbra: o.needsUmbra ?? false,
     expiresIn: o.expiresIn ?? null,
+    ...(o.favourite ? { favourite: o.favourite } : {}),
   };
   s.orders.push(order);
   ctx.ev.push({ type: 'orderPosted', order });
@@ -232,10 +250,11 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
     // Year 6: week 2 asks for Superb or better.
     if (yearRule(s, 6) && s.week === 2 && tierIndex(rolled) < tierIndex(YEAR_RULES.weekTwoTier)) rolled = YEAR_RULES.weekTwoTier;
     const minTier = tower ? tierStep(rolled, 1) : rolled;
-    const request = freshRecipe(ctx, r, customer.prefers, fitRequest(ctx, r, customer.prefers, asked, minTier), minTier, s.orders);
+    const fav = favouriteFor(ctx, r, customer.id);
+    const request = fav?.request ?? freshRecipe(ctx, r, customer.prefers, fitRequest(ctx, r, customer.prefers, asked, minTier), minTier, s.orders);
     const ceiling = ceilingOf(r, request);
     postOrder(ctx, {
-      customer: customer.id, request, minTier, ceiling,
+      customer: customer.id, request, minTier, ceiling, favourite: fav?.favourite ?? null,
       payScale: weekScale(s, false) * customer.payMult * (hermit ? HERMIT_PAY : 1) * (tower ? TOWER_PAY : 1),
       bonus: rand(ctx) < customer.bonusChance ? pick(ctx, customer.bonusPool) : null,
     });
@@ -297,9 +316,10 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
     const guest = guests[i % guests.length]!;
     const asked = requestFor(ctx, r, guest.prefers);
     const minTier = rolled();
-    const request = freshRecipe(ctx, r, guest.prefers, fitRequest(ctx, r, guest.prefers, asked, minTier), minTier, s.orders);
+    const fav = favouriteFor(ctx, r, guest.id);
+    const request = fav?.request ?? freshRecipe(ctx, r, guest.prefers, fitRequest(ctx, r, guest.prefers, asked, minTier), minTier, s.orders);
     postOrder(ctx, {
-      customer: guest.id, request, minTier, ceiling: ceilingOf(r, request),
+      customer: guest.id, request, minTier, ceiling: ceilingOf(r, request), favourite: fav?.favourite ?? null,
       payScale: scale * guest.payMult * extra,
       bonus: guest.bonusChance > 0 && rand(ctx) < guest.bonusChance ? pick(ctx, guest.bonusPool) : null,
       needsUmbra: guest.needsUmbra === true && umbraFits(s, request, r),
@@ -317,10 +337,11 @@ export function matchesRequest(potion: Pick<Potion, 'recipe' | 'family'>, reques
 type PotionLike = Pick<Potion, 'recipe' | 'family' | 'tier' | 'ingredients'>;
 
 const hasUmbra = (p: Pick<Potion, 'ingredients'>) => p.ingredients.some((id) => codex.ingredients.get(id)?.essences.includes('umbra'));
+const hasTag = (p: Pick<Potion, 'ingredients'>, tag: string) => p.ingredients.some((id) => codex.ingredients.get(id)?.tags.includes(tag));
 
 export function satisfies(potion: PotionLike, order: Order, glamour = false): boolean {
   return order.status === 'open' && matchesRequest(potion, order.request, glamour) && tierIndex(potion.tier) >= tierIndex(order.minTier)
-    && (!order.needsUmbra || hasUmbra(potion));
+    && (!order.needsUmbra || hasUmbra(potion)) && (!order.favourite || hasTag(potion, order.favourite.tag));
 }
 
 /** `satisfies`, plus tonight's twist: The May Queen won't take the same family twice running. */
