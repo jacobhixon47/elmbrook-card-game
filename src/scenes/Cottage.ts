@@ -3,7 +3,7 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { boonOf, cauldronOpen, CODEX_TABLES, runStartChoice, witchOpen, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
+import { ALMANAC_FIRST_PAGE, boonOf, cauldronOpen, CODEX_TABLES, runStartChoice, witchOpen, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
 import { CODEX_TABS, codexEntries } from '../view/codex';
 import { unlockName } from '../view/describe';
 import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
@@ -71,7 +71,7 @@ export class Cottage extends Phaser.Scene {
       pickBoonNow(id);
       this.scene.restart({});
     });
-    if (ui?.almanac) this.openAlmanac(profile);
+    if (ui?.almanac) this.openAlmanac(profile, ui.almanacPage ?? 0);
     if (ui?.codex) this.openCodex(profile, ui.codex as CodexTable, ui.codexPage ?? 0);
     if (ui?.settings) settings();
 
@@ -264,18 +264,33 @@ export class Cottage extends Phaser.Scene {
   }
 
   /** The Almanac (GDD §13): every entry's goal and what it adds to the pools, done ones lit. */
-  private openAlmanac(p: Profile) {
+  private openAlmanac(p: Profile, page = 0) {
     const c = this.openOverlay('The Almanac');
-    c.add(pixelText(this, 320, 48, `${p.almanac.length} of ${codex.almanac.size} done. Meet a goal in any run, won or lost, and what it adds joins the pools for good.`, { size: 7, color: 'a', align: 'center' }).setOrigin(0.5, 0));
-    const rows = Math.ceil(codex.almanac.size / 2);
-    [...codex.almanac.values()].forEach((e, i) => {
+    const all = [...codex.almanac.values()];
+    const pages = [all.slice(0, ALMANAC_FIRST_PAGE), all.slice(ALMANAC_FIRST_PAGE)];
+    page = Math.max(0, Math.min(pages.length - 1, page));
+    const intro = page === 0 ? 'Meet a goal in any run, won or lost, and what it adds joins the pools for good.' : 'The harder goals, for the long game.';
+    c.add(pixelText(this, 320, 48, `${p.almanac.length} of ${codex.almanac.size} done. ${intro}  Page ${page + 1} of ${pages.length}`, { size: 7, color: 'a', align: 'center' }).setOrigin(0.5, 0));
+    const prev = button(this, 220, 38, '<', () => this.openAlmanac(p, page - 1), { w: 20 });
+    const next = button(this, 420, 38, '>', () => this.openAlmanac(p, page + 1), { w: 20 });
+    prev.setEnabled(page > 0);
+    next.setEnabled(page < pages.length - 1);
+    c.add([prev, next]);
+    const entries = pages[page]!;
+    const rows = Math.ceil(entries.length / 2);
+    entries.forEach((e, i) => {
       const x = 30 + Math.floor(i / rows) * 292;
       const y = 64 + (i % rows) * 36;
       const done = p.almanac.includes(e.id);
+      // A cauldron an entry opens is named with what it adds to the pools.
+      const adds = [...e.unlocks.map(unlockName), ...[...codex.cauldrons.values()].filter((pot) => pot.unlock === e.id).map((pot) => `the ${pot.name}`)];
       c.add(this.add.rectangle(x, y, 286, 33, hex(done ? 'g' : 'b'), done ? 0.6 : 0.4).setOrigin(0));
       c.add(pixelText(this, x + 6, y + 3, done ? `${e.name} · done` : e.name, { size: 8, color: done ? 'L' : 'W' }));
-      c.add(pixelText(this, x + 280, y + 4, e.goal, { size: 7, color: done ? 'L' : 'a', align: 'right' }).setOrigin(1, 0));
-      c.add(pixelText(this, x + 6, y + 18, `Adds ${e.unlocks.map(unlockName).join(', ')}`, { size: 6, color: done ? 'w' : 'S', wrap: 274 }));
+      // The goals across runs say how far along they are.
+      const tally = e.id === 'every-witch' ? [p.witchWins.length, codex.witches.size] : e.id === 'every-cauldron' ? [p.cauldronWins.length, codex.cauldrons.size] : null;
+      const progress = tally && !done ? ` (${tally[0]} of ${tally[1]})` : '';
+      c.add(pixelText(this, x + 280, y + 4, `${e.goal}${progress}`, { size: 7, color: done ? 'L' : 'a', align: 'right' }).setOrigin(1, 0));
+      c.add(pixelText(this, x + 6, y + 18, `Adds ${adds.join(', ')}`, { size: 6, color: done ? 'w' : 'S', wrap: 274 }));
     });
   }
 

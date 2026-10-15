@@ -105,7 +105,7 @@ describe('witches (GDD §12)', () => {
 describe('cauldrons (GDD §12)', () => {
   it('Copper is open from the start; the rest each open with an Almanac entry', () => {
     expect([...codex.cauldrons.values()].map((c) => [c.id, c.unlock])).toEqual([
-      ['copper', null], ['iron', 'open-for-business'], ['glass', 'masterwork'], ['bone', 'nameless-deal'], ['silver', 'legendary'],
+      ['copper', null], ['iron', 'open-for-business'], ['glass', 'masterwork'], ['bone', 'nameless-deal'], ['silver', 'legend-thrice'],
     ]);
     for (const c of codex.cauldrons.values()) {
       expect(cauldronOpen(newProfile(), c.id)).toBe(c.id === 'copper');

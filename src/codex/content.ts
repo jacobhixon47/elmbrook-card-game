@@ -445,7 +445,7 @@ export const cauldrons: In<typeof Cauldron>[] = [
   { id: 'iron', name: 'Iron Cauldron', text: '3 cauldron slots from the start. -1 Brew a day.', unlock: 'open-for-business', slots: 3, brews: -1 },
   { id: 'glass', name: 'Glass Cauldron', text: '+2 Harmony on every brew. -1 card in hand.', unlock: 'masterwork', harmony: 2, hand: -1 },
   { id: 'bone', name: 'Bone Cauldron', text: '2 Lunar ingredients in your Night Satchel from the start. Rent +25%.', unlock: 'nameless-deal', lunarCards: 2, rent: 1.25 },
-  { id: 'silver', name: 'Silver Cauldron', text: '+1 Discard a day. Orders pay 10% less.', unlock: 'legendary', discards: 1, pay: 0.9 },
+  { id: 'silver', name: 'Silver Cauldron', text: '+1 Discard a day. Orders pay 10% less.', unlock: 'legend-thrice', discards: 1, pay: 0.9 },
 ];
 
 // Dusk events (GDD §7), the first 8 from the balance tables. Each choice's rule is in core/dusk-events.ts.
@@ -517,16 +517,24 @@ export const almanac: In<typeof AlmanacEntry>[] = [
   { id: 'open-for-business', name: 'Open for Business', goal: 'Fill 25 orders in one run.', unlocks: ['lavender', 'clover', 'magpie', 'thunderstride-tonic'] },
   { id: 'paid-up', name: 'Paid Up', goal: 'Pay the rent three weeks running.', unlocks: ['ginger-root', 'sea-salt', 'bonfire-cordial', 'ironheart-draught'] },
   { id: 'superb-work', name: 'Superb Work', goal: 'Brew a Superb potion.', unlocks: ['mountain-salve', 'decant', 'lullaby-draught'] },
-  { id: 'masterwork', name: 'A Masterwork', goal: 'Brew a Masterwork potion.', unlocks: ['elmbrook-panacea', 'old-hound', 'menders-broth'] },
-  { id: 'legendary', name: 'The Stuff of Legend', goal: 'Brew a Legendary potion.', unlocks: ['starlight-elixir', 'old-almanac'] },
-  { id: 'shopkeeper', name: 'Shopkeeper', goal: 'Sell 12 potions from your Shelf in one run.', unlocks: ['geode', 'lucky-horseshoe', 'mulled-cider'] },
+  { id: 'masterwork', name: 'A Masterwork', goal: 'Brew a Masterwork potion.', unlocks: ['old-hound', 'menders-broth'] },
+  { id: 'legendary', name: 'The Stuff of Legend', goal: 'Brew a Legendary potion.', unlocks: ['old-almanac'] },
+  { id: 'shopkeeper', name: 'Shopkeeper', goal: 'Sell 12 potions from your Shelf in one run.', unlocks: ['geode', 'mulled-cider'] },
   { id: 'menagerie', name: 'Menagerie', goal: 'Keep 3 familiars at once.', unlocks: ['fox', 'silver-bell'] },
   { id: 'collector', name: 'Collector', goal: 'Hold 4 relics at once.', unlocks: ['pressed-flower', 'grimoire-page'] },
-  { id: 'nameless-deal', name: 'A Nameless Deal', goal: 'Take a Curse at the Name-Taker.', unlocks: ['fae-dust', 'cracked-mirror', 'moth-swarm', 'black-cauldron'] },
-  { id: 'spring-won', name: 'Spring in Elmbrook', goal: 'Win Spring.', unlocks: ['kelpie-pearl', 'fetch-draught', 'tidewall-salve'] },
-  { id: 'summer-won', name: 'Summer in Elmbrook', goal: 'Win Summer.', unlocks: ['harvest-gourd', 'heartstone'] },
-  { id: 'autumn-won', name: 'Autumn in Elmbrook', goal: 'Win Autumn.', unlocks: ['moonpetal', 'taste-of-memory'] },
+  { id: 'nameless-deal', name: 'A Nameless Deal', goal: 'Take a Curse at the Name-Taker.', unlocks: ['fae-dust', 'cracked-mirror', 'moth-swarm'] },
+  { id: 'spring-won', name: 'Spring in Elmbrook', goal: 'Win Spring.', unlocks: ['fetch-draught', 'tidewall-salve'] },
+  { id: 'summer-won', name: 'Summer in Elmbrook', goal: 'Win Summer.', unlocks: ['harvest-gourd'] },
+  { id: 'autumn-won', name: 'Autumn in Elmbrook', goal: 'Win Autumn.', unlocks: ['moonpetal'] },
   { id: 'winter-won', name: 'Winter in Elmbrook', goal: 'Win Winter.', unlocks: ['second-wind', 'hob'] },
+  // The second page (Jacob, Oct 15): harder goals, paid in the strongest unlock content, moved here from the first page.
+  { id: 'legend-thrice', name: 'A Legend Thrice', goal: 'Brew 3 Legendary potions in one run.', unlocks: ['starlight-elixir'] },
+  { id: 'full-ledger', name: 'A Full Ledger', goal: 'Fill 40 orders in one run.', unlocks: ['elmbrook-panacea'] },
+  { id: 'steady-hand', name: 'A Steady Hand', goal: 'Win a season without using a Discard.', unlocks: ['kelpie-pearl'] },
+  { id: 'every-witch', name: 'Every Witch\'s Way', goal: 'Win a season with every witch.', unlocks: ['taste-of-memory'] },
+  { id: 'every-cauldron', name: 'Every Pot in the House', goal: 'Win a season in every cauldron.', unlocks: ['black-cauldron'] },
+  { id: 'deep-winter', name: 'Deep Winter', goal: 'Win Winter in Year 3 or later.', unlocks: ['heartstone'] },
+  { id: 'tidy-sum', name: 'A Tidy Sum', goal: 'Win a season with 150 gold to spare.', unlocks: ['lucky-horseshoe'] },
 ];
 
 // Boons (GDD §13): three are offered when you loop into the next Year; the one you pick lasts the Year.

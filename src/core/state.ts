@@ -144,7 +144,7 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 18;
+export const RUN_VERSION = 19;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -158,6 +158,9 @@ export type RunStats = {
   mostFamiliars: number;
   mostRelics: number;
   cursesTaken: number;
+  /** Legendary potions brewed, and Discards spent (Discard actions and brews that cost Discards), for the harder Almanac goals. */
+  legendaries: number;
+  discardsUsed: number;
   /** Codex ids met this run, for the cottage's Codex: cards drawn, gained or offered, recipes known, familiars, relics and customers. */
   met: string[];
 };

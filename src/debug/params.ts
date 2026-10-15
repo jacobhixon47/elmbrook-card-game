@@ -47,6 +47,8 @@ export type Fixture = {
     eventCard?: number;
     /** The cottage's Almanac, open. */
     almanac?: boolean;
+    /** The Almanac's page: 1 is the harder second page. */
+    almanacPage?: number;
     /** The cottage's Codex, open at this tab and page. */
     codex?: string;
     codexPage?: number;
