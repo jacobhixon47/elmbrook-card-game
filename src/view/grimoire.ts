@@ -6,11 +6,12 @@ import { createCard } from './card';
 import { calendarWeeks, dayRules, WEATHER_NAME } from './calendar';
 import { deckRows, guideSections, recipeRows, undiscoveredLine } from './guide';
 import { pixelText } from './text';
+import { townsfolkRows } from './townsfolk';
 import type { Tooltip } from './tooltip';
 import { button, panel } from './ui';
 
-export type GrimoireTab = 'recipes' | 'deck' | 'calendar' | 'guide';
-export const GRIMOIRE_TABS: GrimoireTab[] = ['recipes', 'deck', 'calendar', 'guide'];
+export type GrimoireTab = 'recipes' | 'deck' | 'calendar' | 'townsfolk' | 'guide';
+export const GRIMOIRE_TABS: GrimoireTab[] = ['recipes', 'deck', 'calendar', 'townsfolk', 'guide'];
 
 const WEATHER_COLOR: Record<Weather, PaletteKey> = { clear: 'W', rain: 'c', fog: 'a', heatwave: 'o', snow: 'w' };
 const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
@@ -39,9 +40,9 @@ export function drawGrimoire(
   add(scene.add.rectangle(0, 0, 640, 360, hex('K'), 0.6).setOrigin(0).setInteractive()).on('pointerdown', () => on.close());
   add(panel(scene, X, Y, W, H, 'k', 0.97, 'n').setInteractive());
   text(X + 12, Y + 8, 'Grimoire', { size: 14, color: 'y' });
-  const labels: Record<GrimoireTab, string> = { recipes: 'Recipes', deck: 'Deck', calendar: 'Calendar', guide: 'How to play' };
+  const labels: Record<GrimoireTab, string> = { recipes: 'Recipes', deck: 'Deck', calendar: 'Calendar', townsfolk: 'Townsfolk', guide: 'How to play' };
   GRIMOIRE_TABS.forEach((t, i) => {
-    const b = add(button(scene, 214 + i * 76, Y + 16, labels[t], () => on.tab(t), { w: 70, color: t === tab ? 'Y' : 'W' }));
+    const b = add(button(scene, 176 + i * 72, Y + 16, labels[t], () => on.tab(t), { w: 68, color: t === tab ? 'Y' : 'W' }));
     if (t === tab) (b.list[0] as Phaser.GameObjects.Rectangle).setStrokeStyle(1, hex('y'));
   });
   add(button(scene, X + W - 40, Y + 16, 'Close', () => on.close(), { w: 56 }));
@@ -132,6 +133,27 @@ export function drawGrimoire(
         cell.on('pointerover', () => tip.text(`${c.label === 'Night' ? 'Night Shift' : c.label}, week ${c.week}`, dayRules(s, c), x + cw / 2, y, y + ch));
         cell.on('pointerout', () => tip.hide());
       });
+    });
+    return;
+  }
+
+  if (tab === 'townsfolk') {
+    text(X + 12, top, 'Friendship with each regular. Every delivery adds a point and a bonus one more; it lasts the whole save, and Nameless runs earn none.', { size: 7, color: 'a', wrap: W - 24 });
+    const rh = 38;
+    townsfolkRows(s).forEach((r, i) => {
+      const y = top + 22 + i * rh;
+      add(scene.add.rectangle(X + 12, y, W - 24, rh - 6, hex('K'), 0.6).setOrigin(0)).setStrokeStyle(1, hex('n'), 0.6);
+      text(X + 20, y + 4, r.name, { size: 9, color: r.level ? 'y' : 'W' });
+      if (r.nightOnly) text(X + 20, y + 17, 'Night Shifts only', { size: 6, color: 'v' });
+      text(X + 150, y + 5, r.blurb ?? 'Not a friend yet. Fill their orders to get to know them.', { size: 7, color: r.blurb ? 'W' : 'a', wrap: 240 });
+      // The meter: level, then a bar through it.
+      const bx = X + 400;
+      text(bx, y + 4, `♥ ${r.level}`, { size: 9, color: 'R' });
+      const bw = 108;
+      add(scene.add.rectangle(bx + 26, y + 8, bw, 6, hex('k')).setOrigin(0)).setStrokeStyle(1, hex('n'));
+      if (r.progress > 0) add(scene.add.rectangle(bx + 26, y + 8, Math.max(1, Math.round(bw * r.progress)), 6, hex('R')).setOrigin(0));
+      text(bx, y + 17, r.next === null ? 'Best friends' : `${r.points} of ${r.next} to ♥ ${r.level + 1}`, { size: 7, color: 'a' });
+      if (r.thisRun) text(bx + 134, y + 17, `+${r.thisRun} this run`, { size: 7, color: 'G' }).setOrigin(1, 0);
     });
     return;
   }

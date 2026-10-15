@@ -18,7 +18,7 @@ export const RELIC_RULES = {
   horseshoeCards: 1,
   flowerPotency: 2,
   ledgerGold: 1,
-  bellHearts: 1,
+  bellFriendship: 1,
   almanacDiscards: 1,
   satchelHand: 1,
   locketBrews: 1,

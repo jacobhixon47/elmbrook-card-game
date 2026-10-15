@@ -94,9 +94,13 @@ export function modifierSteps(c: ScoreCtx, cards: readonly CardInstance[], ings:
 /** How many times a card's own effects happen in a brew: twice when Blessed. */
 const times = (card: CardInstance) => (card.modifier === 'blessed' ? 2 : 1);
 
-/** Hearts a brewed potion adds or costs on delivery, from its cards (Heartstone, Grave Moss, Cursed). */
+/**
+ * Friendship a brewed potion adds on delivery, from its cards (Heartstone). Any card that sours it
+ * (Grave Moss, a Cursed card) makes it -1: that delivery earns no Friendship at all.
+ */
 export function heartDeltaOf(cards: readonly CardInstance[]): number {
-  return cards.reduce((n, c) => n + sumEffect(c.card, 'heartDelta') * times(c) + (c.modifier === 'cursed' ? MODIFIER_RULES.cursedHearts : 0), 0);
+  const deltas = cards.map((c) => sumEffect(c.card, 'heartDelta') * times(c) + (c.modifier === 'cursed' ? MODIFIER_RULES.cursedHearts : 0));
+  return deltas.some((d) => d < 0) ? -1 : deltas.reduce((n, d) => n + d, 0);
 }
 
 /** Cards drawn after a brew, from its cards. */

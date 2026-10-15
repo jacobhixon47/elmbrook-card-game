@@ -1,7 +1,8 @@
 import { codex } from '../codex';
 import type { ModifierId } from '../codex/schema';
-import { addHearts, changeGold, gainCard, pick, pickWeighted, reject, removeCard, type Ctx } from './ctx';
+import { changeGold, gainCard, pick, pickWeighted, reject, removeCard, type Ctx } from './ctx';
 import { dayPool, rarityOf } from './dusk';
+import { befriend } from './friendship';
 import { addModifier, modifiable } from './modifiers';
 import { MIN_DECK, type ShopRarity } from './rules';
 import { allCards, type CardInstance, type RunState } from './state';
@@ -121,8 +122,8 @@ export const EVENT_CHOICES: Record<string, Choice[]> = {
     {
       run: (ctx) => {
         const regular = pick(ctx, [...codex.regulars.values()]);
-        addHearts(ctx, regular.id, 1);
-        return `It was ${regular.name}'s. +1 heart.`;
+        befriend(ctx, regular.id, 1);
+        return `It was ${regular.name}'s. +1 Friendship.`;
       },
     },
     {

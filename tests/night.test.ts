@@ -130,7 +130,7 @@ describe('patrons', () => {
     const two = ok(slotAll(one, uids.slice(2)), { type: 'brew' });
     expect(two.state.orders.every((o) => o.status === 'declined')).toBe(true);
     expect(ofType(two.events, 'orderExpired')).toHaveLength(s.orders.length);
-    expect(ofType(two.events, 'heartsChanged')).toHaveLength(0);
+    expect(ofType(two.events, 'friendshipGained')).toHaveLength(0);
   });
 
   it('the Firefly Conductor redraws the whole hand after each brew', () => {

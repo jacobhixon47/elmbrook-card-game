@@ -30,7 +30,7 @@ export type Potion = {
   /** Card ids that went in, for order bonus conditions and the Fence. */
   ingredients: string[];
   experiment: boolean;
-  /** Hearts it adds or costs on delivery beyond the usual one (Heartstone +1, Grave Moss -1). */
+  /** Friendship it adds on delivery beyond the usual point (Heartstone +1); below 0 (Grave Moss, Cursed), the delivery earns none. */
   heartDelta: number;
 };
 
@@ -75,7 +75,7 @@ export type Pending = {
 };
 
 /** Extras for the next delivery (Charm Sachet). */
-export type DeliveryBoost = { hearts: number; tip: number; payMult: number };
+export type DeliveryBoost = { /** Friendship added to the next delivery; below 0 it earns none. */ hearts: number; tip: number; payMult: number };
 
 export type Errand = 'market' | 'forage' | 'creek' | 'guild' | 'hearth' | 'event';
 
@@ -144,7 +144,7 @@ export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'd
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 19;
+export const RUN_VERSION = 20;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -204,8 +204,10 @@ export type RunState = {
   knownRecipes: string[];
   orders: Order[];
   shelf: Potion[];
-  /** Hearts per customer id, 0..MAX_HEARTS. */
-  hearts: Record<string, number>;
+  /** Friendship points earned with each regular this run (GDD §4.1); they bank to the profile when the run ends. */
+  friendship: Record<string, number>;
+  /** Each regular's Friendship from the profile when the run began. */
+  friendshipBase: Record<string, number>;
   pending: Pending;
   /** Applied to the next order filled, then cleared. */
   delivery: DeliveryBoost;

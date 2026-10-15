@@ -2,15 +2,16 @@ import { codex } from '../codex';
 import type { StallId, TarotEffect } from '../codex/schema';
 import { essencesOf, recipeAvailable } from './brew';
 import { NIGHT_SHIFT_DAY, WEATHER_WEIGHTS, weatherOn } from './calendar';
-import { addHearts, changeGold, gainCard, pick, pickWeighted, randInt, reject, removeCard, shuffled, type Ctx } from './ctx';
+import { changeGold, gainCard, pick, pickWeighted, randInt, reject, removeCard, shuffled, type Ctx } from './ctx';
 import { dayPool, rarityOf } from './dusk';
 import { addFamiliar, familiarPrice, rollFamiliars } from './familiars';
+import { bestFriend, befriend, FRIENDSHIP, friendLevelOf } from './friendship';
 import { nextFloat, seedRng } from './rng';
 import { draft, lunarPool, omenPool, rarityPool } from './night';
 import { addModifier, modifiable } from './modifiers';
 import { cursePool, gainRelic, rollRelic, takeCurse } from './relics';
 import {
-  BLACK_MARKET, BLACK_MARKET_RELIC, HOLLY_CROWN, SNOWED_IN_CHANCE, YULE_LOG, BLOSSOM_ORACLE_PRICE, BROKER_CARDS, CIDER_PRESS, FIREFLY_GAMES, HARVEST_AUCTION, HEARTH_TRADER, NECTAR_TRADER, SEED_SWAPPER,
+  BLACK_MARKET, BLACK_MARKET_RELIC, HOLLY_CROWN, SNOWED_IN_CHANCE, YULE_LOG, BLOSSOM_ORACLE_PRICE, BROKER_CARDS, CIDER_PRESS, FIREFLY_GAMES, HARVEST_AUCTION, NECTAR_TRADER, SEED_SWAPPER,
   tierIndex, type ShopRarity, BROKER_FAMILIARS, TINKER_FAMILIAR, FORTUNE_PRICE, LANTERN_STOCK, WINTER_LANTERN, MAX_CAULDRON_SLOTS, MAX_SHELF_SLOTS, MIN_DECK,
   NAME_TAKER_DEALS, QUARTER_DRAWN_STALLS, TAILOR_POTENCY, TINKER_PRICE, WEEKS, WORLD_RELIC_TIER,
 } from './rules';
@@ -104,7 +105,7 @@ function openStall(ctx: Ctx, id: StallId, opened: readonly StallState[]): StallS
       return { id, cards: draft(ctx, dayCards(s, 'rare'), NECTAR_TRADER.cards), done: false };
     case 'hearth-trader':
       return {
-        id, cards: draft(ctx, dayCards(s, 'rare'), HEARTH_TRADER.cards), familiars: rollFamiliars(ctx, HEARTH_TRADER.familiars), done: false,
+        id, cards: draft(ctx, dayCards(s, 'rare'), FRIENDSHIP.traderBigCards), familiars: rollFamiliars(ctx, FRIENDSHIP.traderFamiliars), done: false,
         burned: false, crown: HOLLY_CROWN.familiars.filter((f) => !s.familiars.includes(f)), crowned: false,
       };
     case 'blossom-oracle':
@@ -277,7 +278,7 @@ export function drawTarot(ctx: Ctx): void {
       return;
     }
     case 'hearts': {
-      addHearts(ctx, pick(ctx, [...codex.regulars.values()]).id, amount);
+      befriend(ctx, pick(ctx, [...codex.regulars.values()]).id, amount);
       return;
     }
     case 'bad-omen':
@@ -497,18 +498,31 @@ export function placeBid(ctx: Ctx, amount: number): void {
   gainRelic(ctx, stall.relic, 'auction');
 }
 
-/** The Hearth Trader: five hearts with one regular for a Rare card or a familiar (`index` runs over the cards, then the familiars). */
-export function tradeHearts(ctx: Ctx, regular: string, index: number): void {
+/**
+ * What the Hearth Trader shows tonight: two of his three Rare cards, or all three once your best friend
+ * among the regulars is at FRIENDSHIP.traderBigLevel, then his familiar.
+ */
+export function hearthOffers(s: Pick<RunState, 'friendship' | 'friendshipBase'>, stall: { cards: string[]; familiars: string[] }): { cards: string[]; familiars: string[]; regular: string | null } {
+  const regular = bestFriend(s);
+  const level = regular ? friendLevelOf(s, regular) : 0;
+  const shown = level >= FRIENDSHIP.traderBigLevel ? FRIENDSHIP.traderBigCards : FRIENDSHIP.traderCards;
+  return { cards: stall.cards.slice(0, shown), familiars: stall.familiars, regular: level >= FRIENDSHIP.traderLevel ? regular : null };
+}
+
+/** The Hearth Trader: gold, on the name of a regular you're friends with, for a Rare card or a familiar (`index` runs over the cards shown, then the familiars). */
+export function hearthTrade(ctx: Ctx, index: number): void {
   const s = ctx.s;
   const stall = atStall(ctx, 'hearth-trader');
   if (stall.done) reject('the Hearth Trader trades once a night');
-  if ((s.hearts[regular] ?? 0) < HEARTH_TRADER.hearts) reject(`you need ${HEARTH_TRADER.hearts} hearts with them`);
-  const offers = [...stall.cards, ...stall.familiars];
+  const shown = hearthOffers(s, stall);
+  if (!shown.regular) reject(`he trades only with a friend of a regular (Friendship level ${FRIENDSHIP.traderLevel})`);
+  if (s.gold < FRIENDSHIP.traderGold) reject(`needs ${FRIENDSHIP.traderGold} gold`);
+  const offers = [...shown.cards, ...shown.familiars];
   const pick = offers[index];
   if (!pick) reject(`no offer ${index}`);
-  const familiar = index >= stall.cards.length;
+  const familiar = index >= shown.cards.length;
   if (familiar && s.familiars.length >= s.familiarSlots) reject('no free familiar slot');
-  addHearts(ctx, regular, -HEARTH_TRADER.hearts);
+  changeGold(ctx, -FRIENDSHIP.traderGold, 'market');
   if (familiar) addFamiliar(ctx, pick);
   else gainCard(ctx, pick, 'market');
   stall.done = true;

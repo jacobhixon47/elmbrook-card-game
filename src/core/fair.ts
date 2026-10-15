@@ -1,6 +1,7 @@
 import { codex, type Fair, type FairItem } from '../codex';
 import { festivalOn, NIGHT_SHIFT_DAY } from './calendar';
 import { reject, shuffled, type Ctx } from './ctx';
+import { FRIENDSHIP, friendLevelOf } from './friendship';
 import { VIGIL } from './rules';
 import type { RunState, StockItem } from './state';
 
@@ -42,8 +43,8 @@ export function vigilToday(s: Pick<RunState, 'season' | 'week' | 'day'>): boolea
 }
 
 /** The regulars close enough to bring a gift to the vigil, in codex order. */
-export function vigilGuests(s: Pick<RunState, 'hearts'>): string[] {
-  return [...codex.regulars.keys()].filter((id) => (s.hearts[id] ?? 0) >= VIGIL.hearts);
+export function vigilGuests(s: Pick<RunState, 'friendship' | 'friendshipBase'>): string[] {
+  return [...codex.regulars.keys()].filter((id) => friendLevelOf(s, id) >= FRIENDSHIP.vigilLevel);
 }
 
 /** The vigil replaces the dusk reward and the errand: gifts go straight into the Night Satchel for the finale. */

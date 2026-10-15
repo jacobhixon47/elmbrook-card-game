@@ -14,17 +14,18 @@ import { addModifier, cantModify, drawOnBrewOf, MODIFIER_RULES, enchant, heartDe
 import { addFamiliar, FAMILIAR_RULES, familiarGold, hasFamiliar, moveFamiliar, sellFamiliar } from './familiars';
 import {
   atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, placeBid, pressCider, readPetals, seedSwap, stallStock, swapForCard, takeDeal, takePrize,
-  tossRing, tradeHearts, burnYule, wearCrown, tradeNectar, weave,
+  tossRing, hearthTrade, burnYule, wearCrown, tradeNectar, weave,
 } from './market';
-import { cursePool, dayAllowance, gainRelic, grantRelic, handSizeToday, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
+import { cursePool, dayAllowance, gainRelic, grantRelic, handSizeToday, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
 import { fits, postOrders, payout, satisfies } from './orders';
 import { seedRng } from './rng';
 import { cauldronOf, glamourReady, needsGlamour, quirkReady } from './cauldrons';
 import {
-  BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, WINTER_FENCE, MAX_DISCARD, MAX_HEARTS, MIN_DECK, TIER_MIN,
+  BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, WINTER_FENCE, MAX_DISCARD, MIN_DECK, TIER_MIN,
   SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
   MAX_CAULDRON_SLOTS, MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex, VIGIL,
 } from './rules';
+import { befriend } from './friendship';
 import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState, type RunStats, type StockItem } from './state';
 import { YEAR_RULES, yearDiscards, yearRule } from './year';
 
@@ -33,7 +34,7 @@ export type ReduceResult = { state: RunState; events: GameEvent[] };
 const freshPending = (): Pending => ({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false, essenceHarmony: 0 });
 const noBoost = () => ({ hearts: 0, tip: 0, payMult: 1 });
 
-export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string, cauldronId = 'copper'): ReduceResult {
+export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string, cauldronId = 'copper', friendship: Readonly<Record<string, number>> = {}): ReduceResult {
   const witch = codex.witches.get(witchId);
   if (!witch) throw new Error(`unknown witch: ${witchId}`);
   if (!codex.cauldrons.has(cauldronId)) throw new Error(`unknown cauldron: ${cauldronId}`);
@@ -74,7 +75,8 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     knownRecipes: [...witch.knownRecipes],
     orders: [],
     shelf: [],
-    hearts: {},
+    friendship: {},
+    friendshipBase: Object.fromEntries(Object.entries(friendship).filter(([id, n]) => codex.regulars.has(id) && n > 0)),
     pending: freshPending(),
     delivery: noBoost(),
     brewsToday: 0,
@@ -164,15 +166,6 @@ function requirePhase(ctx: Ctx, ...phases: Phase[]): void {
   if (!phases.includes(ctx.s.phase)) reject(`not allowed during ${ctx.s.phase}`);
 }
 
-function changeHearts(ctx: Ctx, customer: string, delta: number): void {
-  // Nameless: no regular remembers you, for better or worse.
-  if (hasCurse(ctx.s, 'nameless')) return;
-  const before = ctx.s.hearts[customer] ?? 0;
-  const after = Math.max(0, Math.min(MAX_HEARTS, before + delta));
-  ctx.s.hearts[customer] = after;
-  if (after !== before) ctx.ev.push({ type: 'heartsChanged', customer, hearts: after, delta: after - before });
-}
-
 function openOrder(ctx: Ctx, id: number): Order {
   const order = ctx.s.orders.find((o) => o.id === id);
   if (!order) reject(`no order ${id}`);
@@ -210,8 +203,10 @@ function fill(ctx: Ctx, order: Order, potion: Potion): void {
   changeGold(ctx, pay + tip, 'order');
   familiarGold(ctx, 'magpie', FAMILIAR_RULES.magpieGold);
   if (hasRelic(ctx.s, 'apprentice-ledger')) changeGold(ctx, RELIC_RULES.ledgerGold, 'relic');
-  const bell = hasRelic(ctx.s, 'silver-bell') && codex.regulars.has(order.customer) ? RELIC_RULES.bellHearts : 0;
-  changeHearts(ctx, order.customer, (bonus ? 2 : 1) + potion.heartDelta + boost.hearts + bell);
+  // Friendship (GDD §4.1): a point a delivery, one more for the bonus, more from the Heartstone and the
+  // Silver Bell. Grave Moss, a Cursed card or the Raven Call sours it, and the delivery earns none.
+  const bell = hasRelic(ctx.s, 'silver-bell') ? RELIC_RULES.bellFriendship : 0;
+  if (potion.heartDelta >= 0 && boost.hearts >= 0) befriend(ctx, order.customer, (bonus ? 2 : 1) + potion.heartDelta + boost.hearts + bell);
   ctx.s.lastFamily = potion.family;
   const patron = codex.patrons.get(order.customer);
   if (patron) patronReward(ctx, patron);
@@ -330,7 +325,6 @@ function endDay(ctx: Ctx): void {
     if (o.status !== 'open') continue;
     o.status = 'declined';
     ctx.ev.push({ type: 'orderDeclined', order: o.id, customer: o.customer });
-    changeHearts(ctx, o.customer, -1);
   }
   commissionsOnDayEnd(ctx, isNightShift(s));
   for (const c of allCards(s)) if (isAged(c)) c.aged = (c.aged ?? 0) + Math.max(c.modifier === 'aged' ? MODIFIER_RULES.agedPerDay : 1, sumEffect(c.card, 'agedRate'));
@@ -537,7 +531,6 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       const order = openOrder(ctx, action.order);
       order.status = 'declined';
       ctx.ev.push({ type: 'orderDeclined', order: order.id, customer: order.customer });
-      changeHearts(ctx, order.customer, -1);
       familiarGold(ctx, 'raven', FAMILIAR_RULES.ravenGold);
       return;
     }
@@ -734,8 +727,8 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
     case 'wearCrown':
       wearCrown(ctx, action.index);
       return;
-    case 'tradeHearts':
-      tradeHearts(ctx, action.regular, action.index);
+    case 'hearthTrade':
+      hearthTrade(ctx, action.index);
       return;
 
     case 'liftCurse': {
@@ -797,9 +790,9 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
         if (!r) reject(`no recipe ${action.recipe}`);
         if (s.shelf.length >= s.shelfSize) reject('the Shelf is full');
         s.shelf.push({ uid: s.nextUid++, recipe: r.id, family: r.family, quality: TIER_MIN[action.tier], tier: action.tier, ingredients: [], experiment: false, heartDelta: 0 });
-      } else if (action.op === 'setHearts') {
+      } else if (action.op === 'setFriendship') {
         if (!codex.regulars.has(action.regular)) reject(`no regular ${action.regular}`);
-        s.hearts[action.regular] = Math.max(0, Math.min(MAX_HEARTS, action.hearts));
+        s.friendship[action.regular] = Math.max(0, Math.floor(action.points));
       } else if (action.op === 'giveRelic') {
         gainRelic(ctx, action.relic, 'debug');
       } else if (action.op === 'giveCurse') {
@@ -903,7 +896,7 @@ function applyBoon(ctx: Ctx, id: string): void {
 
 /** The single entry point for game rules. Pure: same input, same output. A broken rule returns the old state and a `rejected` event. */
 export function reduce(state: RunState | null, action: Action): ReduceResult {
-  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks, action.year, action.boon, action.cauldron);
+  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks, action.year, action.boon, action.cauldron, action.friendship);
   if (!state) throw new Error('no run in progress');
   const ctx: Ctx = { s: structuredClone(state), ev: [] };
   try {

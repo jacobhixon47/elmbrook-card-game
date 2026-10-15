@@ -33,7 +33,8 @@ export function previewPotion(preview: BrewPreview, cards: readonly { card: stri
 export function potionLines(state: RunState, potion: Potion, pinned: number | null = null): string[] {
   const made = potion.ingredients.map((id) => codex.ingredients.get(id)?.name ?? id).join(', ');
   const lines = [`${familyName(potion.family)} · ${TIER_NAME[potion.tier]} (quality ${potion.quality})`, `Made with ${made}.`];
-  if (potion.heartDelta) lines.push(`${potion.heartDelta > 0 ? '+' : ''}${potion.heartDelta} heart on delivery.`);
+  if (potion.heartDelta > 0) lines.push(`+${potion.heartDelta} Friendship on delivery.`);
+  else if (potion.heartDelta < 0) lines.push('Earns no Friendship on delivery.');
   const order = state.phase === 'brewing' ? bestOrderFor(state, potion, pinned) : null;
   if (order) {
     const { pay, tip } = payout(potion, order);

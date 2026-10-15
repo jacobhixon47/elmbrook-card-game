@@ -34,7 +34,7 @@ describe('a Shelf potion tooltip', () => {
     const lines = potionLines(withShelf(brewing('pour'), p), p);
     expect(lines[0]).toMatch(/Crude \(quality 14\)/);
     expect(lines).toContain('Made with Elmroot, Thistledown.');
-    expect(lines).toContain('+1 heart on delivery.');
+    expect(lines).toContain('+1 Friendship on delivery.');
     expect(lines).toContain(`The Fence pays ${fencePrice(p)}g after the Night Shift.`);
   });
 

@@ -254,7 +254,7 @@ export const Tarot = z.object({
   /** Draw chance, relative to the others. */
   weight: z.number().positive(),
   effect: TarotEffect,
-  /** Gold, hearts or the like, when the effect takes an amount. */
+  /** Gold, Friendship or the like, when the effect takes an amount. */
   amount: z.number().int().optional(),
   /** It changes next week's days, so it isn't drawn in the last week. */
   nextWeek: z.boolean().default(false),

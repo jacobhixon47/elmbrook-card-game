@@ -4,7 +4,7 @@ import type { Essence, ModifierId, StallId } from '../codex/schema';
 import type { Errand, GiftSource, Order, Potion } from './state';
 
 export type Action =
-  | { type: 'startRun'; seed: string; witch: string; season?: Season; unlocks?: string[]; perks?: string[]; year?: number; boon?: string; cauldron?: string }
+  | { type: 'startRun'; seed: string; witch: string; season?: Season; unlocks?: string[]; perks?: string[]; year?: number; boon?: string; cauldron?: string; friendship?: Record<string, number> }
   // Afternoon: read the Order Board, then open the shop to draw a hand.
   | { type: 'openShop' }
   // Sunset: brewing.
@@ -59,7 +59,7 @@ export type Action =
   | { type: 'tradeNectar'; index: number }
   | { type: 'pressCider'; uid: number }
   | { type: 'placeBid'; amount: number }
-  | { type: 'tradeHearts'; regular: string; index: number }
+  | { type: 'hearthTrade'; index: number }
   | { type: 'burnYule'; uids: number[] }
   | { type: 'wearCrown'; index: number }
   | { type: 'leaveMarket' }
@@ -86,7 +86,7 @@ export type Action =
   | { type: 'debug'; op: 'setPatron'; week: number; patron: string }
   /** A potion of a known recipe straight onto the Shelf, at the lowest quality of its tier. */
   | { type: 'debug'; op: 'givePotion'; recipe: string; tier: Tier }
-  | { type: 'debug'; op: 'setHearts'; regular: string; hearts: number };
+  | { type: 'debug'; op: 'setFriendship'; regular: string; points: number };
 
 export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'relic' | 'tincture' | 'modifier' | 'familiar' | 'cauldron' | 'blessing' | 'witch';
 
@@ -125,7 +125,7 @@ export type GameEvent =
   | { type: 'potionPoured'; uid: number }
   | { type: 'orderFilled'; order: number; customer: string; potion: number; tier: Tier; pay: number; tip: number; bonus: boolean }
   | { type: 'orderDeclined'; order: number; customer: string }
-  | { type: 'heartsChanged'; customer: string; hearts: number; delta: number }
+  | { type: 'friendshipGained'; regular: string; points: number; total: number; level: number; levelUp: boolean }
   | { type: 'goldChanged'; gold: number; delta: number; reason: string }
   | { type: 'dayEnded'; week: number; day: number }
   | { type: 'rewardOffered'; cards: string[] }
