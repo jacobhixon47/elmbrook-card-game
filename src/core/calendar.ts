@@ -113,8 +113,13 @@ export function todaysWeather(s: Pick<RunState, 'calendar' | 'week' | 'day'>): W
   return weatherOn(s, s.week, s.day);
 }
 
+/** The Longest Night vigil is the eve of the finale: the last day before week 4's Night Shift (decided with Jacob, Oct 15). */
+export const VIGIL_DATE = { week: 4, day: DAYS_PER_WEEK } as const;
+
 export function festivalOn(s: Pick<RunState, 'season'>, week: number, day: number): Festival | null {
-  return week === FESTIVAL_WEEK && day === FESTIVAL_DAY ? SEASON_FESTIVAL[s.season] : null;
+  const f = SEASON_FESTIVAL[s.season];
+  const when = f === 'longest-night' ? VIGIL_DATE : { week: FESTIVAL_WEEK, day: FESTIVAL_DAY };
+  return week === when.week && day === when.day ? f : null;
 }
 
 /** Sky events and calendar events active today, by the ids content uses for `event`. */

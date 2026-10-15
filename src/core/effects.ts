@@ -21,6 +21,8 @@ export type ScoreCtx = {
   filledToday: number;
   /** Today's weather. */
   weather: Weather;
+  /** A Night Shift (Roast Chestnuts, Holly Sprig). */
+  night?: boolean;
   /** Relics held, for those that change card modifiers (the Daisy Chain). */
   relics: readonly string[];
 };
@@ -151,6 +153,14 @@ export const EFFECTS: Record<string, Effect> = {
     },
   },
   'aged-2': { aged: true, agedRate: 2 },
+  'harmony-2-on-night-shift': harmonyIf(2, (c) => c.night === true),
+  'potency-2-on-night-shift': {
+    onScore: (c) => {
+      if (!c.night) return undefined;
+      c.potency += 2;
+      return '+2 Potency (Night Shift)';
+    },
+  },
   'potency-3-if-rain': {
     onScore: (c) => {
       if (c.weather !== 'rain') return undefined;
@@ -202,6 +212,8 @@ export const EFFECTS: Record<string, Effect> = {
   'next-brew-harmony-1': nextBrew((p) => (p.harmony += 1)),
   'next-brew-potency-3': nextBrew((p) => (p.potency += 3)),
   'next-brew-harmony-3': nextBrew((p) => (p.harmony += 3)),
+  'next-brew-harmony-2': nextBrew((p) => (p.harmony += 2)),
+  'draw-1': { onPlay: (ctx) => draw(ctx, 1) },
   'flower-potency-2-today': { onPlay: (ctx) => void (ctx.s.flowerPotencyToday += 2) },
   'ember-potency-2-today': { onPlay: (ctx) => void (ctx.s.emberPotencyToday += 2) },
   'draw-3-night-4': { onPlay: (ctx) => draw(ctx, ctx.s.day === NIGHT_SHIFT_DAY ? 4 : 3) },

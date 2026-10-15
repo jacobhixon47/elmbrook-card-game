@@ -6,7 +6,7 @@ import { activeEvents, NIGHT_SHIFT_DAY, rollCalendar, todaysWeather, type Season
 import { changeGold, draw, drawToHandSize, gainCard, pick, Reject, reject, shuffled, takeFromHand, type Ctx } from './ctx';
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
-import { fairToday, openFair } from './fair';
+import { blessingTonight, chooseBlessing, fairToday, openFair, openVigil, vigilToday } from './fair';
 import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
 import { chooseEvent, eventDone, openEvent } from './dusk-events';
 import { commissionsOnBrew, commissionsOnDayEnd, commissionsOnDeliver, takeCommission } from './commissions';
@@ -22,7 +22,7 @@ import { seedRng } from './rng';
 import {
   BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, WINTER_FENCE, MAX_DISCARD, MAX_HEARTS, MIN_DECK, TIER_MIN,
   SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
-  MAX_CAULDRON_SLOTS, MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex,
+  MAX_CAULDRON_SLOTS, MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex, VIGIL,
 } from './rules';
 import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState, type RunStats, type StockItem } from './state';
 import { YEAR_RULES, yearDiscards, yearRule } from './year';
@@ -88,6 +88,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     flowerPotencyToday: 0,
     emberPotencyToday: 0,
     weekDeliveries: 0,
+    blessing: null,
     fortunes: [],
     fog: false,
     offer: null,
@@ -137,8 +138,8 @@ function startDay(ctx: Ctx): void {
   s.phase = 'morning';
   const rules = SEASON_RULES[s.season];
   const allowance = dayAllowance(s, { brews: BREWS_PER_DAY + (night ? 0 : rules.dayBrews), discards: Math.max(0, DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0) - yearDiscards(s)) }, night, weather);
-  s.brewsLeft = allowance.brews;
-  s.discardsLeft = allowance.discards;
+  s.brewsLeft = allowance.brews + (blessingTonight(s, 'hearthfire') ? VIGIL.hearthfireBrews : 0);
+  s.discardsLeft = allowance.discards + (blessingTonight(s, 'warm-hands') ? VIGIL.warmHandsDiscards : 0);
   ctx.ev.push({ type: 'dayStarted', week: s.week, day: s.day, nightShift: night });
   ctx.ev.push({ type: 'deckShuffled', size: s.drawPile.length });
   postOrders(ctx, night);
@@ -323,7 +324,7 @@ function endDay(ctx: Ctx): void {
   ctx.ev.push({ type: 'dayEnded', week: s.week, day: s.day });
   s.phase = 'dusk';
   // On festival day the fair is the day's reward.
-  if (fairToday(s)) afterReward(ctx);
+  if (fairToday(s) || vigilToday(s)) afterReward(ctx);
   else offerReward(ctx);
 }
 
@@ -367,6 +368,7 @@ function afterReward(ctx: Ctx): void {
   const fair = fairToday(ctx.s);
   if (isNightShift(ctx.s)) openNightMarket(ctx);
   else if (fair) openFair(ctx, fair);
+  else if (vigilToday(ctx.s)) openVigil(ctx);
   else offerErrands(ctx);
 }
 
@@ -438,6 +440,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       s.phase = 'brewing';
       ctx.ev.push({ type: 'shopOpened' });
       drawToHandSize(ctx);
+      if (blessingTonight(s, 'the-long-watch')) draw(ctx, VIGIL.longWatchDraw);
       return;
 
     case 'slot': {
@@ -558,6 +561,10 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       buyItem(ctx, (stallStock(s) ?? offerOf(ctx, 'market').stock)[action.index], action.index);
       return;
 
+    case 'chooseBlessing':
+      chooseBlessing(ctx, action.index);
+      return;
+
     case 'buyAtFair':
       buyItem(ctx, offerOf(ctx, 'fair').stalls[action.stall]?.stock[action.index], action.index);
       return;
@@ -608,7 +615,8 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
     case 'leaveErrand': {
       requirePhase(ctx, 'dusk');
       const kind = s.offer?.kind;
-      if (kind !== 'market' && kind !== 'forage' && kind !== 'creek' && kind !== 'guild' && kind !== 'hearth' && kind !== 'event' && kind !== 'fair') reject('choose an errand first');
+      if (kind !== 'market' && kind !== 'forage' && kind !== 'creek' && kind !== 'guild' && kind !== 'hearth' && kind !== 'event' && kind !== 'fair' && kind !== 'vigil') reject('choose an errand first');
+      if (s.offer?.kind === 'vigil' && !s.offer.chose) reject('choose a blessing at the fire first');
       if (s.offer?.kind === 'event' && !eventDone(s, s.offer)) reject('choose what to do first');
       s.day += 1;
       startDay(ctx);

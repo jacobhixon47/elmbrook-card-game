@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import * as raw from './content';
-import { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon, Fair } from './schema';
+import { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon, Fair, Blessing } from './schema';
 
 export * from './schema';
 
@@ -35,6 +35,7 @@ export const codex = {
   almanac: table(AlmanacEntry, raw.almanac, 'almanac entry'),
   boons: table(Boon, raw.boons, 'boon'),
   fairs: table(Fair, raw.fairs, 'fair'),
+  blessings: table(Blessing, raw.blessings, 'blessing'),
 };
 
 export type CardKind = 'ingredient' | 'tincture' | 'junk';
