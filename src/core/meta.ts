@@ -1,6 +1,6 @@
 import { codex } from '../codex';
 import { ALMANAC_FIRST_PAGE, almanacMet } from './almanac';
-import { bankFriendship } from './friendship';
+import { allStoryKeys, bankFriendship } from './friendship';
 import { seedRng, shuffle } from './rng';
 import { MAX_YEAR, reputationMult } from './year';
 import { SEASONS, WEATHERS, type Season } from './calendar';
@@ -10,7 +10,7 @@ import { RUN_VERSION, type RunState } from './state';
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 10;
+export const PROFILE_VERSION = 11;
 
 /** Sound settings: volume 0 to 1, and mute. */
 export type SoundSettings = { volume: number; muted: boolean };
@@ -57,6 +57,8 @@ export type Profile = {
   cauldronWins: string[];
   /** Friendship points with each regular over the whole save (GDD §4.1). They only ever rise. */
   friendship: Record<string, number>;
+  /** Regulars' story scenes already shown (`storyKey`), each once per save (GDD §13). */
+  storySeen: string[];
 };
 
 export function newProfile(): Profile {
@@ -84,6 +86,7 @@ export function newProfile(): Profile {
     witchWins: [],
     cauldronWins: [],
     friendship: {},
+    storySeen: [],
   };
 }
 
@@ -116,6 +119,8 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   },
   // 9 → 10: Friendship, from none. Hearts lasted only a run, so there is nothing to carry over.
   9: (p) => ({ ...p, friendship: {} }),
+  // 10 → 11: regulars' stories, none seen yet.
+  10: (p) => ({ ...p, storySeen: [] }),
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -171,6 +176,7 @@ function sanitize(p: Raw): Profile {
     cauldron: typeof p.cauldron === 'string' && codex.cauldrons.has(p.cauldron) ? p.cauldron : fresh.cauldron,
     witchWins: Array.isArray(p.witchWins) ? [...codex.witches.keys()].filter((id) => (p.witchWins as unknown[]).includes(id)) : [],
     cauldronWins: Array.isArray(p.cauldronWins) ? [...codex.cauldrons.keys()].filter((id) => (p.cauldronWins as unknown[]).includes(id)) : [],
+    storySeen: Array.isArray(p.storySeen) ? allStoryKeys().filter((k) => (p.storySeen as unknown[]).includes(k)) : [],
     friendship: Object.fromEntries([...codex.regulars.keys()].map((id) => [id, count((p.friendship as Raw | undefined)?.[id])] as const).filter(([, n]) => n > 0)),
   };
 }

@@ -32,7 +32,7 @@ const DECK_VIEW_LABEL = { deck: 'Whole deck', draw: 'Draw pile', discard: 'Disca
  */
 export function drawGrimoire(
   scene: Phaser.Scene, layer: Phaser.GameObjects.Container, s: RunState, tab: GrimoireTab, tip: Tooltip,
-  on: { tab(t: GrimoireTab): void; close(): void; page(n: number): void }, page = 0,
+  on: { tab(t: GrimoireTab): void; close(): void; page(n: number): void; story?(regular: string, level: number): void; storySeen?: readonly string[] }, page = 0,
 ) {
   const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => (layer.add(o), o);
   const text = (x: number, y: number, str: string, opts: Parameters<typeof pixelText>[4] = {}) => add(pixelText(scene, x, y, str, opts));
@@ -140,11 +140,19 @@ export function drawGrimoire(
   if (tab === 'townsfolk') {
     text(X + 12, top, 'Friendship with each regular. Every delivery adds a point and a bonus one more; it lasts the whole save, and Nameless runs earn none.', { size: 7, color: 'a', wrap: W - 24 });
     const rh = 38;
-    townsfolkRows(s).forEach((r, i) => {
+    townsfolkRows(s, on.storySeen).forEach((r, i) => {
       const y = top + 22 + i * rh;
       add(scene.add.rectangle(X + 12, y, W - 24, rh - 6, hex('K'), 0.6).setOrigin(0)).setStrokeStyle(1, hex('n'), 0.6);
       text(X + 20, y + 4, r.unmet ? '???' : r.name, { size: 9, color: r.level ? 'y' : 'W' });
       if (r.nightOnly) text(X + 20, y + 17, 'Night Shifts only', { size: 6, color: 'v' });
+      // Their stories so far: hover for the titles, click to read them again.
+      if (r.stories.length && on.story) {
+        const label = text(X + 20, y + (r.nightOnly ? 24 : 17), `${r.stories.length === 1 ? 'A story' : `${r.stories.length} stories`} to reread`, { size: 6, color: 'c' });
+        label.setInteractive({ useHandCursor: true });
+        label.on('pointerover', () => tip.text(`${r.name}'s stories`, [...r.stories.map((b) => `♥ ${b.level}: ${b.title}`), 'Click to read them again.'], label.x + label.width / 2, label.y, label.y + 8));
+        label.on('pointerout', () => tip.hide());
+        label.on('pointerdown', () => on.story!(r.id, r.stories[0]!.level));
+      }
       text(X + 150, y + 5, r.unmet ? 'You haven\'t met them yet.' : r.blurb ?? 'Not a friend yet. Fill their orders to get to know them.', { size: 7, color: r.blurb ? 'W' : 'a', wrap: 240 });
       if (r.nextOpens) text(X + 150, y + 17, `Next: ${r.nextOpens}`, { size: 6, color: 'l', wrap: 240 });
       // The meter: level, then a bar through it.

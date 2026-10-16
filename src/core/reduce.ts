@@ -25,7 +25,7 @@ import {
   SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
   MAX_CAULDRON_SLOTS, MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex, VIGIL,
 } from './rules';
-import { befriend, FRIENDSHIP } from './friendship';
+import { befriend, FRIENDSHIP, friendUnlocks } from './friendship';
 import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState, type RunStats, type StockItem } from './state';
 import { YEAR_RULES, yearDiscards, yearRule } from './year';
 
@@ -80,7 +80,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     pending: freshPending(),
     delivery: noBoost(),
     brewsToday: 0,
-    unlocks: [...unlocks],
+    unlocks: [...new Set([...unlocks, ...friendUnlocks(friendship)])],
     familiars: [],
     familiarSlots: FAMILIAR_SLOTS,
     discardCount: 0,

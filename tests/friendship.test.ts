@@ -1,11 +1,11 @@
 import { codex } from '../src/codex';
 import { describe, expect, it } from 'vitest';
 import {
-  bankFriendship, bestFriend, satisfies, friendLevel, FRIENDSHIP, levelStartAt, migrateProfile, migrateRun, newProfile, newStats, nextLevelAt, recordRun, reduce,
+  bankFriendship, bestFriend, FAMILIAR_SCORE, familiarPool, friendUnlocks, recipeAvailable, satisfies, storyDue, storyKey, friendLevel, FRIENDSHIP, levelStartAt, migrateProfile, migrateRun, newProfile, newStats, nextLevelAt, recordRun, reduce,
   type Order, type RunState,
 } from '../src/core';
 import { brewing, ofType, ok, slotAll, withHand } from './helpers';
-import { townsfolkRows, friendshipLine, levelUpNote } from '../src/view/townsfolk';
+import { townsfolkRows, friendshipLine, levelUpNote, storyScene } from '../src/view/townsfolk';
 
 const order = (o: Partial<Order> = {}): Order => ({
   id: 500, customer: 'old-tobin', request: { kind: 'family', family: 'healing' }, minTier: 'crude', pay: 10, bonus: null, status: 'open',
@@ -96,8 +96,9 @@ describe('the Townsfolk page', () => {
     expect(rows.find((r) => r.id === 'old-tobin')).toMatchObject({ level: 1, unmet: false, nextOpens: expect.stringMatching(/Longest Night/) as unknown as string });
     expect(rows.find((r) => r.id === 'sister-alder')).toMatchObject({ unmet: false, nextOpens: expect.stringMatching(/Townsfolk/) as unknown as string });
     expect(rows.find((r) => r.id === 'bea-thornwick')!.unmet).toBe(true);
-    // Level 3 opens nothing yet.
-    expect(townsfolkRows({ friendship: {}, friendshipBase: { 'old-tobin': 20 } }).find((r) => r.id === 'old-tobin')!.nextOpens).toBeNull();
+    // Level 3 is a story for Tobin, and nothing yet for Sister Alder.
+    expect(townsfolkRows({ friendship: {}, friendshipBase: { 'old-tobin': 20 } }).find((r) => r.id === 'old-tobin')!.nextOpens).toMatch(/A new story/);
+    expect(townsfolkRows({ friendship: {}, friendshipBase: { 'sister-alder': 20 } }).find((r) => r.id === 'sister-alder')!.nextOpens).toBeNull();
   });
 });
 
@@ -105,7 +106,9 @@ describe('level-up toasts', () => {
   it('names the regular, the level and what it opens', () => {
     const s = { ...brewing('friends'), friendshipBase: { 'old-tobin': 14 } };
     expect(levelUpNote(deliver(s).events)).toBe('Old Tobin: Friendship 2! A gift at the Longest Night, and the Hearth Trader knows their name.');
-    expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': 29 } }).events)).toBe('Old Tobin: Friendship 3!');
+    expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': 29 } }).events)).toBe('Old Tobin: Friendship 3! A new story, next time they come in.');
+    expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': 74 } }).events)).toBe("Old Tobin: Friendship 5! Their recipe, Miner's Balm, joins your pools.");
+    expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': 139 } }).events)).toBe('Old Tobin: Friendship 7! Their familiar, the Canary, joins your pools.');
     expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': 20 } }).events)).toBeNull();
   });
 });
@@ -146,5 +149,71 @@ describe('favourite orders (Friendship level 4)', () => {
     const s = { ...brewing('friends'), orders: [fav], shelf: [{ uid: 600, ...potion, quality: 14, ingredients: ['elmroot', herb], experiment: false, heartDelta: 0 }] };
     const r = ok(s, { type: 'deliver', order: 500, potion: 600 });
     expect(r.state.friendship['old-tobin']).toBe(1 + FRIENDSHIP.favouriteFriendship);
+  });
+});
+
+describe("regulars' recipes, familiars and stories (GDD §13)", () => {
+  const at = (level: number) => FRIENDSHIP.levels[level - 1]!;
+
+  it('a recipe joins the pools at level 5 and a familiar at 7, from the run start or the moment it is reached', () => {
+    expect(friendUnlocks({ 'old-tobin': at(5) - 1 })).toEqual([]);
+    expect(friendUnlocks({ 'old-tobin': at(5), 'bea-thornwick': at(7) })).toEqual(['rising-loaf-tonic', 'kitchen-mouse', 'miners-balm']);
+    expect(friendUnlocks({ 'sister-alder': at(10) })).toEqual([]);
+    const s = reduce(null, { type: 'startRun', seed: 'g', witch: 'hedge-witch', unlocks: ['fox'], friendship: { 'old-tobin': at(7) } }).state;
+    expect(s.unlocks).toEqual(['fox', 'miners-balm', 'canary']);
+    expect(recipeAvailable(codex.recipes.get('miners-balm')!, s)).toBe(true);
+    expect(familiarPool(s).map((f) => f.id)).toContain('canary');
+    expect(familiarPool({ ...s, unlocks: [] }).map((f) => f.id)).not.toContain('canary');
+    // Reached mid-run: their recipe joins this run's pools.
+    const r = deliver({ ...brewing('friends'), friendshipBase: { 'old-tobin': at(5) - 1 } });
+    expect(r.state.unlocks).toContain('miners-balm');
+    expect(deliver({ ...brewing('friends'), friendshipBase: { 'old-tobin': at(5) - 2 } }).state.unlocks).not.toContain('miners-balm');
+  });
+
+  it('the Kitchen Mouse likes Fruit and the Canary sings for a Mineral', () => {
+    const ing = (id: string) => codex.ingredients.get(id)!;
+    const fruit = [...codex.ingredients.values()].find((i) => i.tags.includes('fruit'))!;
+    const brew = (ids: string[]) => ({ ingredients: ids.map(ing), firstPotency: 0, shelf: 0, night: false, firstBrew: false });
+    expect(FAMILIAR_SCORE['kitchen-mouse']!(brew([fruit.id, fruit.id]))).toMatchObject({ potency: 6 });
+    expect(FAMILIAR_SCORE['kitchen-mouse']!(brew(['elmroot', 'creekwater']))).toBeNull();
+    expect(FAMILIAR_SCORE.canary!(brew(['river-clay', 'river-clay']))).toMatchObject({ harmony: 2 });
+    expect(FAMILIAR_SCORE.canary!(brew(['elmroot', 'creekwater']))).toBeNull();
+  });
+
+  it('each story is in level order, at 3, 6, 9 and 10, for Bea and Tobin', () => {
+    for (const id of ['bea-thornwick', 'old-tobin']) expect(codex.regulars.get(id)!.story.map((b) => b.level)).toEqual([3, 6, 9, 10]);
+    for (const r of codex.regulars.values()) {
+      const levels = r.story.map((b) => b.level);
+      expect(levels, r.id).toEqual([...levels].sort((a, b) => a - b));
+      if (r.recipe) expect(codex.recipes.get(r.recipe)?.pool, r.id).toBe('friend');
+      if (r.familiar) expect(codex.familiars.get(r.familiar)?.pool, r.id).toBe('friend');
+    }
+  });
+
+  it('a story is due when a regular with an order has reached it, lowest first, once each', () => {
+    const tobin = order({ customer: 'old-tobin' });
+    const s = { orders: [tobin], friendship: {}, friendshipBase: { 'old-tobin': at(6) } };
+    expect(storyDue(s, [])).toEqual({ regular: 'old-tobin', level: 3 });
+    expect(storyDue(s, [storyKey('old-tobin', 3)])).toEqual({ regular: 'old-tobin', level: 6 });
+    expect(storyDue(s, [storyKey('old-tobin', 3), storyKey('old-tobin', 6)])).toBeNull();
+    // No order from them today, or the order is already filled: not today.
+    expect(storyDue({ ...s, orders: [] }, [])).toBeNull();
+    expect(storyDue({ ...s, orders: [{ ...tobin, status: 'filled' }] }, [])).toBeNull();
+    expect(storyDue({ ...s, friendshipBase: { 'old-tobin': at(3) - 1 } }, [])).toBeNull();
+    // Bea comes first in codex order.
+    expect(storyDue({ orders: [tobin, order({ id: 501, customer: 'bea-thornwick' })], friendship: {}, friendshipBase: { 'old-tobin': at(3), 'bea-thornwick': at(3) } }, [])).toEqual({ regular: 'bea-thornwick', level: 3 });
+  });
+
+  it('the profile remembers stories seen; a version 10 profile has seen none, and junk is dropped', () => {
+    expect(newProfile().storySeen).toEqual([]);
+    expect(migrateProfile({ ...newProfile(), version: 10, storySeen: undefined }).storySeen).toEqual([]);
+    expect(migrateProfile({ ...newProfile(), storySeen: ['old-tobin:6', 'old-tobin:4', 'nobody:3', 7, 'bea-thornwick:3'] }).storySeen).toEqual(['bea-thornwick:3', 'old-tobin:6']);
+  });
+
+  it('the Townsfolk page lists the stories seen, to read again', () => {
+    const rows = townsfolkRows({ friendship: {}, friendshipBase: { 'old-tobin': at(6) } }, [storyKey('old-tobin', 3)]);
+    expect(rows.find((r) => r.id === 'old-tobin')!.stories).toEqual([{ level: 3, title: 'The Cough' }]);
+    expect(rows.find((r) => r.id === 'bea-thornwick')!.stories).toEqual([]);
+    expect(storyScene('old-tobin', 10).name).toBe('Up Into the Light');
   });
 });

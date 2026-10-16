@@ -157,6 +157,9 @@ export const recipes: In<typeof Recipe>[] = [
   { id: 'tidewall-salve', name: 'Tidewall Salve', pattern: ['stone', 'tide', 'tide'], baseHarmony: 5, family: 'protection', pool: 'unlock' },
   { id: 'menders-broth', name: "Mender's Broth", pattern: ['vital', 'tide', 'tide'], baseHarmony: 5, family: 'healing', pool: 'unlock' },
   { id: 'fetch-draught', name: 'Fetch Draught', pattern: ['tide', 'gale', 'umbra'], baseHarmony: 5, family: 'illusion', pool: 'unlock' },
+  // Regulars' recipes (GDD §13): each joins the pools at Friendship 5 with them.
+  { id: 'rising-loaf-tonic', name: 'Rising Loaf Tonic', pattern: ['ember', 'ember', 'gale'], baseHarmony: 5, family: 'vigor', pool: 'friend' },
+  { id: 'miners-balm', name: "Miner's Balm", pattern: ['stone', 'vital', 'vital'], baseHarmony: 5, family: 'healing', pool: 'friend' },
   { id: 'bonfire-cordial', name: 'Bonfire Cordial', pattern: ['ember', 'ember', 'vital'], baseHarmony: 5, family: 'warming', pool: 'unlock' },
   { id: 'mountain-salve', name: 'Mountain Salve', pattern: ['stone', 'stone', 'vital'], baseHarmony: 5, family: 'protection', pool: 'unlock' },
   { id: 'elmbrook-panacea', name: 'Elmbrook Panacea', pattern: ['vital', 'tide', 'stone'], baseHarmony: 6, family: 'healing', pool: 'unlock' },
@@ -174,8 +177,56 @@ export const recipes: In<typeof Recipe>[] = [
 ];
 
 export const regulars: In<typeof Regular>[] = [
-  { id: 'bea-thornwick', name: 'Bea Thornwick', blurb: 'The baker, frantic and kind.', prefers: ['warming', 'vigor'], weight: 3, bonusPool: ['no-umbra', 'three-ingredients'], favourite: { name: 'Ember Bun Tonic', family: 'warming', tag: 'fruit' } },
-  { id: 'old-tobin', name: 'Old Tobin', blurb: 'Retired miner with aches.', prefers: ['healing', 'protection'], weight: 3, bonusPool: ['no-umbra', 'three-ingredients'], favourite: { name: 'Pit Salve', family: 'protection', tag: 'mineral' } },
+  { id: 'bea-thornwick', name: 'Bea Thornwick', blurb: 'The baker, frantic and kind.', prefers: ['warming', 'vigor'], weight: 3, bonusPool: ['no-umbra', 'three-ingredients'], favourite: { name: 'Ember Bun Tonic', family: 'warming', tag: 'fruit' },
+    recipe: 'rising-loaf-tonic', familiar: 'kitchen-mouse',
+    story: [
+      { level: 3, title: 'Flour on Everything', lines: [
+        "Bea is at your door before the lamps are out, flour to the elbows. The bakery oven wouldn't catch this morning, and the whole street is waiting on its bread.",
+        'She warms her hands at your cauldron while you work, and talks the whole time. Her mother kept the oven going for thirty years without missing a morning. Bea has missed two this month.',
+        "\"Don't tell anyone,\" she says, and leaves you a bun that's only a little burnt.",
+      ] },
+      { level: 6, title: 'The Harvest Loaf', lines: [
+        'Bea wants to win the loaf contest at the fair. She has never won it. Her mother won it eleven times.',
+        "She brings you a slice to try and watches your face closely. It's good. She knows it's good. She wants to know why it isn't her mother's.",
+        'You suggest a pinch of something from your shelf. She laughs, then writes it down.',
+      ] },
+      { level: 9, title: 'The Recipe Book', lines: [
+        "Bea brings her mother's recipe book, wrapped in a tea towel. Halfway through, the bread stops and the handwriting changes: notes on elmroot, creekwater and what the moon does to yeast.",
+        "Her mother brewed, a little, on the side. Bea never knew. She asks whether you'd read the pages with her some evening.",
+        'You say yes. She leaves the book on your counter overnight, which is the most trusting thing anyone in Elmbrook has done for you.',
+      ] },
+      { level: 10, title: 'Open Ovens', lines: [
+        'The bakery opens late today, on purpose. Bea has hung a new board over the door, and the first bun on it is named after your shop.',
+        "She says the oven hasn't missed a morning since spring. She says it like it's nothing, then hugs you hard enough to leave flour on your back.",
+        "From now on there's a bun on your doorstep every morning, and Bea tips a little more than she should.",
+      ] },
+    ],
+  },
+  { id: 'old-tobin', name: 'Old Tobin', blurb: 'Retired miner with aches.', prefers: ['healing', 'protection'], weight: 3, bonusPool: ['no-umbra', 'three-ingredients'], favourite: { name: 'Pit Salve', family: 'protection', tag: 'mineral' },
+    recipe: 'miners-balm', familiar: 'canary',
+    story: [
+      { level: 3, title: 'The Cough', lines: [
+        "Tobin waits for the shop to empty before he asks. The aches are one thing, he says. It's the cough that keeps him up.",
+        'He was forty years in the Elm Seam. He tells you about it the way people talk about weather: the damp, the dark, the lamps going blue when the air was bad.',
+        "He pays exactly, counts it twice, and thanks you as if you'd done him a much bigger favour.",
+      ] },
+      { level: 6, title: 'The Lamp', lines: [
+        "Tobin brings an old brass lamp and sets it on your windowsill. He asks if you'd light it on Night Shifts.",
+        "It's for the men who didn't come up when the seam came down. He lit it every night for thirty years. His hands aren't steady enough for the wick now.",
+        "You light it that night. When you look up, he's standing across the lane, hat in his hands.",
+      ] },
+      { level: 9, title: 'Down the Seam', lines: [
+        'At dawn Tobin walks you to the old mine mouth, boarded up and grown over with bramble. He has one of your potions in his coat.',
+        "He pours it out on the stones by the entrance, slowly. \"Wynn always said I'd go soft,\" he says. Wynn was his partner on the seam.",
+        "On the way back he tells you every rock in the creek bed by name, and you realise he's been waiting years for someone who'd listen.",
+      ] },
+      { level: 10, title: 'Up Into the Light', lines: [
+        "Tobin has hung his pick over your door. He says it's no use to him now, and it'll keep the bad air out.",
+        "He's started taking the village children down to the creek on Saturdays to teach them the stones. The cough is better. He tells you this three times.",
+        "The lamp stays in your window. He doesn't come for it, and he tips a little more than he should.",
+      ] },
+    ],
+  },
   { id: 'pip-and-quill', name: 'Pip & Quill', blurb: 'Twin kids, up to mischief.', prefers: ['secrets', 'fortune'], weight: 2, payMult: 0.8, tipMult: 1.5, bonusChance: 0.4, bonusPool: ['wychwood-ingredient', 'three-ingredients'], favourite: { name: 'Midnight Feast Fizz', family: 'secrets', tag: 'flower' } },
   { id: 'sister-alder', name: 'Sister Alder', blurb: 'Keeper of the shrine.', prefers: ['calming', 'healing'], weight: 3, bonusPool: ['no-umbra', 'wychwood-ingredient'], favourite: { name: 'Shrine Tea', family: 'healing', tag: 'herb' } },
   { id: 'marlowe-vance', name: 'Marlowe Vance', blurb: 'Travelling merchant who haggles.', prefers: ['rare'], weight: 2, payMult: 1.25, bonusPool: ['three-ingredients'], favourite: { name: 'Gilded Ledger', family: 'fortune', tag: 'mineral' } },
@@ -224,6 +275,9 @@ export const familiars: In<typeof Familiar>[] = [
   { id: 'fox', name: 'Fox', rarity: 'uncommon', text: 'Tips for beating an order\'s minimum tier are doubled.', pool: 'unlock' },
   { id: 'frost-hare', name: 'Frost Hare', rarity: 'uncommon', text: '+1 Harmony per Frost ingredient in the brew.' },
   { id: 'ermine', name: 'Ermine', rarity: 'uncommon', text: 'Frost ingredients +3 Potency.', pool: 'event' },
+  // Regulars' familiars (GDD §13): each joins the pools at Friendship 7 with them.
+  { id: 'kitchen-mouse', name: 'Kitchen Mouse', rarity: 'uncommon', text: 'Fruit ingredients +3 Potency.', pool: 'friend' },
+  { id: 'canary', name: 'Canary', rarity: 'uncommon', text: '+2 Harmony on brews with a Mineral ingredient.', pool: 'friend' },
   { id: 'bumblebee', name: 'Bumblebee', rarity: 'uncommon', text: 'Flower ingredients +3 Potency.', pool: 'event' },
   { id: 'dragonfly', name: 'Dragonfly', rarity: 'uncommon', text: 'Gale ingredients +3 Potency.', pool: 'event' },
   { id: 'cricket', name: 'Cricket', rarity: 'uncommon', text: '+2 Harmony on Clear and Heatwave days.', pool: 'event' },

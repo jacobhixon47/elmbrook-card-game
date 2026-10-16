@@ -547,23 +547,23 @@ Junk: **Sludge** (does nothing), **Cobweb** (blows away after 3 days), **Bad Ome
 
 ### Friendship
 
-Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts; parts 1 (the meter, the replacements and the Townsfolk page) and 2 (favourite orders and level-up toasts) are in, and the rest follow.
+Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts; parts 1 (the meter, the replacements and the Townsfolk page), 2 (favourite orders and level-up toasts) and 3 (recipes, familiars and stories, starting with Bea and Old Tobin) are in, and part 4 follows.
 
 - **Points.** A delivery to a regular earns 1 point, 2 if the bonus condition is met, +1 from a Heartstone in the brew, +1 from the Silver Bell, +1 from a Charm Sachet. Declining or letting an order go costs nothing. Grave Moss, a Cursed card, the Raven Call and the Moth Swarm sour a delivery: it earns no Friendship at all. The Lovers (+2) and returning the Found Coin Purse (+1) give it to a random regular. Nameless: none this run. The Gardener counts like the others, only at night. Night customers and patrons have none.
-- **Across runs.** The points a run earns count at once on top of the profile's, and bank to the profile when the run ends, won or lost (`friendship` in the profile, version 10). They never go down and have no cap.
+- **Across runs.** The points a run earns count at once on top of the profile's, and bank to the profile when the run ends, won or lost (`friendship` in the profile, version 10; `storySeen`, the stories shown, version 11). They never go down and have no cap.
 - **Levels** (cumulative points): 5, 15, 30, 50, 75, 105, 140, 180, 230, 290, so level 10 takes about 10 Years of steady deliveries.
 
 | Level | Opens |
 |---|---|
 | 1 | Their Townsfolk entry. |
 | 2 | A gift at the Longest Night vigil; the Hearth Trader trades on their name. |
-| 3, 6, 9 | A story beat: a short scene screen, at most one a morning, never in the tutorial or the finale. *(Part 3.)* |
+| 3, 6, 9 | A story beat (below). |
 | 4 | Their favourite order (below) now and then, worth +1 more Friendship. |
-| 5 | Their recipe joins the pools. *(Part 3.)* |
+| 5 | Their recipe joins the pools (below). |
 | 6 | The Hearth Trader shows a third Rare card (your best friend's level counts). |
-| 7 | Their familiar joins the pools. *(Part 3.)* |
+| 7 | Their familiar joins the pools (below). |
 | 8 | A better vigil gift. *(Part 4.)* |
-| 10 | Their finale, and +1 gold tip on their orders. *(Part 4.)* |
+| 10 | Their story's finale; the +1 gold tip on their orders comes in part 4. |
 
 - **Favourite orders** (Jacob, Oct 15). From level 4, each order of theirs has a 1 in 4 chance to be their favourite, at most one on the board a day, and only when the deck can brew the family and holds an ingredient with the tag. It asks for a potion of a family with an ingredient of a tag (the marks on the cards), pays like any order of that family and tier, and earns +1 more Friendship. The ticket shows "♥ Protection + Mineral"; the dialogue names it. The Gardener's comes only on Night Shifts.
 
@@ -575,6 +575,15 @@ Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts
 | Sister Alder | Shrine Tea | Healing, with a Herb |
 | Marlowe Vance | Gilded Ledger | Fortune, with a Mineral |
 | The Gardener | Moonflower Cordial | Lunar, with a Flower |
+
+- **Recipes, familiars and stories** (Jacob approved Bea's and Tobin's, Oct 15; the other four follow two at a time, each approved first). A regular's recipe and familiar are in the `friend` pool: they join a run's pools from its start once the level is reached, and at once if it's reached mid-run. Each story beat is a scene screen shown one morning when that regular has an open order, at most one a morning, lowest level first, never in the tutorial or on the finale night, and once per save. The Townsfolk page lists the stories you've seen; click to read them again.
+
+| Regular | Recipe (level 5) | Familiar (level 7) | Stories (3, 6, 9; finale at 10) |
+|---|---|---|---|
+| Bea Thornwick | Rising Loaf Tonic: Ember + Ember + Gale, Vigor, Harmony 5 | Kitchen Mouse (Uncommon): Fruit ingredients +3 Potency | Flour on Everything; The Harvest Loaf; The Recipe Book; Open Ovens |
+| Old Tobin | Miner's Balm: Stone + Vital + Vital, Healing, Harmony 5 | Canary (Uncommon): +2 Harmony on brews with a Mineral ingredient | The Cough; The Lamp; Down the Seam; Up Into the Light |
+
+The story text lives with each regular in `src/codex/content.ts`.
 
 - **Level-up toasts.** Reaching a level toasts it with a chime, after the brew has played: the regular, the level, and what it opens. The Townsfolk page says what each regular's next level opens (where it opens something yet), and shows a regular you have never served as ???.
 - **More customers later** (Jacob, Oct 15): the six regulars stay six, since more would slow everyone's Friendship. Variety comes later from seasonal visitors, a guest or two per season with odd requests and no Friendship meter, planned after part 3; a seventh regular could be an unlock once the six have their stories.
@@ -597,7 +606,7 @@ Decided after the M2 playtest: the rules must explain themselves before M3 adds 
 - **Grimoire** (the G key, or the book button at the top of the screen), open at any time in a run. Its tabs (the Calendar's is in §3):
   - *Recipes:* every recipe you know with its essence pattern, base Harmony and family; undiscovered ones show as "???" with their ingredient count. This is Balatro's Run Info, not a rules change.
   - *Deck:* every card in the run, with what is in the draw pile now, or just the draw pile or the discard pile. Clicking the draw pile opens it here; clicking the Discarded count under it opens the discard pile.
-  - *Townsfolk:* each regular, your Friendship level with them and a bar to the next, with what this run has added. A regular's entry (who they are) shows from level 1; before that they're "not a friend yet", and one you've never served is ???. Each row says what the next level opens, where it opens something yet.
+  - *Townsfolk:* each regular, your Friendship level with them and a bar to the next, with what this run has added. A regular's entry (who they are) shows from level 1; before that they're "not a friend yet", and one you've never served is ???. Each row says what the next level opens, where it opens something yet, and lists their stories you have seen, to read again.
   - *How to play:* the run and the day, brewing, the scoring formula, quality tiers and the glossary.
 - **Where am I.** The top-left corner shows the Year and season above the week and day (Jacob's playtest, Oct 14). A ribbon at the top shows the week's days (four days, then the Night Shift) and the steps of the current one: Orders, Brew, Twilight, then Errand, or on a Night Shift, the Night Market. Every evening screen says in one line what it is for.
 - **Tutorial.** A player's first run is a guided week 1 on a fixed seed, and it can't be skipped. Tips appear as each part of the game first comes up; most wait for the player to do the thing (open an order, slot two cards, brew), the rest have a Got it button. Finishing week 1 marks the tutorial done in the player's profile (browser storage until M4 brings saves). Developers skip it with `?tutorial=0` or the dev overlay; fixtures and `pnpm e2e` never show it unless they ask for a tip. The Calendar, patrons and the Night Satchel have their own tips (weather, patron, gift); Night Market stalls add theirs in M3 part 4.

@@ -24,6 +24,9 @@ export const FRIENDSHIP = {
   favouriteLevel: 4,
   favouriteChance: 0.25,
   favouriteFriendship: 1,
+  /** A regular's recipe joins the pools at this level, and their familiar at the next (GDD §13). */
+  recipeLevel: 5,
+  familiarLevel: 7,
 } as const;
 
 export const MAX_FRIEND_LEVEL = FRIENDSHIP.levels.length;
@@ -61,6 +64,41 @@ export function bestFriend(s: Pick<RunState, 'friendship' | 'friendshipBase'>): 
   return best;
 }
 
+/** What a regular at this level adds to the pools: their recipe from level 5, their familiar from 7. */
+export function friendGifts(regular: string, level: number): string[] {
+  const r = codex.regulars.get(regular);
+  if (!r) return [];
+  return [
+    ...(r.recipe && level >= FRIENDSHIP.recipeLevel ? [r.recipe] : []),
+    ...(r.familiar && level >= FRIENDSHIP.familiarLevel ? [r.familiar] : []),
+  ];
+}
+
+/** Everything every regular's Friendship adds to the pools: `newRun` adds it to the run's unlocks. */
+export function friendUnlocks(friendship: Readonly<Record<string, number>>): string[] {
+  return [...codex.regulars.keys()].flatMap((id) => friendGifts(id, friendLevel(friendship[id] ?? 0)));
+}
+
+/** A regular's story scene, as the profile remembers it was shown: "old-tobin:3". */
+export const storyKey = (regular: string, level: number) => `${regular}:${level}`;
+
+/** Every story scene's key, in codex order. */
+export const allStoryKeys = () => [...codex.regulars.values()].flatMap((r) => r.story.map((b) => storyKey(r.id, b.level)));
+
+/**
+ * The story scene due this morning (GDD §13), if any: the first regular in codex order with an open
+ * order today, and the lowest story level they've reached that hasn't been shown yet.
+ */
+export function storyDue(s: Pick<RunState, 'orders' | 'friendship' | 'friendshipBase'>, seen: readonly string[]): { regular: string; level: number } | null {
+  for (const r of codex.regulars.values()) {
+    if (!s.orders.some((o) => o.customer === r.id && o.status === 'open')) continue;
+    const level = friendLevelOf(s, r.id);
+    const beat = r.story.find((b) => b.level <= level && !seen.includes(storyKey(r.id, b.level)));
+    if (beat) return { regular: r.id, level: beat.level };
+  }
+  return null;
+}
+
 /** Friendship earned with a regular. Nameless: no one remembers you, so nothing is earned. Others aren't regulars and have none. */
 export function befriend(ctx: Ctx, regular: string, points: number): void {
   const s = ctx.s;
@@ -70,6 +108,8 @@ export function befriend(ctx: Ctx, regular: string, points: number): void {
   const total = before + points;
   const level = friendLevel(total);
   ctx.ev.push({ type: 'friendshipGained', regular, points, total, level, levelUp: level > friendLevel(before) });
+  // A recipe or familiar reached mid-run joins this run's pools at once.
+  for (const id of friendGifts(regular, level)) if (!s.unlocks.includes(id)) s.unlocks.push(id);
 }
 
 /** Friendship banked to the profile after a run: the profile's points plus the run's. */

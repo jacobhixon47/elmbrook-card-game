@@ -18,7 +18,8 @@ export const Season = z.enum(['spring', 'summer', 'autumn', 'winter']);
  * Where content comes from: `base` is offered from a player's first run, `unlock` only once the
  * run lists it in `unlocks` (meta-progression, M4), `event` only from the named calendar event.
  */
-export const Pool = z.enum(['base', 'unlock', 'event']);
+/** Where content comes from: always there, the Almanac, a Calendar event, or a regular's Friendship (GDD §13). */
+export const Pool = z.enum(['base', 'unlock', 'event', 'friend']);
 export type Pool = z.infer<typeof Pool>;
 
 export const Ingredient = z.object({
@@ -95,6 +96,11 @@ export const Regular = z.object({
   bonusPool: z.array(z.enum(['no-umbra', 'three-ingredients', 'wychwood-ingredient'])).min(1).default(['no-umbra', 'three-ingredients', 'wychwood-ingredient']),
   /** Their favourite order (GDD §13, Friendship level 4): a potion of this family with an ingredient of this tag. */
   favourite: z.object({ name: z.string().min(1), family: PotionFamily, tag: z.string().min(1) }).optional(),
+  /** Their recipe (Friendship 5) and familiar (Friendship 7), both in the `friend` pool (GDD §13). */
+  recipe: Id.optional(),
+  familiar: Id.optional(),
+  /** Their story: a scene screen at each of these levels (3, 6 and 9, and the finale at 10). */
+  story: z.array(z.object({ level: z.number().int().min(1).max(10), title: z.string().min(1), lines: z.array(z.string().min(1)).min(1) })).default([]),
 });
 export type Regular = z.infer<typeof Regular>;
 
