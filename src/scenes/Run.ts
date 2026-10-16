@@ -20,7 +20,7 @@ import { createCard } from '../view/card';
 import { friendshipLine, levelUpNote } from '../view/townsfolk';
 import {
   BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, favouriteNote, orderNeeds, orderTerms, recipeName,
-  requestText, TIER_NAME, newRecipeHint, unknownRecipe, familyName, familyRecipesNote, patronTwistText,
+  requestText, TIER_NAME, newRecipeHint, unknownRecipe, familiesName, familyRecipesNote, patronTwistText,
   cap, listOf,
 } from '../view/describe';
 import { DECK_VIEWS, drawGrimoire, type GrimoireTab } from '../view/grimoire';
@@ -737,7 +737,7 @@ export class Run extends Phaser.Scene {
       // With a choice, the pips show which essences this pick uses, known or not.
       if (preview.known || choice) pattern.forEach((e, i) => e !== 'any' && this.add2(this.add.image(x + 3 + i * 9, SIDE.y + 22, `pip/${e}`)));
       // The family, so a Lunar-essence potion isn't mistaken for the Lunar family (playtest, Oct 16).
-      if (preview.known) this.text(x + (pattern.length * 9) + 2, SIDE.y + 18, familyName(preview.family), { size: 7, color: 'a' });
+      if (preview.known) this.text(x + (pattern.length * 9) + 2, SIDE.y + 18, familiesName(preview.recipe), { size: 7, color: 'a' });
       if (choice) {
         // These cards fit more than one recipe: click (or R) for the next.
         const at = preview.options.indexOf(preview.recipe);

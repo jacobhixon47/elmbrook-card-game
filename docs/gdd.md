@@ -275,12 +275,12 @@ Moonlit, Blessed and Cursed score at step 3 (§6.3), after the tinctures and bef
 From 1.0, cleaned up for mouse and keyboard:
 - The cauldron sits centre-screen with **2 slots** (a 3rd unlocks via the cauldron upgrade or certain cards; some recipes need 3).
 - Click (or drag) a hand card to drop it in; click a slotted card to return it. Keyboard: number keys select, Enter brews, D starts and confirms a Discard, Esc cancels.
-- A brew goes to the best-paying open order it fills (or the one you chose with Fulfill), otherwise onto the Shelf. The preview says which before you brew. An order that asks for a family lists the recipes of it you know, so the Lunar family isn't read as the Lunar essence (playtest, Oct 16).
-- As soon as the slots match something, a **preview** shows: the recipe name and family (if known), its essence pattern, and the projected score.
+- A brew goes to the best-paying open order it fills (or the one you chose with Fulfill), otherwise onto the Shelf. The preview says which before you brew. An order that asks for a family lists the recipes of it you know (playtest, Oct 16).
+- As soon as the slots match something, a **preview** shows: the recipe name and families (if known), its essence pattern, and the projected score.
 
 ### 6.2 Recipes
 
-A recipe is an essence pattern with a base Harmony and a potion family.
+A recipe is an essence pattern with a base Harmony and a potion family. A recipe whose pattern uses the Lunar essence is also in the Lunar family, on top of its own (Jacob, after a playtest, Oct 16): Moonlit Veil is Illusion + Lunar, and fills both Illusion and Lunar orders. Lanternfire Tonic, Corona Draught, Moonlit Veil, Silver Whisper and Umbral Crown are the five with two families. Only orders read the second family; the May Queen's chain, the Fence and family-based cards and commissions still read the recipe's own. *Later idea (Jacob):* orders or quests that need both families, like "a Lunar Illusion potion".
 
 - **Known recipes** are in your **Grimoire**. Each witch starts knowing 4.
 - **Unknown but valid** combinations brew as an **Experiment**: the preview shows "???", and brewing it discovers the recipe (added to the Grimoire for this run, and to the permanent Codex) at -1 quality tier for that first brew. This folds 1.0's separate "recipe experimentation" screen into play.

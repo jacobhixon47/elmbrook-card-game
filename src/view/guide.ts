@@ -4,7 +4,7 @@ import {
   BREWS_PER_DAY, DAYS_PER_WEEK, DISCARDS_PER_DAY, FINALE_ORDERS, NIGHT_SHIFT_DAY, RENT, WEEKS, type RunState,
 } from '../core';
 import { recipeAvailable } from '../core/brew';
-import { familyName } from './describe';
+import { familiesName } from './describe';
 import { GLOSSARY, tierLadder } from './inspect';
 
 // What the Grimoire and the stage ribbon show (GDD §15.1). Pure, so tests can check it.
@@ -53,7 +53,7 @@ export function recipeRows(s: Pick<RunState, 'knownRecipes' | 'unlocks' | 'cauld
       pattern: known ? [...r.pattern] : null,
       slots: r.pattern.length,
       harmony: known ? r.baseHarmony : null,
-      family: known ? familyName(r.family) : null,
+      family: known ? familiesName(r.id) : null,
       note,
     };
   }).sort((a, b) => Number(b.known) - Number(a.known) || a.slots - b.slots);
