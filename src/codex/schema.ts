@@ -129,7 +129,7 @@ export type NightCustomer = z.infer<typeof NightCustomer>;
 
 /** Rule twists a patron puts on their Night Shift (GDD §10). Each is handled by id in the core. */
 export const TWISTS = [
-  'hand-hidden', 'origin-chain', 'orders-double', 'ember-zero', 'orders-expire-2', 'family-chain', 'hand-refresh',
+  'wicks-burn', 'origin-chain', 'orders-double', 'ember-zero', 'orders-expire-2', 'family-chain', 'hand-refresh',
   'brew-costs-gold-2', 'non-frost-minus-2', 'pale-courier', 'grimoire-hidden',
 ] as const;
 export const Twist = z.enum(TWISTS);

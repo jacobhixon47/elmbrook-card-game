@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  allCards, brewBlocked, CLOCKLESS_BREWS, FINALE_ORDERS, finaleMet, fits, isSatchelCard, lunarPool, NIGHT_SHIFT_DAY, omenPool, patronOf, previewBrew, reduce,
+  allCards, brewBlocked, CLOCKLESS_BREWS, FINALE_ORDERS, finaleMet, fits, LAMPLIGHTER_HARMONY, isSatchelCard, lunarPool, NIGHT_SHIFT_DAY, omenPool, patronOf, previewBrew, reduce,
   rollCalendar, rollPatrons, SEASONS, tierIndex, tierStep, TITHE_GOLD, twistNow, WEEKS,
   type Calendar, type Order, type Potion, type RunState, type Season,
 } from '../src/core';
@@ -87,6 +87,30 @@ describe('patrons', () => {
     expect(finaleMet({ ...s, orders: s.orders.map((o, i) => ({ ...o, status: i === 0 ? 'filled' as const : o.status })) })).toBe(FINALE_ORDERS <= 1);
     expect(finaleMet({ ...s, orders: s.orders.map((o) => ({ ...o, status: 'filled' as const })) })).toBe(true);
     expect(finaleMet({ ...s, week: 3, patrons: ['lamplighter', 'pale-courier', 'sir-bramble', 'moonless-patron'] })).toBe(true);
+  });
+
+  it('the Lamplighter: each brew tonight has 2 less Harmony than the one before, never below 1', () => {
+    const harmonyOn = (brews: number) => {
+      const s = { ...night('lamplighter'), brewsToday: brews };
+      const [h, uids] = withHand(s, ['elmroot', 'creekwater']);
+      const p = previewBrew(slotAll(h, uids), slotAll(h, uids).cauldron, []);
+      if (p.kind !== 'potion') throw new Error('expected a potion');
+      return p;
+    };
+    const first = harmonyOn(0);
+    expect(first.steps.some((x) => x.source === 'patron')).toBe(false);
+    const second = harmonyOn(1);
+    expect(second.harmony).toBe(Math.max(1, first.harmony - LAMPLIGHTER_HARMONY));
+    expect(harmonyOn(2).steps.find((x) => x.source === 'patron')?.note).toBe(`-${2 * LAMPLIGHTER_HARMONY} Harmony (the wicks burn down)`);
+    expect(harmonyOn(20).harmony).toBe(1);
+    // Brewing counts: the next preview is one step lower.
+    const [h, uids] = withHand(night('lamplighter'), ['elmroot', 'creekwater', 'elmroot', 'creekwater']);
+    const after = ok(slotAll(h, uids.slice(0, 2)), { type: 'brew' }).state;
+    expect(after.brewsToday).toBe(1);
+    // Other nights don't burn down.
+    const [o, ou] = withHand({ ...night('sir-bramble'), brewsToday: 3 }, ['elmroot', 'creekwater']);
+    const other = previewBrew(slotAll(o, ou), slotAll(o, ou).cauldron, []);
+    expect(other.kind === 'potion' && other.harmony).toBe(first.harmony);
   });
 
   it('Sir Bramble zeroes Ember and the Frost Warden chills everything else', () => {

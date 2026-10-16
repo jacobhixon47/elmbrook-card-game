@@ -170,6 +170,8 @@ export const PALE_COURIER_PAY = 2;
 export const CLOCKLESS_BREWS = 2;
 export const TITHE_GOLD = 2;
 export const FROST_WARDEN_POTENCY = -2;
+/** The Lamplighter: each brew on their night has this much less Harmony than the one before (Jacob, Oct 16). */
+export const LAMPLIGHTER_HARMONY = 2;
 /** A relic reward when you already hold every relic pays this much gold instead, by tier. */
 export const RELIC_FALLBACK_GOLD = [0, 8, 12, 16] as const;
 

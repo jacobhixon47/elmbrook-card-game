@@ -1,1 +1,1 @@
-{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{ "patron": [1, "lamplighter"] }, { "jump": [1, 5] }, "openShop"], "ui": { "inspect": 2 } }
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{ "patron": [1, "lamplighter"] }, { "jump": [1, 5] }, "openShop", { "give": "elmroot" }, { "give": "creekwater" }, { "slot": 8 }, { "slot": 8 }, "brew", { "slot": 0 }, { "slot": 3 }] }

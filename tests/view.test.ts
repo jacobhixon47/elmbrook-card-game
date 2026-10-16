@@ -86,7 +86,7 @@ describe('the Codex', () => {
     expect(rows.find((r) => r.id === 'elmroot')).toMatchObject({ name: '???', met: false, text: '' });
     for (const tab of CODEX_TABS) for (const r of codexEntries(tab.id, [...CODEX_TABLES[tab.id].keys()])) expect(r.name).not.toBe('???');
     expect(codexEntries('townsfolk', ['lamplighter'])[0]).toBeDefined();
-    expect(codexEntries('townsfolk', ['lamplighter']).find((r) => r.id === 'lamplighter')!.text).toMatch(/face-down/);
+    expect(codexEntries('townsfolk', ['lamplighter']).find((r) => r.id === 'lamplighter')!.text).toMatch(/wicks burn down/);
   });
 });
 

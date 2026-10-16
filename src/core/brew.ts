@@ -7,7 +7,7 @@ import { FAMILIAR_SCORE } from './familiars';
 import { blessingTonight } from './fair';
 import { cardPotency, isAged, modifierSteps } from './modifiers';
 import { hasRelic, relicSteps } from './relics';
-import { FROST_WARDEN_POTENCY, HEATWAVE_EMBER_POTENCY, RAIN_POTENCY, tierOf, tierStep, VIGIL, type Tier } from './rules';
+import { FROST_WARDEN_POTENCY, HEATWAVE_EMBER_POTENCY, LAMPLIGHTER_HARMONY, RAIN_POTENCY, tierOf, tierStep, VIGIL, type Tier } from './rules';
 import { cauldronOf, quirkReady, WITCH_RULES } from './cauldrons';
 import { twistNow } from './night';
 import type { CardInstance, RunState } from './state';
@@ -221,6 +221,13 @@ export function previewBrew(state: BrewState, cards: readonly CardInstance[], ha
       c.potency = Math.max(0, c.potency - cut);
       steps.push({ type: 'scoreStep', source: 'patron', id: twist, potency: c.potency, harmony: c.harmony, note: `-${cut} Potency` });
     }
+  }
+
+  // The Lamplighter: the wicks burn down, so each brew tonight has less Harmony than the one before.
+  if (twist === 'wicks-burn' && state.brewsToday > 0) {
+    const cut = LAMPLIGHTER_HARMONY * state.brewsToday;
+    c.harmony = Math.max(1, c.harmony - cut);
+    steps.push({ type: 'scoreStep', source: 'patron', id: twist, potency: c.potency, harmony: c.harmony, note: `-${cut} Harmony (the wicks burn down)` });
   }
 
   // Junk in hand that drags every brew down (Bad Omen).

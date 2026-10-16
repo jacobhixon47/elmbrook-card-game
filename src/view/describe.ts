@@ -156,7 +156,7 @@ export function orderNeeds(order: Pick<Order, 'needsUmbra' | 'expiresIn' | 'stat
 }
 
 const PATRON_LINE: Record<string, string> = {
-  lamplighter: 'Mind the dark. Brew what you cannot see.',
+  lamplighter: 'The wicks are low tonight. Make your best one first.',
   'mother-hollow': 'A little from every corner of the valley, dear.',
   'twin-owls': 'Two, please. We always share.',
   'sir-bramble': 'Nothing hot in my cup, if you please.',
