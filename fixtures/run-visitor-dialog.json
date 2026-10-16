@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "season": "spring", "today": "clear", "steps": [{ "jump": [2, 2] }, "openShop", { "visitor": "wren-hollis" }], "ui": { "dialog": -1 } }

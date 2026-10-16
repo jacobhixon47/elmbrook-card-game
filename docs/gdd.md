@@ -109,6 +109,23 @@ A separate cast who only come after dark. Stranger and more formal than the day 
 
 The Night Shift patron (§10) is the featured guest; night customers fill the other orders that night, along with the regulars who only come at night (The Gardener). Gold is the order's normal night pay times the multiplier. Picks wait until after the shift's twilight reward, before the Night Market. Granny Bogwort only insists on Umbra when your deck can brew it into her potion.
 
+### 4.1.1 Seasonal visitors
+
+Approved by Jacob (Oct 16). Daytime guests of one season, two per season, with no Friendship meter. From week 2, about 1 day in 4 of their season brings one, in place of the last regular on the board, at most one a day. They come only when the deck can brew a family they like (with their tag, if they want one). The roll has its own stream from the seed, so a visitor doesn't change the rest of the day's orders. Their gold is the order's normal day pay times the multiplier; what they give beyond it comes after closing, after the twilight reward, like a night customer's pick. Each has a Codex entry under Townsfolk once met.
+
+| ID | Name | Season | Wants | Gold | Pays in |
+|---|---|---|---|---|---|
+| wren-hollis | Wren Hollis, a botanist | Spring | Calming, Healing or Fortune, with a Flower ingredient | ×0.5 | Pick 1 of 2 Flower ingredients |
+| may-herald | The May Herald | Spring, week 2 up to the fair (days 1 to 3) | Fortune or Illusion | ×2 | Gold |
+| captain-brine | Captain Brine, on shore leave | Summer | Vigor or Protection, with a Water ingredient | ×0.5 | Pick 1 of 2 Tide ingredients |
+| firefly-keeper | The Firefly Keeper | Summer, clear days | Calming or Lunar | ×0.5 | Your next buy at this week's Night Market is half price (rounded up) |
+| rook | Rook, a scarecrow | Autumn | Protection | ×0.5 | Takes one card of your choice out of your deck (down to 8 cards), or none |
+| tithe-collector | The Tithe Collector | Autumn | Two Healing or Warming potions in one order | ×2 | Gold |
+| snowbound-traveller | A Snowbound Traveller | Winter, snow days | Warming | ×0.5 | Pick 1 of 2 Tinctures (not Omens) |
+| toymaker | The Toymaker | Winter | Illusion or Secrets | ×0.5 | +2 Potency on an ingredient of your choice for the run |
+
+Changes from the approved draft, made while building: visitors start in week 2, so the tutorial's week never has one; the May Herald comes on week 2 before the fair rather than weeks 1 and 2; the Snowbound Traveller comes on snow days, since Snowed In is a Night Shift; and Wren asks for a family she likes with a Flower in it, since orders always name a recipe or family.
+
 ### 4.2 Events
 
 Four layers, all seeded into the Calendar at run start so they can be planned around.
@@ -602,7 +619,7 @@ The story text lives with each regular in `src/codex/content.ts`.
 | The Gardener | Night Lily (Lunar + Vital, Potency 7, Lunar, Flower): +2 Potency on Night Shifts |
 
 - **Level-up toasts.** Reaching a level toasts it with a chime, after the brew has played: the regular, the level, and what it opens. The Townsfolk page says what each regular's next level opens (where it opens something yet), and shows a regular you have never served as ???.
-- **More customers later** (Jacob, Oct 15): the six regulars stay six, since more would slow everyone's Friendship. Variety comes later from seasonal visitors, a guest or two per season with odd requests and no Friendship meter, planned after part 3; a seventh regular could be an unlock once the six have their stories.
+- **More customers later** (Jacob, Oct 15): the six regulars stay six, since more would slow everyone's Friendship. Variety comes from the seasonal visitors (§4.1.1), two per season with odd requests and no Friendship meter; a seventh regular could be an unlock once the six have their stories.
 
 ### Starting deck (Hedge Witch)
 

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, blessingTonight, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, priceAt, blessingTonight, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
   HARVEST_AUCTION, FRIENDSHIP, friendLevelOf, friendshipOf, hearthOffers, isRegular, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
@@ -165,7 +165,7 @@ export class Run extends Phaser.Scene {
     this.save();
     const state = store.getState()!;
     if (fixture?.ui?.dialog !== undefined) {
-      const order = state.orders[fixture.ui.dialog];
+      const order = state.orders.at(fixture.ui.dialog);
       if (order) this.mode = { kind: 'dialog', order: order.id };
     }
     if (fixture?.ui?.discard) this.mode = { kind: 'select', purpose: 'discard', picked: fixture.ui.discard.map((i) => state.hand[i]!.uid) };
@@ -720,7 +720,7 @@ export class Run extends Phaser.Scene {
         this.text(ORDERS.x + 5, y + 14, 'Hidden in the fog', { size: 8, color: 'h' });
         this.text(ORDERS.x + 5, y + 26, 'Brew or Discard to see it', { size: 7, color: 'h' });
       } else {
-        this.text(ORDERS.x + 5, y + 14, `${requestText(o)}${unknownRecipe(s, o) ? ' (new)' : ''}${o.needsUmbra ? ' + Umbra' : ''}`, { size: 8, color: 'B' });
+        this.text(ORDERS.x + 5, y + 14, `${requestText(o)}${unknownRecipe(s, o) ? ' (new)' : ''}${o.needsUmbra ? ' + Umbra' : ''}${o.needsTag ? ` + ${cap(o.needsTag)}` : ''}`, { size: 8, color: 'B' });
         this.text(ORDERS.x + 5, y + 26, orderTerms(o), { size: 7, color: 'r' });
       }
       if (o.bonus && !s.fog) this.text(ORDERS.x + ORDERS.w - 5, y + 26, '★', { size: 8, color: 'o' }).setOrigin(1, 0);
@@ -1277,8 +1277,18 @@ export class Run extends Phaser.Scene {
         return this.drawGuild(s, offer, title);
       case 'event':
         return this.drawEvent(s, offer, title);
+      case 'favour': {
+        const v = codex.visitors.get(offer.visitor)!;
+        const burn = offer.job === 'burn';
+        title(burn ? `${v.name} carries one off` : `${v.name} tunes one up`, burn
+          ? 'Choose a card for him to take out of your deck for good, or keep them all.'
+          : `Choose an ingredient: +${MODIFIER_RULES.temperPotency} Potency for the rest of the run.`);
+        this.deckGrid(burn ? blackMarketDeck(s) : allCards(s).filter((c) => codex.ingredients.has(c.card)), (inst) => this.dispatch({ type: 'doFavour', uid: inst.uid }));
+        this.add2(button(this, 320, 262, 'No thanks', () => this.dispatch({ type: 'passGift' }), { w: 72 }));
+        return;
+      }
       case 'gift': {
-        const [head, sub] = GIFT_TITLE[offer.source];
+        const [head, sub] = offer.from ? visitorGiftTitle(offer.from) : GIFT_TITLE[offer.source];
         const where = offer.into === 'satchel' ? 'It goes in your Night Satchel, which joins your deck only on Night Shifts.'
           : offer.into === 'familiar' ? (s.familiars.length < s.familiarSlots ? 'It takes a familiar slot.' : 'Every familiar slot is taken: sell one first (bottom right).')
             : 'It goes in your deck.';
@@ -1514,7 +1524,10 @@ export class Run extends Phaser.Scene {
         if (item.sold) tile.setAlpha(0.4);
         else tile.setInteractive({ useHandCursor: true }).on('pointerdown', buy);
       }
-      this.text(x, y - 54, item.sold ? 'sold' : `${item.price}g`, { size: 8, color: item.sold ? 'h' : item.price > s.gold ? 'R' : 'y', stroke: 'k' }).setOrigin(0.5, 0);
+      // The Firefly Keeper's half-price buy shows on every price at the Night Market.
+      const price = priceAt(s, item);
+      const label = item.sold ? 'sold' : price < item.price ? `${price}g, half` : `${price}g`;
+      this.text(x, y - 54, label, { size: 8, color: item.sold ? 'h' : price > s.gold ? 'R' : price < item.price ? 'L' : 'y', stroke: 'k' }).setOrigin(0.5, 0);
       after?.(item, i, x);
     });
   }
@@ -1548,7 +1561,8 @@ export class Run extends Phaser.Scene {
     };
     const backButton = () => this.add2(button(this, 320, 262, 'Back to the street', back, { w: 110 }));
     const info = stall ? codex.stalls.get(stall.id)! : null;
-    const head = (sub: string) => title(info!.name, `${sub} You have ${s.gold}g.`);
+    const half = s.halfPrice > 0 ? ' The Firefly Keeper put in a word: your next buy is half price.' : '';
+    const head = (sub: string) => title(info!.name, `${sub}${half} You have ${s.gold}g.`);
 
     if (!stall) {
       const buried = snowedIn(s, s.week);
@@ -1556,7 +1570,7 @@ export class Run extends Phaser.Scene {
         this.seasonScene('Snowed In', SNOWED_IN_SCENE, () => this.scenesSeen.add(`snowed-in-${s.week}`));
         return;
       }
-      title(buried ? 'The Night Market, Snowed In' : 'The Night Market', `${buried ? SNOWED_IN_LINE : MOON_LINE[moonOf(s.week)]} Visit any stall, then the Guild collects this week's rent: ${due}g. You have ${s.gold}g.`);
+      title(buried ? 'The Night Market, Snowed In' : 'The Night Market', `${buried ? SNOWED_IN_LINE : MOON_LINE[moonOf(s.week)]} Visit any stall, then the Guild collects this week's rent: ${due}g. You have ${s.gold}g.${s.halfPrice > 0 ? ' The Firefly Keeper put in a word: your next buy here is half price.' : ''}`);
       const n = offer.stalls.length;
       const w = Math.min(84, Math.floor(600 / n) - 6);
       offer.stalls.forEach((st, i) => {
@@ -2106,7 +2120,16 @@ const GIFT_TITLE: Record<Gift['source'], [string, string]> = {
   'bog-hag': ['Granny Bogwort pays', 'Something rare from the fen. Take one.'],
   patron: ['The patron\'s reward', 'Take one, with their thanks.'],
   commission: ['The Guild pays', 'A commission done. Take one, with the Guild\'s seal on it.'],
+  visitor: ['A visitor pays', 'Take one, with their thanks.'],
 };
+
+/** A visitor's card pick: who pays, and with what. */
+function visitorGiftTitle(id: string): [string, string] {
+  const v = codex.visitors.get(id);
+  const pays = v?.paysIn.kind === 'card-pick' ? v.paysIn : null;
+  const what = pays?.tincture ? 'one Tincture' : pays?.tag ? `one ${cap(pays.tag)} ingredient` : pays?.essence ? `one ${cap(pays.essence)} ingredient` : 'one';
+  return [`${v?.name ?? 'A visitor'} pays`, `Take ${what}, with their thanks.`];
+}
 
 /** First-time players get the tutorial; ?tutorial=0, a chosen ?seed= or a finished one skip it, ?tutorial=1 forces it. */
 function wantsTutorial(): boolean {

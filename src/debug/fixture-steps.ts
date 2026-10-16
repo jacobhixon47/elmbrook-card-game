@@ -46,7 +46,10 @@ export type FixtureStep =
   /** Buy the item at [stall, index] at the seasonal fair. */
   | { fairBuy: [number, number] }
   /** Choose the Solstice Fire blessing at this index. */
-  | { bless: number };
+  | { bless: number }
+  /** Post this seasonal visitor's order, or pay out as if it were filled. */
+  | { visitor: string }
+  | { visitorPay: string };
 
 export function stepAction(state: RunState, step: FixtureStep): Action {
   if (typeof step === 'string') return { type: step === 'skipReward' ? 'skipReward' : step };
@@ -66,6 +69,8 @@ export function stepAction(state: RunState, step: FixtureStep): Action {
   if ('patron' in step) return { type: 'debug', op: 'setPatron', week: step.patron[0], patron: step.patron[1] };
   if ('potion' in step) return { type: 'debug', op: 'givePotion', recipe: step.potion[0], tier: step.potion[1] };
   if ('friendship' in step) return { type: 'debug', op: 'setFriendship', regular: step.friendship[0], points: step.friendship[1] };
+  if ('visitor' in step) return { type: 'debug', op: 'postVisitor', visitor: step.visitor };
+  if ('visitorPay' in step) return { type: 'debug', op: 'visitorPay', visitor: step.visitorPay };
   if ('bless' in step) return { type: 'chooseBlessing', index: step.bless };
   if ('fairBuy' in step) return { type: 'buyAtFair', stall: step.fairBuy[0], index: step.fairBuy[1] };
   if ('visit' in step) return { type: 'visitStall', index: step.visit };

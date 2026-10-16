@@ -50,7 +50,8 @@ describe('orders', () => {
         const full = s.relics.includes('witchs-hatpin');
         const best = Math.max(...recipes.map((id) => tierIndex(tierOf(reach.get(id) ?? 0)) - (s.knownRecipes.includes(id) || full ? 0 : 1)));
         expect(tierIndex(o.minTier)).toBeLessThanOrEqual(Math.max(0, best));
-        expect(codex.regulars.get(o.customer)!.nightOnly).toBe(false);
+        // Day orders come from day regulars, or a seasonal visitor.
+        expect(codex.visitors.has(o.customer) || codex.regulars.get(o.customer)!.nightOnly === false).toBe(true);
       }
       expect(new Set(s.orders.map((o) => o.customer)).size).toBe(s.orders.length);
     }

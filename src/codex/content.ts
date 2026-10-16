@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon, Fair, Blessing, Cauldron } from './schema';
+import type { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Visitor, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon, Fair, Blessing, Cauldron } from './schema';
 
 // Raw content tables. Validated in ./index.ts and by tests/codex.test.ts.
 // Source of truth for numbers: docs/gdd.md §14.
@@ -348,6 +348,18 @@ export const nightCustomers: In<typeof NightCustomer>[] = [
   { id: 'bog-hag', name: 'Granny Bogwort', blurb: 'Lives in the fen. Surprisingly sweet.', prefers: ['healing'], weight: 2, goldMult: 0.5, paysIn: { kind: 'rare-card' }, requiresUmbra: true },
   { id: 'moth-duchess', name: 'The Moth Duchess', blurb: 'Aristocrat of the lamplight.', prefers: ['illusion', 'fortune'], weight: 2, goldMult: 2.5, paysIn: { kind: 'gold' } },
   { id: 'sleepless-miller', name: 'The Sleepless Miller', blurb: "Hasn't slept in years.", prefers: ['calming'], weight: 2, goldMult: 1, paysIn: { kind: 'lift-curse', noCurseMult: 1.5 } },
+];
+
+// Seasonal visitors (GDD §4.1, Jacob, Oct 16): daytime guests of one season, no Friendship, odd payments.
+export const visitors: In<typeof Visitor>[] = [
+  { id: 'wren-hollis', name: 'Wren Hollis', blurb: 'A botanist cataloguing the spring blooms.', season: 'spring', prefers: ['calming', 'healing', 'fortune'], goldMult: 0.5, paysIn: { kind: 'card-pick', tag: 'flower', count: 2 }, needsTag: 'flower', line: "Something with a bloom in it, please. I'm pressing samples, and I'll trade you one." },
+  { id: 'may-herald', name: 'The May Herald', blurb: 'Cries the Bloomtide Fair through the square.', season: 'spring', prefers: ['fortune', 'illusion'], goldMult: 2, paysIn: { kind: 'gold' }, weeks: [2], lastDay: 3, line: 'Hear ye! The fair wants a little luck and a little glamour. The Crown pays well.' },
+  { id: 'captain-brine', name: 'Captain Brine', blurb: 'A sailor on shore leave, loud and salt-stained.', season: 'summer', prefers: ['vigor', 'protection'], goldMult: 0.5, paysIn: { kind: 'card-pick', essence: 'tide', count: 2 }, needsTag: 'water', line: "Something with sea in it, witch. I've a hold full of river things you can have." },
+  { id: 'firefly-keeper', name: 'The Firefly Keeper', blurb: 'Tends the jars of the summer fireflies.', season: 'summer', prefers: ['calming', 'lunar'], goldMult: 0.5, paysIn: { kind: 'half-price' }, weather: 'clear', line: "A quiet one, for a clear night. I'll put a good word in at the Night Market." },
+  { id: 'rook', name: 'Rook', blurb: 'A scarecrow who walked in from the fields.', season: 'autumn', prefers: ['protection'], goldMult: 0.5, paysIn: { kind: 'burn' }, line: "Something to keep the crows off. In return I'll carry off whatever you don't want." },
+  { id: 'tithe-collector', name: 'The Tithe Collector', blurb: 'Gathers the harvest tithe for the abbey.', season: 'autumn', prefers: ['healing', 'warming'], goldMult: 2, paysIn: { kind: 'gold' }, quantity: 2, line: 'Two for the abbey stores, if you please. The abbey pays its tithes in full.' },
+  { id: 'snowbound-traveller', name: 'A Snowbound Traveller', blurb: 'Waiting out the snow on the way somewhere else.', season: 'winter', prefers: ['warming'], goldMult: 0.5, paysIn: { kind: 'card-pick', tincture: true, count: 2 }, weather: 'snow', line: "Anything warm. I've little coin, but I've odds and ends from the road." },
+  { id: 'toymaker', name: 'The Toymaker', blurb: 'Makes clockwork birds for the solstice.', season: 'winter', prefers: ['illusion', 'secrets'], goldMult: 0.5, paysIn: { kind: 'temper' }, line: "A little wonder for the workshop. I'll tune up one of your ingredients while I wait." },
 ];
 
 // Night Shift patrons (GDD §10). Weeks 1 and 3 roll one of the eligible; week 2 is the Pale Courier, week 4 the finale.

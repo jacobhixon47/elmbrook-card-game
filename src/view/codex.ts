@@ -51,6 +51,8 @@ function describe(table: CodexTable, id: string): { name: string; sub: string; t
       if (regular) return { name: regular.name, sub: 'A regular', text: regular.blurb };
       const night = codex.nightCustomers.get(id);
       if (night) return { name: night.name, sub: 'A Night Shift customer', text: night.blurb };
+      const visitor = codex.visitors.get(id);
+      if (visitor) return { name: visitor.name, sub: `A ${cap(visitor.season)} visitor`, text: visitor.blurb };
       const p = codex.patrons.get(id)!;
       return { name: p.name, sub: 'A patron', text: `${p.blurb} ${p.text}` };
     }

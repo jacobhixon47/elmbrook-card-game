@@ -57,6 +57,8 @@ export type Order = {
   expiresIn: number | null;
   /** A regular's favourite order (Friendship level 4): it needs an ingredient with this tag, and earns +1 Friendship. */
   favourite?: { tag: string } | null;
+  /** A seasonal visitor's order: the potion needs an ingredient with this tag (Wren Hollis's Flower). */
+  needsTag?: string | null;
 };
 
 /** Effects queued by Tinctures for the next brew. */
@@ -106,7 +108,8 @@ export type Offer =
   | { kind: 'fair'; fair: string; stalls: { id: string; stock: StockItem[] }[] }
   /** The Longest Night vigil: the regulars' gifts (already in the Night Satchel) and the Solstice Fire's blessings. */
   | { kind: 'vigil'; gifts: { regular: string; card: string }[]; blessings: string[]; chose: string | null }
-  | Gift;
+  | Gift
+  | Favour;
 
 /** One Night Market stall tonight and what's left of its trade (GDD §9). */
 export type StallState =
@@ -136,17 +139,20 @@ export type { StallId };
 export type ActiveCommission = { id: string; progress: number; dueWeek: number; customers: string[] };
 
 /** Why a free pick is on offer at night. */
-export type GiftSource = 'first-night' | 'lantern-witch' | 'bog-hag' | 'patron' | 'commission';
+export type GiftSource = 'first-night' | 'lantern-witch' | 'bog-hag' | 'patron' | 'commission' | 'visitor';
 
 /** A free pick after a Night Shift: the first-night Lunar card, a night customer's payment or a patron's reward. */
 /** `cards` are familiar ids when it goes `into` your familiar slots. */
-export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'deck' | 'satchel' | 'familiar' };
+export type Gift = { kind: 'gift'; source: GiftSource; cards: string[]; into: 'deck' | 'satchel' | 'familiar'; /** The visitor who gives it. */ from?: string };
+
+/** A seasonal visitor's favour after closing: Rook burns a card of your choice, the Toymaker tempers one (GDD §4.1). */
+export type Favour = { kind: 'favour'; visitor: string; job: 'burn' | 'temper' };
 
 /**
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 20;
+export const RUN_VERSION = 21;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -195,6 +201,8 @@ export type RunState = {
   patrons: string[];
   /** Free picks still to come after tonight's reward. */
   gifts: Gift[];
+  /** Seasonal visitors' favours still to come, after the free picks. */
+  favours: Favour[];
   /** Card ids in today's last brew (Mother Hollow). */
   lastBrew: string[];
   /** The family of the last potion delivered today (The May Queen). */
@@ -251,6 +259,8 @@ export type RunState = {
   offer: Offer | null;
   /** Consecutive reward skips, for skip pity. */
   skipStreak: number;
+  /** Half-price buys left at this week's Night Market (the Firefly Keeper); gone when the rent is paid. */
+  halfPrice: number;
   nextUid: number;
   /** Why a lost run ended: the rent, or the Moonless Patron left unsatisfied. */
   lostTo?: 'rent' | 'finale';

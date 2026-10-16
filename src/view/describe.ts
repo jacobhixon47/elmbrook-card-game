@@ -1,7 +1,7 @@
 import { codex } from '../codex';
 import type { PotionFamily } from '../codex/schema';
-import type { NightPayment, PatronReward } from '../codex/schema';
-import { familiesOf, inFamily, NIGHT_SHIFT_DAY, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
+import type { NightPayment, PatronReward, VisitorPayment } from '../codex/schema';
+import { familiesOf, inFamily, MODIFIER_RULES, NIGHT_SHIFT_DAY, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
 
 // Plain words for what the rules engine holds. Pure, so the wording is tested without a browser.
 
@@ -63,12 +63,12 @@ export function cardText(id: string): string {
 }
 
 export function customerName(id: string): string {
-  return codex.regulars.get(id)?.name ?? codex.nightCustomers.get(id)?.name ?? codex.patrons.get(id)?.name ?? id;
+  return codex.regulars.get(id)?.name ?? codex.nightCustomers.get(id)?.name ?? codex.visitors.get(id)?.name ?? codex.patrons.get(id)?.name ?? id;
 }
 
 /** Who they are, in a few words. */
 export function customerBlurb(id: string): string {
-  return codex.regulars.get(id)?.blurb ?? codex.nightCustomers.get(id)?.blurb ?? codex.patrons.get(id)?.blurb ?? '';
+  return codex.regulars.get(id)?.blurb ?? codex.nightCustomers.get(id)?.blurb ?? codex.visitors.get(id)?.blurb ?? codex.patrons.get(id)?.blurb ?? '';
 }
 
 /**
@@ -86,9 +86,30 @@ export function patronTwistText(s: Pick<RunState, 'orders'>, patron: { id: strin
 export function extraPay(customer: string): string | null {
   const patron = codex.patrons.get(customer);
   if (patron) return PATRON_REWARD_TEXT(patron.reward);
+  const visitor = codex.visitors.get(customer);
+  if (visitor) return visitorPayText(visitor.paysIn);
   const pays = codex.nightCustomers.get(customer)?.paysIn.kind;
   return pays ? NIGHT_PAY_TEXT[pays] : null;
 }
+
+/** What a seasonal visitor gives beyond the gold (GDD §4.1). */
+function visitorPayText(p: VisitorPayment): string | null {
+  switch (p.kind) {
+    case 'gold':
+      return null;
+    case 'card-pick':
+      return `pick 1 of ${p.count} ${p.tincture ? 'Tinctures' : `${cap(p.tag ?? p.essence ?? '')} ingredients`}`;
+    case 'burn':
+      return 'takes a card of your choice out of your deck';
+    case 'temper':
+      return `+${MODIFIER_RULES.temperPotency} Potency on an ingredient of your choice`;
+    case 'half-price':
+      return "your next Night Market buy this week is half price";
+  }
+}
+
+/** The short form for an order ticket's terms. */
+const VISITOR_TERMS: Record<VisitorPayment['kind'], string | null> = { gold: null, 'card-pick': 'pick', burn: 'burn 1', temper: '+2 Potency', 'half-price': 'half price' };
 
 const NIGHT_PAY_TEXT: Record<NightPayment['kind'], string | null> = {
   gold: null,
@@ -158,6 +179,8 @@ export function newRecipeHint(s: Pick<RunState, 'knownRecipes' | 'relics'>, orde
 /** The customer's line, in character (GDD §15: customers speak, the UI states it plainly). */
 export function customerLine(order: Pick<Order, 'request'> & Partial<Pick<Order, 'customer' | 'favourite'>>): string {
   if (order.customer && codex.patrons.has(order.customer)) return PATRON_LINE[order.customer] ?? 'You know what I came for.';
+  const visitor = order.customer ? codex.visitors.get(order.customer) : undefined;
+  if (visitor) return visitor.line;
   const fav = order.favourite && order.customer ? codex.regulars.get(order.customer)?.favourite : undefined;
   if (fav) return `The usual, if you've got it: my ${fav.name}.`;
   if (order.request.kind === 'recipe') return `A ${recipeName(order.request.recipe)}, if you'd be so kind.`;
@@ -170,13 +193,17 @@ export function orderTerms(order: Pick<Order, 'minTier' | 'pay'> & Partial<Pick<
   if (extra === 'omen') return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + Omen`;
   if (extra === 'lunar-card') return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + Lunar`;
   if (extra === 'rare-card') return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + Rare`;
+  const visit = order.customer ? codex.visitors.get(order.customer) : undefined;
+  const short = visit && VISITOR_TERMS[visit.paysIn.kind];
+  if (short) return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + ${short}`;
   return `${TIER_NAME[order.minTier]} or better · ${order.pay}g`;
 }
 
 /** Extra conditions on an order, for its ticket and dialogue: an Umbra ingredient, a clock. */
-export function orderNeeds(order: Pick<Order, 'needsUmbra' | 'expiresIn' | 'status'>): string | null {
+export function orderNeeds(order: Pick<Order, 'needsUmbra' | 'expiresIn' | 'status'> & Partial<Pick<Order, 'needsTag'>>): string | null {
   const parts: string[] = [];
   if (order.needsUmbra) parts.push('needs Umbra');
+  if (order.needsTag) parts.push(`needs a ${cap(order.needsTag)} ingredient`);
   if (order.expiresIn !== null && order.status === 'open') parts.push(`leaves in ${order.expiresIn} brew${order.expiresIn === 1 ? '' : 's'}`);
   return parts.length ? cap(parts.join(', ')) : null;
 }

@@ -192,7 +192,7 @@ describe('the Codex', () => {
 
   it('shows every ingredient, tincture, recipe, familiar, relic and customer', () => {
     const sizes = Object.values(CODEX_TABLES).map((t) => t.size);
-    expect(sizes.reduce((a, b) => a + b)).toBe(codex.ingredients.size + codex.tinctures.size + codex.recipes.size + codex.familiars.size + codex.relics.size + codex.regulars.size + codex.nightCustomers.size + codex.patrons.size);
+    expect(sizes.reduce((a, b) => a + b)).toBe(codex.ingredients.size + codex.tinctures.size + codex.recipes.size + codex.familiars.size + codex.relics.size + codex.regulars.size + codex.nightCustomers.size + codex.visitors.size + codex.patrons.size);
   });
 });
 

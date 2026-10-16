@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import * as raw from './content';
-import { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon, Fair, Blessing, Cauldron } from './schema';
+import { Commission, Curse, DuskEvent, Familiar, Ingredient, Junk, Modifier, NightCustomer, Visitor, Patron, Recipe, Regular, Relic, Stall, Tarot, Tincture, Witch, Perk, AlmanacEntry, Boon, Fair, Blessing, Cauldron } from './schema';
 
 export * from './schema';
 
@@ -21,6 +21,7 @@ export const codex = {
   recipes: table(Recipe, raw.recipes, 'recipe'),
   regulars: table(Regular, raw.regulars, 'regular'),
   nightCustomers: table(NightCustomer, raw.nightCustomers, 'night customer'),
+  visitors: table(Visitor, raw.visitors, 'visitor'),
   patrons: table(Patron, raw.patrons, 'patron'),
   familiars: table(Familiar, raw.familiars, 'familiar'),
   relics: table(Relic, raw.relics, 'relic'),

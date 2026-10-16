@@ -72,10 +72,10 @@ export function draft(ctx: Ctx, pool: readonly string[], n: number): string[] {
   return out;
 }
 
-export function queueGift(ctx: Ctx, source: GiftSource, pool: readonly string[], n: number, into: Gift['into']): void {
+export function queueGift(ctx: Ctx, source: GiftSource, pool: readonly string[], n: number, into: Gift['into'], from?: string): void {
   const cards = draft(ctx, pool, n);
   if (cards.length === 0) return;
-  const gift: Gift = { kind: 'gift', source, cards, into };
+  const gift: Gift = { kind: 'gift', source, cards, into, ...(from ? { from } : {}) };
   ctx.s.gifts.push(gift);
   ctx.ev.push({ type: 'giftQueued', source, cards });
 }
