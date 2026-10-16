@@ -159,6 +159,8 @@ export const recipes: In<typeof Recipe>[] = [
   { id: 'fetch-draught', name: 'Fetch Draught', pattern: ['tide', 'gale', 'umbra'], baseHarmony: 5, family: 'illusion', pool: 'unlock' },
   // Regulars' recipes (GDD §13): each joins the pools at Friendship 5 with them.
   { id: 'rising-loaf-tonic', name: 'Rising Loaf Tonic', pattern: ['ember', 'ember', 'gale'], baseHarmony: 5, family: 'vigor', pool: 'friend' },
+  { id: 'skipping-stone-fizz', name: 'Skipping Stone Fizz', pattern: ['gale', 'gale', 'stone'], baseHarmony: 5, family: 'fortune', pool: 'friend' },
+  { id: 'vesper-tea', name: 'Vesper Tea', pattern: ['tide', 'gale', 'vital'], baseHarmony: 5, family: 'calming', pool: 'friend' },
   { id: 'miners-balm', name: "Miner's Balm", pattern: ['stone', 'vital', 'vital'], baseHarmony: 5, family: 'healing', pool: 'friend' },
   { id: 'bonfire-cordial', name: 'Bonfire Cordial', pattern: ['ember', 'ember', 'vital'], baseHarmony: 5, family: 'warming', pool: 'unlock' },
   { id: 'mountain-salve', name: 'Mountain Salve', pattern: ['stone', 'stone', 'vital'], baseHarmony: 5, family: 'protection', pool: 'unlock' },
@@ -227,8 +229,56 @@ export const regulars: In<typeof Regular>[] = [
       ] },
     ],
   },
-  { id: 'pip-and-quill', name: 'Pip & Quill', blurb: 'Twin kids, up to mischief.', prefers: ['secrets', 'fortune'], weight: 2, payMult: 0.8, tipMult: 1.5, bonusChance: 0.4, bonusPool: ['wychwood-ingredient', 'three-ingredients'], favourite: { name: 'Midnight Feast Fizz', family: 'secrets', tag: 'flower' } },
-  { id: 'sister-alder', name: 'Sister Alder', blurb: 'Keeper of the shrine.', prefers: ['calming', 'healing'], weight: 3, bonusPool: ['no-umbra', 'wychwood-ingredient'], favourite: { name: 'Shrine Tea', family: 'healing', tag: 'herb' } },
+  { id: 'pip-and-quill', name: 'Pip & Quill', blurb: 'Twin kids, up to mischief.', prefers: ['secrets', 'fortune'], weight: 2, payMult: 0.8, tipMult: 1.5, bonusChance: 0.4, bonusPool: ['wychwood-ingredient', 'three-ingredients'], favourite: { name: 'Midnight Feast Fizz', family: 'secrets', tag: 'flower' },
+    recipe: 'skipping-stone-fizz', familiar: 'squirrel',
+    story: [
+      { level: 3, title: 'The Experiment', lines: [
+        "You find Pip under your counter and Quill in your herb cupboard, both very still, both very sure you can't see them.",
+        "They've been brewing behind the bakery: mud, three dandelions and a beetle, \"for luck\". It hasn't worked. They'd like to know what they did wrong.",
+        "You tell them about the beetle. Quill writes it down. Pip asks if they can watch, and doesn't wait for an answer.",
+      ] },
+      { level: 6, title: 'The Stall', lines: [
+        "The twins have opened a potion stall across the lane, a plank on two buckets. They're selling jars of creek water as \"Wishing Water\", a copper each, and doing better than you'd like.",
+        'Bea buys one. Old Tobin buys two and pretends it worked.',
+        'At closing they bring you half the takings, "for the recipe". The recipe was creek water. You keep one coin, and they look very proud.',
+      ] },
+      { level: 9, title: 'Lost in the Wychwood', lines: [
+        "Pip comes in alone, which never happens. Quill went into the Wychwood after a white stag and hasn't come back, and it's getting dark.",
+        'You find Quill by the old stones, cold and cross and absolutely fine, with a pocket full of moss for your shop.',
+        "On the walk home Pip holds your hand, then Quill's, and doesn't say anything for once.",
+      ] },
+      { level: 10, title: 'The Apprentices', lines: [
+        "There's a new sign under yours, painted in two hands: APRENTISES. It's spelled wrong. Nobody has the heart to say.",
+        'The twins arrive every morning now, sweep the floor badly, and know the name of every ingredient on your shelf.',
+        "They've started saving their coppers for a cauldron of their own, and they tip more than they can afford.",
+      ] },
+    ],
+  },
+  { id: 'sister-alder', name: 'Sister Alder', blurb: 'Keeper of the shrine.', prefers: ['calming', 'healing'], weight: 3, bonusPool: ['no-umbra', 'wychwood-ingredient'], favourite: { name: 'Shrine Tea', family: 'healing', tag: 'herb' },
+    recipe: 'vesper-tea', familiar: 'dove',
+    story: [
+      { level: 3, title: 'The Bell', lines: [
+        'Sister Alder comes down from the shrine on a weekday, which the village notices. The shrine bell has cracked, and the sound it makes now is "unkind".',
+        "She hasn't left the shrine for more than a day in nineteen years. She looks at everything in your shop as if it's a little loud.",
+        'She buys her potion, then stays a while longer than she needs to, listening to the cauldron.',
+      ] },
+      { level: 6, title: 'The Spring', lines: [
+        'The spring under the shrine is running low. It has run for three hundred years. Alder says this calmly, the way she says everything, and her hands shake.',
+        "She asks whether a potion could help a spring. You don't know. She says that's the most honest answer she's had.",
+        'You walk up with her that evening and sit by the water until the lamps come on.',
+      ] },
+      { level: 9, title: 'The Ledger', lines: [
+        "Alder brings the shrine's old ledger. The first keeper, three hundred years back, wasn't a sister at all: she was a witch, and the shrine was her shop.",
+        'The last pages are recipes. One is for the spring. It needs something from your shelf and something from the Wychwood, brewed at the shrine at dusk.',
+        'She asks you to come up and brew it with her. She has never asked anyone for anything.',
+      ] },
+      { level: 10, title: 'The Spring Runs', lines: [
+        "The spring is running again. Alder doesn't say it was your doing. She doesn't need to.",
+        "There's a new cup on the shrine shelf, set out for you, and your shop is named in the evening prayers.",
+        'She comes down on weekdays now, and she tips a little more than a sister should.',
+      ] },
+    ],
+  },
   { id: 'marlowe-vance', name: 'Marlowe Vance', blurb: 'Travelling merchant who haggles.', prefers: ['rare'], weight: 2, payMult: 1.25, bonusPool: ['three-ingredients'], favourite: { name: 'Gilded Ledger', family: 'fortune', tag: 'mineral' } },
   { id: 'the-gardener', name: 'The Gardener', blurb: 'Nobody\'s sure who they are.', prefers: ['lunar'], nightOnly: true, weight: 2, payMult: 1.5, bonusPool: ['wychwood-ingredient'], favourite: { name: 'Moonflower Cordial', family: 'lunar', tag: 'flower' } },
 ];
@@ -277,6 +327,8 @@ export const familiars: In<typeof Familiar>[] = [
   { id: 'ermine', name: 'Ermine', rarity: 'uncommon', text: 'Frost ingredients +3 Potency.', pool: 'event' },
   // Regulars' familiars (GDD §13): each joins the pools at Friendship 7 with them.
   { id: 'kitchen-mouse', name: 'Kitchen Mouse', rarity: 'uncommon', text: 'Fruit ingredients +3 Potency.', pool: 'friend' },
+  { id: 'squirrel', name: 'Squirrel', rarity: 'uncommon', text: 'Wychwood ingredients +3 Potency.', pool: 'friend' },
+  { id: 'dove', name: 'Dove', rarity: 'uncommon', text: '+2 Harmony on brews with no Umbra ingredient.', pool: 'friend' },
   { id: 'canary', name: 'Canary', rarity: 'uncommon', text: '+2 Harmony on brews with a Mineral ingredient.', pool: 'friend' },
   { id: 'bumblebee', name: 'Bumblebee', rarity: 'uncommon', text: 'Flower ingredients +3 Potency.', pool: 'event' },
   { id: 'dragonfly', name: 'Dragonfly', rarity: 'uncommon', text: 'Gale ingredients +3 Potency.', pool: 'event' },
