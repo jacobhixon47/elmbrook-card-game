@@ -193,7 +193,7 @@ export const nightCustomers: In<typeof NightCustomer>[] = [
 
 // Night Shift patrons (GDD §10). Weeks 1 and 3 roll one of the eligible; week 2 is the Pale Courier, week 4 the finale.
 export const patrons: In<typeof Patron>[] = [
-  { id: 'lamplighter', name: 'The Lamplighter', blurb: 'Keeps the lamps, and your secrets.', weeks: [1, 3], twist: 'hand-hidden', text: 'Your hand is face-down until you hover a card.', orderCount: 3, reward: { kind: 'gold', amount: 6 } },
+  { id: 'lamplighter', name: 'The Lamplighter', blurb: 'Keeps the lamps, and your secrets.', weeks: [1, 3], twist: 'wicks-burn', text: 'The wicks burn down: each brew tonight has 2 less Harmony than the one before.', orderCount: 3, reward: { kind: 'gold', amount: 6 } },
   { id: 'mother-hollow', name: 'Mother Hollow', blurb: 'Wants a little of everywhere.', weeks: [1, 3], twist: 'origin-chain', text: 'Each brew must use an ingredient from a different Origin than the last.', orderCount: 3, reward: { kind: 'familiar-pick', count: 2 } },
   { id: 'twin-owls', name: 'The Twin Owls', blurb: 'Two of everything, always.', weeks: [1, 3], twist: 'orders-double', text: 'Every order needs two identical potions, and pays double.', orderCount: 2, payMult: 2, reward: { kind: 'card-pick', rarity: 'rare', count: 3 } },
   { id: 'sir-bramble', name: 'Sir Bramble', blurb: 'A knight of the hedgerow. Can\'t abide a hot hearth.', weeks: [1, 3], twist: 'ember-zero', text: 'Ember ingredients have 0 Potency.', orderCount: 3, reward: { kind: 'gold', amount: 6 } },

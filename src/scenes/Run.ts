@@ -746,6 +746,9 @@ export class Run extends Phaser.Scene {
       this.text(x, SIDE.y + 30, `Potency ${preview.potency} × Harmony ${preview.harmony}`, { size: 7, color: 'w' });
       this.text(x, SIDE.y + 42, `= ${preview.quality} · ${TIER_NAME[preview.tier]}`, { size: 10, color: TIER_COLOR[preview.tier]! });
       if (!preview.known) this.text(x, SIDE.y + 56, 'Experiment: one tier lower this time.', { size: 7, color: 'v', wrap: SIDE.w - 12 });
+      // Tonight's patron changed the score (the Lamplighter's wicks, Sir Bramble, the Frost Warden): say by how much.
+      const twist = preview.steps.find((x) => x.source === 'patron')?.note;
+      if (twist) this.text(x, SIDE.y + (preview.known ? 56 : 66), `${customerName(patronOf(s)!.id)}: ${twist}`, { size: 7, color: 'v', wrap: SIDE.w - 12 });
       const potion = previewPotion(preview, s.cauldron)!;
       const target = bestOrderFor(s, potion, this.pinned);
       let dest: string;
@@ -839,8 +842,6 @@ export class Run extends Phaser.Scene {
 
     const picked = this.mode.kind === 'select' ? this.mode.picked : [];
     const tincture = this.mode.kind === 'select' ? this.mode.tincture : undefined;
-    // The Lamplighter: cards lie face-down until you hover them.
-    const hidden = twistNow(s) === 'hand-hidden' && s.phase === 'brewing';
     s.hand.forEach((inst, i) => {
       const x = this.handX(i, s.hand.length);
       const lifted = picked.includes(inst.uid) || inst.uid === tincture;
@@ -848,12 +849,6 @@ export class Run extends Phaser.Scene {
       if (lifted) card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex(inst.uid === tincture ? 'Y' : 'R')), 0);
       this.add2(card);
       card.setInteractive({ useHandCursor: s.phase === 'brewing' });
-      if (hidden && !lifted) {
-        const back = this.add.image(0, 0, 'card/back');
-        card.add(back);
-        card.on('pointerover', () => back.setVisible(false));
-        card.on('pointerout', () => back.setVisible(true));
-      }
       this.inspect(card, inst.card, 1, inst);
       if (s.phase !== 'brewing') {
         card.setAlpha(0.85);

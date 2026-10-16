@@ -421,7 +421,7 @@ In the build the whole month's patrons are rolled at run start (on their own see
 
 | Patron | Weeks | Twist | Reward for their order |
 |---|---|---|---|
-| The Lamplighter | 1, 3 | Your hand is face-down until you hover a card. | 6 gold |
+| The Lamplighter | 1, 3 | The wicks burn down: each brew that night has 2 less Harmony than the one before (0, -2, -4, ...), so the best brew should come first. Replaced a face-down hand, which was only an inconvenience (playtest, Jacob, Oct 16). | 6 gold |
 | Mother Hollow | 1, 3 | Each brew must use an ingredient from a different Origin than the last. | Pick 1 of 2 familiars |
 | The Twin Owls | 1, 3 | Every order needs two identical potions, and pays ×2. Two orders. | Pick 1 of 3 Rare cards |
 | Sir Bramble | 1, 3 | Ember ingredients have 0 Potency. | 6 gold |
