@@ -4,7 +4,7 @@ import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
 import { ALMANAC_FIRST_PAGE, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, CODEX_TABLES, runStartChoice, witchOpen, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
-import { CODEX_TABS, codexEntries } from '../view/codex';
+import { CODEX_TABS, codexEntries, type CodexEntry } from '../view/codex';
 import { unlockName } from '../view/describe';
 import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
 import { cottageBackdrop } from '../view/backdrop';
@@ -13,6 +13,7 @@ import { cap } from '../view/describe';
 import { openSettings } from '../view/settings';
 import { pixelText } from '../view/text';
 import { button, panel } from '../view/ui';
+import type { PaletteKey } from '../art/palette';
 
 /**
  * Your cottage, the home between runs (GDD §13): where you set out for a season, spend Reputation on
@@ -73,7 +74,7 @@ export class Cottage extends Phaser.Scene {
       this.scene.restart({});
     });
     if (ui?.almanac) this.openAlmanac(profile, ui.almanacPage ?? 0);
-    if (ui?.codex) this.openCodex(profile, ui.codex as CodexTable, ui.codexPage ?? 0);
+    if (ui?.codex) this.openCodex(profile, ui.codex as CodexTable, ui.codexPage ?? 0, ui.codexEntry);
     if (ui?.settings) settings();
 
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
@@ -332,7 +333,7 @@ export class Cottage extends Phaser.Scene {
   }
 
   /** The Codex (GDD §13): every card, recipe, familiar, relic and customer, a tab each, hidden until met in a run. */
-  private openCodex(p: Profile, tab: CodexTable = 'ingredients', page = 0) {
+  private openCodex(p: Profile, tab: CodexTable = 'ingredients', page = 0, detail?: string) {
     const PER_PAGE = 15;
     const entries = codexEntries(tab, p.codex);
     const pages = Math.ceil(entries.length / PER_PAGE);
@@ -346,7 +347,14 @@ export class Cottage extends Phaser.Scene {
     entries.slice(page * PER_PAGE, (page + 1) * PER_PAGE).forEach((e, i) => {
       const x = 30 + (i % 3) * 196;
       const y = 82 + Math.floor(i / 3) * 44;
-      c.add(this.add.rectangle(x, y, 192, 40, hex(e.met ? 'b' : 'q'), e.met ? 0.6 : 0.4).setOrigin(0));
+      const tile = this.add.rectangle(x, y, 192, 40, hex(e.met ? 'b' : 'q'), e.met ? 0.6 : 0.4).setOrigin(0);
+      c.add(tile);
+      // A met entry opens its detail card, with its lore.
+      if (e.met) {
+        tile.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.openCodex(p, tab, page, e.id));
+        tile.on('pointerover', () => tile.setStrokeStyle(1, hex('y')));
+        tile.on('pointerout', () => tile.setStrokeStyle());
+      }
       c.add(pixelText(this, x + 6, y + 3, e.name, { size: 8, color: e.met ? 'W' : 'S' }));
       c.add(pixelText(this, x + 6, y + 14, e.sub, { size: 6, color: e.met ? 'y' : 'S' }));
       if (e.text) c.add(pixelText(this, x + 6, y + 23, e.text, { size: 6, color: 'w', wrap: 180 }));
@@ -358,6 +366,33 @@ export class Cottage extends Phaser.Scene {
       next.setEnabled(page < pages - 1);
       c.add([prev, next]);
     }
+    const open = entries.find((e) => e.id === detail && e.met);
+    if (open) this.drawCodexEntry(c, open, () => this.openCodex(p, tab, page));
+  }
+
+  /** A Codex entry's detail card: what it is and does, and a line of Elmbrook. */
+  private drawCodexEntry(c: Phaser.GameObjects.Container, e: CodexEntry, close: () => void) {
+    const W = 300;
+    const x = 320 - W / 2;
+    const parts: Phaser.GameObjects.GameObject[] = [];
+    let y = 8;
+    const line = (text: string, size: number, color: PaletteKey) => {
+      const t = pixelText(this, x + 10, 0, text, { size, color, wrap: W - 20 });
+      parts.push(t);
+      return t;
+    };
+    const rows = [line(e.name, 12, 'y'), line(e.sub, 7, 'h'), ...(e.text ? [line(e.text, 8, 'W')] : []), ...(e.lore ? [line(e.lore, 8, 'L')] : [])];
+    const gaps = [6, 8, 10];
+    const h = rows.reduce((sum, t, i) => sum + t.height + (gaps[i] ?? 0), 0) + 40;
+    const top = Math.round(180 - h / 2);
+    rows.forEach((t, i) => {
+      t.setY(top + y);
+      y += t.height + (gaps[i] ?? 0);
+    });
+    c.add(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.5).setOrigin(0).setInteractive().on('pointerdown', close));
+    c.add(panel(this, x, top, W, h, 'k', 0.98, 'y'));
+    c.add(parts);
+    c.add(button(this, 320, top + h - 16, 'Back', close, { w: 60 }));
   }
 }
 

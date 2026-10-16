@@ -28,6 +28,7 @@ export class Tooltip {
     if (info.essences.length) rows.push({ pips: info.essences });
     rows.push({ text: info.text, size: 8, color: 'W' });
     for (const [term, def] of info.terms) rows.push({ text: `${term}: ${def}`, size: 7, color: 'a' });
+    if (info.lore) rows.push({ text: info.lore, size: 7, color: 'L' });
     this.show(rows, x, top, bottom);
   }
 

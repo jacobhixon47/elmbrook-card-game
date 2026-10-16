@@ -1,4 +1,5 @@
 import { cardKind, codex } from '../codex';
+import { lore } from '../codex/lore';
 import type { Essence } from '../codex/schema';
 import { BREWS_PER_DAY, DISCARDS_PER_DAY, MAX_DISCARD, TIER_MIN, TIERS, type CardInstance } from '../core';
 
@@ -29,6 +30,8 @@ export type CardInfo = {
   potency: number | null;
   text: string;
   terms: [string, string][];
+  /** A line of Elmbrook (codex lore), shown under the rules. */
+  lore: string | null;
 };
 
 const cap = (s: string) => s[0]!.toUpperCase() + s.slice(1);
@@ -53,24 +56,33 @@ export function cardInfo(id: string, extras: CardExtras = {}): CardInfo {
       essences: ing.essences,
       potency: ing.potency,
       text,
-      terms: termsIn(`Essence Potency ${text}`),
+      terms: termsIn(text),
+      lore: lore[id] ?? null,
     };
   }
   if (kind === 'tincture') {
     const t = codex.tinctures.get(id)!;
     if (t.rarity === 'lunar') {
       const text = `${t.text} Kept in your Night Satchel: Night Shifts only.`;
-      return { title: t.name, kind: 'Omen · Lunar tincture', essences: [], potency: null, text, terms: termsIn(`Omen Tincture ${text}`) };
+      return { title: t.name, kind: 'Omen · Lunar tincture', essences: [], potency: null, text, terms: termsIn(`Omen ${text}`), lore: lore[id] ?? null };
     }
-    return { title: t.name, kind: `${cap(t.rarity)} tincture`, essences: [], potency: null, text: t.text, terms: termsIn(`Tincture ${t.text}`) };
+    return { title: t.name, kind: `${cap(t.rarity)} tincture`, essences: [], potency: null, text: t.text, terms: termsIn(t.text), lore: lore[id] ?? null };
   }
   const j = codex.junk.get(id)!;
-  return { title: j.name, kind: 'Junk', essences: [], potency: null, text: j.text, terms: termsIn(`${j.name} ${j.text}`) };
+  return { title: j.name, kind: 'Junk', essences: [], potency: null, text: j.text, terms: termsIn(`${j.name} ${j.text}`), lore: lore[id] ?? null };
 }
 
-/** Glossary entries for the terms a text mentions, in glossary order, at most three. */
+/**
+ * Terms every card uses: the Guide's glossary explains them once, and card tooltips leave them out
+ * (Jacob, Oct 16: an Essence and Potency definition on every card was noise).
+ */
+export const EVERYDAY_TERMS: readonly string[] = ['Essence', 'Potency', 'Harmony', 'Quality', 'Tincture', 'Brew', 'Discard'];
+
+/** Glossary entries for the rarer terms a text mentions, in glossary order, at most three. */
 export function termsIn(text: string): [string, string][] {
-  return Object.entries(GLOSSARY).filter(([term]) => new RegExp(`\\b${term.replace(/s$/, '')}`, 'i').test(text)).slice(0, 3);
+  return Object.entries(GLOSSARY)
+    .filter(([term]) => !EVERYDAY_TERMS.includes(term) && new RegExp(`\\b${term.replace(/s$/, '')}`, 'i').test(text))
+    .slice(0, 3);
 }
 
 /** "Crude under 10 · Fine 10+ · ..." for the Guide and the preview tooltip. */

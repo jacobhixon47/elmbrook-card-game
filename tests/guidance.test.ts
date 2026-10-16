@@ -16,16 +16,19 @@ describe('card inspect', () => {
     }
   });
 
-  it('names essences and potency and defines the terms a card uses', () => {
+  it('names essences and potency, and defines only the rarer terms a card uses (Jacob, Oct 16)', () => {
     const info = cardInfo('thistledown');
     expect(info.kind).toBe('Common ingredient · Wychwood · Flower');
     expect(info.essences).toEqual(['gale']);
     expect(info.text).toBe('Gale essence. Potency 3. When discarded, draw 1.');
-    expect(info.terms.map(([t]) => t)).toEqual(['Essence', 'Potency', 'Discard']);
-    expect(cardInfo('stir').terms.map(([t]) => t)).toContain('Harmony');
+    expect(info.terms).toEqual([]);
+    expect(cardInfo('stir').terms).toEqual([]);
+    expect(cardInfo('amber-sap').terms.map(([t]) => t)).toEqual(['Aged']);
+    expect(cardInfo('grave-moss').terms.map(([t]) => t)).toEqual(expect.arrayContaining(['Satchel', 'Friendship']));
     expect(cardInfo('grave-moss').text).toMatch(/Night Shifts only/);
     expect(termsIn('+1 Friendship with the regular').map(([t]) => t)).toEqual(['Friendship']);
     expect(cardInfo('sludge').kind).toBe('Junk');
+    expect(cardInfo('elmroot').lore).toMatch(/gran/);
   });
 
   it('lists the tiers in order', () => {
