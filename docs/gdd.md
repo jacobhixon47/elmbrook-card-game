@@ -547,7 +547,7 @@ Junk: **Sludge** (does nothing), **Cobweb** (blows away after 3 days), **Bad Ome
 
 ### Friendship
 
-Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts; parts 1 (the meter, the replacements and the Townsfolk page), 2 (favourite orders and level-up toasts) and 3 (recipes, familiars and stories, starting with Bea and Old Tobin) are in, and part 4 follows.
+Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts; parts 1 (the meter, the replacements and the Townsfolk page), 2 (favourite orders and level-up toasts) and 3 (recipes, familiars and stories) are in for Bea, Old Tobin, Pip & Quill and Sister Alder, and part 4 follows.
 
 - **Points.** A delivery to a regular earns 1 point, 2 if the bonus condition is met, +1 from a Heartstone in the brew, +1 from the Silver Bell, +1 from a Charm Sachet. Declining or letting an order go costs nothing. Grave Moss, a Cursed card, the Raven Call and the Moth Swarm sour a delivery: it earns no Friendship at all. The Lovers (+2) and returning the Found Coin Purse (+1) give it to a random regular. Nameless: none this run. The Gardener counts like the others, only at night. Night customers and patrons have none.
 - **Across runs.** The points a run earns count at once on top of the profile's, and bank to the profile when the run ends, won or lost (`friendship` in the profile, version 10; `storySeen`, the stories shown, version 11). They never go down and have no cap.
@@ -576,12 +576,14 @@ Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts
 | Marlowe Vance | Gilded Ledger | Fortune, with a Mineral |
 | The Gardener | Moonflower Cordial | Lunar, with a Flower |
 
-- **Recipes, familiars and stories** (Jacob approved Bea's and Tobin's, Oct 15; the other four follow two at a time, each approved first). A regular's recipe and familiar are in the `friend` pool: they join a run's pools from its start once the level is reached, and at once if it's reached mid-run. Each story beat is a scene screen shown one morning when that regular has an open order, at most one a morning, lowest level first, never in the tutorial or on the finale night, and once per save. The Townsfolk page lists the stories you've seen; click to read them again.
+- **Recipes, familiars and stories** (Jacob approved Bea's and Tobin's on Oct 15 and Pip & Quill's and Sister Alder's on Oct 16; Marlowe and the Gardener follow, approved first). A regular's recipe and familiar are in the `friend` pool: they join a run's pools from its start once the level is reached, and at once if it's reached mid-run. Each story beat is a scene screen shown one morning when that regular has an open order, at most one a morning, lowest level first, never in the tutorial or on the finale night, and once per save. The Townsfolk page lists the stories you've seen; click to read them again.
 
 | Regular | Recipe (level 5) | Familiar (level 7) | Stories (3, 6, 9; finale at 10) |
 |---|---|---|---|
 | Bea Thornwick | Rising Loaf Tonic: Ember + Ember + Gale, Vigor, Harmony 5 | Kitchen Mouse (Uncommon): Fruit ingredients +3 Potency | Flour on Everything; The Harvest Loaf; The Recipe Book; Open Ovens |
 | Old Tobin | Miner's Balm: Stone + Vital + Vital, Healing, Harmony 5 | Canary (Uncommon): +2 Harmony on brews with a Mineral ingredient | The Cough; The Lamp; Down the Seam; Up Into the Light |
+| Pip & Quill | Skipping Stone Fizz: Gale + Gale + Stone, Fortune, Harmony 5 | Squirrel (Uncommon): Wychwood ingredients +3 Potency | The Experiment; The Stall; Lost in the Wychwood; The Apprentices |
+| Sister Alder | Vesper Tea: Tide + Gale + Vital, Calming, Harmony 5 | Dove (Uncommon): +2 Harmony on brews with no Umbra ingredient (it applies to more brews than the Canary; the balance pass checks it) | The Bell; The Spring; The Ledger; The Spring Runs |
 
 The story text lives with each regular in `src/codex/content.ts`.
 

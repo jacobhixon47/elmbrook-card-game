@@ -96,9 +96,9 @@ describe('the Townsfolk page', () => {
     expect(rows.find((r) => r.id === 'old-tobin')).toMatchObject({ level: 1, unmet: false, nextOpens: expect.stringMatching(/Longest Night/) as unknown as string });
     expect(rows.find((r) => r.id === 'sister-alder')).toMatchObject({ unmet: false, nextOpens: expect.stringMatching(/Townsfolk/) as unknown as string });
     expect(rows.find((r) => r.id === 'bea-thornwick')!.unmet).toBe(true);
-    // Level 3 is a story for Tobin, and nothing yet for Sister Alder.
+    // Level 3 is a story for Tobin, and nothing yet for Marlowe.
     expect(townsfolkRows({ friendship: {}, friendshipBase: { 'old-tobin': 20 } }).find((r) => r.id === 'old-tobin')!.nextOpens).toMatch(/A new story/);
-    expect(townsfolkRows({ friendship: {}, friendshipBase: { 'sister-alder': 20 } }).find((r) => r.id === 'sister-alder')!.nextOpens).toBeNull();
+    expect(townsfolkRows({ friendship: {}, friendshipBase: { 'marlowe-vance': 20 } }).find((r) => r.id === 'marlowe-vance')!.nextOpens).toBeNull();
   });
 });
 
@@ -158,7 +158,8 @@ describe("regulars' recipes, familiars and stories (GDD §13)", () => {
   it('a recipe joins the pools at level 5 and a familiar at 7, from the run start or the moment it is reached', () => {
     expect(friendUnlocks({ 'old-tobin': at(5) - 1 })).toEqual([]);
     expect(friendUnlocks({ 'old-tobin': at(5), 'bea-thornwick': at(7) })).toEqual(['rising-loaf-tonic', 'kitchen-mouse', 'miners-balm']);
-    expect(friendUnlocks({ 'sister-alder': at(10) })).toEqual([]);
+    expect(friendUnlocks({ 'sister-alder': at(10) })).toEqual(['vesper-tea', 'dove']);
+    expect(friendUnlocks({ 'marlowe-vance': at(10) })).toEqual([]);
     const s = reduce(null, { type: 'startRun', seed: 'g', witch: 'hedge-witch', unlocks: ['fox'], friendship: { 'old-tobin': at(7) } }).state;
     expect(s.unlocks).toEqual(['fox', 'miners-balm', 'canary']);
     expect(recipeAvailable(codex.recipes.get('miners-balm')!, s)).toBe(true);
@@ -170,7 +171,7 @@ describe("regulars' recipes, familiars and stories (GDD §13)", () => {
     expect(deliver({ ...brewing('friends'), friendshipBase: { 'old-tobin': at(5) - 2 } }).state.unlocks).not.toContain('miners-balm');
   });
 
-  it('the Kitchen Mouse likes Fruit and the Canary sings for a Mineral', () => {
+  it('the Kitchen Mouse likes Fruit, the Canary sings for a Mineral, the Squirrel likes the Wychwood and the Dove shuns Umbra', () => {
     const ing = (id: string) => codex.ingredients.get(id)!;
     const fruit = [...codex.ingredients.values()].find((i) => i.tags.includes('fruit'))!;
     const brew = (ids: string[]) => ({ ingredients: ids.map(ing), firstPotency: 0, shelf: 0, night: false, firstBrew: false });
@@ -178,10 +179,15 @@ describe("regulars' recipes, familiars and stories (GDD §13)", () => {
     expect(FAMILIAR_SCORE['kitchen-mouse']!(brew(['elmroot', 'creekwater']))).toBeNull();
     expect(FAMILIAR_SCORE.canary!(brew(['river-clay', 'river-clay']))).toMatchObject({ harmony: 2 });
     expect(FAMILIAR_SCORE.canary!(brew(['elmroot', 'creekwater']))).toBeNull();
+    // Thistledown and Nightshade are from the Wychwood; Elmroot and Creekwater aren't.
+    expect(FAMILIAR_SCORE.squirrel!(brew(['thistledown', 'nightshade']))).toMatchObject({ potency: 6 });
+    expect(FAMILIAR_SCORE.squirrel!(brew(['elmroot', 'creekwater']))).toBeNull();
+    expect(FAMILIAR_SCORE.dove!(brew(['elmroot', 'creekwater']))).toMatchObject({ harmony: 2 });
+    expect(FAMILIAR_SCORE.dove!(brew(['elmroot', 'nightshade']))).toBeNull();
   });
 
-  it('each story is in level order, at 3, 6, 9 and 10, for Bea and Tobin', () => {
-    for (const id of ['bea-thornwick', 'old-tobin']) expect(codex.regulars.get(id)!.story.map((b) => b.level)).toEqual([3, 6, 9, 10]);
+  it('each story is in level order, at 3, 6, 9 and 10, for Bea, Tobin, Pip & Quill and Sister Alder', () => {
+    for (const id of ['bea-thornwick', 'old-tobin', 'pip-and-quill', 'sister-alder']) expect(codex.regulars.get(id)!.story.map((b) => b.level)).toEqual([3, 6, 9, 10]);
     for (const r of codex.regulars.values()) {
       const levels = r.story.map((b) => b.level);
       expect(levels, r.id).toEqual([...levels].sort((a, b) => a - b));

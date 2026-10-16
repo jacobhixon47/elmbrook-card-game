@@ -47,6 +47,8 @@ export const FAMILIAR_SCORE: Record<string, (b: FamiliarBrew) => FamiliarStep | 
   bumblebee: potencyPer(3, (i) => i.tags.includes('flower'), 'Flower'),
   'kitchen-mouse': potencyPer(3, (i) => i.tags.includes('fruit'), 'Fruit'),
   canary: (b) => harmony(b.ingredients.some((i) => i.tags.includes('mineral')) ? 2 : 0, 'a Mineral'),
+  squirrel: potencyPer(3, (i) => i.origin === 'wychwood', 'Wychwood'),
+  dove: (b) => harmony(b.ingredients.some(essence('umbra')) ? 0 : 2, 'no Umbra'),
   dragonfly: potencyPer(3, essence('gale'), 'Gale'),
   badger: potencyPer(3, essence('umbra'), 'Umbra'),
   cricket: (b) => harmony(b.weather === 'clear' || b.weather === 'heatwave' ? 2 : 0, 'sunny day'),
