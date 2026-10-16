@@ -35,7 +35,7 @@ export const SKY_RULE: Record<SkyEvent, string> = {
   'meteor-shower': 'Fallen Stars can turn up in rewards, the Market and the Forage all week.',
 };
 
-type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'> & Partial<Pick<RunState, 'patrons' | 'fortunes' | 'year' | 'seed' | 'blessing'>>;
+type When = Pick<RunState, 'calendar' | 'season' | 'week' | 'day'> & Partial<Pick<RunState, 'patrons' | 'fortunes' | 'year' | 'seed' | 'blessing' | 'patronsRead'>>;
 
 const buried = (s: When, week: number) => s.seed !== undefined && snowedIn({ ...s, seed: s.seed }, week);
 const SNOWED_IN_RULE = 'Snowed In: drifts bury the Night Market, and only the Hearth Trader opens.';

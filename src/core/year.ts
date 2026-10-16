@@ -58,8 +58,11 @@ export const reputationMult = (year: number) => 1 + YEAR_RULES.reputationStep * 
 /** A Moonless Patron ladder tier, one higher from Year 10. */
 export const finaleTier = (s: InYear, tier: Tier): Tier => (yearRule(s, 10) ? tierStep(tier, YEAR_RULES.finaleTiers) : tier);
 
-/** Whether this week's patron is known yet: always in Year 1, and from the day before their Night Shift after. */
-export function patronKnown(s: InYear & Partial<Pick<RunState, 'week' | 'day'>>, week: number): boolean {
-  if (!yearRule(s, 2) || s.week === undefined || s.day === undefined) return true;
+/**
+ * Whether this week's patron is known yet: always in Year 1, and from the day before their Night Shift after,
+ * unless An Old Cookbook told you them all.
+ */
+export function patronKnown(s: InYear & Partial<Pick<RunState, 'week' | 'day' | 'patronsRead'>>, week: number): boolean {
+  if (!yearRule(s, 2) || s.patronsRead || s.week === undefined || s.day === undefined) return true;
   return week < s.week || (week === s.week && s.day >= NIGHT_SHIFT_DAY - YEAR_RULES.twistNoticeDays);
 }

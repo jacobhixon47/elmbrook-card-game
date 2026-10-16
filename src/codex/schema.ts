@@ -380,6 +380,8 @@ export const DuskEvent = z.object({
   tags: z.array(z.enum(['fae', 'mishap', 'market', 'town'])).min(1),
   /** Roll chance, relative to the others. */
   weight: z.number().positive(),
+  /** Only rolled once this unlock-pool card is open (the Old Cookbook sells a Grimoire Page). */
+  needs: Id.optional(),
   /** What you come across, in a line or two. */
   text: z.string().min(1),
   choices: z.array(z.object({ label: z.string().min(1), text: z.string().min(1) })).min(1).max(3),

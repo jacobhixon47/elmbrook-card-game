@@ -626,7 +626,7 @@ export const cauldrons: In<typeof Cauldron>[] = [
   { id: 'silver', name: 'Silver Cauldron', text: '+1 Discard a day. Orders pay 10% less.', unlock: 'legend-thrice', discards: 1, pay: 0.9 },
 ];
 
-// Dusk events (GDD §7), the first 8 from the balance tables. Each choice's rule is in core/dusk-events.ts.
+// Dusk events (GDD §7), all 20 from the balance tables (the last 12 approved by Jacob, Oct 16). Each choice's rule is in core/dusk-events.ts.
 export const duskEvents: In<typeof DuskEvent>[] = [
   {
     id: 'shrine-blessing', name: 'A Shrine Blessing', tags: ['town'], weight: 4,
@@ -667,6 +667,66 @@ export const duskEvents: In<typeof DuskEvent>[] = [
     id: 'fairy-ring', name: 'A Fairy Ring', tags: ['fae'], weight: 5,
     text: 'A ring of toadstools in the meadow, humming faintly.',
     choices: [{ label: 'Step in', text: 'A random card turns into one of the next rarity up.' }, { label: 'Walk around', text: 'Nothing happens.' }],
+  },
+  {
+    id: 'fae-bargain', name: 'A Fae Bargain', tags: ['fae'], weight: 6,
+    text: 'A voice from the hedge offers a trade: something of the moon, for something of tomorrow.',
+    choices: [{ label: 'Accept', text: 'Skip your next dusk reward. A random Lunar ingredient goes into your Night Satchel.' }, { label: 'Refuse politely', text: 'Nothing happens.' }],
+  },
+  {
+    id: 'pixie-thief', name: 'The Pixie Thief', tags: ['fae', 'mishap'], weight: 5,
+    text: 'A pixie darts off with 4 of your coins, giggling.',
+    choices: [{ label: 'Chase', text: '-1 Discard tomorrow. You get your coins back, and +4 gold.' }, { label: 'Let it go', text: 'Lose 4 gold.' }],
+  },
+  {
+    id: 'changeling-bottle', name: 'A Changeling Bottle', tags: ['fae'], weight: 4,
+    text: 'A bottle on the step that was not there before. It shimmers when you look away.',
+    choices: [{ label: 'Swap', text: 'A Shelf potion of your choice goes up one tier.' }, { label: 'Leave it', text: 'Nothing happens.' }],
+  },
+  {
+    id: 'cracked-shelf', name: 'A Cracked Shelf', tags: ['mishap'], weight: 4,
+    text: 'The Shelf creaks, and a long crack runs along the middle board.',
+    choices: [{ label: 'Repair', text: 'Pay 5 gold.' }, { label: 'Leave it', text: 'Lose a random Shelf potion.' }],
+  },
+  {
+    id: 'market-day', name: 'Market Day', tags: ['market'], weight: 6,
+    text: 'The square is still busy, and the stalls are clearing out stock.',
+    choices: [{ label: 'Browse', text: 'Visit the Market Square, every price 25% off.' }],
+  },
+  {
+    id: 'spice-merchant', name: 'The Spice Merchant', tags: ['market'], weight: 4,
+    text: 'A merchant with a cart of jars, packing up for the night. Everything smells of fire.',
+    choices: [{ label: 'Buy', text: 'Pay 6 gold for a Spice of your choice.' }, { label: 'Haggle', text: 'Every Spice, free. A Bad Omen joins your deck.' }],
+  },
+  {
+    id: 'sell-a-recipe', name: 'Sell a Recipe', tags: ['market'], weight: 4,
+    text: 'A cook from out of town wants to buy one of your recipes, and pays well for it.',
+    choices: [{ label: 'Sell', text: 'Forget a recipe you learned this run. +12 gold.' }, { label: 'Keep it', text: 'Nothing happens.' }],
+  },
+  {
+    id: 'childrens-dare', name: "Pip & Quill's Dare", tags: ['town'], weight: 5,
+    text: 'Pip and Quill dare you to brew one blindfolded. Quill has the blindfold ready.',
+    choices: [{ label: 'Take the dare', text: 'Your next brew has no preview. +2 Friendship with Pip & Quill.' }, { label: 'Not today', text: 'Nothing happens.' }],
+  },
+  {
+    id: 'tobins-stories', name: "Old Tobin's Stories", tags: ['town'], weight: 5,
+    text: 'Old Tobin is on his bench, and he has a story about the mine. He always does.',
+    choices: [{ label: 'Listen', text: '+1 Friendship with Old Tobin, and a Geode joins your deck.' }],
+  },
+  {
+    id: 'bake-sale', name: "Bea's Bake Sale", tags: ['town'], weight: 5,
+    text: 'Bea has a table out for the bake sale, and it needs something warm to drink.',
+    choices: [{ label: 'Help out', text: 'Give your lowest Warming Shelf potion. +8 gold and +1 Friendship with Bea.' }, { label: 'Buy a bun', text: 'Pay 1 gold. +1 Brew tomorrow.' }],
+  },
+  {
+    id: 'apprentice-asks', name: 'An Apprentice Asks', tags: ['town'], weight: 4,
+    text: 'A young apprentice asks to learn from you, and offers to trade notes.',
+    choices: [{ label: 'Teach', text: 'Give away a card of your choice. Learn a random recipe you don\'t know.' }, { label: 'Not now', text: 'Nothing happens.' }],
+  },
+  {
+    id: 'old-cookbook', name: 'An Old Cookbook', tags: ['market'], weight: 4, needs: 'grimoire-page',
+    text: 'A bookseller holds up a cookbook with pages loose at the back.',
+    choices: [{ label: 'Buy it', text: 'Pay 8 gold for a Grimoire Page.' }, { label: 'Leaf through', text: 'Learn who the rest of the month\'s patrons are.' }],
   },
 ];
 

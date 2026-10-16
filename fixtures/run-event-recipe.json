@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{ "learn": ["courage-cordial", "ginger-toddy", "fleetfoot-elixir", "thunderstride-tonic"] }, "openShop", "endDay", "skipReward", { "duskEvent": "sell-a-recipe" }], "ui": { "eventCard": 0 } }

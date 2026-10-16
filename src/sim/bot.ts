@@ -1,7 +1,7 @@
 import type { ModifierId } from '../codex/schema';
 import { codex } from '../codex';
 import {
-  allCards, cheapestPotion, CIDER_PRESS, commonCards, dueWeekOf, EVENT_GOLD, eventChoiceBlocked, eventChoiceCards, eventDone, fits, FIREFLY_GAMES, HARVEST_AUCTION, FRIENDSHIP, hearthOffers, HOLLY_CROWN, YULE_LOG,
+  allCards, cheapestPotion, CIDER_PRESS, commonCards, dueWeekOf, EVENT_GOLD, eventChoiceAsk, eventChoiceBlocked, eventDone, fits, FIREFLY_GAMES, HARVEST_AUCTION, FRIENDSHIP, hearthOffers, HOLLY_CROWN, YULE_LOG,
   MIN_DECK, NECTAR_TRADER, NIGHT_SHIFT_DAY, payout, pressable, previewBrew, rentOf, SEED_SWAPPER, tierIndex, WEEKS,
   type Action, type BrewPreview, type CardInstance, type Errand, type Order, type Potion, type RunState, type StallState, type StockItem,
 } from '../core';
@@ -338,9 +338,25 @@ function greedyDusk(s: RunState): Action {
     case 'event': {
       if (offer.chose !== null || eventDone(s, offer)) return { type: 'leaveErrand' };
       const index = eventPreference(s, offer.event, s.gold - reserve).find((i) => eventChoiceBlocked(s, offer.event, i) === null) ?? 0;
-      const cards = eventChoiceCards(s, offer.event, index);
-      const card = cards?.slice().sort((a, b) => cardPotency(b) - cardPotency(a))[0];
-      return { type: 'chooseEvent', index, ...(card ? { uid: card.uid } : {}) };
+      const ask = eventChoiceAsk(s, offer.event, index);
+      switch (ask?.kind) {
+        case 'deck': {
+          // Bless the strongest card; give the apprentice the weakest.
+          const byPotency = ask.cards.slice().sort((a, b) => cardPotency(b) - cardPotency(a));
+          const card = offer.event === 'apprentice-asks' ? byPotency.at(-1) : byPotency[0];
+          return { type: 'chooseEvent', index, ...(card ? { uid: card.uid } : {}) };
+        }
+        case 'shelf': {
+          const potion = ask.potions.slice().sort((a, b) => b.quality - a.quality)[0];
+          return { type: 'chooseEvent', index, ...(potion ? { uid: potion.uid } : {}) };
+        }
+        case 'recipe':
+          return { type: 'chooseEvent', index, pick: ask.recipes[0] };
+        case 'card':
+          return { type: 'chooseEvent', index, pick: ask.cards[0] };
+        default:
+          return { type: 'chooseEvent', index };
+      }
     }
     case 'hearth': {
       if (offer.removed) return { type: 'leaveErrand' };
@@ -451,6 +467,10 @@ function eventPreference(s: RunState, event: string, spare: number): number[] {
       return spare >= EVENT_GOLD.binRare ? [1, 0, 2] : spare >= EVENT_GOLD.binUncommon ? [0, 2] : [2];
     case 'mice-in-the-pantry':
       return [1, 0];
+    case 'sell-a-recipe':
+      return [1];
+    case 'apprentice-asks':
+      return deck >= 14 ? [0, 1] : [1];
     default:
       return [0, 1];
   }

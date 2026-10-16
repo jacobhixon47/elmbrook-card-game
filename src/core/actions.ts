@@ -37,8 +37,11 @@ export type Action =
   | { type: 'enchant'; uid: number; modifier: ModifierId }
   /** At the Guild Hall, one a visit. */
   | { type: 'takeCommission'; index: number }
-  /** A dusk event's choice; `uid` is the card it's for when the choice asks for one (the Shrine Blessing). */
-  | { type: 'chooseEvent'; index: number; uid?: number }
+  /**
+   * A dusk event's choice. When the choice asks for something: `uid` is the deck card (the Shrine Blessing)
+   * or Shelf potion (the Changeling Bottle), `pick` the recipe (Sell a Recipe) or new card (the Spice Merchant).
+   */
+  | { type: 'chooseEvent'; index: number; uid?: number; pick?: string }
   | { type: 'leaveErrand' }
   // After a Night Shift: free picks (the first-night Lunar card, night customers' payments, a patron's reward).
   | { type: 'takeGift'; index: number }
@@ -136,6 +139,8 @@ export type GameEvent =
   | { type: 'rewardOffered'; cards: string[] }
   | { type: 'rewardPicked'; card: string; uid: number }
   | { type: 'rewardSkipped' }
+  /** A Fae Bargain took tonight's reward. */
+  | { type: 'rewardForfeited' }
   | { type: 'errandsOffered'; options: Errand[] }
   | { type: 'errandChosen'; errand: Errand }
   | { type: 'cardGained'; card: string; uid: number; source: CardSource }
