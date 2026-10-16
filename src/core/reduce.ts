@@ -7,7 +7,7 @@ import { changeGold, draw, drawToHandSize, gainCard, pick, Reject, reject, shuff
 import { hasEffect, effectsOf, sumEffect } from './effects';
 import { offerErrands, offerReward, openErrand } from './dusk';
 import { blessingTonight, chooseBlessing, fairToday, openFair, openVigil, vigilToday } from './fair';
-import { brewBlocked, finaleMet, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
+import { brewBlocked, finaleMet, isSatchelCard, nightPayment, patronReward, queueFirstNightGift, rollPatrons, stowSatchel, twistNow } from './night';
 import { chooseEvent, eventDone, openEvent } from './dusk-events';
 import { commissionsOnBrew, commissionsOnDayEnd, commissionsOnDeliver, takeCommission } from './commissions';
 import { addModifier, cantModify, drawOnBrewOf, MODIFIER_RULES, enchant, heartDeltaOf, isAged, temper } from './modifiers';
@@ -16,7 +16,7 @@ import {
   atStall, brokerPick, drawTarot, forgetRecipe, marketOf, openNightMarket, placeBid, pressCider, readPetals, seedSwap, stallStock, swapForCard, takeDeal, takePrize,
   tossRing, hearthTrade, burnYule, wearCrown, tradeNectar, weave,
 } from './market';
-import { cursePool, dayAllowance, gainRelic, grantRelic, handSizeToday, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
+import { cursePool, dayAllowance, gainRelic, grantRelic, handSizeToday, hasCurse, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
 import { fits, postOrders, postVisitorOrder, payout, satisfies } from './orders';
 import { doFavour, priceAt, visitorPayment } from './visitors';
 import { seedRng } from './rng';
@@ -26,7 +26,7 @@ import {
   SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
   MAX_CAULDRON_SLOTS, MAX_FAMILIAR_SLOTS, MAX_SHELF_SLOTS, tierIndex, VIGIL,
 } from './rules';
-import { befriend, FRIENDSHIP, friendUnlocks } from './friendship';
+import { allKeepsakes, befriend, FRIENDSHIP, friendUnlocks, KEEPSAKE_SLOTS } from './friendship';
 import { allCards, RUN_VERSION, type CardInstance, type Order, type Pending, type Phase, type Potion, type RunState, type RunStats, type StockItem } from './state';
 import { YEAR_RULES, yearDiscards, yearRule } from './year';
 
@@ -35,7 +35,7 @@ export type ReduceResult = { state: RunState; events: GameEvent[] };
 const freshPending = (): Pending => ({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false, essenceHarmony: 0 });
 const noBoost = () => ({ hearts: 0, tip: 0, payMult: 1 });
 
-export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string, cauldronId = 'copper', friendship: Readonly<Record<string, number>> = {}): ReduceResult {
+export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string, cauldronId = 'copper', friendship: Readonly<Record<string, number>> = {}, keepsakes: readonly string[] = []): ReduceResult {
   const witch = codex.witches.get(witchId);
   if (!witch) throw new Error(`unknown witch: ${witchId}`);
   if (!codex.cauldrons.has(cauldronId)) throw new Error(`unknown cauldron: ${cauldronId}`);
@@ -109,6 +109,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
   applyPerks(ctx, perks);
   if (boon) applyBoon(ctx, boon);
   applyYear(ctx);
+  applyKeepsakes(ctx, keepsakes);
   startDay(ctx);
   return { state: ctx.s, events: ctx.ev };
 }
@@ -918,6 +919,21 @@ function applyYear(ctx: Ctx): void {
   if (yearRule(s, 8)) s.shelfSize = Math.max(1, s.shelfSize - YEAR_RULES.shelf);
 }
 
+/**
+ * The keepsake box (GDD §13): its cards join the starting deck, added rather than swapped in. A
+ * Nameless run (Year 7's Curse) brings none, since no one remembers you; Satchel cards go in the Satchel.
+ */
+function applyKeepsakes(ctx: Ctx, keepsakes: readonly string[]): void {
+  const s = ctx.s;
+  if (hasCurse(s, 'nameless')) return;
+  for (const card of keepsakes.slice(0, KEEPSAKE_SLOTS)) {
+    if (!allKeepsakes().includes(card)) throw new Error(`not a keepsake: ${card}`);
+    const inst = { uid: s.nextUid++, card };
+    (isSatchelCard(card) ? s.satchel : s.drawPile).push(inst);
+    if (!s.stats.met.includes(card)) s.stats.met.push(card);
+  }
+}
+
 /** A Year's boon (GDD §13), applied at the start of every run that Year. */
 function applyBoon(ctx: Ctx, id: string): void {
   const boon = codex.boons.get(id);
@@ -927,7 +943,7 @@ function applyBoon(ctx: Ctx, id: string): void {
 
 /** The single entry point for game rules. Pure: same input, same output. A broken rule returns the old state and a `rejected` event. */
 export function reduce(state: RunState | null, action: Action): ReduceResult {
-  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks, action.year, action.boon, action.cauldron, action.friendship);
+  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks, action.year, action.boon, action.cauldron, action.friendship, action.keepsakes);
   if (!state) throw new Error('no run in progress');
   const ctx: Ctx = { s: structuredClone(state), ev: [] };
   try {

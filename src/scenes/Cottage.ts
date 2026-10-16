@@ -3,7 +3,7 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { ALMANAC_FIRST_PAGE, boonOf, cauldronOpen, CODEX_TABLES, runStartChoice, witchOpen, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
+import { ALMANAC_FIRST_PAGE, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, CODEX_TABLES, runStartChoice, witchOpen, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
 import { CODEX_TABS, codexEntries } from '../view/codex';
 import { unlockName } from '../view/describe';
 import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
@@ -65,6 +65,7 @@ export class Cottage extends Phaser.Scene {
     this.add.existing(button(this, 420, 300, 'Settings', settings, { w: 96 }));
     this.drawYearRules(profile);
     this.drawKit(profile, data.fixture?.ui?.kit, !data.fixture);
+    this.drawKeepsakes(profile, !data.fixture);
     const ui = data.fixture?.ui;
     // A new Year's boon is chosen before anything else.
     if (profile.boonOffer) this.openBoons(profile, data.fixture ? null : (id) => {
@@ -209,6 +210,42 @@ export class Cottage extends Phaser.Scene {
     for (const [row, cy] of [['w', y + 28], ['c', y + 77]] as const) {
       this.add.existing(button(this, x + 20, cy, '<', () => step(row, -1), { w: 16 }));
       this.add.existing(button(this, x + 228, cy, '>', () => step(row, 1), { w: 16 }));
+    }
+    draw();
+  }
+
+  /**
+   * The keepsake box (GDD §13): one card added to every run's starting deck, chosen from the regulars'
+   * own vigil gifts once their Friendship reaches 8. Arrows step through the open ones and "empty".
+   */
+  private drawKeepsakes(p: Profile, save: boolean) {
+    // Between the Year's rules (which run to about y 129 in Year 10) and the witch and cauldron.
+    const x = 196;
+    const y = 133;
+    this.add.existing(panel(this, x, y, 248, 43, 'k', 0.9, 'n'));
+    const open = keepsakesOpen(p.friendship);
+    const choices: (string | null)[] = [null, ...open];
+    let i = Math.max(0, choices.indexOf(p.keepsakes.find((k) => open.includes(k)) ?? null));
+    const rows = this.add.container(0, 0);
+    const draw = () => {
+      rows.removeAll(true);
+      const id = choices[i] ?? null;
+      const card = id ? codex.ingredients.get(id) ?? codex.tinctures.get(id) : null;
+      rows.add(pixelText(this, x + 124, y + 4, card ? `Keepsake box: ${card.name}` : 'Keepsake box: empty', { size: 8, color: card ? 'W' : 'S', align: 'center' }).setOrigin(0.5, 0));
+      const note = card ? `${card.text} Added to every run's starting deck.`
+        : open.length ? 'Choose a keepsake to add to every run\'s starting deck.'
+          : `At Friendship ${FRIENDSHIP.vigilGiftLevel}, a regular's own vigil gift can go in here, to start every run in your deck.`;
+      rows.add(pixelText(this, x + 124, y + 16, note, { size: 6, color: card ? 'a' : 'S', align: 'center', wrap: 188 }).setOrigin(0.5, 0));
+    };
+    const step = (by: number) => {
+      i = (i + by + choices.length) % choices.length;
+      const id = choices[i];
+      if (save) saveProfile({ keepsakes: id ? [id] : [] });
+      draw();
+    };
+    if (open.length) {
+      this.add.existing(button(this, x + 20, y + 21, '<', () => step(-1), { w: 16 }));
+      this.add.existing(button(this, x + 228, y + 21, '>', () => step(1), { w: 16 }));
     }
     draw();
   }

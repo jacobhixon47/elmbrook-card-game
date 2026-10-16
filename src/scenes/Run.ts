@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, priceAt, blessingTonight, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, priceAt, runKeepsakes, blessingTonight, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
   HARVEST_AUCTION, FRIENDSHIP, friendLevelOf, friendshipOf, hearthOffers, isRegular, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
@@ -1921,11 +1921,12 @@ export class Run extends Phaser.Scene {
    * What the profile brings to a new run: cottage perks, and what the Almanac added to the pools.
    * Neither in the tutorial, which plays a fixed deal, or in fixtures.
    */
-  private fromProfile(fixture: boolean): { perks?: string[]; unlocks?: string[]; year?: number; boon?: string; friendship?: Record<string, number> } {
-    // A fixture's own profile can bring Friendship from earlier runs (the Townsfolk page).
+  private fromProfile(fixture: boolean): { perks?: string[]; unlocks?: string[]; year?: number; boon?: string; friendship?: Record<string, number>; keepsakes?: string[] } {
+    // A fixture's own profile can bring Friendship from earlier runs (the Townsfolk page) and keepsakes.
     if (fixture) {
-      const friendship = this.fixture?.profile ? migrateProfile(this.fixture.profile).friendship : {};
-      return Object.keys(friendship).length ? { friendship } : {};
+      const p = this.fixture?.profile ? migrateProfile(this.fixture.profile) : null;
+      const keepsakes = p ? runKeepsakes(p) : [];
+      return { ...(p && Object.keys(p.friendship).length ? { friendship: p.friendship } : {}), ...(keepsakes.length ? { keepsakes } : {}) };
     }
     if (this.tutorial) return {};
     const p = loadProfile();
@@ -1936,6 +1937,7 @@ export class Run extends Phaser.Scene {
       ...(p.year > 1 ? { year: p.year } : {}),
       ...(boonOf(p) ? { boon: boonOf(p)! } : {}),
       ...(Object.keys(p.friendship).length ? { friendship: p.friendship } : {}),
+      ...(runKeepsakes(p).length ? { keepsakes: runKeepsakes(p) } : {}),
     };
   }
 

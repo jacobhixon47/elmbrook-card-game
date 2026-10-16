@@ -84,6 +84,23 @@ export function friendTip(s: Pick<RunState, 'friendship' | 'friendshipBase'>, cu
   return isRegular(customer) && friendLevelOf(s, customer) >= FRIENDSHIP.tipLevel ? FRIENDSHIP.tipGold : 0;
 }
 
+/** Slots in the cottage's keepsake box (GDD §13); a second comes later, from an Almanac goal or a perk. */
+export const KEEPSAKE_SLOTS = 1;
+
+/** Every card that can be a keepsake: each regular's own vigil gift. */
+export const allKeepsakes = () => [...codex.regulars.values()].flatMap((r) => (r.vigilGift ? [r.vigilGift] : []));
+
+/** The keepsakes this Friendship opens: a regular's vigil gift from Friendship 8, in codex order. */
+export function keepsakesOpen(friendship: Readonly<Record<string, number>>): string[] {
+  return [...codex.regulars.values()].filter((r) => r.vigilGift && friendLevel(friendship[r.id] ?? 0) >= FRIENDSHIP.vigilGiftLevel).map((r) => r.vigilGift!);
+}
+
+/** The keepsakes a run sets out with: the box's, still open, up to the slots. */
+export function runKeepsakes(p: { keepsakes: readonly string[]; friendship: Readonly<Record<string, number>> }): string[] {
+  const open = keepsakesOpen(p.friendship);
+  return p.keepsakes.filter((k) => open.includes(k)).slice(0, KEEPSAKE_SLOTS);
+}
+
 /** Everything every regular's Friendship adds to the pools: `newRun` adds it to the run's unlocks. */
 export function friendUnlocks(friendship: Readonly<Record<string, number>>): string[] {
   return [...codex.regulars.keys()].flatMap((id) => friendGifts(id, friendLevel(friendship[id] ?? 0)));

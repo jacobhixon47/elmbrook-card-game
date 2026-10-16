@@ -1,7 +1,7 @@
 import { codex } from '../src/codex';
 import { describe, expect, it } from 'vitest';
 import {
-  bankFriendship, bestFriend, FAMILIAR_SCORE, familiarPool, fencePrice, friendUnlocks, recipeAvailable, satisfies, storyDue, storyKey, friendLevel, FRIENDSHIP, levelStartAt, migrateProfile, migrateRun, newProfile, newStats, nextLevelAt, recordRun, reduce,
+  allCards, bankFriendship, bestFriend, KEEPSAKE_SLOTS, keepsakesOpen, runKeepsakes, FAMILIAR_SCORE, familiarPool, fencePrice, friendUnlocks, recipeAvailable, satisfies, storyDue, storyKey, friendLevel, FRIENDSHIP, levelStartAt, migrateProfile, migrateRun, newProfile, newStats, nextLevelAt, recordRun, reduce,
   type Order, type RunState,
 } from '../src/core';
 import { brewing, ofType, ok, slotAll, withHand } from './helpers';
@@ -254,5 +254,46 @@ describe('Friendship part 4: the level 8 vigil gift and the level 10 tip (GDD §
     const s = brewing('friends');
     expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': at(8) - 1 } }).events)).toBe('Old Tobin: Friendship 8! At the Longest Night they bring Lantern Coal.');
     expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': at(10) - 1 } }).events)).toMatch(/^Old Tobin: Friendship 10! \+1 gold tip on every order of theirs\./);
+  });
+});
+
+describe('the keepsake box (GDD §13)', () => {
+  const at8 = FRIENDSHIP.levels[FRIENDSHIP.vigilGiftLevel - 1]!;
+  const run = (keepsakes: string[], extra: Partial<{ year: number; seed: string }> = {}) =>
+    reduce(null, { type: 'startRun', seed: extra.seed ?? 'keep', witch: 'hedge-witch', keepsakes, ...(extra.year ? { year: extra.year } : {}) }).state;
+
+  it('opens a regular\'s own vigil gift at Friendship 8, one slot for now', () => {
+    expect(KEEPSAKE_SLOTS).toBe(1);
+    expect(keepsakesOpen({})).toEqual([]);
+    expect(keepsakesOpen({ 'old-tobin': at8, 'bea-thornwick': at8 - 1 })).toEqual(['lantern-coal']);
+    expect(runKeepsakes({ keepsakes: ['lantern-coal'], friendship: { 'old-tobin': at8 } })).toEqual(['lantern-coal']);
+    expect(runKeepsakes({ keepsakes: ['honey-loaf'], friendship: { 'old-tobin': at8 } })).toEqual([]);
+  });
+
+  it('adds the keepsake to the starting deck, on top of the usual cards', () => {
+    const plain = run([]);
+    const kept = run(['honey-loaf']);
+    expect(allCards(kept)).toHaveLength(allCards(plain).length + 1);
+    expect(allCards(kept).some((c) => c.card === 'honey-loaf')).toBe(true);
+    expect(kept.stats.met).toContain('honey-loaf');
+    // Night Lily is a Lunar card: it waits in the Night Satchel.
+    expect(run(['night-lily']).satchel.map((c) => c.card)).toContain('night-lily');
+    expect(() => run(['elmroot'])).toThrow(/not a keepsake/);
+  });
+
+  it('brings none on a run that starts Nameless', () => {
+    for (let i = 0; i < 200; i++) {
+      const s = run(['honey-loaf'], { year: 7, seed: `nameless-${i}` });
+      if (!s.curses.includes('nameless')) continue;
+      expect(allCards(s).some((c) => c.card === 'honey-loaf')).toBe(false);
+      return;
+    }
+    throw new Error('no seed started Nameless');
+  });
+
+  it('is kept in the profile from version 12, holding only real keepsakes', () => {
+    expect(newProfile().keepsakes).toEqual([]);
+    expect(migrateProfile({ ...newProfile(), version: 11, keepsakes: undefined }).keepsakes).toEqual([]);
+    expect(migrateProfile({ ...newProfile(), keepsakes: ['lantern-coal', 'elmroot', 'honey-loaf'] }).keepsakes).toEqual(['lantern-coal']);
   });
 });
