@@ -93,7 +93,8 @@ export type StockItem =
 export type Offer =
   | { kind: 'reward'; cards: string[] }
   | { kind: 'errands'; options: Errand[] }
-  | { kind: 'market'; stock: StockItem[] }
+  /** `off` is Market Day's discount, already in the prices. */
+  | { kind: 'market'; stock: StockItem[]; off?: number }
   | { kind: 'forage'; cards: string[]; picksLeft: number }
   /** `removed` once a card is burned or a Curse lifted: the Hearth does one a night. */
   | { kind: 'hearth'; removed: boolean }
@@ -152,7 +153,7 @@ export type Favour = { kind: 'favour'; visitor: string; job: 'burn' | 'temper' }
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 21;
+export const RUN_VERSION = 22;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -261,6 +262,14 @@ export type RunState = {
   skipStreak: number;
   /** Half-price buys left at this week's Night Market (the Firefly Keeper); gone when the rent is paid. */
   halfPrice: number;
+  /** Brews and Discards added to (or taken from) the next day's, by dusk events (Bea's bun, the Pixie Thief). */
+  tomorrow: { brews: number; discards: number };
+  /** The next dusk reward is skipped (A Fae Bargain). */
+  forfeitReward: boolean;
+  /** The next brew has no preview (Pip & Quill's Dare). The rules don't change; the cauldron panel hides it. */
+  blindBrew: boolean;
+  /** Every patron of the month is known, whatever the Year (An Old Cookbook). */
+  patronsRead: boolean;
   nextUid: number;
   /** Why a lost run ended: the rent, or the Moonless Patron left unsatisfied. */
   lostTo?: 'rent' | 'finale';

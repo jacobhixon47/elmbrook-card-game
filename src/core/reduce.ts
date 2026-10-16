@@ -102,6 +102,10 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     offer: null,
     skipStreak: 0,
     halfPrice: 0,
+    tomorrow: { brews: 0, discards: 0 },
+    forfeitReward: false,
+    blindBrew: false,
+    patronsRead: false,
     nextUid: uid,
   };
   const ctx: Ctx = { s, ev: [{ type: 'runStarted', seed, witch: witch.id, season }] };
@@ -154,6 +158,10 @@ function startDay(ctx: Ctx): void {
   const pot = cauldronOf(s);
   s.brewsLeft = Math.max(1, allowance.brews + (pot.brews ?? 0)) + (blessingTonight(s, 'hearthfire') ? VIGIL.hearthfireBrews : 0);
   s.discardsLeft = Math.max(0, allowance.discards + (pot.discards ?? 0)) + (blessingTonight(s, 'warm-hands') ? VIGIL.warmHandsDiscards : 0);
+  // Dusk events that reach into the next day (GDD §7).
+  s.brewsLeft = Math.max(1, s.brewsLeft + s.tomorrow.brews);
+  s.discardsLeft = Math.max(0, s.discardsLeft + s.tomorrow.discards);
+  s.tomorrow = { brews: 0, discards: 0 };
   ctx.ev.push({ type: 'dayStarted', week: s.week, day: s.day, nightShift: night });
   ctx.ev.push({ type: 'deckShuffled', size: s.drawPile.length });
   postOrders(ctx, night);
@@ -248,6 +256,7 @@ function brew(ctx: Ctx, deliverTo: number | undefined, pick: string | undefined)
   const used = s.cauldron;
   s.cauldron = [];
   s.brewsLeft -= 1;
+  s.blindBrew = false;
   s.brewsToday += 1;
   liftFog(ctx);
   s.discardsLeft -= preview.discardCost;
@@ -342,7 +351,12 @@ function endDay(ctx: Ctx): void {
   s.phase = 'dusk';
   // On festival day the fair is the day's reward.
   if (fairToday(s) || vigilToday(s)) afterReward(ctx);
-  else offerReward(ctx);
+  else if (s.forfeitReward) {
+    // A Fae Bargain took this reward.
+    s.forfeitReward = false;
+    ctx.ev.push({ type: 'rewardForfeited' });
+    afterReward(ctx);
+  } else offerReward(ctx);
 }
 
 /** Cards like Rot leave the deck by themselves after a few days. */
@@ -630,7 +644,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       return;
 
     case 'chooseEvent':
-      chooseEvent(ctx, action.index, action.uid);
+      chooseEvent(ctx, action.index, action.uid, action.pick);
       return;
 
     case 'leaveErrand': {

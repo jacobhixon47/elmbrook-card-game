@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  allCards, migrateRun, MODIFIER_RULES, NIGHT_SHIFT_DAY, RUN_VERSION, satisfies, VISITOR_RULES, visitorsToday, WEEKS,
+  allCards, migrateRun, MODIFIER_RULES, NIGHT_SHIFT_DAY, satisfies, VISITOR_RULES, visitorsToday, WEEKS,
   type Calendar, type Order, type RunState, type Season, type Weather,
 } from '../src/core';
 import { customerLine, customerName, extraPay, orderNeeds, orderTerms } from '../src/view/describe';
@@ -175,7 +175,8 @@ describe('seasonal visitors (GDD §4.1)', () => {
 
   it('a run saved before visitors continues with no half-price buys or favours', () => {
     const s = start('old');
-    const old: Record<string, unknown> = { ...s, version: RUN_VERSION - 1 };
+    // Saved at version 20, before visitors.
+    const old: Record<string, unknown> = { ...s, version: 20 };
     delete old.halfPrice;
     delete old.favours;
     const back = migrateRun(old)!;

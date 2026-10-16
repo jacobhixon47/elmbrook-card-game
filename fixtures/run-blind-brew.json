@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop", "endDay", "skipReward", { "duskEvent": "childrens-dare" }, { "chooseEvent": 0 }, "leaveErrand", "openShop", { "slot": 0 }, { "slot": 0 }] }

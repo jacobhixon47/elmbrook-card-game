@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop", "endDay", "skipReward", { "duskEvent": "market-day" }, { "chooseEvent": 0 }] }

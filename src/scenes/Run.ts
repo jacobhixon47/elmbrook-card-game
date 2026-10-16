@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, priceAt, runKeepsakes, blessingTonight, BLACK_MARKET, eventChoiceBlocked, eventChoiceCards, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, priceAt, runKeepsakes, blessingTonight, BLACK_MARKET, eventChoiceAsk, eventChoiceBlocked, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
   HARVEST_AUCTION, FRIENDSHIP, friendLevelOf, friendshipOf, hearthOffers, isRegular, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
@@ -760,6 +760,10 @@ export class Run extends Phaser.Scene {
     } else if (preview.kind === 'empty') {
       this.text(x, SIDE.y + 5, 'Cauldron', { size: 8, color: 'y' });
       this.text(x, SIDE.y + 19, `Click ingredients to add them. Two make a potion${s.cauldronSlots > 2 ? ', three a stronger one' : ''}.`, { size: 7, color: 'a', wrap: SIDE.w - 12 });
+    } else if (s.blindBrew) {
+      // Pip & Quill's Dare (a dusk event): no peeking at this one.
+      this.text(x, SIDE.y + 5, 'Blindfolded', { size: 10, color: 'v' });
+      this.text(x, SIDE.y + 21, "Pip & Quill's dare: no preview for this brew. Brew it and see what you made.", { size: 7, color: 'a', wrap: SIDE.w - 12 });
     } else if (preview.kind === 'sludge') {
       this.text(x, SIDE.y + 5, 'Sludge!', { size: 10, color: 'R' });
       this.text(x, SIDE.y + 21, "These essences don't make any recipe. Brewing it adds a Sludge card to your deck.", { size: 7, color: 'a', wrap: SIDE.w - 12 });
@@ -1019,8 +1023,8 @@ export class Run extends Phaser.Scene {
   private brew() {
     const s = store.getState()!;
     const preview = this.previewOf(s);
-    // GDD §6.2: an invalid mix warns first, then makes Sludge if you insist.
-    if (preview.kind === 'sludge' && this.confirm !== 'sludge') {
+    // GDD §6.2: an invalid mix warns first, then makes Sludge if you insist. Blindfolded, no warning.
+    if (preview.kind === 'sludge' && this.confirm !== 'sludge' && !s.blindBrew) {
       this.confirm = 'sludge';
       return this.render();
     }
@@ -1247,7 +1251,7 @@ export class Run extends Phaser.Scene {
         return;
       }
       case 'market': {
-        title('Market Square', `Buy cards for your deck or upgrades for the shop. You have ${s.gold} gold.`);
+        title(offer.off ? 'Market Day' : 'Market Square', `${offer.off ? `Every price is ${Math.round(offer.off * 100)}% off tonight. ` : ''}Buy cards for your deck or upgrades for the shop. You have ${s.gold} gold.`);
         this.drawStock(s, offer.stock);
         this.add2(button(this, 320, 262, 'Leave', () => this.dispatch({ type: 'leaveErrand' }), { w: 60 }));
         return;
@@ -1395,11 +1399,24 @@ export class Run extends Phaser.Scene {
     };
     if (this.mode.kind === 'event-card' && offer.chose === null) {
       const choice = this.mode.choice;
-      title(ev.name, `${ev.choices[choice]!.text} Choose the card.`);
-      this.deckGrid(eventChoiceCards(s, offer.event, choice) ?? [], (inst) => {
-        const events = this.dispatch({ type: 'chooseEvent', index: choice, uid: inst.uid });
+      const ask = eventChoiceAsk(s, offer.event, choice);
+      const choose = (pick: { uid?: number; pick?: string }) => {
+        const events = this.dispatch({ type: 'chooseEvent', index: choice, ...pick });
         if (!events.some((e) => e.type === 'rejected')) this.mode = { kind: 'idle' };
+      };
+      const what = { deck: 'card', shelf: 'potion', recipe: 'recipe', card: 'card' }[ask?.kind ?? 'deck'];
+      title(ev.name, `${ev.choices[choice]!.text} Choose the ${what}.`);
+      // Buttons in rows of three, for Shelf potions and recipes.
+      const rows = (labels: string[], onPick: (i: number) => void) => labels.forEach((label, i) => {
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const across = Math.min(labels.length, 3);
+        this.add2(button(this, 320 + (col - (across - 1) / 2) * 140, 120 + row * 24, label, () => onPick(i), { w: 132 }));
       });
+      if (ask?.kind === 'deck') this.deckGrid(ask.cards, (inst) => choose({ uid: inst.uid }));
+      else if (ask?.kind === 'shelf') rows(ask.potions.map((p) => `${TIER_NAME[p.tier]} ${recipeName(p.recipe)}`), (i) => choose({ uid: ask.potions[i]!.uid }));
+      else if (ask?.kind === 'recipe') rows(ask.recipes.map(recipeName), (i) => choose({ pick: ask.recipes[i] }));
+      else if (ask?.kind === 'card') ask.cards.forEach((id, i) => this.offerCard(320 + (i - (ask.cards.length - 1) / 2) * 76, 140, id, () => choose({ pick: id })));
       this.add2(button(this, 320, 262, 'Back', () => {
         this.mode = { kind: 'idle' };
         this.render();
@@ -1419,7 +1436,7 @@ export class Run extends Phaser.Scene {
         return void tile.setAlpha(0.4);
       }
       tile.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-        if (eventChoiceCards(s, offer.event, i)) {
+        if (eventChoiceAsk(s, offer.event, i)) {
           this.mode = { kind: 'event-card', choice: i };
           this.render();
         } else this.dispatch({ type: 'chooseEvent', index: i });

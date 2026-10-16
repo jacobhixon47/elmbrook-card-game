@@ -429,6 +429,7 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
   },
   // 20 → 21: the Firefly Keeper's half-price buys (seasonal visitors).
   20: (s) => ({ ...s, halfPrice: 0, favours: [] }),
+  21: (s) => ({ ...s, tomorrow: { brews: 0, discards: 0 }, forfeitReward: false, blindBrew: false, patronsRead: false }),
 };
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */

@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{ "potion": ["healing-draught", "fine"] }, { "potion": ["hearthwarm-tonic", "superb"] }, { "potion": ["calm-waters", "legendary"] }, "openShop", "endDay", "skipReward", { "duskEvent": "changeling-bottle" }], "ui": { "eventCard": 0 } }

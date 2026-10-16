@@ -75,20 +75,26 @@ export function offerErrands(ctx: Ctx): void {
   ctx.ev.push({ type: 'errandsOffered', options });
 }
 
+/** The Market Square: cards, familiars and slots. Market Day (a dusk event) takes `off` of every price, rounded to the nearest gold. */
+export function openMarket(ctx: Ctx, off = 0): void {
+  const s = ctx.s;
+  const stock: StockItem[] = rollCards(ctx, MARKET_CARDS, rarityWeights(0)).map((card) => ({
+    kind: 'card', card, price: CARD_PRICE[rarityOf(card)], sold: false,
+  }));
+  for (const familiar of rollFamiliars(ctx, MARKET_FAMILIARS)) stock.push({ kind: 'familiar', familiar, price: familiarPrice(familiar), sold: false });
+  if (s.cauldronSlots < MAX_CAULDRON_SLOTS) stock.push({ kind: 'cauldron-slot', price: CAULDRON_SLOT_PRICE, sold: false });
+  if (s.shelfSize < MAX_SHELF_SLOTS) stock.push({ kind: 'shelf-slot', price: SHELF_SLOT_PRICE, sold: false });
+  for (const item of stock) item.price = Math.round(item.price * (1 - off));
+  s.offer = off ? { kind: 'market', stock, off } : { kind: 'market', stock };
+}
+
 export function openErrand(ctx: Ctx, errand: Errand): void {
   const s = ctx.s;
   ctx.ev.push({ type: 'errandChosen', errand });
   switch (errand) {
-    case 'market': {
-      const stock: StockItem[] = rollCards(ctx, MARKET_CARDS, rarityWeights(0)).map((card) => ({
-        kind: 'card', card, price: CARD_PRICE[rarityOf(card)], sold: false,
-      }));
-      for (const familiar of rollFamiliars(ctx, MARKET_FAMILIARS)) stock.push({ kind: 'familiar', familiar, price: familiarPrice(familiar), sold: false });
-      if (s.cauldronSlots < MAX_CAULDRON_SLOTS) stock.push({ kind: 'cauldron-slot', price: CAULDRON_SLOT_PRICE, sold: false });
-      if (s.shelfSize < MAX_SHELF_SLOTS) stock.push({ kind: 'shelf-slot', price: SHELF_SLOT_PRICE, sold: false });
-      s.offer = { kind: 'market', stock };
+    case 'market':
+      openMarket(ctx);
       return;
-    }
     case 'forage': {
       // Wychwood and in-season ingredients are each three times as likely; every card is free.
       const pool = dayPool(s).filter((c) => codex.ingredients.has(c.id));
