@@ -1,9 +1,11 @@
 // pnpm sim --runs 2000 --strategy greedy [--season spring] [--seed prefix] [--unlocks all] [--perks all|tier|a,b] [--year 2] [--boon id] [--friends 10]
+// pnpm sim --career 20 --strategy casual [--max-runs 250]   (whole saves from a new profile; see src/sim/career.ts)
 // pnpm sim --replay path/to/run.json   (a {seed?, actions[]} log from a crash, the sim or the dev overlay)
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { codex } from '../src/codex';
 import { almanacUnlocks, FRIENDSHIP, replay, SEASONS, type Action, type Season } from '../src/core';
 import type { Strategy } from '../src/sim/bot';
+import { careerReport, playCareer } from '../src/sim/career';
 import { report } from '../src/sim/report';
 import { playRun } from '../src/sim/run';
 
@@ -24,6 +26,7 @@ if (replayPath) {
 
 const runs = Number(arg('runs') ?? 200);
 const strategy = (arg('strategy') ?? 'greedy') as Strategy;
+if (!['greedy', 'skilled', 'casual', 'novice', 'random'].includes(strategy)) throw new Error(`unknown strategy ${strategy}`);
 const season = arg('season') as Season | undefined;
 if (season && !SEASONS.includes(season)) throw new Error(`unknown season ${season}`);
 const prefix = arg('seed') ?? 'sim';
@@ -41,6 +44,16 @@ const boon = arg('boon');
 // --friends n: every regular at Friendship level n, as a long save would have them.
 const friendsArg = arg('friends');
 const friendship = friendsArg ? Object.fromEntries([...codex.regulars.keys()].map((id) => [id, Number(friendsArg) > 0 ? FRIENDSHIP.levels[Number(friendsArg) - 1]! : 0])) : undefined;
+
+// --career n: n whole saves instead of single runs.
+const careers = arg('career');
+if (careers) {
+  const t = performance.now();
+  const saves = Array.from({ length: Number(careers) }, (_, i) => playCareer(`${prefix}-${i}`, strategy, Number(arg('max-runs') ?? 250)));
+  console.log(careerReport(saves, `${strategy} saves`));
+  console.log(`\n${((performance.now() - t) / 1000).toFixed(1)}s`);
+  process.exit(saves.some((c) => c.error) ? 1 : 0);
+}
 
 const t0 = performance.now();
 const records = Array.from({ length: runs }, (_, i) => playRun(`${prefix}-${i}`, { strategy, ...(season ? { season } : {}), ...(unlocks ? { unlocks } : {}), ...(perks ? { perks } : {}), ...(year ? { year } : {}), ...(boon ? { boon } : {}), ...(friendship ? { friendship } : {}) }));

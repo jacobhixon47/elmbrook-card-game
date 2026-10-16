@@ -9,11 +9,13 @@ import { effectsOf, targetsOf } from '../core/effects';
 import { cantModify, cardPotency, MODIFIER_RULES } from '../core/modifiers';
 import { brewBlocked, isSatchelCard } from '../core/night';
 import { fencePrice } from '../core/reduce';
-import { nextFloat, type RngState } from '../core/rng';
+import { nextFloat, seedRng, type RngState } from '../core/rng';
 
 // Headless players for `pnpm sim`. They only read state and return actions, like the UI does.
 
-export type Strategy = 'greedy' | 'random';
+/** `greedy` plays as well as the bot knows how; the personas play like people do (see PERSONAS); `random` fuzzes. */
+export type Strategy = 'greedy' | Persona | 'random';
+export type Persona = 'skilled' | 'casual' | 'novice';
 
 type Plan = { cards: CardInstance[]; preview: Extract<BrewPreview, { kind: 'potion' }>; deliverTo?: number; value: number; /** Which recipe to brew, when the cards fit more than one. */ recipe?: string };
 
@@ -186,7 +188,26 @@ function bestModifier(card: CardInstance, spare: number): ModifierId | undefined
     .sort((a, b) => b.v - a.v)[0]?.id;
 }
 
-function greedyBrewing(s: RunState): Action {
+/**
+ * How a player brews. The greedy bot plays every useful Tincture, hunts with Discard for orders it can't
+ * fill, pours away cheap Shelf potions, and takes the best brew; a persona sometimes doesn't (see PERSONAS).
+ */
+type BrewStyle = {
+  tinctures: boolean;
+  hunt: boolean;
+  pour: boolean;
+  /** Which brew to make, from the candidates best first. */
+  pick: (plans: readonly Plan[]) => Plan | undefined;
+  /** Told the brew it chose, so a persona can stick to it while slotting. */
+  chose?: (plan: Plan) => void;
+};
+const BEST: BrewStyle = { tinctures: true, hunt: true, pour: true, pick: (plans) => plans[0] };
+
+function greedyBrewing(s: RunState, style: BrewStyle = BEST): Action {
+  const go = (plan: Plan): Action => {
+    style.chose?.(plan);
+    return stepToward(s, plan);
+  };
   // Fog hides the orders: spend one Discard on the weakest card to see them, or brew blind.
   if (s.fog) {
     const weakest = [...s.hand].sort((a, b) => cardValue(s, a.card) - cardValue(s, b.card))[0];
@@ -206,17 +227,15 @@ function greedyBrewing(s: RunState): Action {
   if (s.brewsLeft <= 0) return { type: 'endDay' };
 
   const options = brewOptions(s);
-  let best: Plan | null = null;
+  const filling: Plan[] = [];
   for (const plan of options) {
     const potion = asPotion(plan);
-    for (const o of open) {
-      if (!fits(s, potion, o)) continue;
-      const value = orderValue(potion, o);
-      if (!best || value > best.value) best = { ...plan, deliverTo: o.id, value };
-    }
+    for (const o of open) if (fits(s, potion, o)) filling.push({ ...plan, deliverTo: o.id, value: orderValue(potion, o) });
   }
+  // Stable, so the greedy bot takes the first of equal brews.
+  const best = style.pick(filling.sort((a, b) => b.value - a.value));
 
-  const tinctures = s.hand.filter((c) => codex.tinctures.has(c.card));
+  const tinctures = style.tinctures ? s.hand.filter((c) => codex.tinctures.has(c.card)) : [];
   const decant = tinctures.find((c) => targetsOf(c.card) === 'shelf-one');
   const dull = s.shelf.find((p) => tierIndex(p.tier) < tierIndex('superb'));
   if (decant && dull) return { type: 'playTincture', uid: decant.uid, targets: [dull.uid] };
@@ -230,10 +249,10 @@ function greedyBrewing(s: RunState): Action {
     const infuse = tinctures.find((c) => targetsOf(c.card) === 'hand-one');
     const strongest = best.cards[0];
     if (infuse && strongest && s.cauldron.length === 0) return { type: 'playTincture', uid: infuse.uid, targets: [strongest.uid] };
-    return stepToward(s, best);
+    return go(best);
   }
 
-  if (open.length > 0) {
+  if (open.length > 0 && style.hunt) {
     // Hunt for the right cards.
     const forage = tinctures.find((c) => c.card === 'forage');
     if (forage) return { type: 'playTincture', uid: forage.uid };
@@ -267,13 +286,13 @@ function greedyBrewing(s: RunState): Action {
 
   // Nothing fills an order: brew the most valuable potion for the Shelf (and to cycle cards).
   const room = s.shelf.length < s.shelfSize;
-  const shelfPlan = options
+  const shelfPlan = style.pick(options
     .filter((p) => p.preview.known)
     .map((p) => ({ ...p, value: fencePrice(asPotion(p), s) + p.preview.quality / 100 }))
-    .sort((a, b) => b.value - a.value)[0];
-  if (shelfPlan && (room || open.length > 0)) return stepToward(s, shelfPlan);
+    .sort((a, b) => b.value - a.value));
+  if (shelfPlan && (room || open.length > 0)) return go(shelfPlan);
   // A full Shelf: pour away its cheapest potion when the new one would fetch clearly more.
-  if (shelfPlan && !room && s.brewsLeft > 0) {
+  if (shelfPlan && !room && s.brewsLeft > 0 && style.pour) {
     const worst = s.shelf.slice().sort((a, b) => fencePrice(a, s) - fencePrice(b, s))[0]!;
     if (fencePrice(asPotion(shelfPlan), s) > fencePrice(worst, s) + 1) return { type: 'pourOut', uid: worst.uid };
   }
@@ -644,6 +663,162 @@ export function greedyAction(s: RunState): Action {
     default:
       throw new Error(`run is over (${s.phase})`);
   }
+}
+
+/**
+ * How often each persona slips, per decision. A slip is a choice a real player makes: a brew that fills
+ * an order but not the best one, a reward or event picked on a whim, a shop buy the deck didn't need,
+ * a Night Market stall walked past. Every other decision is the greedy bot's.
+ */
+export const PERSONAS: Record<Persona, {
+  /** Takes another brew than the best, from the top `choice` that fill an order (or suit the Shelf). */
+  brew: number;
+  choice: number;
+  /** Doesn't hunt with Discard for an order it can't fill, or pour away a cheap Shelf potion. */
+  lazy: number;
+  /** Leaves the Tinctures in hand unplayed. */
+  tinctures: number;
+  /** Picks a reward, errand, forage, Creek card, commission, event choice, gift or blessing at random. */
+  whim: number;
+  /** Buys something it can afford at random, past what the deck needs (rent still kept). */
+  impulse: number;
+  /** Walks past each Night Market stall but the Fence. */
+  stalls: number;
+}> = {
+  skilled: { brew: 0.1, choice: 3, lazy: 0.15, tinctures: 0.1, whim: 0.15, impulse: 0.1, stalls: 0.2 },
+  casual: { brew: 0.25, choice: 6, lazy: 0.4, tinctures: 0.3, whim: 0.35, impulse: 0.2, stalls: 0.5 },
+  novice: { brew: 0.45, choice: 99, lazy: 0.7, tinctures: 0.5, whim: 0.6, impulse: 0.35, stalls: 0.75 },
+};
+
+export type Player = (s: RunState) => Action;
+
+/** A player for this strategy. Personas and the fuzzer roll their own seeded dice, so a seed replays. */
+export function makePlayer(strategy: Strategy, seed: string): Player {
+  if (strategy === 'greedy') return greedyAction;
+  let rng = seedRng(`bot:${seed}`);
+  if (strategy === 'random') {
+    return (s) => {
+      const [a, next] = randomAction(s, rng);
+      rng = next;
+      return a;
+    };
+  }
+  const roll = () => {
+    const [f, next] = nextFloat(rng);
+    rng = next;
+    return f;
+  };
+  return personaPlayer(PERSONAS[strategy], roll);
+}
+
+function personaPlayer(p: (typeof PERSONAS)[Persona], roll: () => number): Player {
+  const pick = <T>(xs: readonly T[]): T | undefined => xs[Math.floor(roll() * xs.length)];
+  // The brew it's slotting toward, kept so it doesn't change its mind card by card.
+  let plan: Plan | null = null;
+  // Stalls it walked past tonight: `week:day:index`.
+  const passed = new Set<string>();
+
+  const brewing = (s: RunState): Action => {
+    if (plan) {
+      const held = new Set([...s.hand, ...s.cauldron].map((c) => c.uid));
+      const order = plan.deliverTo === undefined || s.orders.some((o) => o.id === plan!.deliverTo && o.status === 'open');
+      if (s.brewsLeft > 0 && order && plan.cards.every((c) => held.has(c.uid))) return stepToward(s, plan);
+      plan = null;
+    }
+    const slip = roll() < p.brew;
+    return greedyBrewing(s, {
+      tinctures: roll() >= p.tinctures,
+      hunt: roll() >= p.lazy,
+      pour: roll() >= p.lazy,
+      pick: (plans) => (slip ? pick(plans.slice(0, p.choice)) : plans[0]),
+      chose: (x) => (plan = x),
+    });
+  };
+
+  const dusk = (s: RunState): Action => {
+    const offer = s.offer!;
+    const reserve = Math.round(rentOf(s) * (s.day / NIGHT_SHIFT_DAY));
+    const whim = roll() < p.whim;
+    const index = (n: number) => Math.floor(roll() * n);
+    switch (offer.kind) {
+      case 'reward':
+        if (whim) return { type: 'pickReward', index: index(offer.cards.length) };
+        break;
+      case 'errands':
+        if (whim) return { type: 'chooseErrand', errand: pick(offer.options)! };
+        break;
+      case 'forage':
+        if (whim && offer.picksLeft > 0) return { type: 'forage', index: index(offer.cards.length) };
+        break;
+      case 'creek': {
+        if (!whim || offer.done) break;
+        const card = pick(allCards(s).filter((c) => codex.ingredients.has(c.card) && !c.modifier));
+        if (!card) break;
+        const mod = pick([...codex.modifiers.values()].filter((m) => m.price != null && m.price <= s.gold - reserve && !cantModify(card, m.id)));
+        return mod && roll() < 0.5 ? { type: 'enchant', uid: card.uid, modifier: mod.id } : { type: 'temper', uid: card.uid };
+      }
+      case 'guild':
+        if (whim && !offer.taken) return { type: 'takeCommission', index: index(offer.options.length) };
+        break;
+      case 'event': {
+        if (!whim || offer.chose !== null || eventDone(s, offer)) break;
+        const open = codex.duskEvents.get(offer.event)!.choices.map((_, i) => i).filter((i) => eventChoiceBlocked(s, offer.event, i) === null);
+        const choice = pick(open);
+        if (choice === undefined) break;
+        const ask = eventChoiceAsk(s, offer.event, choice);
+        switch (ask?.kind) {
+          case 'deck': return { type: 'chooseEvent', index: choice, uid: pick(ask.cards)!.uid };
+          case 'shelf': return { type: 'chooseEvent', index: choice, uid: pick(ask.potions)!.uid };
+          case 'recipe': return { type: 'chooseEvent', index: choice, pick: pick(ask.recipes)! };
+          case 'card': return { type: 'chooseEvent', index: choice, pick: pick(ask.cards)! };
+          default: return { type: 'chooseEvent', index: choice };
+        }
+      }
+      case 'hearth':
+        // Leaves without burning anything, or burns a card it isn't sure about.
+        if (whim && !offer.removed && !s.curses.length) return roll() < 0.5 ? { type: 'leaveErrand' } : { type: 'removeCard', uid: pick(allCards(s).filter((c) => !c.modifier))!.uid };
+        break;
+      case 'gift':
+        if (whim) return roll() < 0.8 && (offer.into !== 'familiar' || s.familiars.length < s.familiarSlots) ? { type: 'takeGift', index: index(offer.cards.length) } : { type: 'passGift' };
+        break;
+      case 'vigil':
+        if (whim && !offer.chose) return { type: 'chooseBlessing', index: index(offer.blessings.length) };
+        break;
+      case 'market':
+      case 'fair': {
+        if (roll() >= p.impulse) break;
+        const spare = s.gold - reserve;
+        const items = offer.kind === 'market'
+          ? offer.stock.flatMap((item, i) => (!item.sold && item.price <= spare && (item.kind !== 'familiar' || s.familiars.length < s.familiarSlots) ? [{ type: 'buy', index: i } as Action] : []))
+          : offer.stalls.flatMap((st, si) => st.stock.flatMap((item, i) => (!item.sold && item.price <= spare && (item.kind !== 'familiar' || s.familiars.length < s.familiarSlots) ? [{ type: 'buyAtFair', stall: si, index: i } as Action] : [])));
+        return pick(items) ?? { type: 'leaveErrand' };
+      }
+      case 'night-market': {
+        if (offer.at !== null) break;
+        // Walks past some stalls, decided once a night; the Fence is where the Shelf is sold.
+        const walked = (i: number) => {
+          const key = `${s.week}:${s.day}:${i}`;
+          if (offer.stalls[i]!.id !== 'fence' && !passed.has(`${key}:seen`)) {
+            passed.add(`${key}:seen`);
+            if (roll() < p.stalls) passed.add(key);
+          }
+          return passed.has(key);
+        };
+        const next = offer.stalls.findIndex((x, i) => stallAction(s, x) !== null && !walked(i));
+        return next >= 0 ? { type: 'visitStall', index: next } : { type: 'leaveMarket' };
+      }
+    }
+    return greedyDusk(s);
+  };
+
+  return (s) => {
+    switch (s.phase) {
+      case 'brewing': return brewing(s);
+      case 'dusk':
+      case 'night-market': return dusk(s);
+      default: return greedyAction(s);
+    }
+  };
 }
 
 /** A fuzzing player: random actions, many of them illegal. Proves the rules never crash or corrupt. */
