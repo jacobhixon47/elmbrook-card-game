@@ -25,7 +25,7 @@ import {
 } from '../view/describe';
 import { DECK_VIEWS, drawGrimoire, type GrimoireTab } from '../view/grimoire';
 import { stages } from '../view/guide';
-import { bestOrderFor, missedOrder, potionLines, previewPotion } from '../view/plan';
+import { bestOrderFor, potionLines, previewPotion } from '../view/plan';
 import { todayLine, todayRules, WEATHER_NAME } from '../view/calendar';
 import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
@@ -754,16 +754,13 @@ export class Run extends Phaser.Scene {
       const potion = previewPotion(preview, s.cauldron)!;
       const target = bestOrderFor(s, potion, this.pinned);
       let dest: string;
-      let miss: ReturnType<typeof missedOrder> = null;
       if (target) {
         const { pay, tip } = payout(potion, target);
         dest = `→ ${customerName(target.customer)}: +${pay + tip}g`;
       } else {
         dest = s.shelf.length < s.shelfSize ? '→ onto the Shelf' : '→ Shelf full: it spills!';
-        miss = missedOrder(s, potion, this.pinned, preview.known);
-        if (miss) dest += `\nNot for ${customerName(miss.order.customer)}: ${miss.why}.`;
       }
-      this.text(x, SIDE.y + (!miss ? 80 : preview.known ? 60 : 68), `${dest}${preview.copies > 1 ? ` (×${preview.copies})` : ''}`, { size: 7, color: target ? 'l' : 'a', wrap: SIDE.w - 12 });
+      this.text(x, SIDE.y + 80, `${dest}${preview.copies > 1 ? ` (×${preview.copies})` : ''}`, { size: 7, color: target ? 'l' : 'a', wrap: SIDE.w - 12 });
     }
 
     // The Shelf (GDD §6.5).

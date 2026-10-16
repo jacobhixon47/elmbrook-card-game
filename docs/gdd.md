@@ -275,7 +275,7 @@ Moonlit, Blessed and Cursed score at step 3 (§6.3), after the tinctures and bef
 From 1.0, cleaned up for mouse and keyboard:
 - The cauldron sits centre-screen with **2 slots** (a 3rd unlocks via the cauldron upgrade or certain cards; some recipes need 3).
 - Click (or drag) a hand card to drop it in; click a slotted card to return it. Keyboard: number keys select, Enter brews, D starts and confirms a Discard, Esc cancels.
-- A brew goes to the best-paying open order it fills (or the one you chose with Fulfill), otherwise onto the Shelf. The preview says which before you brew. When it fills none, the preview also names the order it looks meant for (the one you chose, else one whose request it matches, else tonight's patron) and why it misses: the wrong family or recipe, too low a tier, or a missing ingredient. An order that asks for a family lists the recipes of it you know, so the Lunar family isn't read as the Lunar essence (playtest, Oct 16).
+- A brew goes to the best-paying open order it fills (or the one you chose with Fulfill), otherwise onto the Shelf. The preview says which before you brew. An order that asks for a family lists the recipes of it you know, so the Lunar family isn't read as the Lunar essence (playtest, Oct 16).
 - As soon as the slots match something, a **preview** shows: the recipe name and family (if known), its essence pattern, and the projected score.
 
 ### 6.2 Recipes
