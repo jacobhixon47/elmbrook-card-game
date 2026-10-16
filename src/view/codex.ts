@@ -1,6 +1,6 @@
 import { codex } from '../codex';
 import { CODEX_TABLES, type CodexTable } from '../core';
-import { cap, familyName } from './describe';
+import { cap, familiesName } from './describe';
 
 // The cottage's Codex (GDD §13): every card, recipe, familiar, relic and customer, met or not.
 
@@ -36,7 +36,7 @@ function describe(table: CodexTable, id: string): { name: string; sub: string; t
     }
     case 'recipes': {
       const r = codex.recipes.get(id)!;
-      return { name: r.name, sub: `${familyName(r.family)} · Harmony ${r.baseHarmony}`, text: r.pattern.map(cap).join(' + ') };
+      return { name: r.name, sub: `${familiesName(r.id)} · Harmony ${r.baseHarmony}`, text: r.pattern.map(cap).join(' + ') };
     }
     case 'familiars': {
       const f = codex.familiars.get(id)!;

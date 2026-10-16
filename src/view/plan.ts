@@ -1,7 +1,7 @@
 import { codex } from '../codex';
 import { fits, payout, type BrewPreview, type Order, type Potion, type RunState } from '../core';
 import { fencePrice } from '../core/reduce';
-import { customerName, familyName, TIER_NAME } from './describe';
+import { customerName, familiesName, familyName, TIER_NAME } from './describe';
 
 type PotionLike = Pick<Potion, 'recipe' | 'family' | 'tier' | 'ingredients'>;
 
@@ -32,7 +32,7 @@ export function previewPotion(preview: BrewPreview, cards: readonly { card: stri
 /** A Shelf potion's tooltip: what it is, who wants it and what the Fence pays. */
 export function potionLines(state: RunState, potion: Potion, pinned: number | null = null): string[] {
   const made = potion.ingredients.map((id) => codex.ingredients.get(id)?.name ?? id).join(', ');
-  const lines = [`${familyName(potion.family)} · ${TIER_NAME[potion.tier]} (quality ${potion.quality})`, `Made with ${made}.`];
+  const lines = [`${familiesName(potion.recipe) || familyName(potion.family)} · ${TIER_NAME[potion.tier]} (quality ${potion.quality})`, `Made with ${made}.`];
   if (potion.heartDelta > 0) lines.push(`+${potion.heartDelta} Friendship on delivery.`);
   else if (potion.heartDelta < 0) lines.push('Earns no Friendship on delivery.');
   const order = state.phase === 'brewing' ? bestOrderFor(state, potion, pinned) : null;

@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  allCards, brewBlocked, CLOCKLESS_BREWS, FINALE_ORDERS, finaleMet, fits, LAMPLIGHTER_HARMONY, isSatchelCard, lunarPool, NIGHT_SHIFT_DAY, omenPool, patronOf, previewBrew, reduce,
+  allCards, brewBlocked, CLOCKLESS_BREWS, FINALE_ORDERS, familiesOf, finaleMet, fits, satisfies, LAMPLIGHTER_HARMONY, isSatchelCard, lunarPool, NIGHT_SHIFT_DAY, omenPool, patronOf, previewBrew, reduce,
   rollCalendar, rollPatrons, SEASONS, tierIndex, tierStep, TITHE_GOLD, twistNow, WEEKS,
   type Calendar, type Order, type Potion, type RunState, type Season,
 } from '../src/core';
 import { no, ofType, ok, slotAll, start, withHand } from './helpers';
+import { familiesName, familyRecipesNote, patronTwistText } from '../src/view/describe';
 
 const clear = (): Calendar => ({ weather: Array.from({ length: WEEKS }, () => Array.from({ length: NIGHT_SHIFT_DAY }, () => 'clear' as const)), sky: null });
 
@@ -77,6 +78,28 @@ describe('patrons', () => {
     expect(lunar.orders[0]!.customer).toBe('pale-courier');
     expect(lunar.orders[0]!.request).toEqual({ kind: 'family', family: 'lunar' });
     expect(tierIndex(lunar.orders[0]!.minTier)).toBeLessThanOrEqual(tierIndex('masterwork'));
+  });
+
+  // Playtest (Oct 16): the Pale Courier wouldn't take a potion with the Lunar essence, likely one of
+  // another family, and nothing on screen said what the Courier wanted.
+  it('regression: the Pale Courier says what it wants tonight, and family orders list their recipes', () => {
+    const courier = codex.patrons.get('pale-courier')!;
+    const none = night('pale-courier', 2, { morning: true });
+    expect(patronTwistText(none, courier)).toMatch(/^Your deck can't brew a Lunar potion tonight, so they want your best: any \w+ potion, \w+ or better\. The other orders pay double\.$/);
+    const lunar = night('pale-courier', 2, { morning: true, satchel: ['starlit-dew', 'moonpetal', 'lantern-ember'] });
+    expect(patronTwistText(lunar, courier)).toBe(courier.text);
+    expect(familyRecipesNote({ knownRecipes: ['moonlit-veil', 'moonmilk'] }, lunar.orders[0]!)).toBe('Lunar recipes you know: Moonlit Veil, Moonmilk.');
+    expect(familyRecipesNote({ knownRecipes: [] }, lunar.orders[0]!)).toBe('You know no Lunar recipe yet.');
+    // A recipe that uses the Lunar essence is Lunar too, on top of its own family (Jacob, Oct 16).
+    const wants = order({ customer: 'pale-courier', request: { kind: 'family', family: 'lunar' }, minTier: 'superb' });
+    const veil = potion({ recipe: 'moonlit-veil', family: 'illusion', tier: 'superb', ingredients: ['moonmoth-wing', 'lark-feather'] });
+    expect(satisfies(veil, wants)).toBe(true);
+    expect(satisfies(veil, { ...wants, request: { kind: 'family', family: 'illusion' } })).toBe(true);
+    expect(satisfies(potion({ recipe: 'moonmilk', family: 'lunar', tier: 'superb' }), { ...wants, request: { kind: 'family', family: 'illusion' } })).toBe(false);
+    expect(satisfies(potion({ tier: 'superb' }), wants)).toBe(false);
+    expect(familiesOf(codex.recipes.get('moonlit-veil')!)).toEqual(['illusion', 'lunar']);
+    expect(familiesOf(codex.recipes.get('moonmilk')!)).toEqual(['lunar']);
+    expect(familiesName('lanternfire-tonic')).toBe('Vigor + Lunar');
   });
 
   it('the Moonless Patron places every order, escalating, and the finale needs them all filled', () => {

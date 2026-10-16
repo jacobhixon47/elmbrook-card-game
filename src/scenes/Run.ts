@@ -20,7 +20,7 @@ import { createCard } from '../view/card';
 import { friendshipLine, levelUpNote } from '../view/townsfolk';
 import {
   BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, favouriteNote, orderNeeds, orderTerms, recipeName,
-  requestText, TIER_NAME, newRecipeHint, unknownRecipe,
+  requestText, TIER_NAME, newRecipeHint, unknownRecipe, familiesName, familyRecipesNote, patronTwistText,
   cap, listOf,
 } from '../view/describe';
 import { DECK_VIEWS, drawGrimoire, type GrimoireTab } from '../view/grimoire';
@@ -716,7 +716,7 @@ export class Run extends Phaser.Scene {
     if (s.phase === 'morning' && patron) {
       // Tonight's patron and their twist (GDD §10).
       this.text(x, SIDE.y + 5, patron.name, { size: 8, color: 'v', wrap: SIDE.w - 12 });
-      const twist = this.text(x, SIDE.y + 19, patron.text, { size: 7, color: 'W', wrap: SIDE.w - 12 });
+      const twist = this.text(x, SIDE.y + 19, patronTwistText(s, patron), { size: 7, color: 'W', wrap: SIDE.w - 12 });
       this.text(x, SIDE.y + 23 + twist.height, `Fill their order: ${extraPay(patron.id)}.`, { size: 7, color: 'l', wrap: SIDE.w - 12 });
     } else if (s.phase === 'morning') {
       this.text(x, SIDE.y + 5, 'The Order Board', { size: 8, color: 'y' });
@@ -736,6 +736,8 @@ export class Run extends Phaser.Scene {
       const pattern = codex.recipes.get(preview.recipe)!.pattern;
       // With a choice, the pips show which essences this pick uses, known or not.
       if (preview.known || choice) pattern.forEach((e, i) => e !== 'any' && this.add2(this.add.image(x + 3 + i * 9, SIDE.y + 22, `pip/${e}`)));
+      // The family, so a Lunar-essence potion isn't mistaken for the Lunar family (playtest, Oct 16).
+      if (preview.known) this.text(x + (pattern.length * 9) + 2, SIDE.y + 18, familiesName(preview.recipe), { size: 7, color: 'a' });
       if (choice) {
         // These cards fit more than one recipe: click (or R) for the next.
         const at = preview.options.indexOf(preview.recipe);
@@ -1033,11 +1035,12 @@ export class Run extends Phaser.Scene {
     const notes = [
       ...(favouriteNote(o) ? [{ t: favouriteNote(o)!, c: 'R' as const }] : []),
       ...(hint ? [{ t: hint, c: 'l' as const }] : []),
+      ...(familyRecipesNote(s, o) ? [{ t: familyRecipesNote(s, o)!, c: 'l' as const }] : []),
       ...(o.bonus ? [{ t: `★ Bonus: ${BONUS_TEXT[o.bonus]} (+2g, +1 Friendship)`, c: 'o' as const }] : []),
       ...(extra ? [{ t: `Also pays: ${extra}`, c: 'l' as const }] : []),
       ...(needs ? [{ t: needs, c: 'I' as const }] : []),
     ];
-    notes.slice(0, 2).forEach((n, i) => this.text(x0 + 12, y0 + 94 + i * 10, n.t, { size: 7, color: n.c }));
+    notes.slice(0, 3).forEach((n, i) => this.text(x0 + 12, y0 + 94 + i * 10, n.t, { size: 7, color: n.c }));
 
     const by = y0 + 130;
     if (o.status !== 'open') {

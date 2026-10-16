@@ -1,7 +1,7 @@
 import { codex } from '../codex';
 import type { PotionFamily } from '../codex/schema';
 import type { NightPayment, PatronReward } from '../codex/schema';
-import { NIGHT_SHIFT_DAY, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
+import { familiesOf, inFamily, NIGHT_SHIFT_DAY, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
 
 // Plain words for what the rules engine holds. Pure, so the wording is tested without a browser.
 
@@ -38,6 +38,12 @@ export function familyName(f: PotionFamily): string {
   return f[0]!.toUpperCase() + f.slice(1);
 }
 
+/** A recipe's families as shown: "Illusion + Lunar" for one that uses the Lunar essence. */
+export function familiesName(recipeId: string): string {
+  const r = codex.recipes.get(recipeId);
+  return r ? familiesOf(r).map((f) => familyName(f as PotionFamily)).join(' + ') : '';
+}
+
 export function recipeName(id: string): string {
   return codex.recipes.get(id)?.name ?? id;
 }
@@ -63,6 +69,17 @@ export function customerName(id: string): string {
 /** Who they are, in a few words. */
 export function customerBlurb(id: string): string {
   return codex.regulars.get(id)?.blurb ?? codex.nightCustomers.get(id)?.blurb ?? codex.patrons.get(id)?.blurb ?? '';
+}
+
+/**
+ * A patron's twist on their night. When the Pale Courier can't get a Lunar potion from your deck and
+ * asks for your best instead, it says what they want tonight, since the general text names Lunar.
+ */
+export function patronTwistText(s: Pick<RunState, 'orders'>, patron: { id: string; text: string; fixedOrder?: { family: PotionFamily } | undefined }): string {
+  const o = s.orders.find((x) => x.customer === patron.id);
+  if (!patron.fixedOrder || !o || (o.request.kind === 'family' && o.request.family === patron.fixedOrder.family)) return patron.text;
+  const rest = patron.text.slice(patron.text.indexOf('. ') + 2);
+  return `Your deck can't brew a ${familyName(patron.fixedOrder.family)} potion tonight, so they want your best: ${requestText(o)}, ${TIER_NAME[o.minTier]} or better. ${rest}`;
 }
 
 /** What a night customer or patron gives beyond the gold, if anything. */
@@ -113,6 +130,15 @@ export function favouriteNote(order: Pick<Order, 'request' | 'customer'> & Parti
   const fav = order.favourite ? codex.regulars.get(order.customer)?.favourite : undefined;
   if (!fav || !order.favourite) return null;
   return `♥ Their favourite, the ${fav.name}: +1 Friendship.`;
+}
+
+/** For an order that asks for a family: the recipes of it in your Grimoire, so "Lunar" isn't read as the Lunar essence. */
+export function familyRecipesNote(s: Pick<RunState, 'knownRecipes'>, order: Pick<Order, 'request'>): string | null {
+  if (order.request.kind !== 'family') return null;
+  const family = order.request.family;
+  const known = s.knownRecipes.filter((id) => { const r = codex.recipes.get(id); return r !== undefined && inFamily(r, family); }).map(recipeName);
+  if (!known.length) return `You know no ${familyName(family)} recipe yet.`;
+  return `${familyName(family)} recipes you know: ${known.join(', ')}.`;
 }
 
 /** The recipe an order names, if it isn't in your Grimoire yet. */

@@ -116,9 +116,22 @@ function recipeCeiling(r: Reach, recipe: string): Tier {
   return r.known.includes(recipe) || r.fullExperiments ? tier : tierStep(tier, -1);
 }
 
+/**
+ * Whether a recipe belongs to a family: its own, or Lunar too when its pattern uses the Lunar essence,
+ * so Moonlit Veil is Illusion and Lunar (Jacob, after a playtest, Oct 16).
+ */
+export function inFamily(recipe: Pick<Recipe, 'family' | 'pattern'>, family: string): boolean {
+  return recipe.family === family || (family === 'lunar' && recipe.pattern.includes('lunar'));
+}
+
+/** A recipe's families: its own, then Lunar when it also counts as Lunar. */
+export function familiesOf(recipe: Pick<Recipe, 'family' | 'pattern'>): string[] {
+  return recipe.family !== 'lunar' && inFamily(recipe, 'lunar') ? [recipe.family, 'lunar'] : [recipe.family];
+}
+
 /** The best tier the deck can reach for a request. */
 function ceilingOf(r: Reach, request: OrderRequest): Tier {
-  const ids = request.kind === 'recipe' ? [request.recipe] : r.recipes.filter((x) => x.family === request.family).map((x) => x.id);
+  const ids = request.kind === 'recipe' ? [request.recipe] : r.recipes.filter((x) => inFamily(x, request.family)).map((x) => x.id);
   return ids.map((id) => recipeCeiling(r, id)).reduce((a, b) => (tierIndex(b) > tierIndex(a) ? b : a));
 }
 
@@ -171,7 +184,7 @@ function favouriteFor(ctx: Ctx, r: Reach, customer: string): { request: OrderReq
   const s = ctx.s;
   const fav = codex.regulars.get(customer)?.favourite;
   if (!fav || friendLevelOf(s, customer) < FRIENDSHIP.favouriteLevel || s.orders.some((o) => o.favourite)) return null;
-  if (!r.recipes.some((x) => x.family === fav.family)) return null;
+  if (!r.recipes.some((x) => inFamily(x, fav.family))) return null;
   if (![...allCards(s), ...s.satchel].some((c) => codex.ingredients.get(c.card)?.tags.includes(fav.tag))) return null;
   if (rand(ctx) >= FRIENDSHIP.favouriteChance) return null;
   return { request: { kind: 'family', family: fav.family }, favourite: { tag: fav.tag } };
@@ -180,7 +193,7 @@ function favouriteFor(ctx: Ctx, r: Reach, customer: string): { request: OrderReq
 /** Can the deck put an Umbra ingredient into a potion of this request? */
 function umbraFits(s: RunState, request: OrderRequest, r: Reach): boolean {
   const hasUmbra = allCards(s).some((c) => codex.ingredients.get(c.card)?.essences.includes('umbra'));
-  const recipes = r.recipes.filter((x) => (request.kind === 'recipe' ? x.id === request.recipe : x.family === request.family));
+  const recipes = r.recipes.filter((x) => (request.kind === 'recipe' ? x.id === request.recipe : inFamily(x, request.family)));
   return hasUmbra && recipes.some((x) => x.pattern.includes('umbra') || x.pattern.includes('any'));
 }
 
@@ -293,7 +306,7 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
     const fixed = patron.fixedOrder;
     let request: OrderRequest;
     let minTier: Tier;
-    if (fixed && r.recipes.some((x) => x.family === fixed.family)) {
+    if (fixed && r.recipes.some((x) => inFamily(x, fixed.family))) {
       request = { kind: 'family', family: fixed.family };
       minTier = fixed.minTier;
     } else if (fixed) {
@@ -330,7 +343,10 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
 
 /** Whether a potion is what the order asks for; with `glamour` (the Illusionist), any recipe of the named recipe's family is. */
 export function matchesRequest(potion: Pick<Potion, 'recipe' | 'family'>, request: OrderRequest, glamour = false): boolean {
-  if (request.kind === 'family') return potion.family === request.family;
+  if (request.kind === 'family') {
+    const recipe = codex.recipes.get(potion.recipe);
+    return potion.family === request.family || (recipe !== undefined && inFamily(recipe, request.family));
+  }
   return potion.recipe === request.recipe || (glamour && needsGlamour(potion, { request }));
 }
 
