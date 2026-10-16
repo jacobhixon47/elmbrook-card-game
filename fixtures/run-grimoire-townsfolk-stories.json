@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-6", "steps": [{ "jump": [2, 3] }, "openShop"], "profile": { "version": 11, "friendship": { "old-tobin": 300, "bea-thornwick": 80, "the-gardener": 40 }, "storySeen": ["old-tobin:3", "old-tobin:6", "old-tobin:9", "old-tobin:10", "bea-thornwick:3", "bea-thornwick:6"] }, "ui": { "grimoire": "townsfolk" } }

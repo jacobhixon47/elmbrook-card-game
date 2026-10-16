@@ -1,9 +1,10 @@
 import { codex } from '../codex';
-import { FRIENDSHIP, friendLevel, friendshipOf, levelStartAt, nextLevelAt, type GameEvent, type RunState } from '../core';
+import { unlockName } from './describe';
+import { FRIENDSHIP, friendLevel, friendshipOf, levelStartAt, nextLevelAt, storyKey, type GameEvent, type RunState } from '../core';
 
 /**
- * What reaching a Friendship level opens, for the levels that open something so far (GDD §13). The rest
- * (story beats, recipes, familiars, the vigil upgrade, the finale) come with later parts.
+ * What reaching a Friendship level opens for every regular (GDD §13). A regular's own recipe, familiar
+ * and story come from the codex (`levelOpens`); the vigil upgrade comes with a later part.
  */
 export const LEVEL_OPENS: Partial<Record<number, string>> = {
   1: 'Their Townsfolk entry, in the Grimoire.',
@@ -12,12 +13,23 @@ export const LEVEL_OPENS: Partial<Record<number, string>> = {
   [FRIENDSHIP.traderBigLevel]: 'The Hearth Trader shows a third card on their name.',
 };
 
+/** What reaching this level with this regular opens, or null when nothing yet. */
+export function levelOpens(regular: string, level: number): string | null {
+  const r = codex.regulars.get(regular);
+  const parts = [LEVEL_OPENS[level]];
+  if (r?.recipe && level === FRIENDSHIP.recipeLevel) parts.push(`Their recipe, ${unlockName(r.recipe)}, joins your pools.`);
+  if (r?.familiar && level === FRIENDSHIP.familiarLevel) parts.push(`Their familiar, the ${unlockName(r.familiar)}, joins your pools.`);
+  if (r?.story.some((b) => b.level === level)) parts.push('A new story, next time they come in.');
+  const out = parts.filter(Boolean).join(' ');
+  return out || null;
+}
+
 /** The toast for Friendship levels an action reached: "Old Tobin: Friendship 2! ...". */
 export function levelUpNote(events: readonly GameEvent[]): string | null {
   const lines = events.flatMap((e) => {
     if (e.type !== 'friendshipGained' || !e.levelUp) return [];
     const name = codex.regulars.get(e.regular)?.name ?? e.regular;
-    const opens = LEVEL_OPENS[e.level];
+    const opens = levelOpens(e.regular, e.level);
     return [`${name}: Friendship ${e.level}!${opens ? ` ${opens}` : ''}`];
   });
   return lines.length ? lines.join(' ') : null;
@@ -46,10 +58,12 @@ export type TownsfolkRow = {
   nextOpens: string | null;
   /** Never served: no Friendship at all, and not met this run. */
   unmet: boolean;
+  /** Their story scenes shown so far, to read again. */
+  stories: { level: number; title: string }[];
 };
 
 /** The Grimoire's Townsfolk page (GDD §4.1): each regular and your Friendship with them. */
-export function townsfolkRows(s: Pick<RunState, 'friendship' | 'friendshipBase'> & { stats?: Pick<RunState['stats'], 'met'> }): TownsfolkRow[] {
+export function townsfolkRows(s: Pick<RunState, 'friendship' | 'friendshipBase'> & { stats?: Pick<RunState['stats'], 'met'> }, storySeen: readonly string[] = []): TownsfolkRow[] {
   return [...codex.regulars.values()].map((r) => {
     const points = friendshipOf(s, r.id);
     const level = friendLevel(points);
@@ -58,7 +72,14 @@ export function townsfolkRows(s: Pick<RunState, 'friendship' | 'friendshipBase'>
     return {
       id: r.id, name: r.name, blurb: level >= 1 ? r.blurb : null, nightOnly: r.nightOnly, points, level, next,
       progress: next === null ? 1 : (points - start) / (next - start), thisRun: s.friendship[r.id] ?? 0,
-      nextOpens: next === null ? null : LEVEL_OPENS[level + 1] ?? null, unmet: points === 0 && !s.stats?.met.includes(r.id),
+      nextOpens: next === null ? null : levelOpens(r.id, level + 1), unmet: points === 0 && !s.stats?.met.includes(r.id),
+      stories: r.story.filter((b) => storySeen.includes(storyKey(r.id, b.level))).map((b) => ({ level: b.level, title: b.title })),
     };
   });
+}
+
+/** A regular's story at this level, as a scene screen. */
+export function storyScene(regular: string, level: number): { name: string; lines: string[] } {
+  const beat = codex.regulars.get(regular)!.story.find((b) => b.level === level)!;
+  return { name: beat.title, lines: beat.lines };
 }

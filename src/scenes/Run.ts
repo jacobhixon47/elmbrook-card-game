@@ -6,7 +6,7 @@ import {
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
   HARVEST_AUCTION, FRIENDSHIP, friendLevelOf, friendshipOf, hearthOffers, isRegular, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
-  type NameTakerDeal, type StockItem, type Weather, migrateProfile, recordRun, type RunOutcome, almanacUnlocks, boonOf, runStartChoice, cauldronOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
+  type NameTakerDeal, type StockItem, type Weather, migrateProfile, storyDue, storyKey, recordRun, type RunOutcome, almanacUnlocks, boonOf, runStartChoice, cauldronOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
 } from '../core';
 import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
@@ -17,7 +17,7 @@ import { store } from '../store';
 import { gradedView, shopBackdrop, viewOverrides } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
-import { friendshipLine, levelUpNote } from '../view/townsfolk';
+import { friendshipLine, levelUpNote, storyScene, townsfolkRows } from '../view/townsfolk';
 import {
   BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, favouriteNote, orderNeeds, orderTerms, recipeName,
   requestText, TIER_NAME, newRecipeHint, unknownRecipe, familiesName, familyRecipesNote, patronTwistText,
@@ -108,6 +108,8 @@ export class Run extends Phaser.Scene {
   private bookPage = 0;
   /** Seasonal scene screens already shown this run, so each shows once (Snowed In, by week). */
   private scenesSeen = new Set<string>();
+  /** Story scenes queued to read again from the Townsfolk page. */
+  private reread: { name: string; lines: string[] }[] = [];
   /** The season's opening scene, still to show on a new run's first morning. */
   private openingPending = false;
   /** The scene screen over the shop right now (Enter walks on); null when none. */
@@ -333,9 +335,21 @@ export class Run extends Phaser.Scene {
           this.bookPage = n;
           this.render();
         },
+        story: (regular) => {
+          const levels = townsfolkRows(s, this.storySeen()).find((x) => x.id === regular)?.stories.map((b) => b.level) ?? [];
+          this.reread = levels.map((level) => storyScene(regular, level));
+          this.render();
+        },
+        storySeen: this.storySeen(),
       }, this.bookPage);
     }
     this.drawIntro(s);
+    // A regular's stories, read again from the Townsfolk page, one after another.
+    const story = this.reread[0];
+    if (story) {
+      this.add2(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.6).setOrigin(0).setInteractive());
+      this.seasonScene(story.name, story.lines, () => this.reread.shift());
+    }
     this.drawTutorial(s);
   }
 
@@ -373,6 +387,25 @@ export class Run extends Phaser.Scene {
     if (s.week === WEEKS && s.day === NIGHT_SHIFT_DAY && patronOf(s)?.id === 'moonless-patron' && !this.scenesSeen.has('moonless-patron')) {
       return show(patronArrival(this.grimoireHidden(s), s), () => this.scenesSeen.add('moonless-patron'));
     }
+    // A regular's story (GDD §13): one a morning, when they have an order; never in the tutorial or on the finale night.
+    const today = `story-${s.week}-${s.day}`;
+    const finale = s.week === WEEKS && s.day === NIGHT_SHIFT_DAY;
+    if (s.phase === 'morning' && !finale && !this.scenesSeen.has(today)) {
+      const wanted = this.fixture ? this.fixture.ui?.intro === 'story' : wantsIntros() && !this.tutorial;
+      const seen = this.storySeen();
+      const due = wanted ? storyDue(s, seen) : null;
+      if (due) {
+        return show(storyScene(due.regular, due.level), () => {
+          this.scenesSeen.add(today);
+          if (!this.fixtureRun) saveProfile({ storySeen: [...loadProfile().storySeen, storyKey(due.regular, due.level)] });
+        });
+      }
+    }
+  }
+
+  /** The story scenes this save has shown (a fixture's profile on a fixture run). */
+  private storySeen(): string[] {
+    return this.fixtureRun ? migrateProfile(this.fixture?.profile ?? null).storySeen : loadProfile().storySeen;
   }
 
   /** Settings over the run (Esc, or the button at the bottom right). */

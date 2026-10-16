@@ -58,8 +58,8 @@ export type Fixture = {
     kit?: { witch?: string; cauldron?: string };
     /** The Settings panel, open. */
     settings?: boolean;
-    /** A scene screen to show that otherwise shows only on a real run: a season's opening, or a weather's first time. */
-    intro?: 'season' | 'fog' | 'heatwave' | 'snow' };
+    /** A scene screen to show that otherwise shows only on a real run: a season's opening, a weather's first time, or a regular's story (from the fixture's profile). */
+    intro?: 'season' | 'fog' | 'heatwave' | 'snow' | 'story' };
 };
 
 const fixtures = import.meta.glob<Fixture>('/fixtures/*.json', { eager: true, import: 'default' });
