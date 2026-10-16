@@ -6,6 +6,8 @@ import {
   type Calendar, type Order, type Potion, type RunState, type Season,
 } from '../src/core';
 import { no, ofType, ok, slotAll, start, withHand } from './helpers';
+import { familyRecipesNote, patronTwistText } from '../src/view/describe';
+import { missedOrder } from '../src/view/plan';
 
 const clear = (): Calendar => ({ weather: Array.from({ length: WEEKS }, () => Array.from({ length: NIGHT_SHIFT_DAY }, () => 'clear' as const)), sky: null });
 
@@ -77,6 +79,30 @@ describe('patrons', () => {
     expect(lunar.orders[0]!.customer).toBe('pale-courier');
     expect(lunar.orders[0]!.request).toEqual({ kind: 'family', family: 'lunar' });
     expect(tierIndex(lunar.orders[0]!.minTier)).toBeLessThanOrEqual(tierIndex('masterwork'));
+  });
+
+  // Playtest (Oct 16): a Superb Moonlit Veil (Lunar essence, Illusion family) wasn't taken by the
+  // Pale Courier and spilled off a full Shelf, and nothing on screen said why.
+  it('regression: the Pale Courier says what it wants tonight, and a brew that misses says why', () => {
+    const courier = codex.patrons.get('pale-courier')!;
+    const none = night('pale-courier', 2, { morning: true });
+    expect(patronTwistText(none, courier)).toMatch(/^Your deck can't brew a Lunar potion tonight, so they want your best: any \w+ potion, \w+ or better\. The other orders pay double\.$/);
+    const lunar = night('pale-courier', 2, { morning: true, satchel: ['starlit-dew', 'moonpetal', 'lantern-ember'] });
+    expect(patronTwistText(lunar, courier)).toBe(courier.text);
+    expect(familyRecipesNote({ knownRecipes: ['moonlit-veil', 'moonmilk'] }, lunar.orders[0]!)).toBe('Lunar recipes you know: Moonmilk.');
+    expect(familyRecipesNote({ knownRecipes: [] }, lunar.orders[0]!)).toBe('You know no Lunar recipe yet.');
+
+    const wants = order({ customer: 'pale-courier', request: { kind: 'family', family: 'lunar' }, minTier: 'masterwork' });
+    const veil = potion({ recipe: 'moonlit-veil', family: 'illusion', tier: 'superb', ingredients: ['moonmoth-wing', 'lark-feather'] });
+    expect(missedOrder({ orders: [wants] }, veil)).toEqual({ order: wants, why: 'they want Lunar, this is Illusion' });
+    expect(missedOrder({ orders: [wants] }, veil, null, false)!.why).toBe('they want Lunar');
+    const milk = potion({ recipe: 'moonmilk', family: 'lunar', tier: 'superb', ingredients: ['moonpetal', 'elmroot'] });
+    expect(missedOrder({ orders: [wants] }, milk)!.why).toBe('they want Masterwork, this is Superb');
+    expect(missedOrder({ orders: [wants] }, { ...milk, tier: 'masterwork' })).toBeNull();
+    // An order it was never close to, from someone other than the patron, isn't worth a word.
+    expect(missedOrder({ orders: [order()] }, veil)).toBeNull();
+    expect(missedOrder({ orders: [order()] }, veil, 500)!.why).toBe('they want Healing, this is Illusion');
+    expect(missedOrder({ orders: [order({ favourite: { tag: 'herb' } })] }, potion())!.why).toBe('it needs a Herb ingredient');
   });
 
   it('the Moonless Patron places every order, escalating, and the finale needs them all filled', () => {

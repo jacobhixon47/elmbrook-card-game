@@ -65,6 +65,17 @@ export function customerBlurb(id: string): string {
   return codex.regulars.get(id)?.blurb ?? codex.nightCustomers.get(id)?.blurb ?? codex.patrons.get(id)?.blurb ?? '';
 }
 
+/**
+ * A patron's twist on their night. When the Pale Courier can't get a Lunar potion from your deck and
+ * asks for your best instead, it says what they want tonight, since the general text names Lunar.
+ */
+export function patronTwistText(s: Pick<RunState, 'orders'>, patron: { id: string; text: string; fixedOrder?: { family: PotionFamily } | undefined }): string {
+  const o = s.orders.find((x) => x.customer === patron.id);
+  if (!patron.fixedOrder || !o || (o.request.kind === 'family' && o.request.family === patron.fixedOrder.family)) return patron.text;
+  const rest = patron.text.slice(patron.text.indexOf('. ') + 2);
+  return `Your deck can't brew a ${familyName(patron.fixedOrder.family)} potion tonight, so they want your best: ${requestText(o)}, ${TIER_NAME[o.minTier]} or better. ${rest}`;
+}
+
 /** What a night customer or patron gives beyond the gold, if anything. */
 export function extraPay(customer: string): string | null {
   const patron = codex.patrons.get(customer);
@@ -113,6 +124,15 @@ export function favouriteNote(order: Pick<Order, 'request' | 'customer'> & Parti
   const fav = order.favourite ? codex.regulars.get(order.customer)?.favourite : undefined;
   if (!fav || !order.favourite) return null;
   return `♥ Their favourite, the ${fav.name}: +1 Friendship.`;
+}
+
+/** For an order that asks for a family: the recipes of it in your Grimoire, so "Lunar" isn't read as the Lunar essence. */
+export function familyRecipesNote(s: Pick<RunState, 'knownRecipes'>, order: Pick<Order, 'request'>): string | null {
+  if (order.request.kind !== 'family') return null;
+  const family = order.request.family;
+  const known = s.knownRecipes.filter((id) => codex.recipes.get(id)?.family === family).map(recipeName);
+  if (!known.length) return `You know no ${familyName(family)} recipe yet.`;
+  return `${familyName(family)} recipes you know: ${known.join(', ')}.`;
 }
 
 /** The recipe an order names, if it isn't in your Grimoire yet. */
