@@ -161,6 +161,9 @@ export const recipes: In<typeof Recipe>[] = [
   { id: 'rising-loaf-tonic', name: 'Rising Loaf Tonic', pattern: ['ember', 'ember', 'gale'], baseHarmony: 5, family: 'vigor', pool: 'friend' },
   { id: 'skipping-stone-fizz', name: 'Skipping Stone Fizz', pattern: ['gale', 'gale', 'stone'], baseHarmony: 5, family: 'fortune', pool: 'friend' },
   { id: 'vesper-tea', name: 'Vesper Tea', pattern: ['tide', 'gale', 'vital'], baseHarmony: 5, family: 'calming', pool: 'friend' },
+  { id: 'silver-tongue', name: 'Silver Tongue', pattern: ['ember', 'gale', 'umbra'], baseHarmony: 5, family: 'illusion', pool: 'friend' },
+  // Lunar recipes run higher, so the Gardener's starts at 8 (Jacob, Oct 16).
+  { id: 'night-blooming-tonic', name: 'Night-Blooming Tonic', pattern: ['lunar', 'vital', 'vital'], baseHarmony: 8, family: 'lunar', pool: 'friend' },
   { id: 'miners-balm', name: "Miner's Balm", pattern: ['stone', 'vital', 'vital'], baseHarmony: 5, family: 'healing', pool: 'friend' },
   { id: 'bonfire-cordial', name: 'Bonfire Cordial', pattern: ['ember', 'ember', 'vital'], baseHarmony: 5, family: 'warming', pool: 'unlock' },
   { id: 'mountain-salve', name: 'Mountain Salve', pattern: ['stone', 'stone', 'vital'], baseHarmony: 5, family: 'protection', pool: 'unlock' },
@@ -279,8 +282,56 @@ export const regulars: In<typeof Regular>[] = [
       ] },
     ],
   },
-  { id: 'marlowe-vance', name: 'Marlowe Vance', blurb: 'Travelling merchant who haggles.', prefers: ['rare'], weight: 2, payMult: 1.25, bonusPool: ['three-ingredients'], favourite: { name: 'Gilded Ledger', family: 'fortune', tag: 'mineral' } },
-  { id: 'the-gardener', name: 'The Gardener', blurb: 'Nobody\'s sure who they are.', prefers: ['lunar'], nightOnly: true, weight: 2, payMult: 1.5, bonusPool: ['wychwood-ingredient'], favourite: { name: 'Moonflower Cordial', family: 'lunar', tag: 'flower' } },
+  { id: 'marlowe-vance', name: 'Marlowe Vance', blurb: 'Travelling merchant who haggles.', prefers: ['rare'], weight: 2, payMult: 1.25, bonusPool: ['three-ingredients'], favourite: { name: 'Gilded Ledger', family: 'fortune', tag: 'mineral' },
+    recipe: 'silver-tongue', familiar: 'pack-mule',
+    story: [
+      { level: 3, title: 'The Haggle', lines: [
+        'Marlowe spends a quarter of an hour haggling you down by one copper, and enjoys every minute of it.',
+        "When he's gone, there's a silk scarf on your counter, worth more than everything in your shop. He's left it by mistake, he'll say, if you ask.",
+        "You don't ask. He doesn't come back for it.",
+      ] },
+      { level: 6, title: 'The Broken Axle', lines: [
+        "Marlowe's wagon breaks an axle on the creek road, and he's stuck in Elmbrook for a week. It's the longest he has stayed anywhere in twenty years.",
+        "He is very bad at staying still. He rearranges your shelf \"for profit\", sells two of Bea's buns to Old Tobin at a markup, and talks to everyone.",
+        "On the last night he says Elmbrook is \"not a bad little town\". From Marlowe, that's a love letter.",
+      ] },
+      { level: 9, title: 'The Letter', lines: [
+        "Marlowe comes in with a letter he hasn't opened. It's from his sister. He left home twenty years ago owing his father an apology, and he's been travelling ever since.",
+        "He opens it in your shop, because he can't do it alone. His father is ill and asking for him.",
+        "He buys a potion for the road and, for the first time, doesn't haggle.",
+      ] },
+      { level: 10, title: 'Home Port', lines: [
+        "Marlowe comes back in spring, thinner and happier. His father is mending, and they've said what needed saying.",
+        "He's bought the empty shop across the square. He's staying. The first thing in his window is your potions, at a markup, and he splits the profit with you.",
+        'He still haggles. But he tips more than he should, which for Marlowe is a scandal.',
+      ] },
+    ],
+  },
+  { id: 'the-gardener', name: 'The Gardener', blurb: 'Nobody\'s sure who they are.', prefers: ['lunar'], nightOnly: true, weight: 2, payMult: 1.5, bonusPool: ['wychwood-ingredient'], favourite: { name: 'Moonflower Cordial', family: 'lunar', tag: 'flower' },
+    recipe: 'night-blooming-tonic', familiar: 'nightjar',
+    story: [
+      { level: 3, title: 'Footprints', lines: [
+        "One morning there's a ring of moonflowers planted around your doorstep, white and closed up tight against the sun.",
+        "Nobody saw who did it. But the Gardener's boots, that night, have fresh soil on them, and they don't mention it.",
+        'The moonflowers open when the lamps come on. They smell like rain.',
+      ] },
+      { level: 6, title: 'The Garden Nobody Planted', lines: [
+        "At midnight the Gardener takes you into the Wychwood, to a clearing you've walked past a hundred times and never seen.",
+        "It's a garden. Every flower in it blooms only at night, and it has been tended for longer than anyone in Elmbrook can remember.",
+        "They show you where everything grows, and ask you not to tell anyone. You don't.",
+      ] },
+      { level: 9, title: 'The Name', lines: [
+        "The Gardener tells you their name. Nobody has asked for it in a very long time, they say, and they'd like someone to know it.",
+        "They mention the shrine's first keeper, the witch, as if they'd had tea with her last week.",
+        "You don't ask how old they are. They seem grateful for that.",
+      ] },
+      { level: 10, title: 'Daylight', lines: [
+        'The Gardener comes into your shop at noon. Nobody has ever seen them in daylight. They look quite ordinary, and a little embarrassed.',
+        "They've come to buy something, like anyone would, and to see the moonflowers by your door, which have spread down the whole lane.",
+        'They still come at night, mostly. And they tip a little more than they should.',
+      ] },
+    ],
+  },
 ];
 
 // Night customers (GDD §4.1): only on Night Shifts, after the patron's order.
@@ -329,6 +380,8 @@ export const familiars: In<typeof Familiar>[] = [
   { id: 'kitchen-mouse', name: 'Kitchen Mouse', rarity: 'uncommon', text: 'Fruit ingredients +3 Potency.', pool: 'friend' },
   { id: 'squirrel', name: 'Squirrel', rarity: 'uncommon', text: 'Wychwood ingredients +3 Potency.', pool: 'friend' },
   { id: 'dove', name: 'Dove', rarity: 'uncommon', text: '+2 Harmony on brews with no Umbra ingredient.', pool: 'friend' },
+  { id: 'pack-mule', name: 'Pack Mule', rarity: 'uncommon', text: 'Potions you sell to the Fence fetch +2 gold.', pool: 'friend' },
+  { id: 'nightjar', name: 'Nightjar', rarity: 'uncommon', text: 'Lunar ingredients +3 Potency.', pool: 'friend' },
   { id: 'canary', name: 'Canary', rarity: 'uncommon', text: '+2 Harmony on brews with a Mineral ingredient.', pool: 'friend' },
   { id: 'bumblebee', name: 'Bumblebee', rarity: 'uncommon', text: 'Flower ingredients +3 Potency.', pool: 'event' },
   { id: 'dragonfly', name: 'Dragonfly', rarity: 'uncommon', text: 'Gale ingredients +3 Potency.', pool: 'event' },
