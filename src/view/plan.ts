@@ -37,7 +37,7 @@ export function potionLines(state: RunState, potion: Potion, pinned: number | nu
   else if (potion.heartDelta < 0) lines.push('Earns no Friendship on delivery.');
   const order = state.phase === 'brewing' ? bestOrderFor(state, potion, pinned) : null;
   if (order) {
-    const { pay, tip } = payout(potion, order);
+    const { pay, tip } = payout(potion, order, state.familiars, state);
     lines.push(`Fills ${customerName(order.customer)}'s order: +${pay + tip}g.`);
   } else if (state.phase === 'brewing') {
     lines.push('No open order wants it yet.');

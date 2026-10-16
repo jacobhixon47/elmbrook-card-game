@@ -1,8 +1,8 @@
-// pnpm sim --runs 2000 --strategy greedy [--season spring] [--seed prefix] [--unlocks all] [--perks all|tier|a,b] [--year 2] [--boon id]
+// pnpm sim --runs 2000 --strategy greedy [--season spring] [--seed prefix] [--unlocks all] [--perks all|tier|a,b] [--year 2] [--boon id] [--friends 10]
 // pnpm sim --replay path/to/run.json   (a {seed?, actions[]} log from a crash, the sim or the dev overlay)
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { codex } from '../src/codex';
-import { almanacUnlocks, replay, SEASONS, type Action, type Season } from '../src/core';
+import { almanacUnlocks, FRIENDSHIP, replay, SEASONS, type Action, type Season } from '../src/core';
 import type { Strategy } from '../src/sim/bot';
 import { report } from '../src/sim/report';
 import { playRun } from '../src/sim/run';
@@ -38,12 +38,15 @@ const perks = !perksArg ? undefined
 // --year n: play under Year n's modifiers; --boon id: with that Year's boon.
 const year = arg('year') ? Number(arg('year')) : undefined;
 const boon = arg('boon');
+// --friends n: every regular at Friendship level n, as a long save would have them.
+const friendsArg = arg('friends');
+const friendship = friendsArg ? Object.fromEntries([...codex.regulars.keys()].map((id) => [id, Number(friendsArg) > 0 ? FRIENDSHIP.levels[Number(friendsArg) - 1]! : 0])) : undefined;
 
 const t0 = performance.now();
-const records = Array.from({ length: runs }, (_, i) => playRun(`${prefix}-${i}`, { strategy, ...(season ? { season } : {}), ...(unlocks ? { unlocks } : {}), ...(perks ? { perks } : {}), ...(year ? { year } : {}), ...(boon ? { boon } : {}) }));
+const records = Array.from({ length: runs }, (_, i) => playRun(`${prefix}-${i}`, { strategy, ...(season ? { season } : {}), ...(unlocks ? { unlocks } : {}), ...(perks ? { perks } : {}), ...(year ? { year } : {}), ...(boon ? { boon } : {}), ...(friendship ? { friendship } : {}) }));
 const secs = ((performance.now() - t0) / 1000).toFixed(1);
 
-console.log(report(records, `${strategy}${season ? ` · ${season}` : ''}${unlocks ? ' · all unlocked' : ''}${perks ? ` · ${perksArg === 'all' ? 'all perks' : `perks ${perksArg}`}` : ''}${year ? ` · Year ${year}` : ''}${boon ? ` · ${boon}` : ''}`));
+console.log(report(records, `${strategy}${season ? ` · ${season}` : ''}${unlocks ? ' · all unlocked' : ''}${perks ? ` · ${perksArg === 'all' ? 'all perks' : `perks ${perksArg}`}` : ''}${year ? ` · Year ${year}` : ''}${boon ? ` · ${boon}` : ''}${friendsArg ? ` · Friendship ${friendsArg}` : ''}`));
 console.log(`\n${secs}s`);
 
 const failed = records.filter((r) => r.error);

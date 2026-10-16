@@ -64,6 +64,9 @@ export const ingredients: In<typeof Ingredient>[] = [
   { id: 'chestnut', name: 'Chestnut', essences: ['ember', 'stone'], potency: 6, rarity: 'uncommon', origin: 'wychwood', effects: ['potency-3-if-warming'], text: '+3 Potency in Warming potions.', pool: 'event' },
   { id: 'roast-chestnuts', name: 'Roast Chestnuts', essences: ['ember', 'stone'], potency: 6, rarity: 'uncommon', origin: 'garden', effects: ['harmony-2-on-night-shift'], text: '+2 Harmony on Night Shifts.', pool: 'event' },
   { id: 'holly-sprig', name: 'Holly Sprig', essences: ['vital', 'umbra'], potency: 5, rarity: 'uncommon', origin: 'wychwood', effects: ['potency-2-on-night-shift'], text: '+2 Potency on Night Shifts.', tags: ['frost'], pool: 'event' },
+  // Vigil gifts a regular brings at Friendship 8 in place of a random one (GDD §13, Jacob, Oct 16).
+  { id: 'lantern-coal', name: 'Lantern Coal', essences: ['ember', 'stone'], potency: 7, rarity: 'uncommon', origin: 'mine', effects: ['harmony-2-on-night-shift'], text: '+2 Harmony on Night Shifts.', pool: 'event' },
+  { id: 'night-lily', name: 'Night Lily', essences: ['lunar', 'vital'], potency: 7, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['potency-2-on-night-shift'], text: '+2 Potency on Night Shifts.', tags: ['flower'], pool: 'event' },
   { id: 'bluebell', name: 'Bluebell', essences: ['tide', 'umbra'], potency: 5, rarity: 'uncommon', origin: 'wychwood', effects: ['potency-3-if-rain'], text: '+3 Potency on Rain days.', tags: ['flower'], pool: 'event' },
   { id: 'ice-lily', name: 'Ice Lily', essences: ['tide'], potency: 8, rarity: 'rare', origin: 'creek', effects: ['harmony-per-frost-in-brew'], text: '+1 Harmony per Frost ingredient in the brew.', tags: ['flower', 'frost'], inSeason: ['winter'] },
   { id: 'starlit-dew', name: 'Starlit Dew', essences: ['lunar', 'tide'], potency: 9, rarity: 'lunar', origin: 'night', nightOnly: true, tags: ['water'] },
@@ -109,6 +112,10 @@ export const tinctures: In<typeof Tincture>[] = [
   { id: 'mulled-wine', name: 'Mulled Wine', rarity: 'uncommon', effects: ['gain-brew'], text: '+1 Brew.', pool: 'event' },
   { id: 'wool-mittens', name: 'Wool Mittens', rarity: 'uncommon', effects: ['gain-discard', 'draw-1'], text: '+1 Discard. Draw 1.', pool: 'event' },
   { id: 'snow-globe', name: 'Snow Globe', rarity: 'uncommon', effects: ['peek-3-reorder'], text: 'Look at the top 3 cards of your deck and reorder them.', pool: 'event' },
+  { id: 'honey-loaf', name: 'Honey Loaf', rarity: 'uncommon', effects: ['next-brew-harmony-2', 'draw-2'], text: 'Next brew: +2 Harmony. Draw 2.', pool: 'event' },
+  { id: 'paper-star', name: 'Paper Star', rarity: 'uncommon', effects: ['peek-3-reorder', 'draw-1'], text: 'Look at the top 3 cards of your deck and reorder them, then draw 1.', pool: 'event' },
+  { id: 'shrine-candle', name: 'Shrine Candle', rarity: 'uncommon', effects: ['gain-brew', 'next-brew-harmony-1'], text: '+1 Brew. Next brew: +1 Harmony.', pool: 'event' },
+  { id: 'gilded-coin', name: 'Gilded Coin', rarity: 'uncommon', effects: ['gain-brew', 'gain-gold-2'], text: '+1 Brew. +2 gold.', pool: 'event' },
   { id: 'royal-jelly', name: 'Royal Jelly', rarity: 'rare', effects: ['bless-in-hand'], text: 'Bless an ingredient in your hand for the run.', pool: 'event' },
   // Omens: Night Satchel Tinctures (GDD §5.4), strong with a drawback. They only come out on Night Shifts.
   { id: 'blood-moon', name: 'Blood Moon', rarity: 'lunar', effects: ['next-brew-harmony-x2', 'lose-discard'], text: 'Next brew: Harmony x2. Lose 1 Discard.' },
@@ -183,7 +190,7 @@ export const recipes: In<typeof Recipe>[] = [
 
 export const regulars: In<typeof Regular>[] = [
   { id: 'bea-thornwick', name: 'Bea Thornwick', blurb: 'The baker, frantic and kind.', prefers: ['warming', 'vigor'], weight: 3, bonusPool: ['no-umbra', 'three-ingredients'], favourite: { name: 'Ember Bun Tonic', family: 'warming', tag: 'fruit' },
-    recipe: 'rising-loaf-tonic', familiar: 'kitchen-mouse',
+    recipe: 'rising-loaf-tonic', familiar: 'kitchen-mouse', vigilGift: 'honey-loaf',
     story: [
       { level: 3, title: 'Flour on Everything', lines: [
         "Bea is at your door before the lamps are out, flour to the elbows. The bakery oven wouldn't catch this morning, and the whole street is waiting on its bread.",
@@ -208,7 +215,7 @@ export const regulars: In<typeof Regular>[] = [
     ],
   },
   { id: 'old-tobin', name: 'Old Tobin', blurb: 'Retired miner with aches.', prefers: ['healing', 'protection'], weight: 3, bonusPool: ['no-umbra', 'three-ingredients'], favourite: { name: 'Pit Salve', family: 'protection', tag: 'mineral' },
-    recipe: 'miners-balm', familiar: 'canary',
+    recipe: 'miners-balm', familiar: 'canary', vigilGift: 'lantern-coal',
     story: [
       { level: 3, title: 'The Cough', lines: [
         "Tobin waits for the shop to empty before he asks. The aches are one thing, he says. It's the cough that keeps him up.",
@@ -233,7 +240,7 @@ export const regulars: In<typeof Regular>[] = [
     ],
   },
   { id: 'pip-and-quill', name: 'Pip & Quill', blurb: 'Twin kids, up to mischief.', prefers: ['secrets', 'fortune'], weight: 2, payMult: 0.8, tipMult: 1.5, bonusChance: 0.4, bonusPool: ['wychwood-ingredient', 'three-ingredients'], favourite: { name: 'Midnight Feast Fizz', family: 'secrets', tag: 'flower' },
-    recipe: 'skipping-stone-fizz', familiar: 'squirrel',
+    recipe: 'skipping-stone-fizz', familiar: 'squirrel', vigilGift: 'paper-star',
     story: [
       { level: 3, title: 'The Experiment', lines: [
         "You find Pip under your counter and Quill in your herb cupboard, both very still, both very sure you can't see them.",
@@ -258,7 +265,7 @@ export const regulars: In<typeof Regular>[] = [
     ],
   },
   { id: 'sister-alder', name: 'Sister Alder', blurb: 'Keeper of the shrine.', prefers: ['calming', 'healing'], weight: 3, bonusPool: ['no-umbra', 'wychwood-ingredient'], favourite: { name: 'Shrine Tea', family: 'healing', tag: 'herb' },
-    recipe: 'vesper-tea', familiar: 'dove',
+    recipe: 'vesper-tea', familiar: 'dove', vigilGift: 'shrine-candle',
     story: [
       { level: 3, title: 'The Bell', lines: [
         'Sister Alder comes down from the shrine on a weekday, which the village notices. The shrine bell has cracked, and the sound it makes now is "unkind".',
@@ -283,7 +290,7 @@ export const regulars: In<typeof Regular>[] = [
     ],
   },
   { id: 'marlowe-vance', name: 'Marlowe Vance', blurb: 'Travelling merchant who haggles.', prefers: ['rare'], weight: 2, payMult: 1.25, bonusPool: ['three-ingredients'], favourite: { name: 'Gilded Ledger', family: 'fortune', tag: 'mineral' },
-    recipe: 'silver-tongue', familiar: 'pack-mule',
+    recipe: 'silver-tongue', familiar: 'pack-mule', vigilGift: 'gilded-coin',
     story: [
       { level: 3, title: 'The Haggle', lines: [
         'Marlowe spends a quarter of an hour haggling you down by one copper, and enjoys every minute of it.',
@@ -308,7 +315,7 @@ export const regulars: In<typeof Regular>[] = [
     ],
   },
   { id: 'the-gardener', name: 'The Gardener', blurb: 'Nobody\'s sure who they are.', prefers: ['lunar'], nightOnly: true, weight: 2, payMult: 1.5, bonusPool: ['wychwood-ingredient'], favourite: { name: 'Moonflower Cordial', family: 'lunar', tag: 'flower' },
-    recipe: 'night-blooming-tonic', familiar: 'nightjar',
+    recipe: 'night-blooming-tonic', familiar: 'nightjar', vigilGift: 'night-lily',
     story: [
       { level: 3, title: 'Footprints', lines: [
         "One morning there's a ring of moonflowers planted around your doorstep, white and closed up tight against the sun.",

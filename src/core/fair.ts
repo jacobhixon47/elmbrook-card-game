@@ -51,7 +51,9 @@ export function vigilGuests(s: Pick<RunState, 'friendship' | 'friendshipBase'>):
 export function openVigil(ctx: Ctx): void {
   const s = ctx.s;
   const pool = shuffled(ctx, VIGIL.gifts);
-  const gifts = vigilGuests(s).map((regular, i) => ({ regular, card: pool[i % pool.length]! }));
+  // From Friendship 8 a regular brings their own gift; the rest take turns from the shuffled pool.
+  const own = (id: string) => (friendLevelOf(s, id) >= FRIENDSHIP.vigilGiftLevel ? codex.regulars.get(id)?.vigilGift : undefined);
+  const gifts = vigilGuests(s).map((regular, i) => ({ regular, card: own(regular) ?? pool[i % pool.length]! }));
   for (const g of gifts) {
     const inst = { uid: s.nextUid++, card: g.card };
     s.satchel.push(inst);
