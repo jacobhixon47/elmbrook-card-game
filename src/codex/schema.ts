@@ -135,6 +135,44 @@ export const NightCustomer = z.object({
 });
 export type NightCustomer = z.infer<typeof NightCustomer>;
 
+/** What a seasonal visitor gives on top of their gold (GDD §4.1). */
+export const VisitorPayment = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('gold') }),
+  /** Pick 1 of `count` day ingredients with this tag or essence, or 1 of `count` Tinctures. */
+  z.object({ kind: z.literal('card-pick'), tag: z.string().optional(), essence: Essence.optional(), tincture: z.boolean().default(false), count: z.number().int().min(1) }),
+  /** Takes one card of your choice out of your deck. */
+  z.object({ kind: z.literal('burn') }),
+  /** One ingredient of your choice gets +2 Potency for the run, like tempering at the Creek Bank. */
+  z.object({ kind: z.literal('temper') }),
+  /** Your next buy at this week's Night Market is half price. */
+  z.object({ kind: z.literal('half-price') }),
+]);
+export type VisitorPayment = z.infer<typeof VisitorPayment>;
+
+/** Daytime guests of one season, with no Friendship (GDD §4.1, Jacob, Oct 16). */
+export const Visitor = z.object({
+  id: Id,
+  name: z.string().min(1),
+  blurb: z.string().min(1),
+  season: Season,
+  prefers: z.array(PotionFamily).min(1),
+  /** Scales the order's normal gold pay. */
+  goldMult: z.number().min(0),
+  paysIn: VisitorPayment,
+  /** The potion must have an ingredient with this tag. */
+  needsTag: z.string().optional(),
+  /** Only on these weeks, and on days up to `lastDay`. */
+  weeks: z.array(z.number().int().min(1).max(4)).optional(),
+  lastDay: z.number().int().min(1).optional(),
+  /** Only on days with this weather. */
+  weather: z.enum(['clear', 'rain', 'fog', 'heatwave', 'snow']).optional(),
+  /** Potions the order wants. */
+  quantity: z.number().int().min(1).default(1),
+  /** What they say when you open their order. */
+  line: z.string().min(1),
+});
+export type Visitor = z.infer<typeof Visitor>;
+
 /** Rule twists a patron puts on their Night Shift (GDD §10). Each is handled by id in the core. */
 export const TWISTS = [
   'wicks-burn', 'origin-chain', 'orders-double', 'ember-zero', 'orders-expire-2', 'family-chain', 'hand-refresh',

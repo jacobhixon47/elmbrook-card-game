@@ -1,5 +1,5 @@
 import { codex } from '../codex';
-import type { Ingredient, Recipe, Regular } from '../codex/schema';
+import type { Ingredient, Recipe, Regular, Visitor } from '../codex/schema';
 import { fillsPattern, recipeAvailable } from './brew';
 import { todaysWeather } from './calendar';
 import { pick, pickWeighted, rand, type Ctx } from './ctx';
@@ -10,6 +10,7 @@ import { fortuneOn } from './market';
 import { patronOf, twistNow } from './night';
 import { cauldronOf, glamourReady, needsGlamour } from './cauldrons';
 import { hasRelic, RELIC_RULES } from './relics';
+import { rollVisitor } from './visitors';
 import {
   BONUS_TIP, CLOCKLESS_BREWS, RAIN_MIN_ORDERS, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount,
   HERMIT_PAY, PALE_COURIER_PAY, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, TOWER_PAY, WEEK_PAY_STEP, type Tier,
@@ -209,6 +210,7 @@ type OrderOpts = {
   needsUmbra?: boolean;
   expiresIn?: number | null;
   favourite?: Order['favourite'];
+  needsTag?: string | null;
 };
 
 function postOrder(ctx: Ctx, o: OrderOpts): void {
@@ -229,6 +231,7 @@ function postOrder(ctx: Ctx, o: OrderOpts): void {
     needsUmbra: o.needsUmbra ?? false,
     expiresIn: o.expiresIn ?? null,
     ...(o.favourite ? { favourite: o.favourite } : {}),
+    ...(o.needsTag ? { needsTag: o.needsTag } : {}),
   };
   s.orders.push(order);
   ctx.ev.push({ type: 'orderPosted', order });
@@ -256,6 +259,10 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
   const tower = fortuneOn(s, 'harder-orders');
   if (hermit) count = Math.max(1, count - 1);
 
+  // A seasonal visitor takes the last customer's place (GDD §4.1): rolled on its own stream.
+  const visitor = rollVisitor(s, (v) => canServe(s, r, v));
+  if (visitor) count -= 1;
+
   for (let i = 0; i < count; i++) {
     const customer = customers[i % customers.length]!;
     const asked = requestFor(ctx, r, customer.prefers);
@@ -272,6 +279,39 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
       bonus: rand(ctx) < customer.bonusChance ? pick(ctx, customer.bonusPool) : null,
     });
   }
+  if (visitor) visitorOrder(ctx, r, visitor);
+}
+
+/** Can the deck brew a family this visitor likes, with their tag when they want one? */
+function canServe(s: RunState, r: Reach, v: Visitor): boolean {
+  return v.prefers.some((f) => r.recipes.some((x) => inFamily(x, f)) && (!v.needsTag || tagFits(s, r, f, v.needsTag)));
+}
+
+/** Does the deck hold an ingredient with this tag that fits a recipe of the family? */
+function tagFits(s: RunState, r: Reach, family: string, tag: string): boolean {
+  const tagged = allCards(s).map((c) => codex.ingredients.get(c.card)).filter((i) => i?.tags.includes(tag));
+  return r.recipes.some((x) => inFamily(x, family) && tagged.some((i) => x.pattern.some((e) => e === 'any' || i!.essences.includes(e as never))));
+}
+
+/** A visitor's order: a family they like (with their tag, if any), at the day's tier, their gold. */
+function visitorOrder(ctx: Ctx, r: Reach, v: Visitor): void {
+  const s = ctx.s;
+  const families = v.prefers.filter((f) => r.recipes.some((x) => inFamily(x, f)) && (!v.needsTag || tagFits(s, r, f, v.needsTag)));
+  if (!families.length) return;
+  const request: OrderRequest = { kind: 'family', family: pick(ctx, families) };
+  const minTier = pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
+  postOrder(ctx, {
+    customer: v.id, request, minTier, ceiling: ceilingOf(r, request), payScale: weekScale(s, false) * v.goldMult, bonus: null,
+    quantity: v.quantity, needsTag: v.needsTag ?? null,
+  });
+}
+
+/** Post a visitor's order now, whatever the day (the dev overlay and fixtures). */
+export function postVisitorOrder(ctx: Ctx, id: string): void {
+  const s = ctx.s;
+  const reach = reachableRecipes(s, false);
+  const r: Reach = { reach, recipes: [...reach.keys()].map((x) => codex.recipes.get(x)!), known: s.knownRecipes, fullExperiments: hasRelic(s, 'witchs-hatpin') };
+  visitorOrder(ctx, r, codex.visitors.get(id)!);
 }
 
 /**
@@ -357,7 +397,8 @@ const hasTag = (p: Pick<Potion, 'ingredients'>, tag: string) => p.ingredients.so
 
 export function satisfies(potion: PotionLike, order: Order, glamour = false): boolean {
   return order.status === 'open' && matchesRequest(potion, order.request, glamour) && tierIndex(potion.tier) >= tierIndex(order.minTier)
-    && (!order.needsUmbra || hasUmbra(potion)) && (!order.favourite || hasTag(potion, order.favourite.tag));
+    && (!order.needsUmbra || hasUmbra(potion)) && (!order.favourite || hasTag(potion, order.favourite.tag))
+    && (!order.needsTag || hasTag(potion, order.needsTag));
 }
 
 /** `satisfies`, plus tonight's twist: The May Queen won't take the same family twice running. */

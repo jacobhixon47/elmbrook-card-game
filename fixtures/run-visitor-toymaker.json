@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "season": "winter", "today": "clear", "steps": [{ "jump": [2, 2] }, "openShop", { "visitorPay": "toymaker" }, "endDay", "skipReward"] }

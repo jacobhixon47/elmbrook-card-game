@@ -205,7 +205,7 @@ export const CODEX_TABLES = {
   recipes: codex.recipes,
   familiars: codex.familiars,
   relics: codex.relics,
-  townsfolk: new Map([...codex.regulars, ...codex.nightCustomers, ...codex.patrons].map(([id, c]) => [id, c] as const)),
+  townsfolk: new Map([...codex.regulars, ...codex.nightCustomers, ...codex.visitors, ...codex.patrons].map(([id, c]) => [id, c] as const)),
 } as const;
 export type CodexTable = keyof typeof CODEX_TABLES;
 
@@ -421,6 +421,8 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
     const friendship = Object.fromEntries(Object.entries(old).filter(([id, n]) => codex.regulars.has(id) && typeof n === 'number' && n > 0));
     return { ...s, friendship, friendshipBase: {} };
   },
+  // 20 → 21: the Firefly Keeper's half-price buys (seasonal visitors).
+  20: (s) => ({ ...s, halfPrice: 0, favours: [] }),
 };
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */

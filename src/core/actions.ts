@@ -27,6 +27,8 @@ export type Action =
   | { type: 'buyAtFair'; stall: number; index: number }
   | { type: 'chooseBlessing'; index: number }
   | { type: 'forage'; index: number }
+  /** A seasonal visitor's favour on one deck card: Rook burns it, the Toymaker tempers it. */
+  | { type: 'doFavour'; uid: number }
   | { type: 'removeCard'; uid: number }
   /** At the Hearth, instead of burning a card. */
   | { type: 'liftCurse'; curse: string }
@@ -86,7 +88,10 @@ export type Action =
   | { type: 'debug'; op: 'setPatron'; week: number; patron: string }
   /** A potion of a known recipe straight onto the Shelf, at the lowest quality of its tier. */
   | { type: 'debug'; op: 'givePotion'; recipe: string; tier: Tier }
-  | { type: 'debug'; op: 'setFriendship'; regular: string; points: number };
+  | { type: 'debug'; op: 'setFriendship'; regular: string; points: number }
+  /** Post this seasonal visitor's order, or grant their payment as if it were filled. */
+  | { type: 'debug'; op: 'postVisitor'; visitor: string }
+  | { type: 'debug'; op: 'visitorPay'; visitor: string };
 
 export type ScoreSource = 'recipe' | 'ingredient' | 'weather' | 'patron' | 'curse' | 'relic' | 'tincture' | 'modifier' | 'familiar' | 'cauldron' | 'blessing' | 'witch';
 
@@ -138,6 +143,9 @@ export type GameEvent =
   | { type: 'giftQueued'; source: GiftSource; cards: string[] }
   | { type: 'giftTaken'; source: GiftSource; card: string; uid: number }
   | { type: 'giftPassed'; source: GiftSource }
+  | { type: 'favourQueued'; visitor: string; job: 'burn' | 'temper' }
+  | { type: 'favourDone'; visitor: string; uid: number | null }
+  | { type: 'halfPriceGained'; visitor: string }
   /** The customer gave up waiting (The Clockless Man). */
   | { type: 'orderExpired'; order: number; customer: string }
   /** The finale's orders weren't all filled, so the month is lost. */

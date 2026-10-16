@@ -17,7 +17,8 @@ import {
   tossRing, hearthTrade, burnYule, wearCrown, tradeNectar, weave,
 } from './market';
 import { cursePool, dayAllowance, gainRelic, grantRelic, handSizeToday, hasRelic, liftCurse, RELIC_RULES, rentOf, takeCurse } from './relics';
-import { fits, postOrders, payout, satisfies } from './orders';
+import { fits, postOrders, postVisitorOrder, payout, satisfies } from './orders';
+import { doFavour, priceAt, visitorPayment } from './visitors';
 import { seedRng } from './rng';
 import { cauldronOf, glamourReady, needsGlamour, quirkReady } from './cauldrons';
 import {
@@ -67,6 +68,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     satchel: [],
     patrons: rollPatrons(seed, season),
     gifts: [],
+    favours: [],
     lastBrew: [],
     lastFamily: null,
     hand: [],
@@ -99,6 +101,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     fog: false,
     offer: null,
     skipStreak: 0,
+    halfPrice: 0,
     nextUid: uid,
   };
   const ctx: Ctx = { s, ev: [{ type: 'runStarted', seed, witch: witch.id, season }] };
@@ -134,6 +137,7 @@ function startDay(ctx: Ctx): void {
   s.orders = [];
   s.offer = null;
   s.gifts = [];
+  s.favours = [];
   s.lastBrew = [];
   s.lastFamily = null;
   s.pending = freshPending();
@@ -210,7 +214,10 @@ function fill(ctx: Ctx, order: Order, potion: Potion): void {
   ctx.s.lastFamily = potion.family;
   const patron = codex.patrons.get(order.customer);
   if (patron) patronReward(ctx, patron);
-  else nightPayment(ctx, order);
+  else {
+    nightPayment(ctx, order);
+    visitorPayment(ctx, order);
+  }
 }
 
 function shelve(ctx: Ctx, potion: Potion): void {
@@ -369,7 +376,7 @@ function removeWeekCards(ctx: Ctx): void {
 function afterReward(ctx: Ctx): void {
   // Free picks first (the first-night Lunar card, night customers' payments, a commission's reward),
   // then the Night Market or an errand.
-  const gift = ctx.s.gifts.shift();
+  const gift = ctx.s.gifts.shift() ?? ctx.s.favours.shift();
   if (gift) {
     ctx.s.offer = gift;
     return;
@@ -395,6 +402,7 @@ function collectRent(ctx: Ctx): void {
   }
   changeGold(ctx, -due, 'rent');
   ctx.ev.push({ type: 'rentPaid', week: s.week, amount: due });
+  s.halfPrice = 0;
   if (hasRelic(s, 'cider-barrel')) changeGold(ctx, RELIC_RULES.barrelGold, 'relic');
   if (!finaleMet(s)) {
     // GDD §1: the month is won by surviving every rent and satisfying the Moonless Patron.
@@ -421,11 +429,14 @@ function buyItem(ctx: Ctx, item: StockItem | undefined, index: number): void {
   const s = ctx.s;
   if (!item) reject(`no stock ${index}`);
   if (item.sold) reject('already sold');
-  if (s.gold < item.price) reject('not enough gold');
+  // The Firefly Keeper's half-price buy, at the Night Market.
+  const price = priceAt(s, item);
+  if (s.gold < price) reject('not enough gold');
+  if (price < item.price) s.halfPrice -= 1;
   if (item.kind === 'familiar') addFamiliar(ctx, item.familiar);
   if (item.kind === 'relic') gainRelic(ctx, item.relic, 'market');
   item.sold = true;
-  changeGold(ctx, -item.price, 'market');
+  changeGold(ctx, -price, 'market');
   if (item.kind === 'card') {
     gainCard(ctx, item.card, 'market');
   } else if (item.kind !== 'familiar' && item.kind !== 'relic') {
@@ -648,8 +659,21 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
     }
 
     case 'passGift': {
+      if (s.offer?.kind === 'favour') {
+        ctx.ev.push({ type: 'favourDone', visitor: s.offer.visitor, uid: null });
+        afterReward(ctx);
+        return;
+      }
       const gift = offerOf(ctx, 'gift');
       ctx.ev.push({ type: 'giftPassed', source: gift.source });
+      afterReward(ctx);
+      return;
+    }
+
+    case 'doFavour': {
+      const favour = offerOf(ctx, 'favour');
+      doFavour(ctx, action.uid);
+      ctx.ev.push({ type: 'favourDone', visitor: favour.visitor, uid: action.uid });
       afterReward(ctx);
       return;
     }
@@ -812,6 +836,12 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
         const card = [...allCards(s), ...s.satchel].find((c) => c.uid === action.uid);
         if (!card) reject(`no card ${action.uid}`);
         addModifier(ctx, card, action.modifier, 'debug');
+      } else if (action.op === 'postVisitor') {
+        if (!codex.visitors.has(action.visitor)) reject(`no visitor ${action.visitor}`);
+        postVisitorOrder(ctx, action.visitor);
+      } else if (action.op === 'visitorPay') {
+        if (!codex.visitors.has(action.visitor)) reject(`no visitor ${action.visitor}`);
+        visitorPayment(ctx, { customer: action.visitor });
       } else if (action.op === 'patronReward') {
         const patron = codex.patrons.get(action.patron);
         if (!patron) reject(`no patron ${action.patron}`);

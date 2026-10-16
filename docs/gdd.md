@@ -109,6 +109,23 @@ A separate cast who only come after dark. Stranger and more formal than the day 
 
 The Night Shift patron (§10) is the featured guest; night customers fill the other orders that night, along with the regulars who only come at night (The Gardener). Gold is the order's normal night pay times the multiplier. Picks wait until after the shift's twilight reward, before the Night Market. Granny Bogwort only insists on Umbra when your deck can brew it into her potion.
 
+### 4.1.1 Seasonal visitors
+
+Approved by Jacob (Oct 16). Daytime guests of one season, two per season, with no Friendship meter. From week 2, about 1 day in 4 of their season brings one, in place of the last regular on the board, at most one a day. They come only when the deck can brew a family they like (with their tag, if they want one). The roll has its own stream from the seed, so a visitor doesn't change the rest of the day's orders. Their gold is the order's normal day pay times the multiplier; what they give beyond it comes after closing, after the twilight reward, like a night customer's pick. Each has a Codex entry under Townsfolk once met.
+
+| ID | Name | Season | Wants | Gold | Pays in |
+|---|---|---|---|---|---|
+| wren-hollis | Wren Hollis, a botanist | Spring | Calming, Healing or Fortune, with a Flower ingredient | ×0.5 | Pick 1 of 2 Flower ingredients |
+| may-herald | The May Herald | Spring, week 2 up to the fair (days 1 to 3) | Fortune or Illusion | ×2 | Gold |
+| captain-brine | Captain Brine, on shore leave | Summer | Vigor or Protection, with a Water ingredient | ×0.5 | Pick 1 of 2 Tide ingredients |
+| firefly-keeper | The Firefly Keeper | Summer, clear days | Calming or Lunar | ×0.5 | Your next buy at this week's Night Market is half price (rounded up) |
+| rook | Rook, a scarecrow | Autumn | Protection | ×0.5 | Takes one card of your choice out of your deck (down to 8 cards), or none |
+| tithe-collector | The Tithe Collector | Autumn | Two Healing or Warming potions in one order | ×2 | Gold |
+| snowbound-traveller | A Snowbound Traveller | Winter, snow days | Warming | ×0.5 | Pick 1 of 2 Tinctures (not Omens) |
+| toymaker | The Toymaker | Winter | Illusion or Secrets | ×0.5 | +2 Potency on an ingredient of your choice for the run |
+
+Changes from the approved draft, made while building: visitors start in week 2, so the tutorial's week never has one; the May Herald comes on week 2 before the fair rather than weeks 1 and 2; the Snowbound Traveller comes on snow days, since Snowed In is a Night Shift; and Wren asks for a family she likes with a Flower in it, since orders always name a recipe or family.
+
 ### 4.2 Events
 
 Four layers, all seeded into the Calendar at run start so they can be planned around.
@@ -522,6 +539,7 @@ Elmbrook is a roguelite: every run, won or lost, moves something forward.
   *In the build (M4 part 5):* the cottage's Codex (button or C) has six tabs: Ingredients, Tinctures, Recipes, Familiars, Relics and Townsfolk (regulars, Night Shift customers and patrons). Everything starts as "???" and is written in once a run meets it: a card drawn, gained or offered, a recipe known, a familiar or relic held, a customer who posts an order. A run's finds are added to the profile when it ends, won or lost. Entries show what a thing does or who someone is; lore lines are still to write, and belong with the shared world data (`src/codex`) when the sibling game needs them.
 - **Regulars:** six townsfolk with Friendship that persists across runs (see Friendship under the Regulars table). *Friendship (Jacob, Oct 15):* each regular's Friendship builds over the whole save and never resets; it drives story beats, dialogue, unlocks and the Winter vigil's gifts, and is breadth more than power. Decided with Jacob (Oct 15), built with the regulars milestone: Friendship replaces the per-run hearts, one meter that only ever rises. Delivering to a regular and order bonuses grow it; a declined order just doesn't. About 10 levels per regular, filling slowly enough to last 10 Years. The Hearth Trader opens better trades (paid in gold) as Friendship grows instead of spending hearts; rewards are mostly breadth (story beats, recipes, the regular's own special orders, vigil gifts), with at most a small capped tip bonus at high Friendship. The Silver Bell, Grave Moss, the Nameless Year rule and the order ♥s get Friendship versions, each agreed with Jacob first. A Townsfolk page in the Grimoire lists each regular and your Friendship. Friendship levels open story beats (plain scene screens; Ink was dropped, Jacob, Oct 15), new recipes, familiars and their favourite orders, and a story finale per regular.
 - **Unlocks:** witches, cauldrons, familiars and cards enter the pool via achievements and regulars' stories.
+- **The keepsake box** (decided with Jacob, Oct 16; built after the seasonal visitors). A box in the cottage with one slot: before a run you choose one keepsake to add to the starting deck. It is added, not swapped for a starter card, so it never thins the deck. Keepsakes are Friendship cards: a regular's own vigil gift becomes keepable at Friendship 8, up to six over a save. Later, festival cards join them: at the end of a run you may press one festival card you bought into the box. Almanac cards stay out, since they already add variety to the pools. A second slot comes much later, from an Almanac goal or a perk (Jacob: "we should eventually allow 2 for sure"). Not in the tutorial or a Nameless run. The +1 Brew gifts (Shrine Candle, Gilded Coin) are simmed in a day deck first and may get a gentler keepsake version.
 - **Modes (later):** **Long Year** (unlocked by completing Year 1): one continuous run through all four seasons, 16 weeks, with mid-run saves; the deck, familiars and gold carry over between seasons. Also Endless (keep going past the finale), Daily seeded run, Challenge runs ("no Vital ingredients").
 
 ## 14. Starter content
@@ -601,7 +619,7 @@ The story text lives with each regular in `src/codex/content.ts`.
 | The Gardener | Night Lily (Lunar + Vital, Potency 7, Lunar, Flower): +2 Potency on Night Shifts |
 
 - **Level-up toasts.** Reaching a level toasts it with a chime, after the brew has played: the regular, the level, and what it opens. The Townsfolk page says what each regular's next level opens (where it opens something yet), and shows a regular you have never served as ???.
-- **More customers later** (Jacob, Oct 15): the six regulars stay six, since more would slow everyone's Friendship. Variety comes later from seasonal visitors, a guest or two per season with odd requests and no Friendship meter, planned after part 3; a seventh regular could be an unlock once the six have their stories.
+- **More customers later** (Jacob, Oct 15): the six regulars stay six, since more would slow everyone's Friendship. Variety comes from the seasonal visitors (§4.1.1), two per season with odd requests and no Friendship meter; a seventh regular could be an unlock once the six have their stories.
 
 ### Starting deck (Hedge Witch)
 
