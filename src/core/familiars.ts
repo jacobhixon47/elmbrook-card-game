@@ -49,6 +49,7 @@ export const FAMILIAR_SCORE: Record<string, (b: FamiliarBrew) => FamiliarStep | 
   canary: (b) => harmony(b.ingredients.some((i) => i.tags.includes('mineral')) ? 2 : 0, 'a Mineral'),
   squirrel: potencyPer(3, (i) => i.origin === 'wychwood', 'Wychwood'),
   dove: (b) => harmony(b.ingredients.some(essence('umbra')) ? 0 : 2, 'no Umbra'),
+  nightjar: potencyPer(3, essence('lunar'), 'Lunar'),
   dragonfly: potencyPer(3, essence('gale'), 'Gale'),
   badger: potencyPer(3, essence('umbra'), 'Umbra'),
   cricket: (b) => harmony(b.weather === 'clear' || b.weather === 'heatwave' ? 2 : 0, 'sunny day'),
@@ -70,6 +71,8 @@ export const FAMILIAR_RULES = {
   foxTipMult: 2,
   ferretEvery: 3,
   owlPeek: 3,
+  /** The Pack Mule: gold added to each potion sold to the Fence. */
+  muleFence: 2,
 } as const;
 
 export const hasFamiliar = (s: Pick<RunState, 'familiars'>, id: string) => s.familiars.includes(id);

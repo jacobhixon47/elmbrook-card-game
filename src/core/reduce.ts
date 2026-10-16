@@ -827,7 +827,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
 }
 
 /** The Fence pays by tier, and half again for potions with Umbra or Lunar in them (GDD §9). */
-export function fencePrice(potion: Pick<Potion, 'tier' | 'ingredients' | 'family'>, s?: Pick<RunState, 'season'> & Partial<Pick<RunState, 'relics'>>): number {
+export function fencePrice(potion: Pick<Potion, 'tier' | 'ingredients' | 'family'>, s?: Pick<RunState, 'season'> & Partial<Pick<RunState, 'relics' | 'familiars'>>): number {
   const season = s?.season;
   const shadowy = potion.ingredients.some((id) => {
     const e = codex.ingredients.get(id)?.essences ?? [];
@@ -837,7 +837,8 @@ export function fencePrice(potion: Pick<Potion, 'tier' | 'ingredients' | 'family
   const winter = season === 'winter' ? (potion.family === 'warming' ? WINTER_FENCE.warming : WINTER_FENCE.other) : 1;
   const wreath = s && hasRelic(s, 'ivy-wreath') ? RELIC_RULES.wreathFence : 1;
   const press = s && hasRelic(s, 'apple-press') && tierIndex(potion.tier) >= tierIndex('fine') ? RELIC_RULES.pressGold : 0;
-  return Math.round(FENCE_PRICE[potion.tier] * (shadowy ? FENCE_SHADOW_BONUS : 1) * winter * wreath) + press;
+  const mule = s?.familiars?.includes('pack-mule') ? FAMILIAR_RULES.muleFence : 0;
+  return Math.round(FENCE_PRICE[potion.tier] * (shadowy ? FENCE_SHADOW_BONUS : 1) * winter * wreath) + press + mule;
 }
 
 /** Cottage perks change how a run starts (GDD §13). */

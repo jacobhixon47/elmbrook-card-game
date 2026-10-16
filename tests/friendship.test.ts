@@ -1,7 +1,7 @@
 import { codex } from '../src/codex';
 import { describe, expect, it } from 'vitest';
 import {
-  bankFriendship, bestFriend, FAMILIAR_SCORE, familiarPool, friendUnlocks, recipeAvailable, satisfies, storyDue, storyKey, friendLevel, FRIENDSHIP, levelStartAt, migrateProfile, migrateRun, newProfile, newStats, nextLevelAt, recordRun, reduce,
+  bankFriendship, bestFriend, FAMILIAR_SCORE, familiarPool, fencePrice, friendUnlocks, recipeAvailable, satisfies, storyDue, storyKey, friendLevel, FRIENDSHIP, levelStartAt, migrateProfile, migrateRun, newProfile, newStats, nextLevelAt, recordRun, reduce,
   type Order, type RunState,
 } from '../src/core';
 import { brewing, ofType, ok, slotAll, withHand } from './helpers';
@@ -96,9 +96,9 @@ describe('the Townsfolk page', () => {
     expect(rows.find((r) => r.id === 'old-tobin')).toMatchObject({ level: 1, unmet: false, nextOpens: expect.stringMatching(/Longest Night/) as unknown as string });
     expect(rows.find((r) => r.id === 'sister-alder')).toMatchObject({ unmet: false, nextOpens: expect.stringMatching(/Townsfolk/) as unknown as string });
     expect(rows.find((r) => r.id === 'bea-thornwick')!.unmet).toBe(true);
-    // Level 3 is a story for Tobin, and nothing yet for Marlowe.
+    // Level 3 is a story for Tobin; level 2 opens nothing more for him.
     expect(townsfolkRows({ friendship: {}, friendshipBase: { 'old-tobin': 20 } }).find((r) => r.id === 'old-tobin')!.nextOpens).toMatch(/A new story/);
-    expect(townsfolkRows({ friendship: {}, friendshipBase: { 'marlowe-vance': 20 } }).find((r) => r.id === 'marlowe-vance')!.nextOpens).toBeNull();
+    expect(townsfolkRows({ friendship: {}, friendshipBase: { 'old-tobin': 50 } }).find((r) => r.id === 'old-tobin')!.nextOpens).toBe("Their recipe, Miner's Balm, joins your pools.");
   });
 });
 
@@ -159,7 +159,9 @@ describe("regulars' recipes, familiars and stories (GDD §13)", () => {
     expect(friendUnlocks({ 'old-tobin': at(5) - 1 })).toEqual([]);
     expect(friendUnlocks({ 'old-tobin': at(5), 'bea-thornwick': at(7) })).toEqual(['rising-loaf-tonic', 'kitchen-mouse', 'miners-balm']);
     expect(friendUnlocks({ 'sister-alder': at(10) })).toEqual(['vesper-tea', 'dove']);
-    expect(friendUnlocks({ 'marlowe-vance': at(10) })).toEqual([]);
+    expect(friendUnlocks({ 'marlowe-vance': at(10) })).toEqual(['silver-tongue', 'pack-mule']);
+    // Every regular has their recipe and familiar now.
+    for (const r of codex.regulars.values()) expect(friendUnlocks({ [r.id]: at(10) }), r.id).toHaveLength(2);
     const s = reduce(null, { type: 'startRun', seed: 'g', witch: 'hedge-witch', unlocks: ['fox'], friendship: { 'old-tobin': at(7) } }).state;
     expect(s.unlocks).toEqual(['fox', 'miners-balm', 'canary']);
     expect(recipeAvailable(codex.recipes.get('miners-balm')!, s)).toBe(true);
@@ -184,10 +186,15 @@ describe("regulars' recipes, familiars and stories (GDD §13)", () => {
     expect(FAMILIAR_SCORE.squirrel!(brew(['elmroot', 'creekwater']))).toBeNull();
     expect(FAMILIAR_SCORE.dove!(brew(['elmroot', 'creekwater']))).toMatchObject({ harmony: 2 });
     expect(FAMILIAR_SCORE.dove!(brew(['elmroot', 'nightshade']))).toBeNull();
+    expect(FAMILIAR_SCORE.nightjar!(brew(['moonpetal', 'starlit-dew']))).toMatchObject({ potency: 6 });
+    expect(FAMILIAR_SCORE.nightjar!(brew(['elmroot', 'creekwater']))).toBeNull();
+    // The Pack Mule pays at the Fence instead.
+    const potion = { tier: 'fine' as const, ingredients: ['elmroot', 'creekwater'], family: 'healing' as const };
+    expect(fencePrice(potion, { season: 'spring', familiars: ['pack-mule'] })).toBe(fencePrice(potion, { season: 'spring', familiars: [] }) + 2);
   });
 
-  it('each story is in level order, at 3, 6, 9 and 10, for Bea, Tobin, Pip & Quill and Sister Alder', () => {
-    for (const id of ['bea-thornwick', 'old-tobin', 'pip-and-quill', 'sister-alder']) expect(codex.regulars.get(id)!.story.map((b) => b.level)).toEqual([3, 6, 9, 10]);
+  it('each story is in level order, at 3, 6, 9 and 10, for every regular', () => {
+    for (const id of codex.regulars.keys()) expect(codex.regulars.get(id)!.story.map((b) => b.level)).toEqual([3, 6, 9, 10]);
     for (const r of codex.regulars.values()) {
       const levels = r.story.map((b) => b.level);
       expect(levels, r.id).toEqual([...levels].sort((a, b) => a - b));
