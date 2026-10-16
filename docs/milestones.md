@@ -66,13 +66,13 @@ Each milestone ends with something Jacob can open in a browser. "Done" = accepta
 
 ## M4 — Meta and story
 
-- ✅ Codex screen (lore lines still to write); ✅ persistent save with migrations (the profile and run migrations, `core/meta.ts`).
+- ✅ Codex screen, with lore lines on a detail card and on card tooltips (Jacob, Oct 16); ✅ persistent save with migrations (the profile and run migrations, `core/meta.ts`).
 - The Year: ✅ season unlocks (a win opens the next season; choose it at the cottage), Summer, Autumn and Winter content and twists, ✅ the ending, ✅ a rule per Year for Years 2 to 10, and ✅ a Year picker at the cottage with a boon per Year (GDD §13).
 - ✅ Reputation and cottage perks (the cottage: the out-of-run home where you set out for a season and buy perks); ✅ Almanac achievements that unlock pool content, relics included (eight starter relics).
 - ✅ A tiered perk board for the long game: more perks opening with Years reached and Almanac milestones, about 12 to 15 in all (GDD §13).
 - ✅ An early sound pass, pulled forward from M5 (Jacob, Oct 14: the game feels bland without it): sound effects made in code for slotting cards, the score climbing, brewing, coins, orders and buttons, with a volume and mute setting. Music stays in M5.
 - Six regulars with Friendship (GDD §13, decided with Jacob, Oct 15), in four parts: (1) the meter in place of hearts, its Silver Bell, Grave Moss, Nameless, Hearth Trader and vigil versions, and a Townsfolk page in the Grimoire listing each regular and your Friendship; (2) favourite orders and level-up toasts; (3) each regular's story beats (plain scene screens, no Ink), recipe and familiar, agreed with Jacob a regular or two at a time; (4) the level 8 vigil gift, the level 10 tip and a sim check. Parts 1 to 4 are in (`pnpm sim --friends <level>` plays with every regular at that level). ✅ Seasonal visitors, two per season with no Friendship meter (GDD §4.1.1, approved by Jacob, Oct 16). ✅ The keepsake box, one slot of regulars' gifts (GDD §13, Jacob, Oct 16); festival cards and a second slot later.
-- ✅ The last 12 dusk events from the balance tables, approved by Jacob (Oct 16), so all 20 are in (GDD §7). Codex lore lines are next.
+- ✅ The last 12 dusk events from the balance tables, approved by Jacob (Oct 16), so all 20 are in (GDD §7).
 - ✅ Witch and cauldron selection (Jacob, Oct 15): five witches, one opened by each season's first win, and five cauldrons opened by the Almanac, chosen at the cottage, which remembers the last pick (GDD §12).
 - ✅ A harder second page of the Almanac (Jacob, Oct 15): seven goals for the long game, paid in the strongest unlock content (GDD §13).
 - ✅ Winter tuned into the win-rate band: week 1's rent is the same in every season and Winter pays ×1.2 (`docs/balance-m4.md`).

@@ -52,6 +52,8 @@ export type Fixture = {
     /** The cottage's Codex, open at this tab and page. */
     codex?: string;
     codexPage?: number;
+    /** The detail card of this Codex entry, open. */
+    codexEntry?: string;
     /** The cottage's perk board, at this tier. */
     perkTier?: number;
     /** The cottage's witch and cauldron picker, showing these (open or locked). */

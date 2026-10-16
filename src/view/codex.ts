@@ -1,4 +1,5 @@
 import { codex } from '../codex';
+import { lore } from '../codex/lore';
 import { CODEX_TABLES, type CodexTable } from '../core';
 import { cap, familiesName } from './describe';
 
@@ -13,14 +14,15 @@ export const CODEX_TABS: { id: CodexTable; name: string }[] = [
   { id: 'townsfolk', name: 'Townsfolk' },
 ];
 
-export type CodexEntry = { id: string; name: string; sub: string; text: string; met: boolean };
+/** `lore` is a line of Elmbrook for the entry's detail card (codex lore). */
+export type CodexEntry = { id: string; name: string; sub: string; text: string; lore: string; met: boolean };
 
 /** A tab's entries in codex order: name, a line of kind, and what it does or who they are. Unmet ones are hidden. */
 export function codexEntries(table: CodexTable, met: readonly string[]): CodexEntry[] {
   return [...CODEX_TABLES[table].keys()].map((id) => {
     const seen = met.includes(id);
-    if (!seen) return { id, name: '???', sub: 'Not met yet', text: '', met: false };
-    return { id, ...describe(table, id), met: true };
+    if (!seen) return { id, name: '???', sub: 'Not met yet', text: '', lore: '', met: false };
+    return { id, ...describe(table, id), lore: lore[id] ?? '', met: true };
   });
 }
 
