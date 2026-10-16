@@ -230,3 +230,29 @@ describe("regulars' recipes, familiars and stories (GDD §13)", () => {
     expect(storyScene('old-tobin', 10).name).toBe('Up Into the Light');
   });
 });
+
+describe('Friendship part 4: the level 8 vigil gift and the level 10 tip (GDD §13)', () => {
+  const at = (level: number) => FRIENDSHIP.levels[level - 1]!;
+
+  it('every regular has their own vigil gift, an event card', () => {
+    for (const r of codex.regulars.values()) {
+      expect(r.vigilGift, r.id).toBeDefined();
+      const card = codex.ingredients.get(r.vigilGift!) ?? codex.tinctures.get(r.vigilGift!);
+      expect(card?.pool, r.id).toBe('event');
+    }
+  });
+
+  it('a regular at Friendship 10 tips 1 more gold on their orders, and no one else does', () => {
+    const s = brewing('friends');
+    const tip = (base: Record<string, number>, o: Partial<Order> = {}) =>
+      ofType(deliver({ ...s, friendshipBase: base }, o).events, 'orderFilled')[0]!.tip;
+    expect(tip({ 'old-tobin': at(10) }) - tip({ 'old-tobin': at(9) })).toBe(FRIENDSHIP.tipGold);
+    expect(tip({ 'old-tobin': at(10) }, { customer: 'bea-thornwick' })).toBe(tip({}, { customer: 'bea-thornwick' }));
+  });
+
+  it('the level-up toasts name the gift and the tip', () => {
+    const s = brewing('friends');
+    expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': at(8) - 1 } }).events)).toBe('Old Tobin: Friendship 8! At the Longest Night they bring Lantern Coal.');
+    expect(levelUpNote(deliver({ ...s, friendshipBase: { 'old-tobin': at(10) - 1 } }).events)).toMatch(/^Old Tobin: Friendship 10! \+1 gold tip on every order of theirs\./);
+  });
+});

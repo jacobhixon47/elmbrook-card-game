@@ -547,7 +547,7 @@ Junk: **Sludge** (does nothing), **Cobweb** (blows away after 3 days), **Bad Ome
 
 ### Friendship
 
-Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts; parts 1 (the meter, the replacements and the Townsfolk page), 2 (favourite orders and level-up toasts) and 3 (recipes, familiars and stories for all six regulars) are in, and part 4 follows.
+Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts; parts 1 (the meter, the replacements and the Townsfolk page), 2 (favourite orders and level-up toasts) and 3 (recipes, familiars and stories for all six regulars) and 4 (the level 8 vigil gift and the level 10 tip) are in.
 
 - **Points.** A delivery to a regular earns 1 point, 2 if the bonus condition is met, +1 from a Heartstone in the brew, +1 from the Silver Bell, +1 from a Charm Sachet. Declining or letting an order go costs nothing. Grave Moss, a Cursed card, the Raven Call and the Moth Swarm sour a delivery: it earns no Friendship at all. The Lovers (+2) and returning the Found Coin Purse (+1) give it to a random regular. Nameless: none this run. The Gardener counts like the others, only at night. Night customers and patrons have none.
 - **Across runs.** The points a run earns count at once on top of the profile's, and bank to the profile when the run ends, won or lost (`friendship` in the profile, version 10; `storySeen`, the stories shown, version 11). They never go down and have no cap.
@@ -562,8 +562,8 @@ Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts
 | 5 | Their recipe joins the pools (below). |
 | 6 | The Hearth Trader shows a third Rare card (your best friend's level counts). |
 | 7 | Their familiar joins the pools (below). |
-| 8 | A better vigil gift. *(Part 4.)* |
-| 10 | Their story's finale; the +1 gold tip on their orders comes in part 4. |
+| 8 | They bring their own gift to the vigil instead of a random one (below). |
+| 10 | Their story's finale, and +1 gold tip on every order of theirs (after the Pip & Quill tip multiplier; shown in the brew preview). |
 
 - **Favourite orders** (Jacob, Oct 15). From level 4, each order of theirs has a 1 in 4 chance to be their favourite, at most one on the board a day, and only when the deck can brew the family and holds an ingredient with the tag. It asks for a potion of a family with an ingredient of a tag (the marks on the cards), pays like any order of that family and tier, and earns +1 more Friendship. The ticket shows "♥ Protection + Mineral"; the dialogue names it. The Gardener's comes only on Night Shifts.
 
@@ -588,6 +588,17 @@ Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts
 | Sister Alder | Vesper Tea: Tide + Gale + Vital, Calming, Harmony 5 | Dove (Uncommon): +2 Harmony on brews with no Umbra ingredient (it applies to more brews than the Canary; the balance pass checks it) | The Bell; The Spring; The Ledger; The Spring Runs |
 
 The story text lives with each regular in `src/codex/content.ts`.
+
+- **Vigil gifts** (Jacob, Oct 16). From level 8 a regular brings their own gift to the Longest Night instead of one from the shared pool, about as strong as the best pool gifts: breadth, not power. Festival-only (`pool: 'event'`).
+
+| Regular | Vigil gift (level 8) |
+|---|---|
+| Bea Thornwick | Honey Loaf (Tincture): next brew +2 Harmony, draw 2 |
+| Old Tobin | Lantern Coal (Ember + Stone, Potency 7): +2 Harmony on Night Shifts |
+| Pip & Quill | Paper Star (Tincture): look at the top 3 cards and reorder them, then draw 1 |
+| Sister Alder | Shrine Candle (Tincture): +1 Brew, next brew +1 Harmony |
+| Marlowe Vance | Gilded Coin (Tincture): +1 Brew, +2 gold |
+| The Gardener | Night Lily (Lunar + Vital, Potency 7, Lunar, Flower): +2 Potency on Night Shifts |
 
 - **Level-up toasts.** Reaching a level toasts it with a chime, after the brew has played: the regular, the level, and what it opens. The Townsfolk page says what each regular's next level opens (where it opens something yet), and shows a regular you have never served as ???.
 - **More customers later** (Jacob, Oct 15): the six regulars stay six, since more would slow everyone's Friendship. Variety comes later from seasonal visitors, a guest or two per season with odd requests and no Friendship meter, planned after part 3; a seventh regular could be an unlock once the six have their stories.

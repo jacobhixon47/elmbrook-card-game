@@ -788,7 +788,7 @@ export class Run extends Phaser.Scene {
       const target = bestOrderFor(s, potion, this.pinned);
       let dest: string;
       if (target) {
-        const { pay, tip } = payout(potion, target);
+        const { pay, tip } = payout(potion, target, s.familiars, s);
         dest = `→ ${customerName(target.customer)}: +${pay + tip}g`;
       } else {
         dest = s.shelf.length < s.shelfSize ? '→ onto the Shelf' : '→ Shelf full: it spills!';

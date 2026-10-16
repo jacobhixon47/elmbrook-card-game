@@ -11,6 +11,7 @@ export const LEVEL_OPENS: Partial<Record<number, string>> = {
   [FRIENDSHIP.vigilLevel]: 'A gift at the Longest Night, and the Hearth Trader knows their name.',
   [FRIENDSHIP.favouriteLevel]: 'Their favourite order turns up now and then, for +1 Friendship.',
   [FRIENDSHIP.traderBigLevel]: 'The Hearth Trader shows a third card on their name.',
+  [FRIENDSHIP.tipLevel]: '+1 gold tip on every order of theirs.',
 };
 
 /** What reaching this level with this regular opens, or null when nothing yet. */
@@ -19,6 +20,7 @@ export function levelOpens(regular: string, level: number): string | null {
   const parts = [LEVEL_OPENS[level]];
   if (r?.recipe && level === FRIENDSHIP.recipeLevel) parts.push(`Their recipe, ${unlockName(r.recipe)}, joins your pools.`);
   if (r?.familiar && level === FRIENDSHIP.familiarLevel) parts.push(`Their familiar, the ${unlockName(r.familiar)}, joins your pools.`);
+  if (r?.vigilGift && level === FRIENDSHIP.vigilGiftLevel) parts.push(`At the Longest Night they bring ${unlockName(r.vigilGift)}.`);
   if (r?.story.some((b) => b.level === level)) parts.push('A new story, next time they come in.');
   const out = parts.filter(Boolean).join(' ');
   return out || null;

@@ -99,6 +99,8 @@ export const Regular = z.object({
   /** Their recipe (Friendship 5) and familiar (Friendship 7), both in the `friend` pool (GDD §13). */
   recipe: Id.optional(),
   familiar: Id.optional(),
+  /** What they bring to the Longest Night vigil from Friendship 8, in place of a random gift (an `event` card). */
+  vigilGift: Id.optional(),
   /** Their story: a scene screen at each of these levels (3, 6 and 9, and the finale at 10). */
   story: z.array(z.object({ level: z.number().int().min(1).max(10), title: z.string().min(1), lines: z.array(z.string().min(1)).min(1) })).default([]),
 });

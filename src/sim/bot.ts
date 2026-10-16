@@ -92,6 +92,7 @@ const TINCTURE_VALUE: Record<string, number> = {
   'royal-jelly': 6, 'beeswax-candle': 6, 'spring-mead': 9, garland: 4,
   'firefly-jar': 6, 'sun-bottle': 6, prism: 6, 'paper-fan': 4, 'spiced-cider': 8, perry: 6, 'mulling-spice': 4, 'threshing-flail': 5,
   gingerbread: 6, 'mulled-wine': 9, 'wool-mittens': 6, 'snow-globe': 4,
+  'honey-loaf': 7, 'paper-star': 5, 'shrine-candle': 10, 'gilded-coin': 10,
 };
 
 /** Sell the weakest familiar when one worth `v` would be clearly better and every slot is taken. */

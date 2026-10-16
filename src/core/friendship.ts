@@ -27,6 +27,11 @@ export const FRIENDSHIP = {
   /** A regular's recipe joins the pools at this level, and their familiar at the next (GDD §13). */
   recipeLevel: 5,
   familiarLevel: 7,
+  /** From this level a regular brings their own vigil gift instead of a random one (GDD §13, Jacob, Oct 16). */
+  vigilGiftLevel: 8,
+  /** At this level each of their orders tips this much more gold. */
+  tipLevel: 10,
+  tipGold: 1,
 } as const;
 
 export const MAX_FRIEND_LEVEL = FRIENDSHIP.levels.length;
@@ -72,6 +77,11 @@ export function friendGifts(regular: string, level: number): string[] {
     ...(r.recipe && level >= FRIENDSHIP.recipeLevel ? [r.recipe] : []),
     ...(r.familiar && level >= FRIENDSHIP.familiarLevel ? [r.familiar] : []),
   ];
+}
+
+/** The gold a regular's Friendship adds to the tip on their orders: +1 at level 10, none for anyone else. */
+export function friendTip(s: Pick<RunState, 'friendship' | 'friendshipBase'>, customer: string): number {
+  return isRegular(customer) && friendLevelOf(s, customer) >= FRIENDSHIP.tipLevel ? FRIENDSHIP.tipGold : 0;
 }
 
 /** Everything every regular's Friendship adds to the pools: `newRun` adds it to the run's unlocks. */

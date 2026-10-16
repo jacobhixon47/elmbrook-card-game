@@ -138,3 +138,23 @@ describe('saves', () => {
     expect(migrateRun(old)).toMatchObject({ version: RUN_VERSION, blessing: null });
   });
 });
+
+describe('the vigil at Friendship 8 (GDD §13)', () => {
+  it('a regular at Friendship 8 brings their own gift; others still bring a pool gift', () => {
+    const at8 = FRIENDSHIP.levels[FRIENDSHIP.vigilGiftLevel - 1]!;
+    const s = vigil({ 'old-tobin': at8, 'sister-alder': at8 - 1 });
+    if (s.offer?.kind !== 'vigil') throw new Error('expected the vigil');
+    const by = Object.fromEntries(s.offer.gifts.map((g) => [g.regular, g.card]));
+    expect(by['old-tobin']).toBe(codex.regulars.get('old-tobin')!.vigilGift);
+    expect(VIGIL.gifts).toContain(by['sister-alder']);
+    expect(s.satchel.some((c) => c.card === 'lantern-coal')).toBe(true);
+  });
+
+  it('Gilded Coin and Shrine Candle each add a Brew; the Coin pays 2 gold', () => {
+    const [h, uids] = withHand(brewing('gifts'), ['gilded-coin', 'shrine-candle']);
+    const coin = ok(h, { type: 'playTincture', uid: uids[0]! }).state;
+    expect(coin.brewsLeft).toBe(h.brewsLeft + 1);
+    expect(coin.gold).toBe(h.gold + 2);
+    expect(ok(coin, { type: 'playTincture', uid: uids[1]! }).state.brewsLeft).toBe(h.brewsLeft + 2);
+  });
+});

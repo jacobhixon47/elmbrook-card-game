@@ -232,6 +232,7 @@ export const EFFECTS: Record<string, Effect> = {
   },
   'gain-discard': { onPlay: (ctx) => void (ctx.s.discardsLeft += 1) },
   'gain-brew': { onPlay: (ctx) => void (ctx.s.brewsLeft += 1) },
+  'gain-gold-2': { onPlay: (ctx) => changeGold(ctx, 2, 'card') },
   'next-delivery-heart-tip': {
     onPlay: (ctx) => {
       ctx.s.delivery.hearts += 1;

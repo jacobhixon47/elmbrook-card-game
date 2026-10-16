@@ -186,7 +186,7 @@ function fill(ctx: Ctx, order: Order, potion: Potion): void {
     ctx.s.quirkUsed = true;
     ctx.ev.push({ type: 'glamourUsed', order: order.id, potion: potion.uid });
   }
-  const paid = payout(potion, order, ctx.s.familiars);
+  const paid = payout(potion, order, ctx.s.familiars, ctx.s);
   const { bonus } = paid;
   const s = ctx.s;
   // A Ribbon or similar boosts the next delivery once (GDD §6.4).
