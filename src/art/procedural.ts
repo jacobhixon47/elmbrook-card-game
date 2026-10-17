@@ -61,26 +61,46 @@ export const CAULDRON_METAL = {
 
 /**
  * The line-drawn marks for the ingredient tags rules read (GDD §5.1), 7x7 at card resolution,
- * one colour each: a flower, a snowflake, a fruit. They sit in the card's top-left corner like a suit.
+ * one colour each: a flower, a snowflake, a fruit, a leaf, a gem, a chili and a drop. They sit in
+ * the card's top-left corner like a suit.
  */
-export const TAG_GLYPHS: Record<string, { rows: readonly string[]; color: PaletteKey }> = {
+export const TAG_GLYPHS: Record<string, { rows: readonly string[]; color: PaletteKey; /** A lighter shade, for the tag's name on dark panels. */ text: PaletteKey }> = {
   flower: {
-    color: 'i',
+    color: 'i', text: 'I',
     rows: ['#..#..#', '##.#.##', '#.#.#.#', '#.....#', '.#...#.', '..###..', '...#...'],
   },
   frost: {
-    color: 'U',
+    color: 'U', text: 'c',
     rows: ['#..#..#', '.#.#.#.', '..#.#..', '###.###', '..#.#..', '.#.#.#.', '#..#..#'],
   },
   fruit: {
-    color: 'o',
+    color: 'o', text: 'o',
     rows: ['....##.', '...#...', '.##.##.', '#.....#', '#.....#', '.#...#.', '..###..'],
+  },
+  herb: {
+    color: 'G', text: 'l',
+    rows: ['..#####', '.#....#', '#....##', '#...#.#', '#..#..#', '.##..#.', '#.###..'],
+  },
+  mineral: {
+    color: 'S', text: 'e',
+    rows: ['..###..', '.#.#.#.', '#######', '#.#.#.#', '.#.#.#.', '..#.#..', '...#...'],
+  },
+  spice: {
+    color: 'R', text: 'R',
+    rows: ['.....#.', '....#..', '..###..', '.#..#..', '#..#...', '#.#....', '.#.....'],
+  },
+  water: {
+    color: 'T', text: 't',
+    rows: ['...#...', '..#.#..', '.#...#.', '#.....#', '#.#...#', '.#...#.', '..###..'],
   },
 };
 
+/** A tag's mark, 8x8: the 7x7 line drawing over a dark drop shadow, so it reads crisply on the card. */
 export function tagGlyph(tag: string): Pixmap {
   const g = TAG_GLYPHS[tag]!;
-  const p = new Pixmap(7, 7);
+  const p = new Pixmap(8, 8);
+  const on = (x: number, y: number) => g.rows[y]?.[x] === '#';
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (on(x - 1, y - 1) && !on(x, y)) p.set(x, y, 'k');
   g.rows.forEach((row, y) => [...row].forEach((ch, x) => ch === '#' && p.set(x, y, g.color)));
   return p;
 }

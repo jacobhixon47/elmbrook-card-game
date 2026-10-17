@@ -1,0 +1,1 @@
+{"scene": "Run", "seed": "fixture-hand", "steps": ["openShop", {"give": "lavender"}, {"give": "rime-blossom"}, {"give": "clover"}, {"give": "hollyberry"}, {"give": "harvest-gourd"}, {"give": "sea-salt"}, {"give": "dragon-pepper"}, {"give": "kelpie-pearl"}], "ui": {"inspect": 8}}

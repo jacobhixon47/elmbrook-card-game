@@ -25,8 +25,16 @@ describe('art', () => {
       expect(g.rows).toHaveLength(7);
       expect(g.rows.every((r) => r.length === 7 && /^[.#]+$/.test(r))).toBe(true);
       expect(PALETTE[g.color]).toBeDefined();
-      expect(tagGlyph(tag).width).toBe(7);
+      expect(PALETTE[g.text]).toBeDefined();
+      expect(tagGlyph(tag).width).toBe(8);
     }
+  });
+
+  it('every rule-read tag has a mark, and no tag is on just one card', () => {
+    const count = new Map<string, number>();
+    for (const i of codex.ingredients.values()) for (const t of i.tags) count.set(t, (count.get(t) ?? 0) + 1);
+    for (const tag of ['flower', 'frost', 'fruit', 'herb', 'mineral', 'spice', 'water']) expect(TAG_GLYPHS[tag], tag).toBeDefined();
+    for (const [tag, n] of count) expect(n, tag).toBeGreaterThan(1);
   });
 
   it('sprite ids are unique', () => {

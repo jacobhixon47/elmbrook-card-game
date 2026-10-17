@@ -291,8 +291,8 @@ function greedyBrewing(s: RunState, style: BrewStyle = BEST): Action {
     .map((p) => ({ ...p, value: fencePrice(asPotion(p), s) + p.preview.quality / 100 }))
     .sort((a, b) => b.value - a.value));
   if (shelfPlan && (room || open.length > 0)) return go(shelfPlan);
-  // A full Shelf: pour away its cheapest potion when the new one would fetch clearly more.
-  if (shelfPlan && !room && s.brewsLeft > 0 && style.pour) {
+  // A full Shelf: pour away its cheapest potion (a Discard) when the new one would fetch clearly more.
+  if (shelfPlan && !room && s.brewsLeft > 0 && s.discardsLeft > 0 && style.pour) {
     const worst = s.shelf.slice().sort((a, b) => fencePrice(a, s) - fencePrice(b, s))[0]!;
     if (fencePrice(asPotion(shelfPlan), s) > fencePrice(worst, s) + 1) return { type: 'pourOut', uid: worst.uid };
   }

@@ -808,7 +808,9 @@ export class Run extends Phaser.Scene {
     this.add2(panel(this, SIDE.x, SHELF_Y, SIDE.w, 70));
     this.text(x, SHELF_Y + 4, `Shelf ${s.shelf.length}/${s.shelfSize}`, { size: 8, color: 'y' });
     const pouring = this.mode.kind === 'pour';
-    if (s.shelf.length) {
+    // Pouring out costs a Discard, so it's only offered while one is left.
+    const canPour = s.phase === 'brewing' && s.discardsLeft > 0;
+    if (s.shelf.length && (canPour || pouring)) {
       const pour = this.add2(button(this, SIDE.x + SIDE.w - 30, SHELF_Y + 9, pouring ? 'Cancel' : 'Pour out', () => {
         this.mode = pouring ? { kind: 'idle' } : { kind: 'pour' };
         this.render();
@@ -824,7 +826,7 @@ export class Run extends Phaser.Scene {
       img.on('pointerout', () => this.tip.hide());
       img.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
         // Right-click, or a click while pouring, pours it away.
-        if (pointer.rightButtonDown() || this.mode.kind === 'pour') {
+        if ((pointer.rightButtonDown() && canPour) || this.mode.kind === 'pour') {
           this.mode = { kind: 'idle' };
           this.tip.hide();
           return void this.dispatch({ type: 'pourOut', uid: p.uid });
@@ -839,7 +841,7 @@ export class Run extends Phaser.Scene {
     });
     const decanting = this.mode.kind === 'select' && this.mode.purpose === 'shelf-one';
     if (decanting || pouring) this.add2(this.add.rectangle(SIDE.x, SHELF_Y, SIDE.w, 70).setOrigin(0).setStrokeStyle(2, hex('Y')));
-    const hint = decanting ? 'Click a potion to Decant it.' : pouring ? 'Click a potion to pour it away.' : s.shelf.length ? 'Click a potion to deliver it.' : 'Potions you keep wait here.';
+    const hint = decanting ? 'Click a potion to Decant it.' : pouring ? 'Pour one away for a Discard.' : s.shelf.length ? 'Click a potion to deliver it.' : 'Potions you keep wait here.';
     this.text(x, SHELF_Y + 56, hint, { size: 7, color: decanting || pouring ? 'y' : 'a' });
   }
 
