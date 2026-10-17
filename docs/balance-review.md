@@ -1,6 +1,6 @@
 # Balance review: M4 systems
 
-The M4 balance pass, step one: measure every system that decides a win, together and as different players play. Nothing in the rules changed here. The proposals at the end wait for Jacob's approval.
+The M4 balance pass: measure every system that decides a win, together and as different players play, then tune it. Jacob's direction (Oct 17): tune for the median player, so a casual player can progress through the first Years and a few more with persistence, a skilled player can reach Year 10, difficulty ramps with the Years, and progress between runs (perks, unlocks) should really help. What changed is at the end; the measurements before it are from before the changes.
 
 ## How it was tested
 
@@ -90,7 +90,7 @@ Getting to know the town makes the game harder until the +1 tip at level 10. The
 
 **Not covered yet:** Shrine Tea's rarity, free Shelf pouring on its own, Omens and seasonal stalls one at a time.
 
-## Proposals (for approval)
+## Proposals (as first written)
 
 1. **Tune the bands for a casual player, not the greedy bot.** Target Year 1 for `casual` at about 35/30/25/20% by season, which puts the expert around 60%. The main lever is rent in weeks 3 and 4 of Year 1, where runs are lost. Later Years keep their climb.
 2. **Smooth the Year curve.** Rent ×1.05, ×1.10, ×1.15, then ×1.25 from Year 6, instead of the jump at Year 4.
@@ -102,3 +102,37 @@ Getting to know the town makes the game harder until the +1 tip at level 10. The
 8. **A home season for each witch.** Each witch's focus ingredients turn up more in her season's pools, and the Alchemist gets a small buff.
 9. **Lantern Coal** gets a gentler keepsake version. Shrine Candle and Gilded Coin stay.
 10. **Tags.** Show the 7 tags rules read as icons; fold the one-card tags into the others.
+
+## What changed (Jacob, Oct 17)
+
+Jacob approved tuning for the median player and the fixes above, except trimming tier 4 perks (progress between runs should help; the Year ramp pushes back instead). Tags and Lantern Coal are left for later.
+
+| | before | after |
+|---|---|---|
+| Rent, weeks 2 to 4 (Spring) | 71 / 161 / 307 | 55 / 126 / 239 |
+| Rent in later Years | +5% from Year 2, +25% from Year 4 | +6.5% for each Year after the first |
+| Favourite orders | pay like any order | +6 gold tip |
+| Another Perch, A Taller Shelf | capped at 5 familiars, 6 Shelf slots | the boon's slot goes past the cap |
+| Glass Cauldron | +2 Harmony, -1 hand | +1 Harmony, -1 hand, -1 Discard |
+| Bone Cauldron | rent +25% | rent +5% |
+| Silver Cauldron | pay -10% | pay -5% |
+| Legendary | 300+ quality | 400+ quality |
+| Home seasons | none | +1 Discard a day in the season that opens the witch |
+| Alchemist | hand 7 | hand 8 |
+
+**Whole saves after** (16 per player, up to 250 runs; median runs to reach, share of saves in brackets):
+
+| | finish Year 1 | reach Year 3 | reach Year 5 | reach Year 8 | reach Year 10 | win Year 10 Winter |
+|---|---|---|---|---|---|---|
+| expert | 7 (was 16) | 14 (25) | 28 (68) | 62 (172, 88%) | 113 (was 9% of saves) | 150 (81%; was none) |
+| skilled | 9 (24) | 18 (43) | 36 (126) | 92 (was 6% of saves) | 207 (63%; was none) | 13% of saves |
+| casual | 13 (78) | 27 (156) | 69 (was 4% of saves) | 6% of saves (was none) | none | none |
+| novice | 77 (was never) | 127 (94%) | 13% of saves | none | none | none |
+
+Win rate by Year for the casual player: 32% in Year 1, 27% in Year 2, 22% in Year 3, 15% in Year 4, 8% in Year 5, about 4% from Year 6. The skilled player: 44%, 56%, 43%, 43%, 31%, 20%, 15%, 8%, 4%, 4%.
+
+**Systems after** (greedy bot, Year 1, tier 1 perks; Spring / Winter):
+- Cauldrons, before the rent change: Copper 29 / 10, Glass 35 / 11, Iron 27 / 11, Silver 31 / 7, Bone 23 / 11.
+- Witches in their home season, before the rent change: Bloom Witch Spring 33 (Hedge Witch 24), Illusionist Autumn 19 (8), Frost Witch Winter 10 (8), Alchemist Summer 20 (20).
+- Friendship (casual / greedy, Spring): level 0 24 / 66, level 4 26 / 69, level 7 22 / 64, level 10 33 / 72. Level 4 no longer loses runs.
+- Legendary in first-Spring runs: greedy 31% (was 51%), casual 6% (was 15%).

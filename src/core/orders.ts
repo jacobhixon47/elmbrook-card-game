@@ -421,7 +421,7 @@ export function meetsBonus(potion: Pick<Potion, 'ingredients'>, bonus: OrderBonu
 
 /**
  * Pay plus tip: the tip grows with how far the potion beats the minimum tier, plus the bonus, plus
- * +1 gold from a regular at Friendship 10 when `friends` is given.
+ * +1 gold from a regular at Friendship 10 when `friends` is given, plus a favourite order's tip.
  */
 export function payout(
   potion: Pick<Potion, 'tier' | 'ingredients'>, order: Order, familiars: readonly string[] = [], friends?: Pick<RunState, 'friendship' | 'friendshipBase'>,
@@ -433,5 +433,6 @@ export function payout(
   const tierTip = Math.round(order.pay * (TIER_PAY[potion.tier] / TIER_PAY[order.minTier] - 1)) * (familiars.includes('fox') ? FAMILIAR_RULES.foxTipMult : 1);
   const tipMult = codex.regulars.get(order.customer)?.tipMult ?? 1;
   const friendly = friends ? friendTip(friends, order.customer) : 0;
-  return { pay, tip: Math.round((Math.max(0, tierTip) + (bonus ? BONUS_TIP : 0)) * tipMult) + friendly, bonus };
+  const favourite = order.favourite ? FRIENDSHIP.favouriteTip : 0;
+  return { pay, tip: Math.round((Math.max(0, tierTip) + (bonus ? BONUS_TIP : 0)) * tipMult) + friendly + favourite, bonus };
 }

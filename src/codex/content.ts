@@ -542,7 +542,7 @@ export const witches: In<typeof Witch>[] = [
     id: 'bloom-witch',
     name: 'Bloom Witch',
     focus: 'Vital and Gale; Flowers',
-    quirk: 'The day\'s first brew with a Flower in it: +2 Harmony.',
+    quirk: 'The day\'s first brew with a Flower in it: +2 Harmony. +1 Discard a day in Spring.',
     handSize: 7,
     startingDeck: [
       { card: 'elmroot', count: 3 },
@@ -561,8 +561,8 @@ export const witches: In<typeof Witch>[] = [
     id: 'alchemist',
     name: 'Alchemist',
     focus: 'Stone and Ember; transformation',
-    quirk: 'The day\'s first Experiment brews at full quality.',
-    handSize: 7,
+    quirk: 'The day\'s first Experiment brews at full quality. +1 card in hand. +1 Discard a day in Summer.',
+    handSize: 8,
     startingDeck: [
       { card: 'river-clay', count: 3 },
       { card: 'iron-filings', count: 2 },
@@ -580,7 +580,7 @@ export const witches: In<typeof Witch>[] = [
     id: 'illusionist',
     name: 'Illusionist',
     focus: 'Umbra and Gale; glamours',
-    quirk: 'Once a day, a potion can fill an order for another recipe of the same family.',
+    quirk: 'Once a day, a potion can fill an order for another recipe of the same family. +1 Discard a day in Autumn.',
     handSize: 7,
     startingDeck: [
       { card: 'nightshade', count: 3 },
@@ -599,7 +599,7 @@ export const witches: In<typeof Witch>[] = [
     id: 'frost-witch',
     name: 'Frost Witch',
     focus: 'Tide and Umbra; Frost',
-    quirk: 'On Snow days, +1 card in hand.',
+    quirk: 'On Snow days, +1 card in hand. +1 Discard a day in Winter.',
     handSize: 7,
     startingDeck: [
       { card: 'creekwater', count: 3 },
@@ -621,9 +621,9 @@ export const witches: In<typeof Witch>[] = [
 export const cauldrons: In<typeof Cauldron>[] = [
   { id: 'copper', name: 'Copper Cauldron', text: 'No surprises.' },
   { id: 'iron', name: 'Iron Cauldron', text: '3 cauldron slots from the start. -1 Brew a day.', unlock: 'open-for-business', slots: 3, brews: -1 },
-  { id: 'glass', name: 'Glass Cauldron', text: '+2 Harmony on every brew. -1 card in hand.', unlock: 'masterwork', harmony: 2, hand: -1 },
-  { id: 'bone', name: 'Bone Cauldron', text: '2 Lunar ingredients in your Night Satchel from the start. Rent +25%.', unlock: 'nameless-deal', lunarCards: 2, rent: 1.25 },
-  { id: 'silver', name: 'Silver Cauldron', text: '+1 Discard a day. Orders pay 10% less.', unlock: 'legend-thrice', discards: 1, pay: 0.9 },
+  { id: 'glass', name: 'Glass Cauldron', text: '+1 Harmony on every brew. -1 card in hand and -1 Discard a day.', unlock: 'masterwork', harmony: 1, hand: -1, discards: -1 },
+  { id: 'bone', name: 'Bone Cauldron', text: '2 Lunar ingredients in your Night Satchel from the start. Rent +5%.', unlock: 'nameless-deal', lunarCards: 2, rent: 1.05 },
+  { id: 'silver', name: 'Silver Cauldron', text: '+1 Discard a day. Orders pay 5% less.', unlock: 'legend-thrice', discards: 1, pay: 0.95 },
 ];
 
 // Dusk events (GDD §7), all 20 from the balance tables (the last 12 approved by Jacob, Oct 16). Each choice's rule is in core/dusk-events.ts.

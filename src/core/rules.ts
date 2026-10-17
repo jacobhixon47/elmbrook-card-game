@@ -15,13 +15,13 @@ export const MAX_SHELF_SLOTS = 6;
 /** The Hearth won't burn a deck below this. */
 export const MIN_DECK = 8;
 /** Rent after each week's Night Shift, before the season multiplier (GDD §3). Week 1's is `weekOneRent`. */
-export const RENT = [20, 71, 161, 307] as const;
+export const RENT = [20, 55, 126, 239] as const;
 export const SKIP_GOLD = 2;
 
 export type Tier = 'crude' | 'fine' | 'superb' | 'masterwork' | 'legendary';
 export const TIERS: readonly Tier[] = ['crude', 'fine', 'superb', 'masterwork', 'legendary'];
 /** Lowest quality for each tier (GDD §6.4). */
-export const TIER_MIN: Record<Tier, number> = { crude: 0, fine: 10, superb: 30, masterwork: 100, legendary: 300 };
+export const TIER_MIN: Record<Tier, number> = { crude: 0, fine: 10, superb: 30, masterwork: 100, legendary: 400 };
 export const TIER_PAY: Record<Tier, number> = { crude: 0.5, fine: 1, superb: 1.5, masterwork: 2, legendary: 3 };
 
 export function tierOf(quality: number): Tier {

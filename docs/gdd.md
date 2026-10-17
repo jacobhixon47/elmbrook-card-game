@@ -35,7 +35,7 @@ Week 4 (Waning Crescent)  Day · Day · Day · Day · Night Shift (NEW MOON fina
 - **The Calendar is seeded at run start:** each day's weather, the week's town event, the festival in week 2, and any rare sky event, so you can plan around them.
 - **The Calendar is the run map.** It shows the current week, each day's weather/event icon, and the upcoming Night Shift's patron and rule twist (revealed in advance, like Balatro's boss blind). In the build it is the Grimoire's Calendar tab: four weeks of five days with each week's moon, every day's weather, the festival and any sky event; hovering a day gives its rules. Today's weather and events also sit under the Brews in the HUD.
 - The Calendar rolls from its own random stream (`seed:calendar`), so the same seed deals the same cards whatever the weather.
-- **Rent** is paid automatically after each Night Shift: 20 / 71 / 161 / 307 gold in Spring. Week 1's rent ramps gently by season (20, 22, 24, 26); later weeks take the season's multiplier, and later Years add to it (§13). Can't pay = run over ("the Guild reclaims your stall").
+- **Rent** is paid automatically after each Night Shift: 20 / 55 / 126 / 239 gold in Spring (the balance pass, tuned for a casual player). Week 1's rent ramps gently by season (20, 22, 24, 26); later weeks take the season's multiplier, and later Years add to it (§13). Can't pay = run over ("the Guild reclaims your stall").
 - **Full Moon** (week 2) is the mid-run boss. **New Moon** (week 4) is the finale.
 
 ### Seasons
@@ -49,7 +49,7 @@ Every run happens in one season. The season is chosen at run start from those yo
 | Autumn | Roots, mushrooms, Umbra ingredients | Harvest patrons: bigger orders, bigger tips. Rent ×1.32, orders pay ×1.23 | Falling leaves, lanterns, the Harvest Fair |
 | Winter | Scarce Fresh ingredients; Frost and Lunar cards more common | The Hearth Trader every night, and snowy nights can bury the rest of the Night Market (Snowed In). Rent ×1.48, orders pay ×1.35 | Snow, hearth fires, the longest nights |
 
-Seasons scale in difficulty in that order: rent rises faster than pay, so the bot's win rates in Year 1 are about 40%, 34%, 29% and 23% (the M4 ramp pass, `docs/balance-m4.md`). Numbers are tuning starting points. Each season adds its own ingredients, patrons, events and two Night Market variants to the pools, so later seasons also feel new, not only harder.
+Seasons scale in difficulty in that order: rent rises faster than pay, so Year 1 is tuned for a casual player (the balance pass, Oct 17, decided with Jacob): with the first perks, a casual player wins about 25 to 30% of Spring runs and finishes Year 1 in about 12 runs, a skilled one reaches Year 10, and perks and unlocks help as a save goes on (`docs/balance-review.md`). Numbers are tuning starting points. Each season adds its own ingredients, patrons, events and two Night Market variants to the pools, so later seasons also feel new, not only harder.
 
 ### Time of day
 
@@ -322,7 +322,7 @@ A recipe is an essence pattern with a base Harmony and a potion family. A recipe
 | Fine | 10+ | ×1 |
 | Superb | 30+ | ×1.5 |
 | Masterwork | 100+ | ×2 |
-| Legendary | 300+ | ×3 |
+| Legendary | 400+ | ×3 |
 
 Sanity check: a starter Healing Draught (Elmroot 4 + Creekwater 3) × 2 = 14, Fine. Greater Restorative (4 + 4 + 3) × 5 = 55, Superb. Week 4 orders should ask for Masterwork, which needs familiars and modifiers. Thresholds scale up across weeks via order difficulty, not by changing the tiers.
 
@@ -494,9 +494,11 @@ Pick a **Witch** (starting deck, 4 known recipes, a quirk) and a **Cauldron** (r
 |---|---|---|---|---|
 | Hedge Witch | start | Vital, Tide; healing | §14 | Hand size 8 (the others 7). |
 | Bloom Witch | win Spring | Vital, Gale; Flowers | Elmroot ×3, Thistledown ×3, Dandelion Fluff ×2, Creekwater ×2, Emberbloom, Sunflower, Mint Sprig, Stir | The day's first brew with a Flower in it: +2 Harmony. |
-| Alchemist | win Summer | Stone, Ember; transformation | River Clay ×3, Emberbloom ×3, Iron Filings ×2, Elmroot ×2, Hearth Coal, Creekwater, Honeycomb, Simmer | The first Experiment each day brews at full quality. |
+| Alchemist | win Summer | Stone, Ember; transformation | River Clay ×3, Emberbloom ×3, Iron Filings ×2, Elmroot ×2, Hearth Coal, Creekwater, Honeycomb, Simmer | The first Experiment each day brews at full quality; hand size 8. |
 | Illusionist | win Autumn | Umbra, Gale; glamours | Nightshade ×3, Thistledown ×3, Inkcap ×2, Creekwater ×2, Emberbloom, Elmroot, Mistcap, Taste Test | Once a day, a potion can fill an order for another recipe of the same family. |
 | Frost Witch | win Winter | Tide, Umbra; Frost | Creekwater ×3, Nightshade ×2, Elmroot ×2, Thistledown ×2, Frostcap, Hollyberry, Pine Resin, Inkcap, Stir | +1 card in hand on Snow days. |
+
+*Home seasons (the balance pass, Oct 17):* each witch but the Hedge Witch has +1 Discard a day in the season whose win opens her (Bloom Witch Spring, Alchemist Summer, Illusionist Autumn, Frost Witch Winter), so each one is the strongest pick in her own season. Before it, no witch won more in her own season. The Alchemist also got a hand of 8: she was the weakest witch everywhere.
 
 Known recipes: Bloom Witch Four-leaf Tea, Healing Draught, Calm Waters, Fleetfoot Elixir; Alchemist Courage Cordial, Ironhide Salve, Hearthwarm Tonic, Mudbath Salve; Illusionist Whisper Ink, Sleep Syrup, Fleetfoot Elixir, Restful Tonic; Frost Witch Sleep Syrup, Calm Waters, Healing Draught, Restful Tonic.
 
@@ -504,9 +506,9 @@ Known recipes: Bloom Witch Four-leaf Tea, Healing Draught, Calm Waters, Fleetfoo
 |---|---|---|
 | Copper | start | No surprises. |
 | Iron | Open for Business | 3 slots from the start, -1 Brew a day. |
-| Glass | A Masterwork | +2 Harmony on every brew (a cauldron step, last), -1 card in hand. |
-| Bone | A Nameless Deal | 2 Lunar ingredients in the Night Satchel from the start; rent +25%. |
-| Silver | A Legend Thrice | +1 Discard a day; orders pay 10% less (set when the order is posted). |
+| Glass | A Masterwork | +1 Harmony on every brew (a cauldron step, last), -1 card in hand, -1 Discard a day. |
+| Bone | A Nameless Deal | 2 Lunar ingredients in the Night Satchel from the start; rent +5%. |
+| Silver | A Legend Thrice | +1 Discard a day; orders pay 5% less (set when the order is posted). |
 
 Glass first showed exact previews, but the previews already do; and an "always see the next 3 cards" cauldron was dropped because it makes Taste Test pointless (Jacob, Oct 15). Silver opens with A Legend Thrice, three Legendary potions in one run: Shopkeeper, then a single Legendary, were too easy (a Legendary came in a first Spring). Each cauldron has its own metal on the shop counter (`CAULDRON_METAL` in `art/procedural.ts`). How the witches do in their own seasons is a question for the M4 balance pass.
 
@@ -515,10 +517,10 @@ Glass first showed exact previews, but the previews already do; and an "always s
 Elmbrook is a roguelite: every run, won or lost, moves something forward.
 
 - **The Year:** Spring is open from the start. Winning a season unlocks the next (Summer, then Autumn, then Winter). Clearing Winter completes **Year 1** and shows a short "year in Elmbrook" ending. Each later Year is a difficulty level, like Ascension in Slay the Spire or Heat in Hades: it keeps every earlier Year's rule and adds one of its own, up to Year 10.
-- **Choosing a Year** (decided with Jacob, Oct 9; replaces the earlier retire-or-loop choice): every Year you have reached is a level you pick at the cottage, and each Year keeps its own open seasons, starting again at Spring. Winning Winter in your top Year opens the next Year. That is locked at first: Year 1 always just ends with the ending, and the next Year opens from the second Year won, or earlier once 25% of the Almanac is done. The first time you choose a new Year you pick a **boon** from three, and it stays with that Year (a starting relic, +1 familiar slot, a Blessed card in the starting deck and the like). Each Year multiplies the Reputation it earns (×1.5 for Year 2, ×2 for Year 3), so climbing is worth more than replaying Year 1. A Year is not a replay of the month: a single run always ends at its new moon.
+- **Choosing a Year** (decided with Jacob, Oct 9; replaces the earlier retire-or-loop choice): every Year you have reached is a level you pick at the cottage, and each Year keeps its own open seasons, starting again at Spring. Winning Winter in your top Year opens the next Year. That is locked at first: Year 1 always just ends with the ending, and the next Year opens from the second Year won, or earlier once 25% of the Almanac is done. The first time you choose a new Year you pick a **boon** from three, and it stays with that Year (a starting relic, +1 familiar slot, a Blessed card in the starting deck and the like). A boon's slot goes past the cap the perks reach (up to 6 familiars or 7 Shelf slots), so it always does something (the balance pass). Each Year multiplies the Reputation it earns (×1.5 for Year 2, ×2 for Year 3), so climbing is worth more than replaying Year 1. A Year is not a replay of the month: a single run always ends at its new moon.
   *In the build (M4 part 1):* the profile (`core/meta.ts`) records the open seasons, runs, wins by season and Years done. A win opens the next season with a line on the victory screen. After the tutorial, every run starts and ends at **the cottage** (the `Cottage` scene, a painted backdrop): its Year panel lists the four seasons, and you set out for an open one (or press 1-4); a locked one says which win opens it. The end screens offer the same season again or Home, and say how much Reputation the run earned.
 
-  *The ending and the Years (M4 part 6):* every Winter win plays the short ending ("A Year in Elmbrook") and counts a Year; there is no choice on that screen. When the win opens a new Year the ending says so and points to the cottage (`RunOutcome.newYear`). The profile keeps each Year's open seasons (`yearSeasons`), the Year chosen (`year`) and each Year's boon (`boons`). The cottage's Year panel has arrows (or the left and right keys) to change Year, and lists the Year's Reputation multiplier, its rules and its boon. Choosing a Year above 1 with no boon yet opens a must-pick of three from A Lucky Find (a random tier 1 relic), Blessed Hands (a random starting card Blessed), Another Perch (+1 familiar slot), Winter Savings (+15 gold) and A Taller Shelf (+1 Shelf slot); boons are codex data (`boons`). Each Year adds one rule and keeps the ones before it (`core/year.ts`, `YEAR_MODIFIERS`; decided with Jacob in place of rent and pay multipliers): Year 2, patrons stay hidden until the day before their Night Shift; Year 3, a Cobweb in the starting deck; Year 4, one fewer Night Market stall; Year 5, one fewer Discard a day; Year 6, week 2 orders ask for Superb or better (week 1 orders are already Fine, so this replaced the first idea of "week 1 Fine"); Year 7, a random Curse at the start; Year 8, the Shelf holds one less potion; Year 9, reward picks offer one card fewer; Year 10, the Moonless Patron asks one tier higher (the finale already needs all three orders, so this replaced "all three orders"). Rent also rises 5% from Year 2 and 25% from Year 4 (the ramp pass): the rules alone kept pace with perks up to tier 3, but tier 4 perks add about 25 points of win rate. The bot's Spring win rate falls from 40% in Year 1 to about 15% in Year 10.
+  *The ending and the Years (M4 part 6):* every Winter win plays the short ending ("A Year in Elmbrook") and counts a Year; there is no choice on that screen. When the win opens a new Year the ending says so and points to the cottage (`RunOutcome.newYear`). The profile keeps each Year's open seasons (`yearSeasons`), the Year chosen (`year`) and each Year's boon (`boons`). The cottage's Year panel has arrows (or the left and right keys) to change Year, and lists the Year's Reputation multiplier, its rules and its boon. Choosing a Year above 1 with no boon yet opens a must-pick of three from A Lucky Find (a random tier 1 relic), Blessed Hands (a random starting card Blessed), Another Perch (+1 familiar slot), Winter Savings (+15 gold) and A Taller Shelf (+1 Shelf slot); boons are codex data (`boons`). Each Year adds one rule and keeps the ones before it (`core/year.ts`, `YEAR_MODIFIERS`; decided with Jacob in place of rent and pay multipliers): Year 2, patrons stay hidden until the day before their Night Shift; Year 3, a Cobweb in the starting deck; Year 4, one fewer Night Market stall; Year 5, one fewer Discard a day; Year 6, week 2 orders ask for Superb or better (week 1 orders are already Fine, so this replaced the first idea of "week 1 Fine"); Year 7, a random Curse at the start; Year 8, the Shelf holds one less potion; Year 9, reward picks offer one card fewer; Year 10, the Moonless Patron asks one tier higher (the finale already needs all three orders, so this replaced "all three orders"). Rent also rises 6.5% for each Year after the first (the balance pass, Oct 17; was +5% from Year 2 and +25% from Year 4), so the climb is steady and perks still help. The bot's Spring win rate falls from 40% in Year 1 to about 15% in Year 10.
 
   *Reputation and perks (M4 part 3):* a run earns 4 Reputation per week's rent paid, 1 per order filled, 1 per potion sold and 10 for a win (`REPUTATION` in `core/meta.ts`). The cottage's perk board sells four perks, once each: Nest Egg (+5 starting gold, 15), A Deeper Shelf (5 Shelf slots, 20), Gran's Spoon (a Stir in the starting deck, 25) and A Spare Perch (+1 familiar slot, 35). Perks are codex data (`perks`) and apply at run start, never to the tutorial. The Night Market reroll from the list above needs a reroll mechanic first and is left for later. A Winter win counts a Year.
 
@@ -577,14 +579,14 @@ Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts
 | 1 | Their Townsfolk entry. |
 | 2 | A gift at the Longest Night vigil; the Hearth Trader trades on their name. |
 | 3, 6, 9 | A story beat (below). |
-| 4 | Their favourite order (below) now and then, worth +1 more Friendship. |
+| 4 | Their favourite order (below) now and then, worth +1 more Friendship and 6 gold more in tips. |
 | 5 | Their recipe joins the pools (below). |
 | 6 | The Hearth Trader shows a third Rare card (your best friend's level counts). |
 | 7 | Their familiar joins the pools (below). |
 | 8 | They bring their own gift to the vigil instead of a random one (below). |
 | 10 | Their story's finale, and +1 gold tip on every order of theirs (after the Pip & Quill tip multiplier; shown in the brew preview). |
 
-- **Favourite orders** (Jacob, Oct 15). From level 4, each order of theirs has a 1 in 4 chance to be their favourite, at most one on the board a day, and only when the deck can brew the family and holds an ingredient with the tag. It asks for a potion of a family with an ingredient of a tag (the marks on the cards), pays like any order of that family and tier, and earns +1 more Friendship. The ticket shows "♥ Protection + Mineral"; the dialogue names it. The Gardener's comes only on Night Shifts.
+- **Favourite orders** (Jacob, Oct 15). From level 4, each order of theirs has a 1 in 4 chance to be their favourite, at most one on the board a day, and only when the deck can brew the family and holds an ingredient with the tag. It asks for a potion of a family with an ingredient of a tag (the marks on the cards), pays like any order of that family and tier with 6 gold more in tips, and earns +1 more Friendship (the tip came in the balance pass, Oct 17: without it a favourite was a harder order for nothing, and Friendship 4 lost more runs than Friendship 0). The ticket shows "♥ Protection + Mineral"; the dialogue names it. The Gardener's comes only on Night Shifts.
 
 | Regular | Favourite | Asks for |
 |---|---|---|

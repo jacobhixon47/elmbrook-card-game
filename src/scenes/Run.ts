@@ -78,6 +78,11 @@ const SEASON_COLOR: Record<Season, PaletteKey> = { spring: 'L', summer: 'y', aut
 const TICKET_H = 40;
 const SIDE = { x: 498, y: 42, w: 134 };
 const SHELF_Y = 146;
+/** Where Shelf potion `i` sits: six to a row, or seven, closer together, when a boon takes the Shelf past six. */
+function shelfSpot(s: RunState, i: number, x: number): [number, number] {
+  const row = s.shelfSize > 6 ? 7 : 6;
+  return [x + 10 + (i % row) * (row === 7 ? 18 : 21), SHELF_Y + 30 + Math.floor(i / row) * 22];
+}
 const TIER_COLOR: Record<string, PaletteKey> = { crude: 'h', fine: 'w', superb: 'c', masterwork: 'y', legendary: 'I' };
 
 /**
@@ -153,7 +158,7 @@ export class Run extends Phaser.Scene {
       this.tutorial = fixture ? null : wantsTutorial() ? new TutorialProgress() : null;
       const seed = fixture?.seed ?? params.get('seed') ?? (this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`);
       const season = data.season ?? (fixture?.season as Season | undefined) ?? viewOverrides().season;
-      store.dispatch({ type: 'startRun', seed, ...this.kit(fixture), ...(season ? { season } : {}), ...(fixture?.year ? { year: fixture.year } : {}), ...this.fromProfile(!!fixture) });
+      store.dispatch({ type: 'startRun', seed, ...this.kit(fixture), ...(season ? { season } : {}), ...(fixture?.year ? { year: fixture.year } : {}), ...(fixture?.perks ? { perks: fixture.perks } : {}), ...(fixture?.boon ? { boon: fixture.boon } : {}), ...this.fromProfile(!!fixture) });
       // `today` sets the weather of the day the fixture starts on and of the day its steps end on.
       const today = () => fixture?.today && store.dispatch({ type: 'debug', op: 'setWeather', weather: fixture.today as Weather });
       today();
@@ -208,8 +213,7 @@ export class Run extends Phaser.Scene {
     const shelfTip = fixture?.ui?.shelfTip;
     const potion = shelfTip !== undefined ? state.shelf[shelfTip] : undefined;
     if (potion) {
-      const px = SIDE.x + 6 + 10 + (shelfTip! % 6) * 21;
-      const py = SHELF_Y + 30 + Math.floor(shelfTip! / 6) * 22;
+      const [px, py] = shelfSpot(state, shelfTip!, SIDE.x + 6);
       this.tip.text(recipeName(potion.recipe), potionLines(state, potion, this.pinned), px, py - 10, py + 10);
     }
     // Changes from outside this scene (the dev overlay, Playwright) redraw it too.
@@ -812,8 +816,7 @@ export class Run extends Phaser.Scene {
       pour.setScale(0.85);
     }
     s.shelf.forEach((p, i) => {
-      const px = x + 10 + (i % 6) * 21;
-      const py = SHELF_Y + 30 + Math.floor(i / 6) * 22;
+      const [px, py] = shelfSpot(s, i, x);
       const img = this.add2(this.add.image(px, py, `potion/${p.family}`));
       this.text(px, py + 9, TIER_NAME[p.tier][0]!, { size: 6, color: TIER_COLOR[p.tier]!, stroke: 'k' }).setOrigin(0.5, 0);
       img.setInteractive({ useHandCursor: true });

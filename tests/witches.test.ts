@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  cauldronOpen, CAULDRON_SLOTS, DISCARDS_PER_DAY, handSizeToday, migrateProfile, migrateRun, newProfile, newStats, previewBrew, recordRun, reduce, rentOf,
-  runStartChoice, tierStep, WITCH_RULES, witchOpen, type Order, type RunState, type Season,
+  atHome, cauldronOpen, CAULDRON_SLOTS, DISCARDS_PER_DAY, handSizeToday, migrateProfile, migrateRun, newProfile, newStats, previewBrew, recordRun, reduce, rentOf,
+  runStartChoice, SEASONS, tierStep, WITCH_RULES, witchOpen, type Order, type RunState, type Season,
 } from '../src/core';
 import { ofType, ok, slotAll, withHand } from './helpers';
 
@@ -102,6 +102,16 @@ describe('witches (GDD §12)', () => {
   });
 });
 
+describe('home seasons (balance pass)', () => {
+  it('a witch has one more Discard a day in the season that opens her', () => {
+    expect(brewing('bloom-witch', 'copper', 'kit', 'spring').discardsLeft).toBe(DISCARDS_PER_DAY + WITCH_RULES.homeDiscards);
+    expect(brewing('bloom-witch', 'copper', 'kit', 'summer').discardsLeft).toBe(DISCARDS_PER_DAY);
+    expect(brewing('frost-witch', 'copper', 'kit', 'winter').discardsLeft).toBe(DISCARDS_PER_DAY + WITCH_RULES.homeDiscards);
+    // The Hedge Witch has no home season.
+    expect(SEASONS.map((se) => atHome({ season: se, witch: 'hedge-witch' }))).toEqual([false, false, false, false]);
+  });
+});
+
 describe('cauldrons (GDD §12)', () => {
   it('Copper is open from the start; the rest each open with an Almanac entry', () => {
     expect([...codex.cauldrons.values()].map((c) => [c.id, c.unlock])).toEqual([
@@ -125,30 +135,31 @@ describe('cauldrons (GDD §12)', () => {
     expect(iron.brewsLeft).toBe(copper.brewsLeft - 1);
   });
 
-  it('Glass: +2 Harmony on every brew, one card fewer in hand', () => {
+  it('Glass: +1 Harmony on every brew, one card fewer in hand and one Discard fewer', () => {
     const copper = brewing('hedge-witch');
     const glass = brewing('hedge-witch', 'glass');
     expect(glass.handSize).toBe(copper.handSize - 1);
-    expect(preview(glass, ['elmroot', 'creekwater']).harmony).toBe(preview(copper, ['elmroot', 'creekwater']).harmony + 2);
+    expect(glass.discardsLeft).toBe(copper.discardsLeft - 1);
+    expect(preview(glass, ['elmroot', 'creekwater']).harmony).toBe(preview(copper, ['elmroot', 'creekwater']).harmony + 1);
   });
 
-  it('Bone: two Lunar ingredients in the Night Satchel, rent +25%', () => {
+  it('Bone: two Lunar ingredients in the Night Satchel, rent +5%', () => {
     const copper = start('hedge-witch');
     const bone = start('hedge-witch', 'bone');
     const lunar = bone.satchel.filter((c) => codex.ingredients.get(c.card)?.essences.includes('lunar'));
     expect(bone.satchel.length - copper.satchel.length).toBe(2);
     expect(lunar.length).toBeGreaterThanOrEqual(2);
-    expect(rentOf(bone)).toBe(Math.round(rentOf(copper) * 1.25));
+    expect(rentOf(bone, 4)).toBe(Math.round(rentOf(copper, 4) * 1.05));
   });
 
-  it('Silver: +1 Discard a day, orders pay 10% less', () => {
+  it('Silver: +1 Discard a day, orders pay 5% less', () => {
     const copper = brewing('hedge-witch');
     const silver = brewing('hedge-witch', 'silver');
     expect(copper.discardsLeft).toBe(DISCARDS_PER_DAY);
     expect(silver.discardsLeft).toBe(DISCARDS_PER_DAY + 1);
-    const pay = (s: RunState) => s.orders.reduce((n, o) => n + o.pay, 0);
     expect(silver.orders.map((o) => o.customer)).toEqual(copper.orders.map((o) => o.customer));
-    expect(pay(silver)).toBeLessThan(pay(copper));
+    // 5% off, rounded per order, so a small order can pay the same.
+    expect(silver.orders.every((o, i) => o.pay <= copper.orders[i]!.pay && o.pay >= Math.round(copper.orders[i]!.pay * 0.95) - 1)).toBe(true);
   });
 });
 

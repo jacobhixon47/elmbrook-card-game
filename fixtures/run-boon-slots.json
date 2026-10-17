@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "year": 2, "perks": ["deep-shelf", "wide-shelf", "spare-perch"], "boon": "another-perch", "steps": [{ "familiar": "hearth-toad" }, { "familiar": "barn-owl" }, { "familiar": "jackdaw" }, { "familiar": "will-o-wisp" }, { "familiar": "otter" }, { "familiar": "fox" }, { "potion": ["healing-draught", "fine"] }, "openShop"] }

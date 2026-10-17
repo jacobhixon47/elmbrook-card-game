@@ -76,7 +76,7 @@ describe('scoring', () => {
   });
 
   it('quality tiers follow GDD §6.4', () => {
-    expect([9, 10, 29, 30, 99, 100, 299, 300].map(tierOf)).toEqual(['crude', 'fine', 'fine', 'superb', 'superb', 'masterwork', 'masterwork', 'legendary']);
+    expect([9, 10, 29, 30, 99, 100, 399, 400].map(tierOf)).toEqual(['crude', 'fine', 'fine', 'superb', 'superb', 'masterwork', 'masterwork', 'legendary']);
     expect(tierStep('crude', -1)).toBe('crude');
     expect(tierStep('legendary', 1)).toBe('legendary');
   });

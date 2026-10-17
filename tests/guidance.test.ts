@@ -32,7 +32,7 @@ describe('card inspect', () => {
   });
 
   it('lists the tiers in order', () => {
-    expect(tierLadder()).toBe('Crude under 10 · Fine 10+ · Superb 30+ · Masterwork 100+ · Legendary 300+');
+    expect(tierLadder()).toBe('Crude under 10 · Fine 10+ · Superb 30+ · Masterwork 100+ · Legendary 400+');
   });
 });
 

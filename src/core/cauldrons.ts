@@ -10,7 +10,14 @@ export const WITCH_RULES = {
   bloomHarmony: 2,
   /** The Frost Witch: cards in hand on a Snow day. */
   frostHand: 1,
+  /** In her home season (the one that opens her), a witch has this many more Discards a day (balance pass, Oct 17). */
+  homeDiscards: 1,
 } as const;
+
+/** Whether the run is in its witch's home season: the season whose win opens her. The Hedge Witch has none. */
+export function atHome(s: Pick<RunState, 'season'> & Partial<Pick<RunState, 'witch'>>): boolean {
+  return !!s.witch && codex.witches.get(s.witch)?.unlockSeason === s.season;
+}
 
 /** The run's cauldron; runs saved before cauldrons brew in Copper. */
 export function cauldronOf(s: Partial<Pick<RunState, 'cauldronKind'>>): Cauldron {

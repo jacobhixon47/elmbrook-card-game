@@ -269,7 +269,7 @@ describe('weeks, rent and the end of a run', () => {
     const market = skipDay({ ...s, orders: s.orders.map((o) => ({ ...o, status: 'filled' as const })) });
     const r = ok({ ...market, gold: 500 }, { type: 'leaveMarket' });
     expect(r.state.phase).toBe('victory');
-    expect(r.state.gold).toBe(500 - 307);
+    expect(r.state.gold).toBe(500 - 239);
     expect(ofType(r.events, 'runWon')).toHaveLength(1);
     // Rent paid but the finale not met: the month is lost.
     const short = ok({ ...skipDay(s), gold: 500 }, { type: 'leaveMarket' });
@@ -278,13 +278,13 @@ describe('weeks, rent and the end of a run', () => {
   });
 
   it('seasons scale the rent and twist the day', () => {
-    expect([1, 2, 3, 4].map((w) => rentDue('spring', w))).toEqual([20, 71, 161, 307]);
+    expect([1, 2, 3, 4].map((w) => rentDue('spring', w))).toEqual([20, 55, 126, 239]);
     expect(rentDue('winter', 4)).toBeGreaterThan(rentDue('autumn', 4));
     // Week 1's rent ramps gently by season (the M4 ramp pass).
     expect(SEASONS.map((se) => rentDue(se, 1))).toEqual([20, 22, 24, 26]);
-    expect(rentDue('winter', 2)).toBe(Math.round(71 * 1.48));
-    // Later Years raise it: a little from Year 2, more from Year 4.
-    expect([1, 2, 3, 4, 10].map((year) => rentOf({ season: 'spring', week: 4, year }))).toEqual([307, 322, 322, 384, 384]);
+    expect(rentDue('winter', 2)).toBe(Math.round(55 * 1.48));
+    // Each later Year raises it by 6.5% (the balance pass).
+    expect([1, 2, 3, 4, 10].map((year) => rentOf({ season: 'spring', week: 4, year }))).toEqual([239, 255, 270, 286, 379]);
     const summer = start('sun', 'summer');
     expect(summer.brewsLeft).toBe(5);
     const night = ok(summer, { type: 'debug', op: 'jumpToDay', week: 1, day: NIGHT_SHIFT_DAY }).state;
