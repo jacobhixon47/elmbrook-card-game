@@ -51,27 +51,11 @@ export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essenc
     ctx.textBaseline = 'top';
     const lines = wrapLines(ctx, str, maxWidth ? maxWidth * Z : undefined);
     lines.forEach((line, i) => ctx.fillText(line, x * Z, (y + i * (size + 1)) * Z));
-    return lines.length;
   };
 
   if (kind === 'ingredient') {
     const ing = codex.ingredients.get(cardId)!;
-    const nameLines = text(ing.name, CARD_W / 2, 44, 7, 'k', FONT_BODY, 52);
-    // Under the name, each rule-read tag's name in its mark's colour (Jacob, Oct 17).
-    const tags = faceTags(ing.tags);
-    if (tags.length) {
-      ctx.font = `${5 * Z}px ${FONT_DISPLAY}`;
-      ctx.textAlign = 'left';
-      const words = tags.map((t) => t.toUpperCase());
-      const gap = ctx.measureText(' ').width;
-      const widths = words.map((w) => ctx.measureText(w).width);
-      let tx = (CARD_W * Z - widths.reduce((a, b) => a + b, 0) - gap * (words.length - 1)) / 2;
-      words.forEach((w, i) => {
-        ctx.fillStyle = PALETTE[TAG_GLYPHS[tags[i]!]!.color];
-        ctx.fillText(w, tx, (44 + nameLines * 8 + 1) * Z);
-        tx += widths[i]! + gap;
-      });
-    }
+    text(ing.name, CARD_W / 2, 44, 7, 'k', FONT_BODY, 52);
     ctx.textAlign = 'left';
     ctx.font = `${8 * Z}px ${FONT_DISPLAY}`;
     ctx.fillStyle = PALETTE.r;

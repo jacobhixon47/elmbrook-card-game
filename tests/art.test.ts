@@ -25,6 +25,7 @@ describe('art', () => {
       expect(g.rows).toHaveLength(7);
       expect(g.rows.every((r) => r.length === 7 && /^[.#]+$/.test(r))).toBe(true);
       expect(PALETTE[g.color]).toBeDefined();
+      expect(PALETTE[g.text]).toBeDefined();
       expect(tagGlyph(tag).width).toBe(8);
     }
   });

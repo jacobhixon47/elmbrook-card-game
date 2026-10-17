@@ -64,33 +64,33 @@ export const CAULDRON_METAL = {
  * one colour each: a flower, a snowflake, a fruit, a leaf, a gem, a chili and a drop. They sit in
  * the card's top-left corner like a suit.
  */
-export const TAG_GLYPHS: Record<string, { rows: readonly string[]; color: PaletteKey }> = {
+export const TAG_GLYPHS: Record<string, { rows: readonly string[]; color: PaletteKey; /** A lighter shade, for the tag's name on dark panels. */ text: PaletteKey }> = {
   flower: {
-    color: 'i',
+    color: 'i', text: 'I',
     rows: ['#..#..#', '##.#.##', '#.#.#.#', '#.....#', '.#...#.', '..###..', '...#...'],
   },
   frost: {
-    color: 'U',
+    color: 'U', text: 'c',
     rows: ['#..#..#', '.#.#.#.', '..#.#..', '###.###', '..#.#..', '.#.#.#.', '#..#..#'],
   },
   fruit: {
-    color: 'o',
+    color: 'o', text: 'o',
     rows: ['....##.', '...#...', '.##.##.', '#.....#', '#.....#', '.#...#.', '..###..'],
   },
   herb: {
-    color: 'G',
+    color: 'G', text: 'l',
     rows: ['..#####', '.#....#', '#....##', '#...#.#', '#..#..#', '.##..#.', '#.###..'],
   },
   mineral: {
-    color: 'S',
+    color: 'S', text: 'e',
     rows: ['..###..', '.#.#.#.', '#######', '#.#.#.#', '.#.#.#.', '..#.#..', '...#...'],
   },
   spice: {
-    color: 'R',
+    color: 'R', text: 'R',
     rows: ['.....#.', '....#..', '..###..', '.#..#..', '#..#...', '#.#....', '.#.....'],
   },
   water: {
-    color: 'T',
+    color: 'T', text: 't',
     rows: ['...#...', '..#.#..', '.#...#.', '#.....#', '#.#...#', '.#...#.', '..###..'],
   },
 };

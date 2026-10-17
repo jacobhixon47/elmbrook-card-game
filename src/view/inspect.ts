@@ -1,3 +1,4 @@
+import { TAG_GLYPHS } from '../art/procedural';
 import { cardKind, codex } from '../codex';
 import { lore } from '../codex/lore';
 import type { Essence } from '../codex/schema';
@@ -27,6 +28,8 @@ export type CardInfo = {
   title: string;
   kind: string;
   essences: Essence[];
+  /** Tags the rules read, shown in their marks' colours (Jacob, Oct 17); other tags stay in `kind`. */
+  tags: string[];
   potency: number | null;
   text: string;
   terms: [string, string][];
@@ -50,10 +53,13 @@ export function cardInfo(id: string, extras: CardExtras = {}): CardInfo {
     if (mod) lines.push(`${mod.name}: ${mod.text}`);
     if (ing.nightOnly) lines.push('Kept in your Night Satchel: Night Shifts only.');
     const text = lines.join(' ');
+    const ruled = Object.keys(TAG_GLYPHS).filter((t) => ing.tags.includes(t));
+    const other = ing.tags.filter((t) => !ruled.includes(t));
     return {
       title: ing.name,
-      kind: `${cap(ing.rarity)} ingredient · ${cap(ing.origin)}${ing.tags.length ? ` · ${ing.tags.map(cap).join(', ')}` : ''}`,
+      kind: `${cap(ing.rarity)} ingredient · ${cap(ing.origin)}${other.length ? ` · ${other.map(cap).join(', ')}` : ''}`,
       essences: ing.essences,
+      tags: ruled,
       potency: ing.potency,
       text,
       terms: termsIn(text),
@@ -64,12 +70,12 @@ export function cardInfo(id: string, extras: CardExtras = {}): CardInfo {
     const t = codex.tinctures.get(id)!;
     if (t.rarity === 'lunar') {
       const text = `${t.text} Kept in your Night Satchel: Night Shifts only.`;
-      return { title: t.name, kind: 'Omen · Lunar tincture', essences: [], potency: null, text, terms: termsIn(`Omen ${text}`), lore: lore[id] ?? null };
+      return { title: t.name, kind: 'Omen · Lunar tincture', essences: [], tags: [], potency: null, text, terms: termsIn(`Omen ${text}`), lore: lore[id] ?? null };
     }
-    return { title: t.name, kind: `${cap(t.rarity)} tincture`, essences: [], potency: null, text: t.text, terms: termsIn(t.text), lore: lore[id] ?? null };
+    return { title: t.name, kind: `${cap(t.rarity)} tincture`, essences: [], tags: [], potency: null, text: t.text, terms: termsIn(t.text), lore: lore[id] ?? null };
   }
   const j = codex.junk.get(id)!;
-  return { title: j.name, kind: 'Junk', essences: [], potency: null, text: j.text, terms: termsIn(`${j.name} ${j.text}`), lore: lore[id] ?? null };
+  return { title: j.name, kind: 'Junk', essences: [], tags: [], potency: null, text: j.text, terms: termsIn(`${j.name} ${j.text}`), lore: lore[id] ?? null };
 }
 
 /**
