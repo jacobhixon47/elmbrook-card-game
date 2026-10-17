@@ -95,9 +95,12 @@ export const TAG_GLYPHS: Record<string, { rows: readonly string[]; color: Palett
   },
 };
 
+/** A tag's mark, 8x8: the 7x7 line drawing over a dark drop shadow, so it reads crisply on the card. */
 export function tagGlyph(tag: string): Pixmap {
   const g = TAG_GLYPHS[tag]!;
-  const p = new Pixmap(7, 7);
+  const p = new Pixmap(8, 8);
+  const on = (x: number, y: number) => g.rows[y]?.[x] === '#';
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (on(x - 1, y - 1) && !on(x, y)) p.set(x, y, 'k');
   g.rows.forEach((row, y) => [...row].forEach((ch, x) => ch === '#' && p.set(x, y, g.color)));
   return p;
 }
