@@ -21,7 +21,8 @@
     "render-texture": "tsx scripts/render-texture.ts",
     "art:import": "tsx scripts/import-backdrop.ts",
     "art:window": "tsx scripts/window-sheet.ts",
-    "sim": "tsx scripts/sim.ts"
+    "sim": "tsx scripts/sim.ts",
+    "balance": "tsx scripts/balance.ts"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
