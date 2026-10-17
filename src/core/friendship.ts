@@ -20,10 +20,12 @@ export const FRIENDSHIP = {
   traderCards: 2,
   traderBigCards: 3,
   traderFamiliars: 1,
-  /** From this level, each order of theirs may be their favourite: 1 in 4, at most one a day, +1 Friendship. */
+  /** From this level, each order of theirs may be their favourite: 1 in 4, at most one a day, +1 Friendship and a bigger tip. */
   favouriteLevel: 4,
   favouriteChance: 0.25,
   favouriteFriendship: 1,
+  /** A favourite order also tips this much more gold, so it's worth the harder ask (balance pass, Oct 17). */
+  favouriteTip: 6,
   /** A regular's recipe joins the pools at this level, and their familiar at the next (GDD §13). */
   recipeLevel: 5,
   familiarLevel: 7,

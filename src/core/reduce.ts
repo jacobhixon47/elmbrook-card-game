@@ -20,7 +20,7 @@ import { cursePool, dayAllowance, gainRelic, grantRelic, handSizeToday, hasCurse
 import { fits, postOrders, postVisitorOrder, payout, satisfies } from './orders';
 import { doFavour, priceAt, visitorPayment } from './visitors';
 import { seedRng } from './rng';
-import { cauldronOf, glamourReady, needsGlamour, quirkReady } from './cauldrons';
+import { atHome, cauldronOf, glamourReady, needsGlamour, quirkReady, WITCH_RULES } from './cauldrons';
 import {
   BREWS_PER_DAY, CAULDRON_SLOTS, FAMILIAR_SLOTS, DISCARDS_PER_DAY, FENCE_PRICE, FENCE_SHADOW_BONUS, WINTER_FENCE, MAX_DISCARD, MIN_DECK, TIER_MIN,
   SEASON_RULES, SHELF_SLOTS, SKIP_GOLD, START_GOLD, TITHE_GOLD, tierStep, WEEKS,
@@ -157,7 +157,7 @@ function startDay(ctx: Ctx): void {
   const allowance = dayAllowance(s, { brews: BREWS_PER_DAY + (night ? 0 : rules.dayBrews), discards: Math.max(0, DISCARDS_PER_DAY + (night ? rules.nightDiscards : 0) - yearDiscards(s)) }, night, weather);
   const pot = cauldronOf(s);
   s.brewsLeft = Math.max(1, allowance.brews + (pot.brews ?? 0)) + (blessingTonight(s, 'hearthfire') ? VIGIL.hearthfireBrews : 0);
-  s.discardsLeft = Math.max(0, allowance.discards + (pot.discards ?? 0)) + (blessingTonight(s, 'warm-hands') ? VIGIL.warmHandsDiscards : 0);
+  s.discardsLeft = Math.max(0, allowance.discards + (pot.discards ?? 0) + (atHome(s) ? WITCH_RULES.homeDiscards : 0)) + (blessingTonight(s, 'warm-hands') ? VIGIL.warmHandsDiscards : 0);
   // Dusk events that reach into the next day (GDD §7).
   s.brewsLeft = Math.max(1, s.brewsLeft + s.tomorrow.brews);
   s.discardsLeft = Math.max(0, s.discardsLeft + s.tomorrow.discards);
@@ -899,8 +899,10 @@ function applyPerks(ctx: Ctx, perks: readonly string[]): void {
 function applyStart(ctx: Ctx, start: RunStart, source: string): void {
   const s = ctx.s;
   s.gold += start.gold ?? 0;
-  s.shelfSize = Math.min(MAX_SHELF_SLOTS, s.shelfSize + (start.shelf ?? 0));
-  s.familiarSlots = Math.min(MAX_FAMILIAR_SLOTS, s.familiarSlots + (start.familiarSlots ?? 0));
+  // A boon's slots go past the cap, so a Year's boon still counts once the perks have filled it.
+  const past = (n = 0) => (source === 'boon' ? n : 0);
+  s.shelfSize = Math.min(MAX_SHELF_SLOTS + past(start.shelf), s.shelfSize + (start.shelf ?? 0));
+  s.familiarSlots = Math.min(MAX_FAMILIAR_SLOTS + past(start.familiarSlots), s.familiarSlots + (start.familiarSlots ?? 0));
   s.cauldronSlots = Math.min(MAX_CAULDRON_SLOTS, s.cauldronSlots + (start.cauldron ?? 0));
   for (const card of start.cards ?? []) s.drawPile.push({ uid: s.nextUid++, card });
   if (start.relicTier) grantRelic(ctx, start.relicTier, source);

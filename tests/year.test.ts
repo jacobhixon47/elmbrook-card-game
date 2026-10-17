@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
   boonOf, chooseYear, DISCARDS_PER_DAY, LOOP_ALMANAC, loopOpen, MAX_YEAR, SEASONS, seasonsOf, migrateProfile, migrateRun, newProfile, newRun, NIGHT_SHIFT_DAY, patronKnown, pickBoon, recordRun,
-  reputationFor, reputationMult, rollBoons, RUN_VERSION, START_GOLD, SHELF_SLOTS, FAMILIAR_SLOTS, newStats, yearModifiers, YEAR_RULES,
+  reputationFor, reputationMult, rollBoons, RUN_VERSION, START_GOLD, SHELF_SLOTS, FAMILIAR_SLOTS, MAX_SHELF_SLOTS, MAX_FAMILIAR_SLOTS, newStats, yearModifiers, YEAR_RULES,
   type Profile, finaleTier, rewardCount, type RunState,
 } from '../src/core';
 import { calendarWeeks, dayRules } from '../src/view/calendar';
@@ -79,6 +79,10 @@ describe('boons', () => {
     expect(run('winter-savings').gold).toBe(START_GOLD + 15);
     expect(run('tall-shelf').shelfSize).toBe(SHELF_SLOTS + 1);
     expect(run('another-perch').familiarSlots).toBe(FAMILIAR_SLOTS + 1);
+    // A boon's slot goes past the cap the perks reach, so it never does nothing (balance pass).
+    const capped = (boon: string) => newRun('boon', 'hedge-witch', 'spring', [], ['deep-shelf', 'wide-shelf', 'spare-perch'], 2, boon).state;
+    expect(capped('tall-shelf').shelfSize).toBe(MAX_SHELF_SLOTS + 1);
+    expect(capped('another-perch').familiarSlots).toBe(MAX_FAMILIAR_SLOTS + 1);
     const lucky = run('lucky-find');
     expect(lucky.relics).toHaveLength(1);
     expect(codex.relics.get(lucky.relics[0]!)!.tier).toBe(1);

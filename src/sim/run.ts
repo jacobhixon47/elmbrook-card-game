@@ -1,7 +1,6 @@
 import { codex } from '../codex';
 import { allCards, isPatron, reduce, type Action, type GameEvent, type RunState, type Season } from '../core';
-import { seedRng } from '../core/rng';
-import { greedyAction, isOver, randomAction, type Strategy } from './bot';
+import { isOver, makePlayer, type Strategy } from './bot';
 
 export type RunRecord = {
   seed: string;
@@ -39,10 +38,12 @@ export type RunRecord = {
   modifiers: string[];
   /** Each day's requests (a recipe id, or `family:<id>`), by week: [week][day]. */
   boards: string[][][];
+  /** The state the run ended in, for counting it into a profile. */
+  final?: RunState;
   error?: string;
 };
 
-export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; unlocks?: readonly string[]; perks?: readonly string[]; year?: number; boon?: string; friendship?: Readonly<Record<string, number>>; maxActions?: number };
+export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; unlocks?: readonly string[]; perks?: readonly string[]; year?: number; boon?: string; cauldron?: string; friendship?: Readonly<Record<string, number>>; keepsakes?: readonly string[]; maxActions?: number };
 
 /** Play one full run headlessly. Never throws: a crash is recorded with the action log that caused it. */
 export function playRun(seed: string, opts: SimOptions): RunRecord {
@@ -52,7 +53,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
     finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [], modifiers: [], boards: [],
   };
   const max = opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000);
-  let rng = seedRng(`bot:${seed}`);
+  const player = makePlayer(opts.strategy, seed);
 
   const observe = (s: RunState, events: GameEvent[]) => {
     for (const e of events) {
@@ -122,15 +123,13 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
   };
 
   try {
-    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}), ...(opts.unlocks ? { unlocks: [...opts.unlocks] } : {}), ...(opts.perks ? { perks: [...opts.perks] } : {}), ...(opts.year ? { year: opts.year } : {}), ...(opts.boon ? { boon: opts.boon } : {}), ...(opts.friendship ? { friendship: { ...opts.friendship } } : {}) };
+    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}), ...(opts.unlocks ? { unlocks: [...opts.unlocks] } : {}), ...(opts.perks ? { perks: [...opts.perks] } : {}), ...(opts.year ? { year: opts.year } : {}), ...(opts.boon ? { boon: opts.boon } : {}), ...(opts.cauldron ? { cauldron: opts.cauldron } : {}), ...(opts.friendship ? { friendship: { ...opts.friendship } } : {}), ...(opts.keepsakes?.length ? { keepsakes: [...opts.keepsakes] } : {}) };
     rec.actions.push(start);
     const first = reduce(null, start);
     let state = first.state;
     observe(state, first.events);
     while (!isOver(state) && rec.actions.length < max) {
-      let action: Action;
-      if (opts.strategy === 'greedy') action = greedyAction(state);
-      else [action, rng] = randomAction(state, rng);
+      const action = player(state);
       rec.actions.push(action);
       const r = reduce(state, action);
       // Gold is observed on the state the day started in, so observe after applying.
@@ -138,6 +137,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
       observe(state, r.events);
     }
     rec.finished = isOver(state);
+    rec.final = state;
     rec.familiars = [...state.familiars];
     rec.relics = [...state.relics];
     rec.curses = [...state.curses];

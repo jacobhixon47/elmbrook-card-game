@@ -15,6 +15,9 @@ export type Fixture = {
   cauldron?: string;
   /** The Year a Run fixture plays in (its modifiers), from 2. */
   year?: number;
+  /** Cottage perks and the Year's boon a Run fixture starts with. */
+  perks?: string[];
+  boon?: string;
   time?: string;
   weather?: string;
   /** Today's weather for the rules (the Calendar's roll), set before `steps` run. `weather` only changes the window. */

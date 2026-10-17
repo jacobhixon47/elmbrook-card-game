@@ -1,7 +1,7 @@
 import { codex } from '../src/codex';
 import { describe, expect, it } from 'vitest';
 import {
-  allCards, bankFriendship, bestFriend, KEEPSAKE_SLOTS, keepsakesOpen, runKeepsakes, FAMILIAR_SCORE, familiarPool, fencePrice, friendUnlocks, recipeAvailable, satisfies, storyDue, storyKey, friendLevel, FRIENDSHIP, levelStartAt, migrateProfile, migrateRun, newProfile, newStats, nextLevelAt, recordRun, reduce,
+  allCards, bankFriendship, bestFriend, KEEPSAKE_SLOTS, keepsakesOpen, runKeepsakes, FAMILIAR_SCORE, familiarPool, fencePrice, friendUnlocks, recipeAvailable, satisfies, storyDue, storyKey, friendLevel, FRIENDSHIP, levelStartAt, payout, migrateProfile, migrateRun, newProfile, newStats, nextLevelAt, recordRun, reduce,
   type Order, type RunState,
 } from '../src/core';
 import { brewing, ofType, ok, slotAll, withHand } from './helpers';
@@ -149,6 +149,12 @@ describe('favourite orders (Friendship level 4)', () => {
     const s = { ...brewing('friends'), orders: [fav], shelf: [{ uid: 600, ...potion, quality: 14, ingredients: ['elmroot', herb], experiment: false, heartDelta: 0 }] };
     const r = ok(s, { type: 'deliver', order: 500, potion: 600 });
     expect(r.state.friendship['old-tobin']).toBe(1 + FRIENDSHIP.favouriteFriendship);
+  });
+
+  it('tip more gold than the same order would, so the harder ask pays (balance pass)', () => {
+    const potion = { tier: 'crude' as const, ingredients: ['elmroot', 'mint-sprig'] };
+    const plain = payout(potion, order());
+    expect(payout(potion, order({ favourite: { tag: 'herb' } }))).toEqual({ ...plain, tip: plain.tip + FRIENDSHIP.favouriteTip });
   });
 });
 
