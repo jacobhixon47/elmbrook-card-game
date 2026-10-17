@@ -15,6 +15,7 @@ Read before working: `docs/gdd.md` (what to build), `docs/tech.md` (how), `docs/
 - `pnpm art:import <image> <name> [--grid 2 --panel 0]`: pixelize a painted image into `public/backdrops/<name>.png`
 - `pnpm art:window`: render the shop window in every season, time of day and weather to `.snaps/window-grades.png` and `.snaps/window-weather.png`
 - `pnpm sim --runs <n> [--strategy greedy|skilled|casual|novice|random] [--season s] [--friends n]`: headless balance report; `pnpm sim --career <n> --strategy s` plays whole saves from a new profile; `pnpm sim --replay <file>` replays an action log
+- `pnpm balance [--quick] [--systems]`: the balance check (`docs/balance-check.md`): every player type in Year 1 and over whole saves, compared with the targets
 - Dev overlay: press backtick in the game for seed, state, +gold, jump to day, action-log export, and skipping or resetting the tutorial
 
 Dev URL params: `?fixture=<name>`, `?seed=<s>`, `?noanim=1`, `?renderer=canvas`, `?backdrops=code` (code-drawn backdrops instead of painted ones), `?season=winter`, `?time=night` and `?weather=snow` (preview the shop window). A first run plays the tutorial; `?tutorial=0` skips it, `?tutorial=1` forces it, and any `?seed=` or fixture skips it unless the fixture sets `ui.tutorial` to a tip id.
@@ -27,7 +28,7 @@ Dev URL params: `?fixture=<name>`, `?seed=<s>`, `?noanim=1`, `?renderer=canvas`,
 - Art is code (see `docs/art-pipeline.md`): palette keys only, 16×16 sprite grids, procedural generators, baked card faces. The one exception is large painted backdrops: PNGs in `public/backdrops/` made only by `pnpm art:import` and listed in `src/art/backdrops.ts` with their source. No other binary image assets.
 - Every scene calls `markReady(this)` when fully drawn. Every new screen or UI state gets a fixture.
 - After any visual change: run `pnpm snap` for the affected fixtures and look at the PNGs before calling it done.
-- After any balance change (M1+): run `pnpm sim` before and after and include both summaries in the PR.
+- After any balance change (M1+): run `pnpm sim` before and after and include both summaries in the PR. At crucial points (the end of a milestone, a new system or batch of content, a balance pass), run `pnpm balance`, compare with the targets in `docs/balance-check.md`, and add a row to its results.
 - Every bug fix gets a regression test or a replay fixture.
 - Done = typecheck, lint, tests and `art:check` green, plus snaps reviewed for UI work.
 - The repo is public: commit messages, PR descriptions and comments carry no Claude session or project links (no `Claude-Session:` trailer, no claude.ai/code session URLs).
