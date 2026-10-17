@@ -43,6 +43,6 @@ export function potionLines(state: RunState, potion: Potion, pinned: number | nu
     lines.push('No open order wants it yet.');
   }
   lines.push(`The Fence pays ${fencePrice(potion, state)}g after the Night Shift.`);
-  lines.push('Click to deliver. Right-click to pour it away.');
+  lines.push('Click to deliver. Right-click to pour it away for a Discard.');
   return lines;
 }

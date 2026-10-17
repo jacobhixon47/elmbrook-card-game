@@ -779,10 +779,14 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
     }
 
     case 'pourOut': {
-      if (s.phase === 'game-over' || s.phase === 'victory') reject('the run is over');
+      // Pouring a potion away costs a Discard, so a Shelf of the best potions is a choice (balance, Oct 17).
+      requirePhase(ctx, 'brewing');
+      if (s.discardsLeft <= 0) reject('pouring out takes a Discard, and none are left today');
       const i = s.shelf.findIndex((p) => p.uid === action.uid);
       if (i < 0) reject(`potion ${action.uid} is not on the Shelf`);
       s.shelf.splice(i, 1);
+      s.discardsLeft -= 1;
+      s.stats.discardsUsed += 1;
       ctx.ev.push({ type: 'potionPoured', uid: action.uid });
       return;
     }

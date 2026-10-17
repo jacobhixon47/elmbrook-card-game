@@ -18,7 +18,11 @@ describe('card inspect', () => {
 
   it('names essences and potency, and defines only the rarer terms a card uses (Jacob, Oct 16)', () => {
     const info = cardInfo('thistledown');
-    expect(info.kind).toBe('Common ingredient · Wychwood · Flower');
+    expect(info.kind).toBe('Common ingredient · Wychwood');
+    expect(info.tags).toEqual(['flower']);
+    // Tags the rules read get their own coloured line; the rest stay on the kind line.
+    expect(cardInfo('ginger-root').kind).toMatch(/· Root$/);
+    expect(cardInfo('ginger-root').tags).toEqual(['spice']);
     expect(info.essences).toEqual(['gale']);
     expect(info.text).toBe('Gale essence. Potency 3. When discarded, draw 1.');
     expect(info.terms).toEqual([]);

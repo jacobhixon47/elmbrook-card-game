@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import type { PaletteKey } from '../art/palette';
+import { TAG_GLYPHS } from '../art/procedural';
 import { cardInfo, type CardExtras } from './inspect';
 import { pixelText } from './text';
 import { panel } from './ui';
@@ -26,6 +27,7 @@ export class Tooltip {
       { text: info.kind, size: 7, color: 'h' },
     ];
     if (info.essences.length) rows.push({ pips: info.essences });
+    if (info.tags.length) rows.push({ tags: info.tags });
     rows.push({ text: info.text, size: 8, color: 'W' });
     for (const [term, def] of info.terms) rows.push({ text: `${term}: ${def}`, size: 7, color: 'a' });
     if (info.lore) rows.push({ text: info.lore, size: 7, color: 'L' });
@@ -52,6 +54,17 @@ export class Tooltip {
         y += 9;
         continue;
       }
+      if ('tags' in row) {
+        // Each tag the rules read, in its mark's colour, side by side.
+        let tx = PAD;
+        for (const tag of row.tags) {
+          const t = pixelText(s, tx, y, tag[0]!.toUpperCase() + tag.slice(1), { size: 8, color: TAG_GLYPHS[tag]!.text });
+          parts.push(t);
+          tx += t.width + 6;
+        }
+        y += 10;
+        continue;
+      }
       const t = pixelText(s, PAD, y, row.text, { size: row.size, color: row.color, wrap: W - PAD * 2 });
       parts.push(t);
       y += t.height + 2;
@@ -66,4 +79,4 @@ export class Tooltip {
   }
 }
 
-type Row = { text: string; size: number; color: PaletteKey } | { pips: readonly string[] };
+type Row = { text: string; size: number; color: PaletteKey } | { pips: readonly string[] } | { tags: readonly string[] };
