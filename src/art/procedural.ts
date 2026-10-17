@@ -61,7 +61,8 @@ export const CAULDRON_METAL = {
 
 /**
  * The line-drawn marks for the ingredient tags rules read (GDD §5.1), 7x7 at card resolution,
- * one colour each: a flower, a snowflake, a fruit. They sit in the card's top-left corner like a suit.
+ * one colour each: a flower, a snowflake, a fruit, a leaf, a gem, a chili and a drop. They sit in
+ * the card's top-left corner like a suit.
  */
 export const TAG_GLYPHS: Record<string, { rows: readonly string[]; color: PaletteKey }> = {
   flower: {
@@ -75,6 +76,22 @@ export const TAG_GLYPHS: Record<string, { rows: readonly string[]; color: Palett
   fruit: {
     color: 'o',
     rows: ['....##.', '...#...', '.##.##.', '#.....#', '#.....#', '.#...#.', '..###..'],
+  },
+  herb: {
+    color: 'G',
+    rows: ['..#####', '.#....#', '#....##', '#...#.#', '#..#..#', '.##..#.', '#.###..'],
+  },
+  mineral: {
+    color: 'S',
+    rows: ['..###..', '.#.#.#.', '#######', '#.#.#.#', '.#.#.#.', '..#.#..', '...#...'],
+  },
+  spice: {
+    color: 'R',
+    rows: ['.....#.', '....#..', '..###..', '.#..#..', '#..#...', '#.#....', '.#.....'],
+  },
+  water: {
+    color: 't',
+    rows: ['...#...', '..#.#..', '.#...#.', '#.....#', '#.#...#', '.#...#.', '..###..'],
   },
 };
 

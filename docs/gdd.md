@@ -220,7 +220,7 @@ The bulk of the deck. Each has:
 - **Rarity:** Common, Uncommon, Rare, Lunar.
 - **Origin:** Garden, Wychwood, Creek, Mine, Market, Night (flavour + bonus conditions + shared codex with game 2).
 - **Optional text effect:** "+2 Harmony if brewed with a Tide ingredient", "When discarded, draw 1".
-- **Tags** (flower, root, frost, mineral…) that effects and later systems key on, e.g. Ice Lily's "+1 Harmony per Frost ingredient". Tags a rule reads (today Frost, Flower and Fruit) show as small line-drawn marks in the card's top-left corner, like a suit: a tulip for Flower, a snowflake for Frost, a fruit for Fruit, one colour each. A card with two stacks them. So a Frost card reads as Frost at a glance whatever its essences (Jacob, Oct 14; marks in place of the first coloured chips, Oct 15). Every tag is listed when you inspect a card.
+- **Tags** (flower, root, frost, mineral…) that effects and later systems key on, e.g. Ice Lily's "+1 Harmony per Frost ingredient". The seven tags a rule reads (Flower, Frost, Fruit, Herb, Mineral, Spice and Water) show as small line-drawn marks in the card's top-left corner, like a suit: a tulip for Flower, a snowflake for Frost, a fruit for Fruit, a leaf for Herb, a gem for Mineral, a chili for Spice and a drop for Water, one colour each. A card with two stacks them. No tag is on just one card: the balance pass (Jacob, Oct 17) dropped the one-card tags, with Kelpie Pearl moving to Water and Fallen Star to Mineral. So a Frost card reads as Frost at a glance whatever its essences (Jacob, Oct 14; marks in place of the first coloured chips, Oct 15). Every tag is listed when you inspect a card.
 - **In season:** the seasons it grows in. In-season ingredients are three times as likely in rewards, the Market and the Forage.
 - **Pool:** base (offered from the first run), unlock (offered once unlocked, §13) or event (only from its calendar event).
 
@@ -330,7 +330,7 @@ Pay, tips, Fence prices and shop prices live in `src/core/rules.ts` and are tune
 
 ### 6.5 The Shelf
 
-Brewed potions not delivered go to the Shelf (4 slots, upgradable). Shelf potions can fill later orders (from 1.0's "fulfil from inventory"), carry between days, and sell at the Night Market. Potions on the Shelf at rent time are not worth anything unless sold. A Shelf potion can be poured away for free at any time (the Pour out button, or right-click it), so a full Shelf never wastes a brew; hovering one shows its quality, ingredients, the order it would fill and what the Fence pays (decided with Jacob).
+Brewed potions not delivered go to the Shelf (4 slots, upgradable). Shelf potions can fill later orders (from 1.0's "fulfil from inventory"), carry between days, and sell at the Night Market. Potions on the Shelf at rent time are not worth anything unless sold. A Shelf potion can be poured away during a day for one of the day's Discards (the Pour out button, or right-click it), so a full Shelf costs a choice rather than a brew (pouring was free until the balance pass, Jacob, Oct 17: a Shelf of the best potions was trivial to keep); hovering one shows its quality, ingredients, the order it would fill and what the Fence pays (decided with Jacob).
 
 ## 7. Dusk errands
 
@@ -593,7 +593,7 @@ Decided with Jacob (Oct 15), in place of the per-run hearts. Built in four parts
 | Bea Thornwick | Ember Bun Tonic | Warming, with a Fruit |
 | Old Tobin | Pit Salve | Protection, with a Mineral |
 | Pip & Quill | Midnight Feast Fizz | Secrets, with a Flower |
-| Sister Alder | Shrine Tea | Healing, with a Herb |
+| Sister Alder | Shrine Tea | Calming, with a Herb |
 | Marlowe Vance | Gilded Ledger | Fortune, with a Mineral |
 | The Gardener | Moonflower Cordial | Lunar, with a Flower |
 

@@ -34,7 +34,7 @@ export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essenc
     const ing = codex.ingredients.get(cardId)!;
     const essences = woven && !ing.essences.includes(woven) ? [ing.essences[0]!, woven] : ing.essences;
     essences.forEach((e, i) => face.blit(essencePip(e), CARD_W - 12 - i * 8, CARD_H - 11));
-    // Tags the rules read (Frost, Flower, Fruit) get a small line-drawn mark in the top-left corner, like a suit.
+    // Tags the rules read (Flower, Frost, Fruit, Herb, Mineral, Spice, Water) get a small line-drawn mark in the top-left corner, like a suit.
     faceTags(ing.tags).forEach((tag, i) => face.blit(tagGlyph(tag), 2, 4 + i * 9));
   }
 
@@ -73,7 +73,7 @@ export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essenc
   return key;
 }
 
-/** Ingredient tags that rules care about, in the order their marks stack. Other tags (Root, Mineral...) stay in the inspect panel. */
+/** Ingredient tags that rules care about, in the order their marks stack. Other tags (Root, Bark...) stay in the inspect panel. */
 export function faceTags(tags: readonly string[]): string[] {
   return Object.keys(TAG_GLYPHS).filter((t) => tags.includes(t));
 }

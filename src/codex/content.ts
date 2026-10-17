@@ -19,7 +19,7 @@ export const ingredients: In<typeof Ingredient>[] = [
   { id: 'hearth-coal', name: 'Hearth Coal', essences: ['ember'], potency: 5, rarity: 'common', origin: 'mine', tags: ['mineral'], inSeason: ['winter'] },
   { id: 'iron-filings', name: 'Iron Filings', essences: ['stone'], potency: 4, rarity: 'common', origin: 'mine', effects: ['potency-2-if-3-ingredients'], text: '+2 Potency if brewed with 3 ingredients.', tags: ['mineral'] },
   { id: 'inkcap', name: 'Inkcap', essences: ['umbra'], potency: 4, rarity: 'common', origin: 'wychwood', tags: ['mushroom'], inSeason: ['autumn'] },
-  { id: 'honeycomb', name: 'Honeycomb', essences: ['vital', 'ember'], potency: 4, rarity: 'uncommon', origin: 'market', tags: ['sweet'], inSeason: ['summer'] },
+  { id: 'honeycomb', name: 'Honeycomb', essences: ['vital', 'ember'], potency: 4, rarity: 'uncommon', origin: 'market', inSeason: ['summer'] },
   { id: 'mistcap', name: 'Mistcap Mushroom', essences: ['tide', 'umbra'], potency: 5, rarity: 'uncommon', origin: 'wychwood', tags: ['mushroom'], inSeason: ['autumn'] },
   { id: 'quartz-dust', name: 'Quartz Dust', essences: ['stone', 'gale'], potency: 4, rarity: 'uncommon', origin: 'mine', effects: ['harmony-2-if-3-ingredients'], text: '+2 Harmony if brewed with 3 ingredients.', tags: ['mineral'] },
   { id: 'dragon-pepper', name: 'Dragon Pepper', essences: ['ember'], potency: 8, rarity: 'uncommon', origin: 'market', effects: ['costs-1-discard'], text: 'Brewing it costs 1 Discard.', tags: ['spice'], inSeason: ['summer'] },
@@ -40,9 +40,9 @@ export const ingredients: In<typeof Ingredient>[] = [
   { id: 'crow-feather', name: 'Crow Feather', essences: ['gale', 'umbra'], potency: 6, rarity: 'rare', origin: 'wychwood', effects: ['harmony-per-umbra-in-hand'], text: '+1 Harmony per Umbra card in hand.', tags: ['feather'], inSeason: ['autumn'] },
   { id: 'amber-sap', name: 'Amber Sap', essences: ['stone', 'vital'], potency: 7, rarity: 'rare', origin: 'wychwood', effects: ['aged'], text: 'Aged.', tags: ['bark'] },
   { id: 'sunberry', name: 'Sunberry', essences: ['vital'], potency: 8, rarity: 'rare', origin: 'garden', effects: ['harmony-2-first-brew'], text: '+2 Harmony on the first brew of the day.', tags: ['fruit'], inSeason: ['summer'] },
-  { id: 'salamander-scale', name: 'Salamander Scale', essences: ['ember'], potency: 7, rarity: 'rare', origin: 'market', effects: ['harmony-per-ember-in-brew'], text: '+1 Harmony per Ember ingredient in the brew.', tags: ['scale'] },
-  { id: 'kelpie-pearl', name: 'Kelpie Pearl', essences: ['tide'], potency: 7, rarity: 'rare', origin: 'creek', effects: ['brew-makes-2'], text: 'A brew with it makes 2 potions.', tags: ['pearl'], pool: 'unlock' },
-  { id: 'stormseed', name: 'Stormseed', essences: ['gale'], potency: 8, rarity: 'rare', origin: 'wychwood', effects: ['on-brew-draw-2'], text: 'When brewed, draw 2.', tags: ['seed'] },
+  { id: 'salamander-scale', name: 'Salamander Scale', essences: ['ember'], potency: 7, rarity: 'rare', origin: 'market', effects: ['harmony-per-ember-in-brew'], text: '+1 Harmony per Ember ingredient in the brew.' },
+  { id: 'kelpie-pearl', name: 'Kelpie Pearl', essences: ['tide'], potency: 7, rarity: 'rare', origin: 'creek', effects: ['brew-makes-2'], text: 'A brew with it makes 2 potions.', tags: ['water'], pool: 'unlock' },
+  { id: 'stormseed', name: 'Stormseed', essences: ['gale'], potency: 8, rarity: 'rare', origin: 'wychwood', effects: ['on-brew-draw-2'], text: 'When brewed, draw 2.' },
   { id: 'heartstone', name: 'Heartstone', essences: ['stone'], potency: 9, rarity: 'rare', origin: 'mine', effects: ['gain-heart'], text: '+1 Friendship with the regular it\'s delivered to.', tags: ['mineral'], pool: 'unlock' },
   { id: 'shadowroot', name: 'Shadowroot', essences: ['umbra'], potency: 7, rarity: 'rare', origin: 'wychwood', effects: ['harmony-x1.5-if-secrets'], text: 'x1.5 Harmony in a Secrets potion.', tags: ['root'], inSeason: ['autumn'] },
   { id: 'harvest-gourd', name: 'Harvest Gourd', essences: ['vital', 'stone'], potency: 6, rarity: 'rare', origin: 'garden', effects: ['potency-2-per-order-today'], text: '+2 Potency for each order filled today.', tags: ['fruit'], inSeason: ['autumn'], pool: 'unlock' },
@@ -76,9 +76,9 @@ export const ingredients: In<typeof Ingredient>[] = [
   { id: 'lantern-ember', name: 'Lantern Ember', essences: ['lunar', 'ember'], potency: 9, rarity: 'lunar', origin: 'night', nightOnly: true, tags: ['mineral'], inSeason: ['summer'] },
   { id: 'lunar-salt', name: 'Lunar Salt', essences: ['lunar', 'stone'], potency: 8, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['aged'], text: 'Aged.', tags: ['mineral'] },
   { id: 'wolfsbane', name: 'Wolfsbane', essences: ['lunar', 'umbra'], potency: 12, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['night-discard-cost'], text: 'Drawing it costs 1 Discard this shift.', tags: ['flower'], inSeason: ['autumn'] },
-  { id: 'fae-dust', name: 'Fae Dust', essences: ['lunar'], potency: 6, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['wild-essence', 'on-brew-draw-1'], text: 'Counts as any essence. When brewed, draw 1.', tags: ['dust'], pool: 'unlock' },
+  { id: 'fae-dust', name: 'Fae Dust', essences: ['lunar'], potency: 6, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['wild-essence', 'on-brew-draw-1'], text: 'Counts as any essence. When brewed, draw 1.', pool: 'unlock' },
   { id: 'rime-blossom', name: 'Rime Blossom', essences: ['lunar', 'tide'], potency: 8, rarity: 'lunar', origin: 'night', nightOnly: true, effects: ['harmony-per-frost-in-brew'], text: '+1 Harmony per Frost ingredient in the brew.', tags: ['flower', 'frost'], inSeason: ['winter'] },
-  { id: 'fallen-star', name: 'Fallen Star', essences: ['lunar', 'gale'], potency: 11, rarity: 'lunar', origin: 'night', effects: ['day-usable', 'gone-at-week-end'], text: 'Can be brewed on Days. Gone when the week ends.', tags: ['star'], pool: 'event', event: 'meteor-shower' },
+  { id: 'fallen-star', name: 'Fallen Star', essences: ['lunar', 'gale'], potency: 11, rarity: 'lunar', origin: 'night', effects: ['day-usable', 'gone-at-week-end'], text: 'Can be brewed on Days. Gone when the week ends.', tags: ['mineral'], pool: 'event', event: 'meteor-shower' },
 ];
 
 export const tinctures: In<typeof Tincture>[] = [
@@ -264,7 +264,7 @@ export const regulars: In<typeof Regular>[] = [
       ] },
     ],
   },
-  { id: 'sister-alder', name: 'Sister Alder', blurb: 'Keeper of the shrine.', prefers: ['calming', 'healing'], weight: 3, bonusPool: ['no-umbra', 'wychwood-ingredient'], favourite: { name: 'Shrine Tea', family: 'healing', tag: 'herb' },
+  { id: 'sister-alder', name: 'Sister Alder', blurb: 'Keeper of the shrine.', prefers: ['calming', 'healing'], weight: 3, bonusPool: ['no-umbra', 'wychwood-ingredient'], favourite: { name: 'Shrine Tea', family: 'calming', tag: 'herb' },
     recipe: 'vesper-tea', familiar: 'dove', vigilGift: 'shrine-candle',
     story: [
       { level: 3, title: 'The Bell', lines: [
