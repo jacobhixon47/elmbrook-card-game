@@ -90,7 +90,7 @@ export const TAG_GLYPHS: Record<string, { rows: readonly string[]; color: Palett
     rows: ['.....#.', '....#..', '..###..', '.#..#..', '#..#...', '#.#....', '.#.....'],
   },
   water: {
-    color: 't',
+    color: 'T',
     rows: ['...#...', '..#.#..', '.#...#.', '#.....#', '#.#...#', '.#...#.', '..###..'],
   },
 };

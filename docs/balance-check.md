@@ -58,5 +58,7 @@ Also check:
 |---|---|---|---|---|
 | Oct 17 | before the M4 balance pass | 78 runs / 4% of saves | none | `docs/balance-review.md` |
 | Oct 17 | after it | 13 runs / 69 runs | 63% of saves, run 207 | `docs/balance-review.md` |
+| Oct 17 | M4 leftovers, before (quick) | 15 runs / 73 runs | none within 150 runs | the M4 leftovers PR |
+| Oct 17 | M4 leftovers, after (quick): pouring costs a Discard, Shrine Tea is Calming, tags tidied | 18 runs / 66 runs | none within 150 runs | the M4 leftovers PR |
 
 Add a row each time the check runs at a crucial point.
