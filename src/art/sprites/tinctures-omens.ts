@@ -1,0 +1,268 @@
+import type { SpriteDef } from '../sprite';
+
+// 16x16 Tincture icons (omens). Shown 1x in lists and 2x on cards.
+// Light comes from the top-left; outlines use 'k', never pure black.
+
+export const bloodMoon: SpriteDef = {
+  id: 'tincture/blood-moon',
+  rows: [
+    '................',
+    '.....kkkkkk.....',
+    '...kkRRRRRRkk...',
+    '..kRWRRRRRRRrk..',
+    '..kRRRrrRRRRrk..',
+    '.kRRRrjjrRRRRrk.',
+    '.kRRRRrrRRRRrrk.',
+    '.kRRRRRRRRrrrrk.',
+    '.kRRRRRRRrjjrrk.',
+    '.kRRRRRRRRrjrQQq',
+    '.kRRRRRRQQQQqqq.',
+    'qQQQQQqqqrrrrk..',
+    '..qqqqqRRrrrrk..',
+    '...kkrrrrrrkk...',
+    '.....kkkkkk.....',
+    '................',
+  ],
+};
+
+export const blackCatCrossing: SpriteDef = {
+  id: 'tincture/black-cat-crossing',
+  rows: [
+    '..k.............',
+    '.kvk.......k.k..',
+    '.kQk......kvkvk.',
+    '..kQk.....kvQQk.',
+    '..kQk....kQQyQQk',
+    '...kQk...kQQQqk.',
+    '...kQkkkkkQqqk..',
+    '...kvvvvvvQqk...',
+    '..kQQQQQQQQqqk..',
+    '..kqQQQQQQqqqk..',
+    '..kqqqqqqqqqqk..',
+    '..kqqkkkkkkqqk..',
+    '.kqqk.....kqk...',
+    '.kqk.......kqk..',
+    'kqk.........kqk.',
+    'kk...........kk.',
+  ],
+};
+
+export const ravenCall: SpriteDef = {
+  id: 'tincture/raven-call',
+  rows: [
+    '................',
+    '....kkkk.....v..',
+    '...kQvvQk.....v.',
+    '..kQvQQQQk.v..v.',
+    '..kQQWkQQSk.v.v.',
+    '.kqQQkkQSSSk.v..',
+    '.kqQQQQkkSSSk...',
+    '.kqqQQQkrrrk....',
+    '.kqqqQQkSSSSk...',
+    '.kqqqqQkksSSSk..',
+    '..kqqqqQQkkkkk..',
+    '..kqqPqqQk......',
+    '.kqqqPqqqk......',
+    '.kqqPqqqqqk.....',
+    'kqqqqqqqqqk.....',
+    'kkkkkkkkkkk.....',
+  ],
+};
+
+export const witchingHour: SpriteDef = {
+  id: 'tincture/witching-hour',
+  rows: [
+    '......kkk....kk.',
+    '......kYk...kmk.',
+    '.....kkykk..kmk.',
+    '...kkyyyyykk.kk.',
+    '..kyymmkmmyok...',
+    '.kymmmmkmmmmok..',
+    '.kymmmmkmmmmok..',
+    '.kykmmmkmmmkok..',
+    '.kymmmmrmmmvok..',
+    '.kymmmmmmmmvok..',
+    '.kyommmkmmvook..',
+    '..kooovvvvook...',
+    '...kkoooookk....',
+    '.....kkkkk......',
+    '................',
+    '................',
+  ],
+};
+
+export const howl: SpriteDef = {
+  id: 'tincture/howl',
+  rows: [
+    '...........kkk..',
+    '..........kmmk..',
+    '..k.......kmk...',
+    '.kSk......kmmk..',
+    '.kSSk......kkk..',
+    '.kSeSk..kk......',
+    '.kSeSSkkeSk.....',
+    '.kSSSSeeSSkkk...',
+    '.kSSkSSSSkrSk...',
+    'kSSSSSSSkrSSk...',
+    'kSSSSSSSSSSk....',
+    'kSSSSSSSSSk.....',
+    'ksSSeSSSSk......',
+    'kssSSeSSSSk.....',
+    'ksssSSeSSSk.....',
+    'kkkkkkkkkkk.....',
+  ],
+};
+
+export const crackedMirror: SpriteDef = {
+  id: 'tincture/cracked-mirror',
+  rows: [
+    '................',
+    '......kYYk......',
+    '....kkyyyykk....',
+    '...kyymcccyok...',
+    '..kymWcccckeok..',
+    '..kymcccckeeok..',
+    '..kyckWecceeok..',
+    '..kyccckeeeeok..',
+    '..kycckkeeSSok..',
+    '...kyckeeSSok...',
+    '....kyooooook...',
+    '.....kkyookk....',
+    '.......kyok.....',
+    '.......kyok.....',
+    '......kyYook....',
+    '.......kkkk.....',
+  ],
+};
+
+export const wishingStar: SpriteDef = {
+  id: 'tincture/wishing-star',
+  rows: [
+    '...........k....',
+    '..........kmk...',
+    '.......kkkkWmkkk',
+    '........kmmmmmk.',
+    '.........kmmmk..',
+    '.......vkmmkmmk.',
+    '......vPkk...kk.',
+    '.....vPv........',
+    '...m.vPv........',
+    '...vPvm.........',
+    '..vPv...........',
+    '.vPv..m.........',
+    'vPv.............',
+    'Pv..m...........',
+    'v...............',
+    '................',
+  ],
+};
+
+export const yuleCandle: SpriteDef = {
+  id: 'tincture/yule-candle',
+  rows: [
+    '.......kk.......',
+    '......kYk.......',
+    '......kyYk......',
+    '.....kyWYk......',
+    '.....koyYok.....',
+    '......kook......',
+    '...kkkkbkkkkk...',
+    '...kRWRRRRRrk...',
+    '...kRRRRRRrrk...',
+    '...kRRRRRRrrk...',
+    '...kRRRRRRrrk...',
+    '..kGkRRRRRrrkk..',
+    '.kGlGkRRrrkGlk..',
+    'kGlGRRkkkkGlGGk.',
+    '.kkkRWRkkkGGkk..',
+    '....kkk..kkk....',
+  ],
+};
+
+export const mothSwarm: SpriteDef = {
+  id: 'tincture/moth-swarm',
+  rows: [
+    '..k.k...........',
+    'kwwBwwk....k.k..',
+    '.kaBak...kwwBwwk',
+    '..........kaBak.',
+    '.....PPPPP......',
+    '....PvvvvvP.....',
+    '...PvmmmmmvP....',
+    '...PvmWmmmvP....',
+    '...PvmmmmmvP....',
+    '...PvmmmmmvP....',
+    '....PvvvvvP.....',
+    '.....PPPPP......',
+    '.k.k.......k.k..',
+    'kwBwk....kwwBwwk',
+    '.kBk......kaBak.',
+    '................',
+  ],
+};
+
+export const sludge: SpriteDef = {
+  id: 'junk/sludge',
+  rows: [
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '..........kk....',
+    '.........kLWk...',
+    '.........kllk...',
+    '.....kkk..kk....',
+    '....kGlGk.......',
+    '..kkGlLGGkkk....',
+    '.kGGlkGGkGGGk...',
+    'kGGBGkGGkGBBBkk.',
+    'kBGBBGGGGBBbBbBk',
+    '.kkbBBbkkbbBbkk.',
+    '...kkkk..kkkk...',
+  ],
+};
+
+export const cobweb: SpriteDef = {
+  id: 'junk/cobweb',
+  rows: [
+    'eeeeeeeeeeeeee..',
+    'ee...e...e...e..',
+    'e.e.e...e...ee..',
+    'e..e....e...ee..',
+    'e.e.e..e...e.e..',
+    'ee...ee....e.e..',
+    'e....ee...e..e..',
+    'e...e..e..e..e..',
+    'e.ee....ee...e..',
+    'ee......ee...e..',
+    'e.....ee..e..e..',
+    'e...ee.....k.e.k',
+    'e.ee.......kkqkk',
+    'ee..........kqk.',
+    '...........k...k',
+    '................',
+  ],
+};
+
+export const badOmen: SpriteDef = {
+  id: 'junk/bad-omen',
+  rows: [
+    '.....kkk........',
+    '...kkvvPkkkk....',
+    '..kPvvPPPPPPkk..',
+    '.kPvPPPPPPPPPPk.',
+    'kPPvPPPPPPPPPPQk',
+    'kPPkkPPPPPPkkQQk',
+    'kPPPPkPPPPkPQQQk',
+    'kQPPPPPPPPPPQQQk',
+    'kQPPPPkkkkPPQQQk',
+    'kQQPQkQQQQkQQQQk',
+    '.kQQQQQQQQQQQQk.',
+    '..kkkkkkyykkkk..',
+    '.......kyk......',
+    '......kyyk......',
+    '.......kyyk.....',
+    '........kk......',
+  ],
+};
