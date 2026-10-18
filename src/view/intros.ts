@@ -4,7 +4,8 @@ import { FINALE_ORDERS, WEATHER_RULE, type RunState, type Season, type Weather }
 // The words of the scene screens that open a run, meet a weather for the first time, and bring
 // on the Moonless Patron (GDD §4.2). Run.ts decides when each shows.
 
-export type Intro = { name: string; lines: string[] };
+/** `portrait` is whose portrait sits at the top of the screen, when it is about someone. */
+export type Intro = { name: string; lines: string[]; portrait?: string };
 
 /** Each run opens with its season's scene, unless it was turned off in Settings. */
 export const SEASON_OPENING: Record<Season, Intro> = {
@@ -74,6 +75,7 @@ export function patronArrival(grimoireHidden: boolean, s: Pick<RunState, 'blessi
       : 'Your Grimoire is still open to you tonight.';
   return {
     name: patron.name,
+    portrait: patron.id,
     lines: [
       'The new moon. The lane is dark, the regulars went home early, and someone is waiting at the counter. Nobody sees a face.',
       `Fill all ${FINALE_ORDERS} of their orders tonight to win the month.`,

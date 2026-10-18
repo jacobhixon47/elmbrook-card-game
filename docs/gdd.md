@@ -76,7 +76,7 @@ Same as a day, but: the patron's rule twist is active, your **Night Satchel** (�
 
 ## 4. Orders and customers
 
-Each order shows on the Order Board as: portrait, name, your Friendship level with a regular (♥ 2), and once you've opened it, the request and pay. The order's dialogue shows the progress to the next level (♥ 2 · 21/30).
+Each order shows on the Order Board as: portrait, name, your Friendship level with a regular (♥ 2), and once you've opened it, the request and pay. The order's dialogue shows their portrait at twice size and the progress to the next level (♥ 2 · 21/30). Every customer (regulars, seasonal visitors, night customers and patrons) has a portrait; it also heads their story scenes, the Moonless Patron's arrival, and their Codex and Townsfolk entries, where someone you haven't met is an empty frame.
 
 Carried over from 1.0: click an order to open its dialogue; choose **Fulfill**, **Decline**, or **Back**. Reopening returns to the choice without replaying dialogue. You choose which order to work on and in what order.
 

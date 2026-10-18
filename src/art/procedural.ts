@@ -303,6 +303,7 @@ export function proceduralTextures(): Record<string, Pixmap> {
     'fx/bubble': bubble(),
     'fx/fog': fogBank(),
     'placeholder/16': placeholder(16, 16),
+    'placeholder/32': placeholder(32, 32),
   };
   for (const t of [1, 2, 3] as const) {
     out[`token/relic-${t}`] = relicToken(t);

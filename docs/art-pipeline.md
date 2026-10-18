@@ -56,7 +56,7 @@ The one exception to palette-locking is light: `fx/glow` is a smooth radial grad
 
 ## Sprite rules
 
-- 16×16 for icons, shown 1× in lists and 2× on cards. Portraits (M4) are 32×32 grids.
+- 16×16 for icons, shown 1× in lists and 2× on cards. Portraits are 32×32 grids in `src/art/sprites/portraits*.ts`, registered through `PORTRAITS` (not `SPRITES`) as `portrait/<customer id>`; `framedPortrait` in `src/view/portrait.ts` draws one in its frame.
 - 1px outline with `k` (never pure black); light from the top-left; one highlight pixel (`W`) on shiny things.
 - Readable silhouette first, detail second. If it doesn't read at 1×, simplify.
 - Variants via `recolor()` (potions are one bottle grid tinted 8 ways), not copy-paste.

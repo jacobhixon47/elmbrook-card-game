@@ -39,6 +39,7 @@ import { TIER_SOUND, tickPitch } from '../audio/sounds';
 import { addWeather } from '../view/weather';
 import { isIntroWeather, patronArrival, SEASON_OPENING, WEATHER_INTRO, type Intro } from '../view/intros';
 import { openSettings } from '../view/settings';
+import { framedPortrait } from '../view/portrait';
 
 /** The Hearth Trader's three trades (Winter). */
 type HearthTab = 'trade' | 'yule' | 'crown';
@@ -76,6 +77,8 @@ const ORDERS = { x: 8, y: 46, w: 134 };
 /** The season's colour in the HUD. */
 const SEASON_COLOR: Record<Season, PaletteKey> = { spring: 'L', summer: 'y', autumn: 'o', winter: 'c' };
 const TICKET_H = 40;
+/** Where a ticket's words start, right of the portrait. */
+const TICKET_TEXT = 40;
 const SIDE = { x: 498, y: 42, w: 134 };
 const SHELF_Y = 146;
 /** Where Shelf potion `i` sits: six to a row, or seven, closer together, when a boon takes the Shelf past six. */
@@ -114,7 +117,7 @@ export class Run extends Phaser.Scene {
   /** Seasonal scene screens already shown this run, so each shows once (Snowed In, by week). */
   private scenesSeen = new Set<string>();
   /** Story scenes queued to read again from the Townsfolk page. */
-  private reread: { name: string; lines: string[] }[] = [];
+  private reread: { name: string; lines: string[]; portrait: string }[] = [];
   /** The season's opening scene, still to show on a new run's first morning. */
   private openingPending = false;
   /** The scene screen over the shop right now (Enter walks on); null when none. */
@@ -352,7 +355,7 @@ export class Run extends Phaser.Scene {
     const story = this.reread[0];
     if (story) {
       this.add2(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.6).setOrigin(0).setInteractive());
-      this.seasonScene(story.name, story.lines, () => this.reread.shift());
+      this.seasonScene(story.name, story.lines, () => this.reread.shift(), undefined, story.portrait);
     }
     this.drawTutorial(s);
   }
@@ -368,7 +371,7 @@ export class Run extends Phaser.Scene {
       this.intro = { done: onDone };
       // Swallows clicks meant for the shop underneath.
       this.add2(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.35).setOrigin(0).setInteractive());
-      this.seasonScene(intro.name, intro.lines, onDone, dontShow && { label: 'Don\'t show again', onClick: dontShow });
+      this.seasonScene(intro.name, intro.lines, onDone, dontShow && { label: 'Don\'t show again', onClick: dontShow }, intro.portrait);
     };
     if (this.openingPending) {
       const done = () => (this.openingPending = false);
@@ -530,13 +533,17 @@ export class Run extends Phaser.Scene {
   }
 
   /** A short seasonal scene screen over the window: why something seasonal is happening, then on. */
-  private seasonScene(name: string, lines: readonly string[], onDone: () => void, extra?: { label: string; onClick: () => void }) {
-    const box = this.add2(panel(this, 150, 70, 340, 150, 'k', 0.9, 'c'));
-    this.text(320, 84, name, { size: 14, color: 'c', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
-    const body = this.text(320, 112, lines.join('\n\n'), { size: 8, color: 'W', stroke: 'k', align: 'center', wrap: 300 }).setOrigin(0.5, 0);
+  private seasonScene(name: string, lines: readonly string[], onDone: () => void, extra?: { label: string; onClick: () => void }, portrait?: string) {
+    // A scene about someone wears their portrait at twice size, set into the top edge of the panel.
+    const top = portrait ? 86 : 70;
+    const box = this.add2(panel(this, 150, top, 340, 150, 'k', 0.9, 'c'));
+    if (portrait) for (const g of framedPortrait(this, 288, top - 40, portrait, 2)) this.add2(g);
+    const head = portrait ? top + 30 : top + 14;
+    this.text(320, head, name, { size: 14, color: 'c', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
+    const body = this.text(320, head + 28, lines.join('\n\n'), { size: 8, color: 'W', stroke: 'k', align: 'center', wrap: 300 }).setOrigin(0.5, 0);
     // Longer scenes grow the panel down; the buttons sit under the words.
-    const y = Math.max(198, 112 + body.height + 22);
-    box.setSize(340, y - 70 + 22);
+    const y = Math.max(top + 128, head + 28 + body.height + 22);
+    box.setSize(340, y - top + 22);
     const walkOn = () => {
       onDone();
       this.render();
@@ -717,15 +724,26 @@ export class Run extends Phaser.Scene {
       const bg = this.add2(panel(this, ORDERS.x, y, ORDERS.w, TICKET_H, patron ? 'W' : 'w', 0.95, o.id === this.pinned ? 'y' : patron ? 'v' : 'n'));
       if (o.id === this.pinned || patron) bg.setStrokeStyle(2, hex(o.id === this.pinned ? 'y' : 'v'));
       const friend = isRegular(o.customer) ? friendLevelOf(s, o.customer) : null;
-      this.text(ORDERS.x + 5, y + 3, customerName(o.customer), { size: 8, color: patron ? 'P' : 'k' });
+      // Who's asking: their portrait at the left of the ticket (GDD §4).
+      const tx = ORDERS.x + TICKET_TEXT;
+      for (const g of framedPortrait(this, ORDERS.x + 4, y + 4, o.customer)) this.add2(g);
+      this.text(tx, y + 3, customerName(o.customer), { size: 8, color: patron ? 'P' : 'k' });
       if (o.expiresIn !== null && open) this.text(ORDERS.x + ORDERS.w - 5, y + 3, `${o.expiresIn} brew${o.expiresIn === 1 ? '' : 's'} left`, { size: 7, color: 'r' }).setOrigin(1, 0);
       else if (friend !== null) this.text(ORDERS.x + ORDERS.w - 5, y + 3, `♥ ${friend}`, { size: 7, color: 'R' }).setOrigin(1, 0);
       if (s.fog && open) {
-        this.text(ORDERS.x + 5, y + 14, 'Hidden in the fog', { size: 8, color: 'h' });
-        this.text(ORDERS.x + 5, y + 26, 'Brew or Discard to see it', { size: 7, color: 'h' });
+        this.text(tx, y + 14, 'Hidden in the fog', { size: 8, color: 'h' });
+        this.text(tx, y + 26, 'Brew or Discard to see it', { size: 7, color: 'h' });
       } else {
-        this.text(ORDERS.x + 5, y + 14, `${requestText(o)}${unknownRecipe(s, o) ? ' (new)' : ''}${o.needsUmbra ? ' + Umbra' : ''}${o.needsTag ? ` + ${cap(o.needsTag)}` : ''}`, { size: 8, color: 'B' });
-        this.text(ORDERS.x + 5, y + 26, orderTerms(o), { size: 7, color: 'r' });
+        // The request, shortened to fit beside the portrait: "potion" goes first, then the size.
+        const want = `${requestText(o)}${unknownRecipe(s, o) ? ' (new)' : ''}${o.needsUmbra ? ' + Umbra' : ''}${o.needsTag ? ` + ${cap(o.needsTag)}` : ''}`;
+        const room = ORDERS.w - TICKET_TEXT - 4;
+        let line = this.text(tx, y + 14, want, { size: 8, color: 'B' });
+        for (const [str, size] of [[want.replace(' potion', ''), 8], [want.replace(' potion', ''), 7]] as const) {
+          if (line.width <= room) break;
+          line.destroy();
+          line = this.text(tx, y + (size === 7 ? 15 : 14), str, { size, color: 'B' });
+        }
+        this.text(tx, y + 26, orderTerms(o), { size: 7, color: 'r' });
       }
       if (o.bonus && !s.fog) this.text(ORDERS.x + ORDERS.w - 5, y + 26, '★', { size: 8, color: 'o' }).setOrigin(1, 0);
       if (!open) {
@@ -1061,16 +1079,21 @@ export class Run extends Phaser.Scene {
     if (!o) return;
     const shade = this.add2(this.add.rectangle(0, 0, 640, 360, hex('K'), 0.55).setOrigin(0).setInteractive());
     shade.on('pointerdown', () => this.closeDialog());
-    const x0 = 170;
+    const x0 = 140;
     const y0 = 70;
-    const w = 300;
-    this.add2(panel(this, x0, y0, w, 150, 'k', 0.97, 'n'));
-    this.text(x0 + 12, y0 + 10, customerName(o.customer), { size: 12, color: isPatron(o.customer) ? 'v' : 'y' });
+    const w = 360;
+    const box = this.add2(panel(this, x0, y0, w, 150, 'k', 0.97, 'n'));
+    // Their portrait at twice size on the left; the words sit right of it.
+    for (const g of framedPortrait(this, x0 + 12, y0 + 12, o.customer, 2)) this.add2(g);
+    const tx = x0 + 88;
+    this.text(tx, y0 + 10, customerName(o.customer), { size: 12, color: isPatron(o.customer) ? 'v' : 'y' });
     if (isRegular(o.customer)) this.text(x0 + w - 12, y0 + 12, friendshipLine(friendshipOf(s, o.customer)), { size: 8, color: 'R' }).setOrigin(1, 0);
-    this.text(x0 + 12, y0 + 28, customerBlurb(o.customer), { size: 7, color: 'a' });
-    this.text(x0 + 12, y0 + 44, `"${customerLine(o)}"`, { size: 8, color: 'W', wrap: w - 24 });
-    this.text(x0 + 12, y0 + 70, `Wants: ${requestText(o, true)}`, { size: 8, color: 'w' });
-    this.text(x0 + 12, y0 + 82, orderTerms(o), { size: 8, color: 'c' });
+    this.text(tx, y0 + 28, customerBlurb(o.customer), { size: 7, color: 'a', wrap: x0 + w - 12 - tx });
+    const quote = this.text(tx, y0 + 44, `"${customerLine(o)}"`, { size: 8, color: 'W', wrap: x0 + w - 12 - tx });
+    // A long line pushes the rest down, and the panel grows to fit.
+    const wy = Math.max(y0 + 70, quote.y + quote.height + 8);
+    this.text(tx, wy, `Wants: ${requestText(o, true)}`, { size: 8, color: 'w' });
+    this.text(tx, wy + 12, orderTerms(o), { size: 8, color: 'c' });
     const extra = extraPay(o.customer);
     const needs = orderNeeds(o);
     const hint = newRecipeHint(s, o);
@@ -1082,22 +1105,24 @@ export class Run extends Phaser.Scene {
       ...(extra ? [{ t: `Also pays: ${extra}`, c: 'l' as const }] : []),
       ...(needs ? [{ t: needs, c: 'I' as const }] : []),
     ];
-    notes.slice(0, 3).forEach((n, i) => this.text(x0 + 12, y0 + 94 + i * 10, n.t, { size: 7, color: n.c }));
+    let ny = wy + 24;
+    for (const n of notes.slice(0, 3)) ny += this.text(tx, ny, n.t, { size: 7, color: n.c, wrap: x0 + w - 12 - tx }).height + 2;
 
-    const by = y0 + 130;
+    const by = Math.max(y0 + 130, ny + 14);
+    box.setSize(w, by - y0 + 20);
     if (o.status !== 'open') {
-      this.text(x0 + w / 2, y0 + 108, o.status === 'filled' ? 'Delivered. Thank you kindly!' : 'Declined.', { size: 8, color: 'a' }).setOrigin(0.5, 0);
+      this.text(x0 + w / 2, by - 22, o.status === 'filled' ? 'Delivered. Thank you kindly!' : 'Declined.', { size: 8, color: 'a' }).setOrigin(0.5, 0);
       this.add2(button(this, x0 + w / 2, by, 'Back', () => this.closeDialog(), { w: 56 }));
       return;
     }
     const fromShelf = s.phase === 'brewing' ? s.shelf.find((p) => bestOrderFor({ orders: [o] }, p)) : undefined;
     const fulfil = fromShelf ? `Fulfill (Shelf)` : this.pinned === o.id ? 'Brewing for them' : 'Fulfill';
-    this.add2(button(this, x0 + 60, by, fulfil, () => this.fulfil(o, fromShelf), { w: 96, color: 'L' }));
-    this.add2(button(this, x0 + 150, by, 'Decline', () => {
+    this.add2(button(this, x0 + 90, by, fulfil, () => this.fulfil(o, fromShelf), { w: 96, color: 'L' }));
+    this.add2(button(this, x0 + 180, by, 'Decline', () => {
       this.mode = { kind: 'idle' };
       this.dispatch({ type: 'decline', order: o.id });
     }, { w: 60, color: 'I' }));
-    this.add2(button(this, x0 + 240, by, 'Back', () => this.closeDialog(), { w: 56 }));
+    this.add2(button(this, x0 + 270, by, 'Back', () => this.closeDialog(), { w: 56 }));
   }
 
   private fulfil(o: Order, fromShelf: Potion | undefined) {

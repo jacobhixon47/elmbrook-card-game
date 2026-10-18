@@ -1,17 +1,19 @@
-// Renders every sprite and procedural texture to .snaps/art-sheet.png without a browser.
+// Renders every sprite, portrait and procedural texture to .snaps/art-sheet.png without a browser.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { Pixmap } from '../src/art/pixmap';
 import { proceduralTextures } from '../src/art/procedural';
 import { rasterize } from '../src/art/sprite';
-import { SPRITES } from '../src/art/sprites';
+import { PORTRAITS, SPRITES } from '../src/art/sprites';
 
 const SCALE = 3;
-// Sprites fill as many rows as they need; the procedural rows sit below them.
-const spriteH = Math.ceil(SPRITES.length / 18) * 34;
+// Sprites fill as many rows as they need, then the portraits; the procedural rows sit below them.
+const spriteRowsH = Math.ceil(SPRITES.length / 18) * 34;
+const spriteH = spriteRowsH + Math.ceil(PORTRAITS.length / 17) * 36;
 const H = spriteH + 152;
 const sheet = new Pixmap(640, H).fillRect(0, 0, 640, H, 's');
 SPRITES.forEach((def, i) => sheet.blit(rasterize(def), 8 + (i % 18) * 34, 8 + Math.floor(i / 18) * 34, 2));
+PORTRAITS.forEach((def, i) => sheet.blit(rasterize(def), 8 + (i % 17) * 36, 8 + spriteRowsH + Math.floor(i / 17) * 36));
 let x = 8;
 let roomX = 8;
 for (const [key, pm] of Object.entries(proceduralTextures())) {
@@ -36,4 +38,4 @@ for (let y = 0; y < png.height; y++) {
 }
 mkdirSync('.snaps', { recursive: true });
 writeFileSync('.snaps/art-sheet.png', PNG.sync.write(png));
-console.log(`✓ .snaps/art-sheet.png (${SPRITES.length} sprites)`);
+console.log(`✓ .snaps/art-sheet.png (${SPRITES.length} sprites, ${PORTRAITS.length} portraits)`);

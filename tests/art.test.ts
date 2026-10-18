@@ -7,7 +7,8 @@ import { PALETTE } from '../src/art/palette';
 import { proceduralTextures, TAG_GLYPHS, tagGlyph } from '../src/art/procedural';
 import { codex } from '../src/codex';
 import { spriteSize, validateSprite } from '../src/art/sprite';
-import { SPRITES } from '../src/art/sprites';
+import { PORTRAITS, SPRITES } from '../src/art/sprites';
+import { portraitStatus } from '../src/art/status';
 
 describe('art', () => {
   it('every sprite grid is rectangular and on-palette', () => {
@@ -35,6 +36,15 @@ describe('art', () => {
     for (const i of codex.ingredients.values()) for (const t of i.tags) count.set(t, (count.get(t) ?? 0) + 1);
     for (const tag of ['flower', 'frost', 'fruit', 'herb', 'mineral', 'spice', 'water']) expect(TAG_GLYPHS[tag], tag).toBeDefined();
     for (const [tag, n] of count) expect(n, tag).toBeGreaterThan(1);
+  });
+
+  it('portraits are 32x32, on-palette, and every customer has one', () => {
+    for (const def of PORTRAITS) {
+      expect(validateSprite(def)).toEqual([]);
+      expect(spriteSize(def), def.id).toEqual({ width: 32, height: 32 });
+    }
+    expect(portraitStatus().filter((p) => !p.done).map((p) => p.id)).toEqual([]);
+    expect(new Set(PORTRAITS.map((s) => s.id)).size).toBe(PORTRAITS.length);
   });
 
   it('sprite ids are unique', () => {

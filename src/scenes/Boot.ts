@@ -3,7 +3,7 @@ import { BACKDROPS, type BackdropId } from '../art/backdrops';
 import type { Pixmap } from '../art/pixmap';
 import { proceduralTextures } from '../art/procedural';
 import { rasterize } from '../art/sprite';
-import { SPRITES } from '../art/sprites';
+import { PORTRAITS, SPRITES } from '../art/sprites';
 import { loadFixture } from '../debug/params';
 import { backdropTexture } from '../view/backdrop';
 
@@ -43,7 +43,7 @@ export class Boot extends Phaser.Scene {
   }
 
   create() {
-    for (const def of SPRITES) addTexture(this, def.id, rasterize(def));
+    for (const def of [...SPRITES, ...PORTRAITS]) addTexture(this, def.id, rasterize(def));
     const procedural: Record<string, Pixmap> = proceduralTextures();
     for (const [key, pm] of Object.entries(procedural)) addTexture(this, key, pm);
 
