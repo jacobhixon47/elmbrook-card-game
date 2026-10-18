@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { facing, ROOM_H, ROOM_W, SOLIDS, SPAWN, STATIONS, standBy, stationAt, walk, type Point } from '../src/view/room';
+import { SEASONS, type Season } from '../src/core';
+import { DRESSING_SPRITES } from '../src/art/scenes/cottage-room';
+import { DOORSTEP, DRESSING, facing, ROOM_H, ROOM_W, SOLIDS, SPAWN, STATIONS, standBy, stationAt, walk, type Point } from '../src/view/room';
 
 /** Walks in one direction for a while, a frame at a time. */
 const hold = (p: Point, dx: number, dy: number, seconds: number) => {
@@ -9,7 +11,7 @@ const hold = (p: Point, dx: number, dy: number, seconds: number) => {
 };
 
 /** Every spot your feet can reach from the door, on a 2px grid. */
-function reachable(): Set<string> {
+function reachable(season?: Season): Set<string> {
   const key = (p: Point) => `${p.x},${p.y}`;
   const seen = new Set([key(SPAWN)]);
   const queue = [SPAWN];
@@ -18,7 +20,7 @@ function reachable(): Set<string> {
     for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]] as const) {
       const n = { x: p.x + dx, y: p.y + dy };
       // A step of exactly 2px: walk() moves WALK_SPEED * dt, so pick dt to match.
-      const moved = walk(p, Math.sign(dx), Math.sign(dy), 2 / 72);
+      const moved = walk(p, Math.sign(dx), Math.sign(dy), 2 / 72, season);
       if (Math.abs(moved.x - n.x) > 1e-6 || Math.abs(moved.y - n.y) > 1e-6) continue;
       if (seen.has(key(n))) continue;
       seen.add(key(n));
@@ -67,8 +69,8 @@ describe('the walkable cottage', () => {
     expect(facing(0, 0, 'right')).toBe('right');
   });
 
-  it('can reach every station, and standing by one uses that one', () => {
-    const open = reachable();
+  it.each([undefined, ...SEASONS])('can reach every station in %s, and standing by one uses that one', (season) => {
+    const open = reachable(season);
     for (const st of STATIONS) {
       const spot = standBy(st.id);
       expect(stationAt(spot)?.id, st.id).toBe(st.id);
@@ -82,4 +84,18 @@ describe('the walkable cottage', () => {
       expect(inZone, st.id).toBe(true);
     }
   });
+
+  it('dresses each season with sprites that exist, clear of the stations and the way in', () => {
+    for (const season of SEASONS) {
+      for (const d of DRESSING[season]) {
+        expect(DRESSING_SPRITES as readonly string[]).toContain(d.id);
+        if (!d.solid) continue;
+        for (const st of STATIONS) expect(overlap(d.solid, st.zone), `${d.id} by the ${st.id}`).toBe(false);
+      }
+      // Coming home, you step in from the doorstep to where you'd spawn.
+      expect(walk(DOORSTEP, 0, -1, (DOORSTEP.y - SPAWN.y) / 72, season).y).toBeCloseTo(SPAWN.y);
+    }
+  });
 });
+
+const overlap = (a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;

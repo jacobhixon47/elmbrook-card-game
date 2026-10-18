@@ -14,7 +14,7 @@ export const ROOM_SPRITE_H = 180;
 const WOOD: readonly PaletteKey[] = ['k', 'b', 'B', 'n', 'a'];
 const BOOKS: readonly PaletteKey[] = ['r', 'R', 'U', 'G', 'P', 'y', 'o', 'T', 'i'];
 
-/** The window's view by season: sky, far hills, near hills. Part 2 dresses the room further. */
+/** The code-drawn window view by season: sky, far hills, near hills. */
 const VIEW: Record<Season, [PaletteKey, PaletteKey, PaletteKey]> = {
   spring: ['c', 'l', 'G'],
   summer: ['X', 'L', 'l'],
@@ -23,7 +23,7 @@ const VIEW: Record<Season, [PaletteKey, PaletteKey, PaletteKey]> = {
 };
 
 /** Walls, floor and window: everything you walk on or can't reach. */
-export function roomShell(season: Season = 'spring'): Pixmap {
+export function roomShell(): Pixmap {
   const p = new Pixmap(ROOM_SPRITE_W, ROOM_SPRITE_H);
   const rng: Rng = { s: seedRng('cottage-room') };
   const r = () => rand(rng);
@@ -52,14 +52,9 @@ export function roomShell(season: Season = 'spring'): Pixmap {
   }
   for (const bx of [8, 88, 130, 190, 232, 262, 311]) for (let y = 0; y < 36; y++) p.shade(bx, y, WOOD, 0.35).shade(bx + 1, y, WOOD, 0.5);
   p.hline(0, ROOM_SPRITE_W - 1, 0, 'k').hline(0, ROOM_SPRITE_W - 1, 1, 'b');
-  // The window, with the season outside.
-  const [sky, far, near] = VIEW[season];
-  p.fillRect(136, 8, 48, 26, sky);
-  for (let x = 137; x < 183; x++) {
-    const h1 = 20 + Math.round(Math.sin(x / 7) * 2);
-    const h2 = 26 + Math.round(Math.sin(x / 4 + 1) * 1.5);
-    for (let y = h1; y < 34; y++) p.set(x, y, y >= h2 ? near : far);
-  }
+  // The window's panes are left clear: the view behind them is its own image (the shop window's
+  // painted view, graded for the season, or `roomView` with ?backdrops=code).
+  for (let y = 8; y < 34; y++) for (let x = 136; x < 184; x++) p.clear(x, y);
   p.strokeRect(135, 7, 50, 28, 'b').strokeRect(134, 6, 52, 30, 'k');
   p.fillRect(159, 7, 2, 28, 'b').fillRect(135, 20, 50, 1, 'b');
   p.fillRect(132, 35, 56, 3, 'n').hline(132, 187, 37, 'b');
@@ -69,6 +64,20 @@ export function roomShell(season: Season = 'spring'): Pixmap {
   p.fillRect(0, 172, ROOM_SPRITE_W, 8, 'b').hline(0, ROOM_SPRITE_W - 1, 172, 'B').hline(0, ROOM_SPRITE_W - 1, 179, 'k');
   // The doorway itself, open to the night step (the door sprite sits over it).
   p.fillRect(144, 172, 32, 8, 'q');
+  return p;
+}
+
+/** The window's view drawn in code, for ?backdrops=code: sky and two lines of hills. 48x26. */
+export function roomView(season: Season): Pixmap {
+  const p = new Pixmap(48, 26);
+  const [sky, far, near] = VIEW[season];
+  p.fillRect(0, 0, 48, 26, sky);
+  for (let x = 0; x < 48; x++) {
+    const h1 = 12 + Math.round(Math.sin((x + 136) / 7) * 2);
+    const h2 = 18 + Math.round(Math.sin((x + 136) / 4 + 1) * 1.5);
+    for (let y = h1; y < 26; y++) p.set(x, y, y >= h2 ? near : far);
+  }
+  if (season === 'winter') for (let x = 0; x < 48; x += 3) p.set(x, 12 + Math.round(Math.sin((x + 136) / 7) * 2), 'W');
   return p;
 }
 
@@ -86,6 +95,16 @@ export function roomSprite(id: string): Pixmap {
     case 'bed': return bed();
     case 'plant': return plant();
     case 'rug': return rug();
+    case 'garland-spring': return garland(['I', 'i', 'W'], 'l');
+    case 'garland-autumn': return garland(['o', 'R', 'y'], 'n');
+    case 'garland-winter': return garland(['R', 'R', 'W'], 'G');
+    case 'blossoms': return blossoms();
+    case 'firefly-jar': return fireflyJar();
+    case 'sunflowers': return sunflowers();
+    case 'pumpkins': return pumpkins();
+    case 'leaves': return leaves();
+    case 'sill-snow': return sillSnow();
+    case 'snowdrift': return snowdrift();
     default: throw new Error(`no room sprite ${id}`);
   }
 }
@@ -215,6 +234,108 @@ function rug(): Pixmap {
     p.set(Math.round(44 + Math.cos(t) * 39), Math.round(26 + Math.sin(t) * 21.5), 'y');
   }
   p.fillEllipse(44, 26, 8, 5, 'y').fillEllipse(44, 26, 5, 3, 'R');
+  return p;
+}
+
+// The season's dressing (M4.5 part 2): what the house puts out for the season you'll play next.
+// Where each goes is `DRESSING` in view/room.ts.
+export const DRESSING_SPRITES = ['garland-spring', 'garland-autumn', 'garland-winter', 'blossoms', 'firefly-jar', 'sunflowers', 'pumpkins', 'leaves', 'sill-snow', 'snowdrift'] as const;
+
+/** A swag of leaves and blooms over the window: `bloom` colours on a `leaf` vine. 60x12. */
+function garland(bloom: readonly PaletteKey[], leaf: PaletteKey): Pixmap {
+  const p = new Pixmap(60, 12);
+  const sag = (x: number) => 2 + Math.round(Math.sin((x / 59) * Math.PI) * 5);
+  for (let x = 0; x < 60; x++) {
+    const y = sag(x);
+    p.set(x, y, leaf).set(x, y + 1, leaf);
+    // Leaf tufts above and below the vine.
+    if (x % 3 === 0) p.set(x, y - 1, leaf).set(x + 1, y + 2, leaf);
+  }
+  for (let i = 0, x = 3; x < 57; x += 5, i++) {
+    const y = sag(x);
+    p.fillRect(x, y - 1, 2, 2, bloom[i % bloom.length]!).set(x + 1, y + 1, bloom[(i + 1) % bloom.length]!);
+  }
+  p.fillRect(0, 0, 2, 4, 'b').fillRect(58, 0, 2, 4, 'b');
+  return p.outline('k');
+}
+
+/** Spring: blossom branches in a tall jug by the door. 18x30. */
+function blossoms(): Pixmap {
+  const p = new Pixmap(18, 30);
+  p.fillRect(5, 18, 8, 12, 'm').strokeRect(5, 18, 8, 12, 'e').fillRect(6, 16, 6, 3, 'm').hline(6, 11, 16, 'e');
+  p.hline(6, 11, 22, 'U').hline(6, 11, 23, 'U');
+  // Branches, then the blossom along them.
+  for (const [x0, x1, top] of [[8, 3, 4], [9, 14, 2], [9, 9, 0], [8, 1, 10], [10, 16, 9]] as const) {
+    for (let y = 17; y >= top; y--) p.set(Math.round(x0 + ((x1 - x0) * (17 - y)) / (17 - top)), y, 'B');
+  }
+  for (const [x, y] of [[3, 4], [4, 7], [14, 2], [12, 5], [9, 0], [9, 4], [1, 10], [3, 12], [16, 9], [14, 12], [6, 9], [11, 9]] as const) {
+    p.fillRect(x - 1, y, 2, 2, 'I').set(x, y, 'W');
+  }
+  return p.outline('k');
+}
+
+/** Summer: a jar of fireflies on the windowsill. 10x12. */
+function fireflyJar(): Pixmap {
+  const p = new Pixmap(10, 12);
+  p.fillRect(1, 3, 8, 9, 'Z').strokeRect(1, 3, 8, 9, 'c').fillRect(2, 0, 6, 3, 'B').hline(2, 7, 2, 'n');
+  for (const [x, y] of [[3, 5], [6, 6], [3, 8], [5, 9], [7, 9]] as const) p.set(x, y, 'L');
+  p.set(5, 5, 'Y').set(4, 7, 'Y');
+  return p.outline('k');
+}
+
+/** Summer: sunflowers in a pot. 16x24. */
+function sunflowers(): Pixmap {
+  const p = new Pixmap(16, 24);
+  p.fillRect(3, 17, 10, 7, 'H').strokeRect(3, 17, 10, 7, 'h').hline(2, 13, 17, 'h');
+  for (const [cx, cy, stem] of [[5, 4, 5], [11, 7, 11], [8, 2, 8]] as const) {
+    for (let y = cy + 2; y < 17; y++) p.set(stem, y, 'G');
+    p.fillEllipse(cx, cy, 3, 3, 'y').fillEllipse(cx, cy, 1.5, 1.5, 'B');
+  }
+  p.set(7, 11, 'l').set(9, 13, 'l').set(6, 14, 'l');
+  return p;
+}
+
+/** Autumn: pumpkins by the hearth. 24x14. */
+function pumpkins(): Pixmap {
+  const p = new Pixmap(24, 14);
+  const one = (cx: number, cy: number, rx: number, ry: number) => {
+    p.fillEllipse(cx, cy, rx, ry, 'o');
+    for (const dx of [-rx / 2, 0, rx / 2]) for (let y = Math.round(cy - ry + 1); y < cy + ry - 1; y++) p.set(Math.round(cx + dx), y, 'R');
+    p.fillRect(cx - 1, cy - ry - 2, 2, 3, 'G');
+  };
+  one(7, 8, 6.5, 5.5);
+  one(18, 10, 5, 4);
+  return p.outline('k');
+}
+
+/** Autumn: a few leaves blown in over the step. 40x14, flat on the floor. */
+function leaves(): Pixmap {
+  const p = new Pixmap(40, 14);
+  for (const [x, y, c] of [[4, 10, 'o'], [10, 6, 'R'], [17, 11, 'y'], [24, 4, 'o'], [30, 9, 'R'], [35, 12, 'o'], [14, 2, 'y']] as const) {
+    p.fillRect(x, y, 3, 2, c).set(x + 1, y - 1, c).set(x + 3, y + 1, 'n');
+  }
+  return p;
+}
+
+/** Winter: snow along the windowsill. 56x4. */
+function sillSnow(): Pixmap {
+  const p = new Pixmap(56, 4);
+  for (let x = 1; x < 55; x++) {
+    const h = 2 + Math.round(Math.sin(x / 3) * 0.8 + Math.sin(x / 7));
+    for (let y = 4 - h; y < 4; y++) p.set(x, y, y === 4 - h ? 'W' : 'm');
+  }
+  return p;
+}
+
+/** Winter: snow blown in over the step, in low drifts. 44x9, flat on the floor. */
+function snowdrift(): Pixmap {
+  const p = new Pixmap(44, 9);
+  for (let x = 0; x < 44; x++) {
+    const edge = Math.min(x, 43 - x);
+    const h = Math.min(edge / 2, 3 + Math.round(Math.sin(x / 3) * 1.2 + Math.sin(x / 5 + 2)));
+    for (let y = Math.round(9 - h); y < 9; y++) p.set(x, y, y === Math.round(9 - h) ? 'W' : 'm');
+  }
+  for (const [x, y] of [[4, 3], [12, 1], [30, 2], [39, 4], [21, 0]] as const) p.set(x, y, 'W');
   return p;
 }
 

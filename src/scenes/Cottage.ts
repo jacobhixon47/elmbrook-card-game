@@ -3,16 +3,17 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { ALMANAC_FIRST_PAGE, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
+import { ALMANAC_FIRST_PAGE, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
 import { CODEX_TABS, codexEntries, type CodexEntry } from '../view/codex';
 import { unlockName } from '../view/describe';
 import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
+import { backdropTexture, codeBackdrops, gradedView } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { cap } from '../view/describe';
 import { openSettings } from '../view/settings';
 import { pixelText } from '../view/text';
 import { button, panel } from '../view/ui';
-import { facing, PROPS, ROOM_SCALE, SPAWN, STATIONS, standBy, stationAt, walk, type Facing, type Point, type Station, type StationId } from '../view/room';
+import { DOORSTEP, DRESSING, facing, PROPS, ROOM_SCALE, SEASON_LIGHT, SPAWN, STATIONS, standBy, stationAt, walk, type Facing, type Point, type Station, type StationId } from '../view/room';
 import type { PaletteKey } from '../art/palette';
 
 /**
@@ -40,8 +41,13 @@ export class Cottage extends Phaser.Scene {
   private sprites = new Map<StationId, { plain: Phaser.GameObjects.Image; lit: Phaser.GameObjects.Image }>();
   private near: Station | null = null;
   private prompt: Phaser.GameObjects.Container | null = null;
+  /** The season the house is dressed for: the one you'll set out for next. */
+  private season: Season = 'spring';
+  /** Stepping in through the door after a run; you can't walk until you're in. */
+  private arriving = false;
 
-  create(data: { fixture?: Fixture | null; perkTier?: number; at?: Point; reopen?: StationId | 'other' | null } = {}) {
+  /** `home` is the season of the run you've just come home from. */
+  create(data: { fixture?: Fixture | null; perkTier?: number; at?: Point; reopen?: StationId | 'other' | null; home?: Season } = {}) {
     this.overlay = null;
     this.settingsOpen = false;
     this.sprites.clear();
@@ -57,9 +63,13 @@ export class Cottage extends Phaser.Scene {
     const spot = ui?.at ?? ui?.station;
     this.pos = data.at ?? (spot ? standBy(spot) : { ...SPAWN });
     this.face = 'up';
+    this.season = homeSeason(profile);
+    this.arriving = false;
 
-    this.drawRoom(profile);
+    this.drawRoom();
     this.drawHud(profile);
+    const home = data.home ?? ui?.home;
+    if (home && !profile.boonOffer) this.comeHome(home);
 
     // A new Year's boon is chosen before anything else.
     if (profile.boonOffer) this.openBoons(profile, data.fixture ? null : (id) => {
@@ -81,12 +91,16 @@ export class Cottage extends Phaser.Scene {
   }
 
   override update(_time: number, delta: number) {
+    if (this.arriving) {
+      this.stepClock += delta;
+      return this.placeYou(Math.floor(this.stepClock / 160) % 2 === 1 ? 1 : 0);
+    }
     if (this.overlay || this.settingsOpen || this.profile.boonOffer) return;
     const k = this.keys;
     const dx = (k.d.isDown || k.right.isDown ? 1 : 0) - (k.a.isDown || k.left.isDown ? 1 : 0);
     const dy = (k.s.isDown || k.down.isDown ? 1 : 0) - (k.w.isDown || k.up.isDown ? 1 : 0);
     const moving = dx !== 0 || dy !== 0;
-    this.pos = walk(this.pos, dx, dy, Math.min(delta, 50) / 1000);
+    this.pos = walk(this.pos, dx, dy, Math.min(delta, 50) / 1000, this.season);
     this.face = facing(dx, dy, this.face);
     this.stepClock = moving ? this.stepClock + delta : 0;
     this.placeYou(moving && Math.floor(this.stepClock / 160) % 2 === 1 ? 1 : 0);
@@ -94,7 +108,7 @@ export class Cottage extends Phaser.Scene {
   }
 
   private onKey(e: KeyboardEvent) {
-    if (this.profile.boonOffer || this.settingsOpen) return; // the boon comes first; Settings handles its own Esc
+    if (this.profile.boonOffer || this.settingsOpen || this.arriving) return; // the boon comes first; Settings handles its own Esc
     const key = e.key.toLowerCase();
     if (e.key === 'Escape') return this.overlay ? this.closeOverlay() : this.openSettings();
     if (key === 'f' || e.key === ' ') {
@@ -115,9 +129,17 @@ export class Cottage extends Phaser.Scene {
   }
 
   /** The room: walls and floor, then furniture and you, sorted by where your feet are. */
-  private drawRoom(p: Profile) {
+  private drawRoom() {
     const Z = ROOM_SCALE;
-    this.add.image(0, 0, `room/shell-${roomSeason(p)}`).setOrigin(0).setScale(Z).setDepth(-1000);
+    const season = this.season;
+    this.add.image(0, 0, 'room/shell').setOrigin(0).setScale(Z).setDepth(-1000);
+    // Through the window, the shop window's painted view graded for the season, cropped to the panes.
+    if (codeBackdrops) this.add.image(136 * Z, 8 * Z, `room/view-${season}`).setOrigin(0).setScale(Z).setDepth(-1001);
+    else {
+      const view = this.add.image(0, 0, gradedView(this, `${backdropTexture('shop')}-view`, 'shop', season, 'afternoon')).setOrigin(0).setDepth(-1001);
+      const src = VIEW_CROP;
+      view.setCrop(src.x, src.y, src.w, src.h).setScale(VIEW_SCALE).setPosition(136 * Z - src.x * VIEW_SCALE, 8 * Z - src.y * VIEW_SCALE);
+    }
     for (const prop of PROPS) {
       const img = this.add.image(prop.at.x * Z, prop.at.y * Z, `room/${prop.id}`).setOrigin(0).setScale(Z);
       img.setDepth(prop.solid ? prop.solid.y + prop.solid.h : -500);
@@ -126,6 +148,20 @@ export class Cottage extends Phaser.Scene {
     const hearth = PROPS.find((x) => x.id === 'hearth')!;
     const glow = this.add.image((hearth.at.x + 17) * Z, (hearth.at.y + 30) * Z, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(1.6).setAlpha(0.35).setDepth(900);
     if (!noAnim) this.tweens.add({ targets: glow, alpha: 0.22, scale: 1.45, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    // The season's dressing; flat things lie over the doormat, the rest sort with you.
+    for (const d of DRESSING[season]) {
+      const img = this.add.image(d.at.x * Z, d.at.y * Z, `room/${d.id}`).setOrigin(0).setScale(Z);
+      img.setDepth(d.solid ? d.solid.y + d.solid.h : d.flat ? -390 : -600);
+      if (d.id === 'firefly-jar') {
+        const jar = this.add.image((d.at.x + 4) * Z, (d.at.y + 6) * Z, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(0.35).setAlpha(0.5).setDepth(-590);
+        if (!noAnim) this.tweens.add({ targets: jar, alpha: 0.25, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      }
+    }
+    // Winter draws you to the fire: it burns brighter.
+    if (season === 'winter') glow.setAlpha(0.5).setScale(1.9);
+    // And the season's light over everything.
+    const light = SEASON_LIGHT[season];
+    this.add.rectangle(0, 0, 640, 360, hex(light.color), light.alpha).setOrigin(0).setDepth(1000);
     for (const st of STATIONS) {
       const depth = st.solid ? st.solid.y + st.solid.h : st.id === 'door' ? -400 : -600;
       const lit = this.add.image((st.at.x - 1) * Z, (st.at.y - 1) * Z, `room/${st.id}-lit`).setOrigin(0).setScale(Z).setDepth(depth - 0.5).setVisible(false);
@@ -189,6 +225,31 @@ export class Cottage extends Phaser.Scene {
     if (!noAnim) {
       this.prompt.setAlpha(0).setY(cy + 4);
       this.tweens.add({ targets: this.prompt, alpha: 1, y: cy, duration: 140, ease: 'Quad.easeOut' });
+    }
+  }
+
+  /**
+   * Back from a run: you step in through the front door. If the house has changed season while you
+   * were out, a line says so.
+   */
+  private comeHome(from: Season) {
+    const changed = from !== this.season;
+    const caption = changed ? pixelText(this, 320, 300, `${cap(this.season)} has come to the cottage.`, { size: 10, color: 'Y', stroke: 'k', align: 'center' }).setOrigin(0.5).setDepth(1500) : null;
+    if (noAnim) return;
+    this.pos = { ...DOORSTEP };
+    this.face = 'up';
+    this.arriving = true;
+    this.placeYou(0);
+    this.tweens.add({
+      targets: this.pos, y: SPAWN.y, duration: 450, ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.arriving = false;
+        this.placeYou(0);
+      },
+    });
+    if (caption) {
+      caption.setAlpha(0);
+      this.tweens.chain({ targets: caption, tweens: [{ alpha: 1, duration: 400, delay: 250 }, { alpha: 0, duration: 600, delay: 2200 }] });
     }
   }
 
@@ -272,6 +333,8 @@ export class Cottage extends Phaser.Scene {
       const wins = p.wins[season];
       this.add.rectangle(x + 8, ty, 160, 32, hex(open ? 'b' : 'q'), open ? 0.6 : 0.4).setOrigin(0);
       pixelText(this, x + 14, ty + 4, `${i + 1}  ${cap(season)}`, { size: 8, color: open ? 'W' : 'S' });
+      // The season the house is dressed for is the one waiting outside.
+      if (open && season === this.season) pixelText(this, x + 70, ty + 5, 'up next', { size: 7, color: 'y' });
       const note = !open ? `Win ${cap(SEASONS[i - 1]!)} to open` : wins ? `Won ${wins === 1 ? 'once' : `${wins} times`}` : 'Not won yet';
       pixelText(this, x + 14, ty + 18, note, { size: 7, color: open ? 'a' : 'S' });
       if (open) this.add.existing(button(this, x + 136, ty + 16, 'Set out', () => start(season), { w: 48, color: 'y' }));
@@ -576,9 +639,10 @@ const TOP_TIER = 1 + PERK_TIERS.length;
 type WalkKeys = Record<'w' | 'a' | 's' | 'd' | 'up' | 'down' | 'left' | 'right', Phaser.Input.Keyboard.Key>;
 
 /** The season the house is dressed for: the newest open season of the Year you're playing. */
-function roomSeason(p: Profile): Season {
-  return seasonsOf(p).at(-1) ?? 'spring';
-}
+
+/** The part of the shop window's painted view (640x360) shown through the cottage's panes, and its scale. */
+const VIEW_CROP = { x: 224, y: 88, w: 192, h: 104 };
+const VIEW_SCALE = 0.5;
 
 /** The perk board opens at the first open tier with something left to buy, else the top open tier. */
 function firstTier(p: Profile): number {

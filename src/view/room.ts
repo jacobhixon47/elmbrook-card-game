@@ -1,3 +1,5 @@
+import type { Season } from '../core';
+
 // The walkable cottage (GDD §13, M4.5): one open-plan room seen from above, where each corner holds
 // a cross-run system. Pure, so tests can walk it. Room space is a 320x180 grid drawn at 2x.
 
@@ -47,8 +49,43 @@ export const PROPS: readonly { id: string; at: Point; solid: Rect | null }[] = [
   { id: 'rug', at: { x: 116, y: 92 }, solid: null },
 ];
 
+/**
+ * What the house puts out for the season you'll play next (GDD §13): wall-hung things and things on
+ * the floor, some of which you walk round. Drawn by `roomSprite`.
+ */
+export const DRESSING: Record<Season, readonly { id: string; at: Point; solid: Rect | null; flat?: boolean }[]> = {
+  spring: [
+    { id: 'garland-spring', at: { x: 129, y: 1 }, solid: null },
+    { id: 'blossoms', at: { x: 110, y: 138 }, solid: { x: 115, y: 162, w: 10, h: 6 } },
+  ],
+  summer: [
+    { id: 'firefly-jar', at: { x: 165, y: 23 }, solid: null },
+    { id: 'sunflowers', at: { x: 192, y: 144 }, solid: { x: 195, y: 162, w: 10, h: 6 } },
+  ],
+  autumn: [
+    { id: 'garland-autumn', at: { x: 129, y: 1 }, solid: null },
+    { id: 'pumpkins', at: { x: 252, y: 120 }, solid: { x: 253, y: 126, w: 22, h: 8 } },
+    { id: 'leaves', at: { x: 140, y: 156 }, solid: null, flat: true },
+  ],
+  winter: [
+    { id: 'garland-winter', at: { x: 129, y: 1 }, solid: null },
+    { id: 'sill-snow', at: { x: 132, y: 32 }, solid: null },
+    { id: 'snowdrift', at: { x: 138, y: 164 }, solid: null, flat: true },
+  ],
+};
+
+/** The light the season casts over the room: a palette colour and how strongly it tints. */
+export const SEASON_LIGHT: Record<Season, { color: 'L' | 'Y' | 'o' | 'x'; alpha: number }> = {
+  spring: { color: 'L', alpha: 0.06 },
+  summer: { color: 'Y', alpha: 0.08 },
+  autumn: { color: 'o', alpha: 0.12 },
+  winter: { color: 'x', alpha: 0.26 },
+};
+
 /** Where you stand when you come in: just inside the front door, facing in. */
 export const SPAWN: Point = { x: 160, y: 148 };
+/** Where you step in from when you come home from a run, in the doorway. */
+export const DOORSTEP: Point = { x: 160, y: 171 };
 
 /** Your feet, which is what collides: centred on x, resting on y. */
 const FEET = { w: 10, h: 5 };
@@ -64,26 +101,27 @@ const WALLS: readonly Rect[] = [
   { x: 144, y: 174, w: 32, h: 6 },
 ];
 
-/** Everything you can't walk through. */
+/** Everything you can't walk through, whatever the season. */
 export const SOLIDS: readonly Rect[] = [...WALLS, ...STATIONS.flatMap((s) => (s.solid ? [s.solid] : [])), ...PROPS.flatMap((p) => (p.solid ? [p.solid] : []))];
+const solidsIn = (season?: Season): readonly Rect[] => (season ? [...SOLIDS, ...DRESSING[season].flatMap((d) => (d.solid ? [d.solid] : []))] : SOLIDS);
 
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 const feetAt = (p: Point): Rect => ({ x: p.x - FEET.w / 2, y: p.y - FEET.h, w: FEET.w, h: FEET.h });
-const blocked = (p: Point) => SOLIDS.some((r) => overlaps(feetAt(p), r));
+const blocked = (p: Point, season?: Season) => solidsIn(season).some((r) => overlaps(feetAt(p), r));
 
 /**
  * One step of walking: `dx`, `dy` are the held directions (-1, 0 or 1), `dt` seconds. Each axis
- * moves on its own, so walking diagonally into a wall slides along it.
+ * moves on its own, so walking diagonally into a wall slides along it. `season` adds its dressing.
  */
-export function walk(p: Point, dx: number, dy: number, dt: number): Point {
+export function walk(p: Point, dx: number, dy: number, dt: number, season?: Season): Point {
   if (!dx && !dy) return p;
   const len = Math.hypot(dx, dy);
   const step = (WALK_SPEED * dt) / len;
   let next = { ...p };
   const x = { ...next, x: next.x + dx * step };
-  if (!blocked(x)) next = x;
+  if (!blocked(x, season)) next = x;
   const y = { ...next, y: next.y + dy * step };
-  if (!blocked(y)) next = y;
+  if (!blocked(y, season)) next = y;
   return next;
 }
 
