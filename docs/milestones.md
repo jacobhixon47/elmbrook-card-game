@@ -101,6 +101,10 @@ Once Reputation, the Almanac, the Codex and witch selection exist, the cottage b
 
 **Accept:** every between-runs screen is reached by walking to it, and coming home from a win shows the next season in the house.
 
+- ✅ Part 1: the room, walking (WASD or arrows), and a station for every between-runs screen, used with F or Space behind a prompt and a glowing outline.
+- Part 2: the house dressed for the season, and coming home.
+- Part 3: polish (footsteps, idle touches).
+
 Later, the Night Market becomes a walkable street the same way (Jacob, Oct 14): stalls you walk up to, dressed for the season, so a Snowed In night is literally drifts over the closed stalls with only the Hearth Trader's glow lit.
 
 ## M5 — Art and audio pass

@@ -10,8 +10,15 @@ const SCALE = 3;
 const sheet = new Pixmap(640, 260).fillRect(0, 0, 640, 260, 's');
 SPRITES.forEach((def, i) => sheet.blit(rasterize(def), 8 + (i % 18) * 34, 8 + Math.floor(i / 18) * 34, 2));
 let x = 8;
+let roomX = 8;
 for (const [key, pm] of Object.entries(proceduralTextures())) {
-  if (key.startsWith('bg/')) continue;
+  if (key.startsWith('bg/') || key.startsWith('room/shell') || key.endsWith('-lit')) continue;
+  // The cottage's furniture and you get a row of their own.
+  if (key.startsWith('room/') || key.startsWith('wizard/')) {
+    sheet.blit(pm, roomX, 196);
+    roomX += pm.width + 4;
+    continue;
+  }
   sheet.blit(pm, x, 120);
   x += pm.width + 6;
 }

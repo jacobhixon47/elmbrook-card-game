@@ -3,16 +3,16 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { ALMANAC_FIRST_PAGE, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, CODEX_TABLES, runStartChoice, witchOpen, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
+import { ALMANAC_FIRST_PAGE, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
 import { CODEX_TABS, codexEntries, type CodexEntry } from '../view/codex';
 import { unlockName } from '../view/describe';
 import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
-import { cottageBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { cap } from '../view/describe';
 import { openSettings } from '../view/settings';
 import { pixelText } from '../view/text';
 import { button, panel } from '../view/ui';
+import { facing, PROPS, ROOM_SCALE, SPAWN, STATIONS, standBy, stationAt, walk, type Facing, type Point, type Station, type StationId } from '../view/room';
 import type { PaletteKey } from '../art/palette';
 
 /**
@@ -24,92 +24,240 @@ export class Cottage extends Phaser.Scene {
     super('Cottage');
   }
 
-  /** The open Almanac or Codex, drawn over the room. */
+  /** The open panel (a station's, the Almanac, the Codex or a boon), drawn over the room. */
   private overlay: Phaser.GameObjects.Container | null = null;
+  private settingsOpen = false;
+  private profile!: Profile;
+  private fixture: Fixture | null = null;
+  private perkTier = 1;
+  /** Where you stand, in room pixels (your feet). */
+  private pos: Point = { ...SPAWN };
+  private face: Facing = 'up';
+  private stepClock = 0;
+  private you!: Phaser.GameObjects.Image;
+  private keys!: WalkKeys;
+  /** Each station's sprite, its lit outline, and the prompt over it. */
+  private sprites = new Map<StationId, { plain: Phaser.GameObjects.Image; lit: Phaser.GameObjects.Image }>();
+  private near: Station | null = null;
+  private prompt: Phaser.GameObjects.Container | null = null;
 
-  create(data: { fixture?: Fixture | null; perkTier?: number } = {}) {
+  create(data: { fixture?: Fixture | null; perkTier?: number; at?: Point; reopen?: StationId | 'other' | null } = {}) {
     this.overlay = null;
+    this.settingsOpen = false;
+    this.sprites.clear();
+    this.near = null;
+    this.prompt = null;
+    this.fixture = data.fixture ?? null;
     pixelCamera(this);
-    const bg = cottageBackdrop();
-    this.add.image(0, 0, bg.texture).setOrigin(0);
-    for (const l of bg.lights) {
-      const glow = this.add.image(l.x, l.y, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(l.scale).setAlpha(0.18);
-      if (!noAnim) this.tweens.add({ targets: glow, alpha: 0.1, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    }
-
     const profile = data.fixture ? migrateProfile(data.fixture.profile ?? null) : loadProfile();
-    const start = (season: Season) => this.scene.start('Run', { season });
-
-    pixelText(this, 320, 16, 'Your cottage', { size: 16, color: 'y', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
-    // A fixture shows its profile but can't change it.
-    const choose = data.fixture ? null : (year: number) => {
-      chooseYearNow(year);
-      this.scene.restart({});
-    };
-    this.drawYear(profile, start, choose);
-    // A fixture shows its profile but can't spend it.
-    const tier = data.perkTier ?? data.fixture?.ui?.perkTier ?? firstTier(profile);
-    this.drawPerks(profile, tier, (t) => this.scene.restart({ ...data, perkTier: t }), data.fixture ? null : (id) => {
-      buyPerkNow(id);
-      this.scene.restart({ perkTier: tier });
-    });
-
-    const met = profile.codex.length;
-    const all = Object.values(CODEX_TABLES).reduce((n, t) => n + t.size, 0);
-    this.add.existing(button(this, 220, 300, `Codex ${met}/${all}`, () => this.openCodex(profile), { w: 96, color: 'y' }));
-    this.add.existing(button(this, 320, 300, `Almanac ${profile.almanac.length}/${codex.almanac.size}`, () => this.openAlmanac(profile), { w: 96, color: 'y' }));
-    let settingsOpen = false;
-    const settings = () => {
-      settingsOpen = true;
-      openSettings(this, () => (settingsOpen = false));
-    };
-    this.add.existing(button(this, 420, 300, 'Settings', settings, { w: 96 }));
-    this.drawYearRules(profile);
-    this.drawKit(profile, data.fixture?.ui?.kit, !data.fixture);
-    this.drawKeepsakes(profile, !data.fixture);
+    this.profile = profile;
+    this.perkTier = data.perkTier ?? data.fixture?.ui?.perkTier ?? firstTier(profile);
     const ui = data.fixture?.ui;
+    // A fixture with a station open stands you by it.
+    const spot = ui?.at ?? ui?.station;
+    this.pos = data.at ?? (spot ? standBy(spot) : { ...SPAWN });
+    this.face = 'up';
+
+    this.drawRoom(profile);
+    this.drawHud(profile);
+
     // A new Year's boon is chosen before anything else.
     if (profile.boonOffer) this.openBoons(profile, data.fixture ? null : (id) => {
       pickBoonNow(id);
       this.scene.restart({});
     });
+    const reopen = ui?.station ?? (data.reopen && data.reopen !== 'other' ? data.reopen : null);
+    if (reopen && !profile.boonOffer) this.use(reopen);
     if (ui?.almanac) this.openAlmanac(profile, ui.almanacPage ?? 0);
     if (ui?.codex) this.openCodex(profile, ui.codex as CodexTable, ui.codexPage ?? 0, ui.codexEntry);
-    if (ui?.settings) settings();
+    if (ui?.settings) this.openSettings();
 
-    this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
-      if (profile.boonOffer || settingsOpen) return; // the boon comes first; Settings handles its own Esc
-      if (!this.overlay && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
-        const year = profile.year + (e.key === 'ArrowLeft' ? -1 : 1);
-        if (year >= 1 && year <= profile.yearSeasons.length) choose?.(year);
-        return;
-      }
-      if (e.key === 'Escape') {
-        if (this.overlay) this.closeOverlay();
-        else this.scene.start('Title', {});
-        return;
-      }
-      if (e.key === 'a' || e.key === 'A') return this.overlay ? this.closeOverlay() : this.openAlmanac(profile);
-      if (e.key === 'c' || e.key === 'C') return this.overlay ? this.closeOverlay() : this.openCodex(profile);
-      const season = SEASONS[Number(e.key) - 1];
-      if (season && !this.overlay && seasonsOf(profile).includes(season)) start(season);
-    });
+    const kb = this.input.keyboard!;
+    const K = Phaser.Input.Keyboard.KeyCodes;
+    this.keys = kb.addKeys({ w: K.W, a: K.A, s: K.S, d: K.D, up: K.UP, down: K.DOWN, left: K.LEFT, right: K.RIGHT }) as WalkKeys;
+    kb.on('keydown', (e: KeyboardEvent) => this.onKey(e));
+    this.updateNear();
     markReady(this);
+  }
+
+  override update(_time: number, delta: number) {
+    if (this.overlay || this.settingsOpen || this.profile.boonOffer) return;
+    const k = this.keys;
+    const dx = (k.d.isDown || k.right.isDown ? 1 : 0) - (k.a.isDown || k.left.isDown ? 1 : 0);
+    const dy = (k.s.isDown || k.down.isDown ? 1 : 0) - (k.w.isDown || k.up.isDown ? 1 : 0);
+    const moving = dx !== 0 || dy !== 0;
+    this.pos = walk(this.pos, dx, dy, Math.min(delta, 50) / 1000);
+    this.face = facing(dx, dy, this.face);
+    this.stepClock = moving ? this.stepClock + delta : 0;
+    this.placeYou(moving && Math.floor(this.stepClock / 160) % 2 === 1 ? 1 : 0);
+    this.updateNear();
+  }
+
+  private onKey(e: KeyboardEvent) {
+    if (this.profile.boonOffer || this.settingsOpen) return; // the boon comes first; Settings handles its own Esc
+    const key = e.key.toLowerCase();
+    if (e.key === 'Escape') return this.overlay ? this.closeOverlay() : this.openSettings();
+    if (key === 'f' || e.key === ' ') {
+      if (this.overlay) return this.closeOverlay();
+      if (this.near) this.use(this.near.id);
+      return;
+    }
+    // In the front door's and the calendar's panels, the arrow keys choose the Year and 1-4 set out.
+    if (this.overlayKind === 'door' || this.overlayKind === 'calendar') {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const year = this.profile.year + (e.key === 'ArrowLeft' ? -1 : 1);
+        if (year >= 1 && year <= this.profile.yearSeasons.length) this.chooseYear(year);
+        return;
+      }
+      const season = SEASONS[Number(e.key) - 1];
+      if (this.overlayKind === 'door' && season && seasonsOf(this.profile).includes(season)) this.setOut(season);
+    }
+  }
+
+  /** The room: walls and floor, then furniture and you, sorted by where your feet are. */
+  private drawRoom(p: Profile) {
+    const Z = ROOM_SCALE;
+    this.add.image(0, 0, `room/shell-${roomSeason(p)}`).setOrigin(0).setScale(Z).setDepth(-1000);
+    for (const prop of PROPS) {
+      const img = this.add.image(prop.at.x * Z, prop.at.y * Z, `room/${prop.id}`).setOrigin(0).setScale(Z);
+      img.setDepth(prop.solid ? prop.solid.y + prop.solid.h : -500);
+    }
+    // The hearth's fire, a soft flickering light.
+    const hearth = PROPS.find((x) => x.id === 'hearth')!;
+    const glow = this.add.image((hearth.at.x + 17) * Z, (hearth.at.y + 30) * Z, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(1.6).setAlpha(0.35).setDepth(900);
+    if (!noAnim) this.tweens.add({ targets: glow, alpha: 0.22, scale: 1.45, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    for (const st of STATIONS) {
+      const depth = st.solid ? st.solid.y + st.solid.h : st.id === 'door' ? -400 : -600;
+      const lit = this.add.image((st.at.x - 1) * Z, (st.at.y - 1) * Z, `room/${st.id}-lit`).setOrigin(0).setScale(Z).setDepth(depth - 0.5).setVisible(false);
+      const plain = this.add.image(st.at.x * Z, st.at.y * Z, `room/${st.id}`).setOrigin(0).setScale(Z).setDepth(depth);
+      this.sprites.set(st.id, { plain, lit });
+    }
+    this.you = this.add.image(0, 0, 'wizard/up-0').setOrigin(0.5, 1).setScale(Z);
+    this.placeYou(0);
+  }
+
+  private placeYou(frame: 0 | 1) {
+    this.you.setTexture(`wizard/${this.face}-${frame}`);
+    this.you.setPosition(Math.round(this.pos.x * ROOM_SCALE), Math.round(this.pos.y * ROOM_SCALE) + 2).setDepth(this.pos.y);
+  }
+
+  /** Your Year and Reputation in the corner, and how to get about. */
+  private drawHud(p: Profile) {
+    const head = p.year > 1 ? `Year ${p.year} · Reputation ${p.reputation}` : `Reputation ${p.reputation}`;
+    pixelText(this, 22, 8, head, { size: 8, color: 'y', stroke: 'k' }).setDepth(1500);
+    pixelText(this, 618, 8, 'WASD to walk · F or Space to use · Esc for settings', { size: 7, color: 'w', stroke: 'k', align: 'right' }).setOrigin(1, 0).setDepth(1500);
+  }
+
+  /** Lights up the station you're standing by, with a prompt saying what F does there. */
+  private updateNear() {
+    const st = this.overlay ? null : stationAt(this.pos);
+    if (st?.id === this.near?.id) return;
+    if (this.near) {
+      const old = this.sprites.get(this.near.id)!;
+      this.tweens.killTweensOf([old.lit, old.plain]);
+      old.lit.setVisible(false).setAlpha(1);
+      old.plain.setY(this.near.at.y * ROOM_SCALE);
+    }
+    this.prompt?.destroy();
+    this.prompt = null;
+    this.near = st;
+    if (!st) return;
+    const s = this.sprites.get(st.id)!;
+    s.lit.setVisible(true);
+    if (!noAnim) {
+      // A little hop, then the outline breathes while you stand there.
+      this.tweens.add({ targets: s.plain, y: st.at.y * ROOM_SCALE - 2, duration: 90, yoyo: true, ease: 'Quad.easeOut' });
+      this.tweens.add({ targets: s.lit, alpha: 0.45, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
+    const label = pixelText(this, 0, 0, st.verb, { size: 8, color: 'W' }).setOrigin(0, 0.5);
+    const cap = this.add.rectangle(0, 0, 13, 13, hex('y')).setStrokeStyle(1, hex('k'));
+    const f = pixelText(this, 0, 0, 'F', { size: 8, color: 'k', align: 'center' }).setOrigin(0.5);
+    const w = 13 + 6 + label.width + 12;
+    const bg = this.add.rectangle(0, 0, w, 19, hex('k'), 0.88).setStrokeStyle(1, hex('n'));
+    cap.setX(-w / 2 + 12);
+    f.setX(cap.x);
+    label.setX(cap.x + 11);
+    // Over the thing (or over you, if you stand in front of it); under your feet if that's off the top.
+    const img = s.plain;
+    const head = this.you.y - this.you.displayHeight;
+    const top = Math.min(img.y, head) - 14;
+    const below = top < 26;
+    const mid = below ? this.you.x : img.x + img.displayWidth / 2;
+    const cx = Math.max(w / 2 + 4, Math.min(640 - w / 2 - 4, mid));
+    const cy = below ? this.you.y + 14 : top;
+    this.prompt = this.add.container(cx, cy, [bg, cap, f, label]).setDepth(1400);
+    if (!noAnim) {
+      this.prompt.setAlpha(0).setY(cy + 4);
+      this.tweens.add({ targets: this.prompt, alpha: 1, y: cy, duration: 140, ease: 'Quad.easeOut' });
+    }
+  }
+
+  /** Using a station opens its panel. */
+  private use(id: StationId) {
+    const p = this.profile;
+    switch (id) {
+      case 'bookshelf': return this.openCodex(p);
+      case 'lectern': return this.openAlmanac(p);
+      case 'door': return this.openPanel('door', () => this.drawYear(p, 232, 60));
+      case 'calendar': return this.openPanel('calendar', () => this.drawCalendar(p));
+      case 'workbench': return this.openPanel('workbench', () => this.drawPerks(p, 232, 60, this.perkTier));
+      case 'wardrobe': return this.openPanel('wardrobe', () => this.drawKit(p, this.fixture?.ui?.kit, !this.fixture));
+      case 'pinboard': return this.openPanel('pinboard', () => this.drawKeepsakes(p, !this.fixture));
+    }
+  }
+
+  private setOut(season: Season) {
+    this.scene.start('Run', { season });
+  }
+
+  /** A fixture shows its profile but can't change it. */
+  private chooseYear(year: number) {
+    if (this.fixture) return;
+    chooseYearNow(year);
+    this.scene.restart({ at: this.pos, reopen: this.overlayKind });
+  }
+
+  private openSettings() {
+    this.settingsOpen = true;
+    openSettings(this, () => (this.settingsOpen = false), () => this.scene.start('Title', {}));
+  }
+
+  /** Which station's panel is open, if one is. */
+  private overlayKind: StationId | 'other' | null = null;
+
+  /**
+   * A station's panel over the room. The draw functions add to the scene as they always have; what
+   * they add is gathered into the panel.
+   */
+  private openPanel(kind: StationId, draw: () => void) {
+    this.closeOverlay();
+    const c = this.add.container(0, 0).setDepth(2000);
+    c.add(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.55).setOrigin(0).setInteractive());
+    const before = new Set(this.children.list);
+    draw();
+    const added = this.children.list.filter((o) => !before.has(o) && o !== c);
+    c.add(added);
+    // Close sits just under the panel.
+    const bottom = Math.max(0, ...added.map((o) => ('getBounds' in o ? (o as unknown as Phaser.GameObjects.Components.GetBounds).getBounds().bottom : 0)));
+    c.add(button(this, 320, Math.min(340, bottom + 20), 'Close', () => this.closeOverlay(), { w: 60 }));
+    this.overlay = c;
+    this.overlayKind = kind;
+    this.updateNear();
   }
 
   /**
    * The chosen Year's four seasons: set out for an open one; a locked one says which win opens it.
    * Once a later Year is open, arrows (or the arrow keys) choose which Year to play, like Ascension.
    */
-  private drawYear(p: Profile, start: (s: Season) => void, choose: ((year: number) => void) | null) {
-    const x = 14;
-    const y = 52;
+  private drawYear(p: Profile, x: number, y: number) {
+    const start = (season: Season) => this.setOut(season);
+    const choose = (year: number) => this.chooseYear(year);
     this.add.existing(panel(this, x, y, 176, 228, 'k', 0.9, 'n'));
     pixelText(this, x + 88, y + 8, `Year ${p.year}`, { size: 10, color: 'y', align: 'center' }).setOrigin(0.5, 0);
     const top = p.yearSeasons.length;
     if (top > 1) {
-      const prev = button(this, x + 30, y + 14, '<', () => choose?.(p.year - 1), { w: 20 });
-      const next = button(this, x + 146, y + 14, '>', () => choose?.(p.year + 1), { w: 20 });
+      const prev = button(this, x + 30, y + 14, '<', () => choose(p.year - 1), { w: 20 });
+      const next = button(this, x + 146, y + 14, '>', () => choose(p.year + 1), { w: 20 });
       prev.setEnabled(p.year > 1);
       next.setEnabled(p.year < top);
       this.add.existing(prev);
@@ -130,16 +278,23 @@ export class Cottage extends Phaser.Scene {
     });
 
     const runs = p.runs === 1 ? '1 run' : `${p.runs} runs`;
-    pixelText(this, x + 88, y + 216, `${runs} · Esc for the title`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
+    pixelText(this, x + 88, y + 216, `${runs} · 1-4 to set out`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
   }
 
   /**
    * Perks bought with Reputation: each changes how every later run starts. The board shows one tier
    * at a time; a tier not yet open shows its perks and what opens it.
    */
-  private drawPerks(p: Profile, tier: number, show: (tier: number) => void, buy: ((id: string) => void) | null) {
-    const x = 450;
-    const y = 52;
+  private drawPerks(p: Profile, x: number, y: number, tier: number) {
+    const show = (t: number) => {
+      this.perkTier = t;
+      this.use('workbench');
+    };
+    // A fixture shows its profile but can't spend it.
+    const buy = this.fixture ? null : (id: string) => {
+      buyPerkNow(id);
+      this.scene.restart({ perkTier: tier, at: this.pos, reopen: 'workbench' });
+    };
     this.add.existing(panel(this, x, y, 176, 228, 'k', 0.9, 'n'));
     pixelText(this, x + 88, y + 8, `Reputation ${p.reputation}`, { size: 10, color: 'y', align: 'center' }).setOrigin(0.5, 0);
     const prev = button(this, x + 30, y + 30, '<', () => show(tier - 1), { w: 20 });
@@ -174,7 +329,7 @@ export class Cottage extends Phaser.Scene {
    */
   private drawKit(p: Profile, view: { witch?: string; cauldron?: string } | undefined, save: boolean) {
     const x = 196;
-    const y = 180;
+    const y = 127;
     this.add.existing(panel(this, x, y, 248, 106, 'k', 0.9, 'n'));
     const chosen = runStartChoice(p);
     const witches = [...codex.witches.values()];
@@ -220,9 +375,8 @@ export class Cottage extends Phaser.Scene {
    * own vigil gifts once their Friendship reaches 8. Arrows step through the open ones and "empty".
    */
   private drawKeepsakes(p: Profile, save: boolean) {
-    // Between the Year's rules (which run to about y 129 in Year 10) and the witch and cauldron.
     const x = 196;
-    const y = 133;
+    const y = 158;
     this.add.existing(panel(this, x, y, 248, 43, 'k', 0.9, 'n'));
     const open = keepsakesOpen(p.friendship);
     const choices: (string | null)[] = [null, ...open];
@@ -251,25 +405,43 @@ export class Cottage extends Phaser.Scene {
     draw();
   }
 
-  /** After a loop: the Year's modifiers and boon, under the title. */
-  private drawYearRules(p: Profile) {
+  /**
+   * The wall calendar: which Year you're playing, with arrows once a later one is open (like
+   * Ascension), and that Year's rules and boon.
+   */
+  private drawCalendar(p: Profile) {
+    const x = 196;
+    const y = 96;
     const boon = boonOf(p);
-    if (p.year <= 1 && !boon) return;
     const lines = [
-      `Year ${p.year}: Reputation ×${reputationMult(p.year)}`,
+      `Reputation ×${reputationMult(p.year)}`,
       ...yearModifiers(p.year).map((m) => m.text),
       ...(boon ? [`Boon: ${codex.boons.get(boon)!.name}. ${codex.boons.get(boon)!.text}`] : []),
+      ...(p.yearSeasons.length <= 1 ? ['Win Winter to open Year 2, with a new rule and a boon.'] : []),
     ];
-    const t = pixelText(this, 320, 44, lines.join('\n'), { size: 7, color: 'w', align: 'center', wrap: 236 }).setOrigin(0.5, 0);
-    this.add.rectangle(320, 40, 248, t.height + 8, hex('k'), 0.8).setOrigin(0.5, 0).setStrokeStyle(1, hex('n'));
-    t.setDepth(1);
+    const body = pixelText(this, x + 124, y + 32, lines.join('\n'), { size: 7, color: 'w', align: 'center', wrap: 228 }).setOrigin(0.5, 0);
+    const h = body.height + 44;
+    const bg = panel(this, x, y, 248, h, 'k', 0.9, 'n');
+    this.add.existing(bg);
+    this.children.bringToTop(body);
+    pixelText(this, x + 124, y + 8, `Year ${p.year}`, { size: 12, color: 'y', align: 'center' }).setOrigin(0.5, 0);
+    const top = p.yearSeasons.length;
+    if (top > 1) {
+      const prev = button(this, x + 40, y + 15, '<', () => this.chooseYear(p.year - 1), { w: 20 });
+      const next = button(this, x + 208, y + 15, '>', () => this.chooseYear(p.year + 1), { w: 20 });
+      prev.setEnabled(p.year > 1);
+      next.setEnabled(p.year < top);
+      this.add.existing(prev);
+      this.add.existing(next);
+    }
   }
 
   /** Looping into a new Year: choose one of three boons, kept for the whole Year. */
   private openBoons(p: Profile, pick: ((id: string) => void) | null) {
     this.closeOverlay();
-    const c = this.add.container(0, 0);
+    const c = this.add.container(0, 0).setDepth(2000);
     this.overlay = c;
+    this.overlayKind = 'other';
     c.add(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.6).setOrigin(0).setInteractive());
     c.add(panel(this, 110, 90, 420, 170, 'k', 0.96, 'n'));
     c.add(pixelText(this, 320, 100, `Year ${p.year} begins`, { size: 12, color: 'y', align: 'center' }).setOrigin(0.5, 0));
@@ -287,13 +459,16 @@ export class Cottage extends Phaser.Scene {
   private closeOverlay() {
     this.overlay?.destroy();
     this.overlay = null;
+    this.overlayKind = null;
+    this.updateNear();
   }
 
   /** A panel over the room with a title and a Close button. */
   private openOverlay(title: string): Phaser.GameObjects.Container {
     this.closeOverlay();
-    const c = this.add.container(0, 0);
+    const c = this.add.container(0, 0).setDepth(2000);
     this.overlay = c;
+    this.overlayKind = 'other';
     c.add(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.6).setOrigin(0).setInteractive());
     c.add(panel(this, 20, 24, 600, 312, 'k', 0.96, 'n'));
     c.add(pixelText(this, 320, 32, title, { size: 12, color: 'y', align: 'center' }).setOrigin(0.5, 0));
@@ -397,6 +572,13 @@ export class Cottage extends Phaser.Scene {
 }
 
 const TOP_TIER = 1 + PERK_TIERS.length;
+
+type WalkKeys = Record<'w' | 'a' | 's' | 'd' | 'up' | 'down' | 'left' | 'right', Phaser.Input.Keyboard.Key>;
+
+/** The season the house is dressed for: the newest open season of the Year you're playing. */
+function roomSeason(p: Profile): Season {
+  return seasonsOf(p).at(-1) ?? 'spring';
+}
 
 /** The perk board opens at the first open tier with something left to buy, else the top open tier. */
 function firstTier(p: Profile): number {

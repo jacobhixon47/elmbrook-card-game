@@ -1,5 +1,6 @@
 import type { FixtureStep } from './fixture-steps';
 import type { ModifierId } from '../codex/schema';
+import type { StationId } from '../view/room';
 
 // Dev URL params: ?fixture=<name> ?seed=<s> ?noanim=1 ?renderer=canvas
 
@@ -48,6 +49,10 @@ export type Fixture = {
     pour?: boolean;
     /** At a dusk event, choosing the card for the choice at this index. */
     eventCard?: number;
+    /** In the walkable cottage, standing by this station (its prompt showing). */
+    at?: StationId;
+    /** In the walkable cottage, this station's panel open. */
+    station?: StationId;
     /** The cottage's Almanac, open. */
     almanac?: boolean;
     /** The Almanac's page: 1 is the harder second page. */
