@@ -16,6 +16,13 @@ export const GRIMOIRE_TABS: GrimoireTab[] = ['recipes', 'deck', 'calendar', 'tow
 const WEATHER_COLOR: Record<Weather, PaletteKey> = { clear: 'W', rain: 'c', fog: 'a', heatwave: 'o', snow: 'w' };
 const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
 
+/** Deck page layouts, roomiest first: the first that holds every card is used. A short label is just the count. */
+const DECK_FITS = [
+  { perRow: 8, rows: 2, dx: 66, dy: 84, y: 50, scale: 0.75, label: 32, text: 7, short: false },
+  { perRow: 9, rows: 3, dx: 60, dy: 62, y: 44, scale: 0.6, label: 26, text: 6, short: false },
+  { perRow: 11, rows: 4, dx: 48, dy: 50, y: 38, scale: 0.5, label: 22, text: 6, short: true },
+] as const;
+
 const X = 40;
 const Y = 30;
 const W = 560;
@@ -86,16 +93,17 @@ export function drawGrimoire(
     const none = { drawPile: [], hand: [], discardPile: [], cauldron: [] };
     const rows = view === 'deck' ? deckRows(s) : deckRows({ ...none, [view === 'draw' ? 'drawPile' : 'discardPile']: view === 'draw' ? s.drawPile : s.discardPile });
     if (!rows.length) text(X + W / 2, top + 60, view === 'draw' ? 'The draw pile is empty.' : 'Nothing discarded yet today. Brewed and discarded cards land here until the morning shuffle.', { size: 8, color: 'a', align: 'center', wrap: 360 }).setOrigin(0.5, 0);
-    const perRow = 8;
+    // Smaller cards as the deck grows, so every card fits above the Night Satchel.
+    const fit = DECK_FITS.find((f) => rows.length <= f.perRow * f.rows) ?? DECK_FITS[DECK_FITS.length - 1]!;
     rows.forEach((r, i) => {
-      const x = X + 48 + (i % perRow) * 66;
-      const y = top + 50 + Math.floor(i / perRow) * 84;
-      const c = add(createCard(scene, x, y, r.card).setScale(0.75));
+      const x = X + 48 + (i % fit.perRow) * fit.dx;
+      const y = top + fit.y + Math.floor(i / fit.perRow) * fit.dy;
+      const c = add(createCard(scene, x, y, r.card).setScale(fit.scale));
       c.setInteractive();
       c.on('pointerover', () => tip.card(r.card, x, y - 30, y + 30));
       c.on('pointerout', () => tip.hide());
-      const label = view === 'deck' ? `×${r.total} · ${r.inDraw} to draw` : `×${r.total}`;
-      text(x, y + 32, label, { size: 7, color: view !== 'deck' || r.inDraw ? 'W' : 'a', align: 'center' }).setOrigin(0.5, 0);
+      const label = view === 'deck' && !fit.short ? `×${r.total} · ${r.inDraw} to draw` : `×${r.total}`;
+      text(x, y + fit.label, label, { size: fit.text, color: view !== 'deck' || r.inDraw ? 'W' : 'a', align: 'center' }).setOrigin(0.5, 0);
     });
     // The Night Satchel (GDD §5.4): Lunar cards and Omens that join the deck only on Night Shifts.
     const satchel = deckRows({ drawPile: [], hand: [], discardPile: s.satchel, cauldron: [] });
