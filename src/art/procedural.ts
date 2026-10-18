@@ -2,7 +2,8 @@ import { seedRng } from '../core/rng';
 import { MODIFIERS, type ModifierId } from '../codex/schema';
 import { ESSENCE_COLOR, type PaletteKey } from './palette';
 import { Pixmap } from './pixmap';
-import { DRESSING_SPRITES, litSprite, roomShell, roomSprite, roomView, wizard } from './scenes/cottage-room';
+import { fire, lightSprite, litSprite, roomShell, roomSprite, roomView, steam, wizard } from './scenes/cottage-room';
+import { DRESSING, PROPS, STATIONS } from '../view/room';
 import { shopBackdrop } from './scenes/shop';
 import { townBackdrop } from './scenes/town';
 
@@ -309,15 +310,22 @@ export function proceduralTextures(): Record<string, Pixmap> {
   }
   for (const e of Object.keys(ESSENCE_COLOR) as (keyof typeof ESSENCE_COLOR)[]) out[`pip/${e}`] = essencePip(e);
   for (const m of MODIFIERS) out[`badge/${m}`] = modifierBadge(m);
-  // The walkable cottage (M4.5): the room and its window view for each season, its furniture and seasonal dressing plain and lit, and you.
+  // The walkable cottage (M4.5): the room, its window views, and every station, prop and piece of
+  // seasonal dressing lit for where it stands (stations also with a bright outline). Then you.
   out['room/shell'] = roomShell();
-  for (const season of ['spring', 'summer', 'autumn', 'winter'] as const) out[`room/view-${season}`] = roomView(season);
-  for (const id of DRESSING_SPRITES) out[`room/${id}`] = roomSprite(id);
-  for (const id of ['bookshelf', 'lectern', 'pinboard', 'calendar', 'wardrobe', 'workbench', 'door', 'hearth', 'bed', 'plant', 'rug']) {
-    const sprite = roomSprite(id);
-    out[`room/${id}`] = sprite;
-    out[`room/${id}-lit`] = litSprite(sprite);
+  for (const season of ['spring', 'summer', 'autumn', 'winter'] as const) {
+    out[`room/view-${season}`] = roomView(season);
+    DRESSING[season].forEach((d, i) => (out[`room/dress-${season}-${i}`] = lightSprite(roomSprite(d.id), d.at)));
   }
+  for (const st of STATIONS) {
+    const sprite = lightSprite(roomSprite(st.id), st.at);
+    out[`room/${st.id}`] = sprite;
+    out[`room/${st.id}-lit`] = litSprite(sprite);
+  }
+  for (const prop of PROPS) out[`room/${prop.id}`] = lightSprite(roomSprite(prop.id), prop.at);
+  out['room/cat-1'] = lightSprite(roomSprite('cat-1'), PROPS.find((x) => x.id === 'cat')!.at);
+  for (const f of [0, 1, 2] as const) out[`room/fire-${f}`] = fire(f);
+  out['room/steam'] = steam();
   for (const face of ['down', 'up', 'left', 'right'] as const) for (const frame of [0, 1] as const) out[`wizard/${face}-${frame}`] = wizard(face, frame);
   return out;
 }

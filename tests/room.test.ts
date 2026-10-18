@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SEASONS, type Season } from '../src/core';
 import { DRESSING_SPRITES } from '../src/art/scenes/cottage-room';
-import { DOORSTEP, DRESSING, facing, ROOM_H, ROOM_W, SOLIDS, SPAWN, STATIONS, standBy, stationAt, walk, type Point } from '../src/view/room';
+import { DOORSTEP, DRESSING, facing, onRug, ROOM_H, ROOM_W, SOLIDS, SPAWN, STATIONS, standBy, stationAt, walk, type Point } from '../src/view/room';
 
 /** Walks in one direction for a while, a frame at a time. */
 const hold = (p: Point, dx: number, dy: number, seconds: number) => {
@@ -60,6 +60,13 @@ describe('the walkable cottage', () => {
     const straight = walk(p, 1, 0, 0.1);
     const diag = walk(p, 1, 1, 0.1);
     expect(Math.hypot(diag.x - p.x, diag.y - p.y)).toBeCloseTo(straight.x - p.x);
+  });
+
+  it('knows the rug, where footsteps are soft', () => {
+    expect(onRug({ x: 160, y: 86 })).toBe(true);
+    expect(onRug({ x: 160, y: 128 })).toBe(true);
+    expect(onRug(SPAWN)).toBe(false);
+    expect(onRug(standBy('workbench'))).toBe(false);
   });
 
   it('faces the way you walk, and keeps facing when you stop', () => {

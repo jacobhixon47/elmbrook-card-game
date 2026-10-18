@@ -8,12 +8,14 @@ import { CODEX_TABS, codexEntries, type CodexEntry } from '../view/codex';
 import { unlockName } from '../view/describe';
 import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
 import { backdropTexture, codeBackdrops, gradedView } from '../view/backdrop';
+import { play } from '../audio/sfx';
+import { ROOM_LIGHTS, ROOM_WINDOWS, roomLight } from '../art/scenes/cottage-room';
 import { pixelCamera } from '../view/camera';
 import { cap } from '../view/describe';
 import { openSettings } from '../view/settings';
 import { pixelText } from '../view/text';
 import { button, panel } from '../view/ui';
-import { DOORSTEP, DRESSING, facing, PROPS, ROOM_SCALE, SEASON_LIGHT, SPAWN, STATIONS, standBy, stationAt, walk, type Facing, type Point, type Station, type StationId } from '../view/room';
+import { DOORSTEP, DRESSING, facing, HEARTH, onRug, PROPS, ROOM_SCALE, SEASON_LIGHT, SPAWN, STATIONS, standBy, stationAt, walk, type Facing, type Point, type Station, type StationId } from '../view/room';
 import type { PaletteKey } from '../art/palette';
 
 /**
@@ -35,6 +37,10 @@ export class Cottage extends Phaser.Scene {
   private pos: Point = { ...SPAWN };
   private face: Facing = 'up';
   private stepClock = 0;
+  /** How long you've stood still, for the idle touches. */
+  private idleClock = 0;
+  /** Until the hearth next crackles. */
+  private crackleIn = 2000;
   private you!: Phaser.GameObjects.Image;
   private keys!: WalkKeys;
   /** Each station's sprite, its lit outline, and the prompt over it. */
@@ -65,6 +71,8 @@ export class Cottage extends Phaser.Scene {
     this.face = 'up';
     this.season = homeSeason(profile);
     this.arriving = false;
+    this.stepClock = 0;
+    this.idleClock = 0;
 
     this.drawRoom();
     this.drawHud(profile);
@@ -91,20 +99,52 @@ export class Cottage extends Phaser.Scene {
   }
 
   override update(_time: number, delta: number) {
-    if (this.arriving) {
-      this.stepClock += delta;
-      return this.placeYou(Math.floor(this.stepClock / 160) % 2 === 1 ? 1 : 0);
-    }
+    this.crackle(delta);
+    if (this.arriving) return this.stride(delta);
     if (this.overlay || this.settingsOpen || this.profile.boonOffer) return;
     const k = this.keys;
     const dx = (k.d.isDown || k.right.isDown ? 1 : 0) - (k.a.isDown || k.left.isDown ? 1 : 0);
     const dy = (k.s.isDown || k.down.isDown ? 1 : 0) - (k.w.isDown || k.up.isDown ? 1 : 0);
-    const moving = dx !== 0 || dy !== 0;
+    const from = this.pos;
     this.pos = walk(this.pos, dx, dy, Math.min(delta, 50) / 1000, this.season);
     this.face = facing(dx, dy, this.face);
-    this.stepClock = moving ? this.stepClock + delta : 0;
-    this.placeYou(moving && Math.floor(this.stepClock / 160) % 2 === 1 ? 1 : 0);
-    this.updateNear();
+    // Walking into a wall isn't walking: no steps, and the idle touches carry on.
+    if (this.pos.x !== from.x || this.pos.y !== from.y) this.stride(delta);
+    else this.idle(delta);
+    this.updateNear(true);
+  }
+
+  /** A walking frame, with a footstep on each stride: soft on the rug. */
+  private stride(delta: number) {
+    const before = Math.floor(this.stepClock / 160);
+    this.stepClock += delta;
+    this.idleClock = 0;
+    const step = Math.floor(this.stepClock / 160);
+    if (step !== before) play('step', { pitch: step % 2 ? 1.12 : 0.94, volume: onRug(this.pos) ? 0.35 : 1 });
+    this.placeYou(step % 2 === 1 ? 1 : 0);
+  }
+
+  /**
+   * Standing still: after a moment you breathe (a slow one-pixel bob), and after a while you turn to
+   * face the room.
+   */
+  private idle(delta: number) {
+    this.stepClock = 0;
+    this.idleClock += delta;
+    if (noAnim) return this.placeYou(0);
+    if (this.idleClock > 6000 && this.face !== 'down') this.face = 'down';
+    this.placeYou(0);
+    if (this.idleClock > 1500 && Math.floor(this.idleClock / 700) % 2 === 1) this.you.y -= ROOM_SCALE;
+  }
+
+  /** The fire crackles now and then, louder the nearer you stand. */
+  private crackle(delta: number) {
+    if (noAnim) return;
+    this.crackleIn -= delta;
+    if (this.crackleIn > 0) return;
+    this.crackleIn = 1500 + Math.random() * 3500;
+    const d = Math.hypot(this.pos.x - HEARTH.x, this.pos.y - HEARTH.y);
+    play('crackle', { pitch: 0.8 + Math.random() * 0.5, volume: Math.max(0.15, 1 - d / 220) });
   }
 
   private onKey(e: KeyboardEvent) {
@@ -133,32 +173,54 @@ export class Cottage extends Phaser.Scene {
     const Z = ROOM_SCALE;
     const season = this.season;
     this.add.image(0, 0, 'room/shell').setOrigin(0).setScale(Z).setDepth(-1000);
-    // Through the window, the shop window's painted view graded for the season, cropped to the panes.
-    if (codeBackdrops) this.add.image(136 * Z, 8 * Z, `room/view-${season}`).setOrigin(0).setScale(Z).setDepth(-1001);
-    else {
-      const view = this.add.image(0, 0, gradedView(this, `${backdropTexture('shop')}-view`, 'shop', season, 'afternoon')).setOrigin(0).setDepth(-1001);
-      const src = VIEW_CROP;
-      view.setCrop(src.x, src.y, src.w, src.h).setScale(VIEW_SCALE).setPosition(136 * Z - src.x * VIEW_SCALE, 8 * Z - src.y * VIEW_SCALE);
+    // Through the windows, the shop window's painted view graded for the season at twilight, cropped
+    // to each window's panes.
+    for (const [n, w] of ROOM_WINDOWS.entries()) {
+      if (codeBackdrops) {
+        this.add.image(w.x * Z, w.y * Z, `room/view-${season}`).setOrigin(0).setScale(Z).setDepth(-1001);
+        continue;
+      }
+      const src = { x: VIEW_CROP.x + n * 150, y: VIEW_CROP.y, w: (w.w * Z) / VIEW_SCALE, h: (w.h * Z) / VIEW_SCALE };
+      const view = this.add.image(0, 0, gradedView(this, `${backdropTexture('shop')}-view`, 'shop', season, 'twilight')).setOrigin(0).setDepth(-1001);
+      view.setCrop(src.x, src.y, src.w, src.h).setScale(VIEW_SCALE).setPosition(w.x * Z - src.x * VIEW_SCALE, w.y * Z - src.y * VIEW_SCALE);
     }
     for (const prop of PROPS) {
       const img = this.add.image(prop.at.x * Z, prop.at.y * Z, `room/${prop.id}`).setOrigin(0).setScale(Z);
       img.setDepth(prop.solid ? prop.solid.y + prop.solid.h : -500);
+      // The cat breathes in its sleep.
+      if (prop.id === 'cat' && !noAnim) this.time.addEvent({ delay: 1100, loop: true, callback: () => img.setTexture(img.texture.key === 'room/cat' ? 'room/cat-1' : 'room/cat') });
     }
-    // The hearth's fire, a soft flickering light.
-    const hearth = PROPS.find((x) => x.id === 'hearth')!;
-    const glow = this.add.image((hearth.at.x + 17) * Z, (hearth.at.y + 30) * Z, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(1.6).setAlpha(0.35).setDepth(900);
-    if (!noAnim) this.tweens.add({ targets: glow, alpha: 0.22, scale: 1.45, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    // The season's dressing; flat things lie over the doormat, the rest sort with you.
-    for (const d of DRESSING[season]) {
-      const img = this.add.image(d.at.x * Z, d.at.y * Z, `room/${d.id}`).setOrigin(0).setScale(Z);
-      img.setDepth(d.solid ? d.solid.y + d.solid.h : d.flat ? -390 : -600);
-      if (d.id === 'firefly-jar') {
-        const jar = this.add.image((d.at.x + 4) * Z, (d.at.y + 6) * Z, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(0.35).setAlpha(0.5).setDepth(-590);
-        if (!noAnim) this.tweens.add({ targets: jar, alpha: 0.25, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    // The fire, dancing in the hearth.
+    const flames = this.add.image((HEARTH.x - 14) * Z, (HEARTH.y - 11) * Z, 'room/fire-0').setOrigin(0).setScale(Z).setDepth(-900);
+    if (!noAnim) {
+      let f = 0;
+      this.time.addEvent({ delay: 120, loop: true, callback: () => flames.setTexture(`room/fire-${(f = (f + 1 + Math.floor(Math.random() * 2)) % 3)}`) });
+    }
+    // Steam off the cauldron's brew.
+    const pot = STATIONS.find((x) => x.id === 'cauldron')!.at;
+    if (!noAnim) {
+      for (let k = 0; k < 3; k++) {
+        const puff = this.add.image((pot.x + 14 + k * 3) * Z, (pot.y + 4) * Z, 'room/steam').setScale(Z).setAlpha(0).setDepth(80);
+        this.tweens.add({ targets: puff, y: (pot.y - 14) * Z, x: puff.x + (k - 1) * 6, alpha: { from: 0.7, to: 0 }, scale: { from: Z * 0.8, to: Z * 1.4 }, duration: 1800, delay: k * 600, repeat: -1 });
       }
     }
-    // Winter draws you to the fire: it burns brighter.
-    if (season === 'winter') glow.setAlpha(0.5).setScale(1.9);
+    // Every light gets a soft glow that flickers: the fire most, the brew green.
+    for (const l of ROOM_LIGHTS) {
+      const fire = l.kind === 'fire';
+      const glow = this.add.image(l.x * Z, l.y * Z, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(900);
+      glow.setScale((l.radius * 2.2) / 128).setAlpha(fire ? (season === 'winter' ? 0.55 : 0.42) : l.kind === 'brew' ? 0.35 : 0.45);
+      if (l.kind === 'brew') glow.setTint(hex('l'));
+      if (!noAnim) this.tweens.add({ targets: glow, alpha: glow.alpha * (fire ? 0.7 : 0.8), scale: glow.scale * 0.94, duration: fire ? 380 + Math.random() * 200 : 700 + Math.random() * 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
+    // The season's dressing; flat things lie over the doormat, the rest sort with you.
+    DRESSING[season].forEach((d, i) => {
+      const img = this.add.image(d.at.x * Z, d.at.y * Z, `room/dress-${season}-${i}`).setOrigin(0).setScale(Z);
+      img.setDepth(d.solid ? d.solid.y + d.solid.h : d.flat ? -390 : -600);
+      if (d.id === 'firefly-jar') {
+        const jar = this.add.image((d.at.x + 5) * Z, (d.at.y + 6) * Z, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(0.35).setAlpha(0.5).setTint(hex('L')).setDepth(-590);
+        if (!noAnim) this.tweens.add({ targets: jar, alpha: 0.25, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      }
+    });
     // And the season's light over everything.
     const light = SEASON_LIGHT[season];
     this.add.rectangle(0, 0, 640, 360, hex(light.color), light.alpha).setOrigin(0).setDepth(1000);
@@ -175,6 +237,10 @@ export class Cottage extends Phaser.Scene {
   private placeYou(frame: 0 | 1) {
     this.you.setTexture(`wizard/${this.face}-${frame}`);
     this.you.setPosition(Math.round(this.pos.x * ROOM_SCALE), Math.round(this.pos.y * ROOM_SCALE) + 2).setDepth(this.pos.y);
+    // You're lit like the room: warm by the fire, dim in the corners.
+    const level = 0.68 + roomLight(this.pos.x, this.pos.y - 8) * 0.45;
+    const c = (f: number) => Math.round(Math.min(1, level * f) * 255);
+    this.you.setTint((c(1) << 16) | (c(0.95) << 8) | c(0.9));
   }
 
   /** Your Year and Reputation in the corner, and how to get about. */
@@ -184,9 +250,9 @@ export class Cottage extends Phaser.Scene {
     pixelText(this, 618, 8, 'WASD to walk · F or Space to use · Esc for settings', { size: 7, color: 'w', stroke: 'k', align: 'right' }).setOrigin(1, 0).setDepth(1500);
   }
 
-  /** Lights up the station you're standing by, with a prompt saying what F does there. */
-  private updateNear() {
-    const st = this.overlay ? null : stationAt(this.pos);
+  /** Lights up the station you're standing by, with a prompt saying what F does there (and a soft chime when you walk up). */
+  private updateNear(walked = false) {
+    const st = this.overlay || this.arriving ? null : stationAt(this.pos);
     if (st?.id === this.near?.id) return;
     if (this.near) {
       const old = this.sprites.get(this.near.id)!;
@@ -198,6 +264,7 @@ export class Cottage extends Phaser.Scene {
     this.prompt = null;
     this.near = st;
     if (!st) return;
+    if (walked) play('near');
     const s = this.sprites.get(st.id)!;
     s.lit.setVisible(true);
     if (!noAnim) {
@@ -245,6 +312,7 @@ export class Cottage extends Phaser.Scene {
       onComplete: () => {
         this.arriving = false;
         this.placeYou(0);
+        this.updateNear();
       },
     });
     if (caption) {
@@ -262,7 +330,7 @@ export class Cottage extends Phaser.Scene {
       case 'door': return this.openPanel('door', () => this.drawYear(p, 232, 60));
       case 'calendar': return this.openPanel('calendar', () => this.drawCalendar(p));
       case 'workbench': return this.openPanel('workbench', () => this.drawPerks(p, 232, 60, this.perkTier));
-      case 'wardrobe': return this.openPanel('wardrobe', () => this.drawKit(p, this.fixture?.ui?.kit, !this.fixture));
+      case 'cauldron': return this.openPanel('cauldron', () => this.drawKit(p, this.fixture?.ui?.kit, !this.fixture));
       case 'pinboard': return this.openPanel('pinboard', () => this.drawKeepsakes(p, !this.fixture));
     }
   }
@@ -640,8 +708,8 @@ type WalkKeys = Record<'w' | 'a' | 's' | 'd' | 'up' | 'down' | 'left' | 'right',
 
 /** The season the house is dressed for: the newest open season of the Year you're playing. */
 
-/** The part of the shop window's painted view (640x360) shown through the cottage's panes, and its scale. */
-const VIEW_CROP = { x: 224, y: 88, w: 192, h: 104 };
+/** Where the cottage's windows look into the shop window's painted view (640x360): the left window here, the right one further along. And its scale. */
+const VIEW_CROP = { x: 196, y: 96 };
 const VIEW_SCALE = 0.5;
 
 /** The perk board opens at the first open tier with something left to buy, else the top open tier. */
