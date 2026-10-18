@@ -1,0 +1,246 @@
+import type { SpriteDef } from '../sprite';
+
+// 16x16 familiar portraits (field): the whole animal, facing right, shown 1x in the slots and 2x on offers.
+// Light comes from the top-left; outlines use 'k', never pure black.
+
+export const tortoise: SpriteDef = {
+  id: 'familiar/tortoise',
+  rows: [
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '....kkkkk.......',
+    '..kkHnnBnkk.....',
+    '.kHnBBnnBBnkkkk.',
+    'kHnBnnBnnnBkGllk',
+    'knBBnBBBnBBkGklk',
+    'kBnnBnnnBnnkGGk.',
+    'kbBBbBBBbBBbkk..',
+    '.kkkkkkkkkkkk...',
+    '..kGlk...kGlk...',
+    '..kkkk...kkkk...',
+    '................',
+  ],
+};
+
+export const fox: SpriteDef = {
+  id: 'familiar/fox',
+  rows: [
+    '................',
+    '.........k..k...',
+    '........kokkok..',
+    '........koooook.',
+    '........kooKoook',
+    '.......kooooooKk',
+    '.......kowwwwkk.',
+    '.......kowwwk...',
+    '......kooWwwk...',
+    '.....koooWwwk...',
+    '....kooooowwk...',
+    '.kk.koooooowk...',
+    'kWwkooookkowk...',
+    'kWooooookwkwk...',
+    '.kkkkkkkkkkkk...',
+    '................',
+  ],
+};
+
+export const frostHare: SpriteDef = {
+  id: 'familiar/frost-hare',
+  rows: [
+    '..........kk.kk.',
+    '.........kWkkmk.',
+    '.........kWikmk.',
+    '.........kWikmk.',
+    '.........kWkkmk.',
+    '........kWWWWmk.',
+    '........kWWkWWk.',
+    '.......kWWWWWmk.',
+    '.....kkkWWWWik..',
+    '...kkWWWmWWWk...',
+    '..kWWWWWmmWmk...',
+    '..kWWWWmmmWmk...',
+    '.kmWWWmmmmmmk...',
+    '.kmmmmmeeeemk...',
+    '..kkkkkkkkkkk...',
+    '................',
+  ],
+};
+
+export const ermine: SpriteDef = {
+  id: 'familiar/ermine',
+  rows: [
+    '................',
+    '.........k.k....',
+    '........kWkWk...',
+    '.......kWWWWWk..',
+    '.......kWWWWWWk.',
+    '.......kWWWkWWIk',
+    '........kmWWWWk.',
+    '........kWWWmk..',
+    '.......kWWWWmk..',
+    '.......kWWkWkk..',
+    '.......kWWWmmk..',
+    '.......kWWWmek..',
+    '.......kWmmmek..',
+    '.kkkkkkkWmmeek..',
+    'kKqKmmmmmmmeeek.',
+    '.kkkkkkkkkkkkk..',
+  ],
+};
+
+export const kitchenMouse: SpriteDef = {
+  id: 'familiar/kitchen-mouse',
+  rows: [
+    '................',
+    '................',
+    '................',
+    '................',
+    '.......kk..kk...',
+    '......kIIkkIIk..',
+    '......kIikkIik..',
+    '.......kSSSSSk..',
+    '......kSSSkSSek.',
+    '......kSSSSSSIk.',
+    '.....kSeSSSkkk..',
+    '....kSSSkRRk....',
+    '...kSSSSkRrk....',
+    '..keSSSSSkk.....',
+    '.kkeeSSSSSk.....',
+    'k..kkkkkkk......',
+  ],
+};
+
+export const squirrel: SpriteDef = {
+  id: 'familiar/squirrel',
+  rows: [
+    '..kkkk..........',
+    '.kRoook.........',
+    'kRoRoook........',
+    'kRoookRok.......',
+    'kRoRk.kRok.k.k..',
+    'kRoRk.kRokRkRk..',
+    'kRoRk.kRoooook..',
+    '.kRok.kRooKoWk..',
+    '.kRok.kRoooook..',
+    '.kRoRkkRowkkk...',
+    '..kRoRkRwwkbk...',
+    '..kRooRoowknBk..',
+    '...kRoooowkbbk..',
+    '...kRooooowkk...',
+    '....kkkkkkkk....',
+    '................',
+  ],
+};
+
+export const dove: SpriteDef = {
+  id: 'familiar/dove',
+  rows: [
+    '................',
+    '................',
+    '................',
+    '.........kkk....',
+    '........kWWWk...',
+    '........kWkWWkk.',
+    '........kWWWWkyk',
+    '....kkk.kWWWkk..',
+    '..kkWWWkkWWWWk..',
+    '.kWWWmWWWWWWmk..',
+    'kWWmWWmWWWWmmk..',
+    '.kkmmmeWWWmmk...',
+    '...kkmmmmmmk....',
+    '.bbbbbbbbbbbbbbb',
+    '..bBBnbbBnnbBnb.',
+    '.....kk.kk......',
+  ],
+};
+
+export const packMule: SpriteDef = {
+  id: 'familiar/pack-mule',
+  rows: [
+    '........kk..kk..',
+    '........kSk.kSk.',
+    '........kek.kek.',
+    '........kSkkkSk.',
+    '.......kSeeSSSSk',
+    '.......keSSSkSSk',
+    '.......kSSSSSeek',
+    '..kkkkkkSSSSeeKk',
+    '.keeeekkkSSSkkk.',
+    'kSkSSkBnnBkSSk..',
+    'k.kSSkBnyBkSSk..',
+    '..kSSkbBBbkSsk..',
+    '..kSSSkkkkSssk..',
+    '..kSkSk..kSkSk..',
+    '..kskSk..kskSk..',
+    '..kkkkk..kkkkk..',
+  ],
+};
+
+export const nightjar: SpriteDef = {
+  id: 'familiar/nightjar',
+  rows: [
+    '................',
+    '..kk............',
+    '.kmk............',
+    '.kmk............',
+    '..kk............',
+    '........kkkkkk..',
+    '......kkHhHhHhk.',
+    '....kkhHjhHhKWhk',
+    '..kkhjhhHhhhKhak',
+    'kkhjhhjhJhhwwak.',
+    '.kkJhJjhJjhJhk..',
+    '...kkkJjJJjJkk..',
+    '......kkkkkk....',
+    'bbbbbbbbbbbbbbbb',
+    '.bBnnbBBnbbBnbb.',
+    '................',
+  ],
+};
+
+export const canary: SpriteDef = {
+  id: 'familiar/canary',
+  rows: [
+    '................',
+    '................',
+    '................',
+    '.........kkk....',
+    '........kYYYk...',
+    '........kYkYkk..',
+    '........kYYYkok.',
+    '.....kkkyYYYkk..',
+    '...kkyyYYYYk....',
+    '..kyyyyyYYYk....',
+    '.kyyoyyyyYyk....',
+    'kyyoyyyoyyk.....',
+    '.kkooyyyyk......',
+    '...kkkkkk.......',
+    '...bkbbkbbbbbbb.',
+    '..bBnnbBBnbbBnb.',
+  ],
+};
+
+export const bumblebee: SpriteDef = {
+  id: 'familiar/bumblebee',
+  rows: [
+    '................',
+    '................',
+    '....kkk..kkk....',
+    '...kcmmkkmcck...',
+    '...kcmmmkmcmk...',
+    '....kkmkmkkk....',
+    '....kkkkkkkk....',
+    '..kkyyKKyyKkkk..',
+    '.kyyyKyyKKyKWk..',
+    '.kYyyKyyKKyKkk..',
+    'kKyyyKyyKKykk...',
+    '.kyyyKyyKKyk....',
+    '..kkyKyKKkk.....',
+    '....kkkkk.......',
+    '................',
+    '................',
+  ],
+};

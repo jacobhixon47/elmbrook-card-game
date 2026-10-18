@@ -1,0 +1,246 @@
+import type { SpriteDef } from '../sprite';
+
+// 16x16 familiar portraits (night): the whole animal, facing right, shown 1x in the slots and 2x on offers.
+// Light comes from the top-left; outlines use 'k', never pure black.
+
+export const dragonfly: SpriteDef = {
+  id: 'familiar/dragonfly',
+  rows: [
+    '................',
+    '.kkk......kkk...',
+    'kmcck....kcmck..',
+    '.kccck..kcmck...',
+    '..kccck.kcck....',
+    '...kcccckck..kk.',
+    '.kkkkkkckkkkkWtk',
+    'kTtTtTtTTttTtKtk',
+    '.kkkkkkckkkkktTk',
+    '...kcccckck..kk.',
+    '..kccck.kcck....',
+    '.kccck..kcmck...',
+    'kmcck....kcmck..',
+    '.kkk......kkk...',
+    '................',
+    '................',
+  ],
+};
+
+export const cricket: SpriteDef = {
+  id: 'familiar/cricket',
+  rows: [
+    '............kk..',
+    '....kkkkk..kYyk.',
+    '.........kkkyk..',
+    '..kk.......kyk..',
+    '.kLlk.....kyyk..',
+    '.kGllk.....kkk..',
+    '.kGlGlkkkkkkk...',
+    '..kGlGllllLlkk..',
+    '..kGGllllllkWkk.',
+    '..kgGGGGGGGlllk.',
+    '..kgggggggGGGlk.',
+    '..kkkkkkkkkkkkk.',
+    '.kGk...kGk.kGk..',
+    '.kGk..kGk...kGk.',
+    'kkk...kk.....kk.',
+    '................',
+  ],
+};
+
+export const scarecrow: SpriteDef = {
+  id: 'familiar/scarecrow',
+  rows: [
+    '.....kkkkk......',
+    '....knnyynk.....',
+    '..kkkbBBBbkkk...',
+    '.knnnnnnnnnnnk..',
+    '..kkkwawwwakk...',
+    '....kwKwwKak....',
+    '....kwBBBBak....',
+    '....kkRRRRkk....',
+    'kkkkPPPPPPPPkkkk',
+    'kyknPPyyPPPPnkyk',
+    '.kkkPPyyPPpPkkk.',
+    '....kPPPPPppk...',
+    '....kykyykyk....',
+    '......kBbk......',
+    '......kBbk......',
+    '.....kkkkkk.....',
+  ],
+};
+
+export const badger: SpriteDef = {
+  id: 'familiar/badger',
+  rows: [
+    '................',
+    '................',
+    '................',
+    '................',
+    '.......kkk......',
+    '..kkkkkkSkkkkk..',
+    '.keeeeekKKwwwwwk',
+    'keSeSeSkKWKKKKKk',
+    'kSSSSSSkKwwwwwKk',
+    'kSSSSSSSkwwwwkk.',
+    'kSSSSSSSSkkkk...',
+    'ksssssssssk.....',
+    '.kkkkkkkkkk.....',
+    '..kKk..kKk......',
+    '..kkk..kkk......',
+    '................',
+  ],
+};
+
+export const harvestHare: SpriteDef = {
+  id: 'familiar/harvest-hare',
+  rows: [
+    '.........kk.kk..',
+    '........knIknIk.',
+    '........knIknIk.',
+    '........knnknnk.',
+    '.........knnnnk.',
+    '........knnnnWkk',
+    '........knnnkknk',
+    '..kkk..kBnnnnnIk',
+    '.kwwkkkBnnnaaak.',
+    '.kwkBnnnnnnaak..',
+    '..kBnnnnnnnaak..',
+    '..kBBnnnnnaaak..',
+    '..kbBBBnnnaak...',
+    '..kbbbBBBnnk....',
+    '...kkkkkkkkk....',
+    '................',
+  ],
+};
+
+export const queenBee: SpriteDef = {
+  id: 'familiar/queen-bee',
+  rows: [
+    '................',
+    '..........k.k.k.',
+    '..kkk.....kykyk.',
+    '.kmcck....kyyyk.',
+    '.kcmcck...kYyyk.',
+    '..kccmck.kQQQQQk',
+    '...kccckkQQWQQQk',
+    '.kkkkkkyykQQkQQk',
+    'kyykyykyyyykQQk.',
+    'kyykyykYyyyykk..',
+    '.kykyykyyyyk....',
+    '..kkkkkkkkk.....',
+    '...k..k..k......',
+    '................',
+    '................',
+    '................',
+  ],
+};
+
+export const jackdaw: SpriteDef = {
+  id: 'familiar/jackdaw',
+  rows: [
+    '................',
+    '................',
+    '.........kkkk...',
+    '........kSeeek..',
+    '.......kSeemWkk.',
+    '.......kSSeqkssk',
+    '......kqSSqqkkk.',
+    '....kkqqqqqqqk..',
+    '...kqQqqqqqqqk..',
+    '..kqQQQqqqqqqk..',
+    '.kqQQqqqqqqqk...',
+    'kqqqkqqqqqqk....',
+    'kqkk.kkkkkk.....',
+    'kk.....kek......',
+    '.....kkBBBBBkk..',
+    '................',
+  ],
+};
+
+export const moth: SpriteDef = {
+  id: 'familiar/moth',
+  rows: [
+    '...k........k...',
+    '..kwk......kwk..',
+    '...kwk.kk.kwk...',
+    '.kkkkkkwwkkkkkk.',
+    'kmmmmvkwWkvmmmmk',
+    'kmvPvmkwwkmvPvmk',
+    'kmPyPmkwwkmPyPmk',
+    'kmvPvmkwwkmvPvmk',
+    '.kmmmmkwwkmmmmk.',
+    '..kkmmkwwkmmkk..',
+    '..kmvmkwwkmvmk..',
+    '..kmPvkwwkvPmk..',
+    '...kmmkwakmmk...',
+    '....kkkwakkk....',
+    '.......kk.......',
+    '................',
+  ],
+};
+
+export const willOWisp: SpriteDef = {
+  id: 'familiar/will-o-wisp',
+  rows: [
+    '.........k......',
+    '........kck.....',
+    '.......kcmk..k..',
+    '......kcmmck.ck.',
+    '.....kcmmmmckck.',
+    '....kcmWmmmmcck.',
+    '....kcmkmmkmctk.',
+    '....kcmkmmkmctk.',
+    '....ktcmmmmmctk.',
+    '....kttcmmmcttk.',
+    '...kTtttcccttk..',
+    '...kTttttttTk...',
+    '..kTtTTTTkkk....',
+    '.kTTkkkk........',
+    '.kTk............',
+    '..k.............',
+  ],
+};
+
+export const oldHound: SpriteDef = {
+  id: 'familiar/old-hound',
+  rows: [
+    '................',
+    '................',
+    '..........kkk...',
+    '.........kBnnk..',
+    '........kBnnnnkk',
+    '........kbBWneKk',
+    '........kbbkBeek',
+    '........kbbBeeek',
+    '.k......kbbkkkk.',
+    'kBk.kkkkkbbk....',
+    'kBkkBnnnBkbBk...',
+    '.kBBnBBBBBBBk...',
+    '.kbBBBBBBBBBk...',
+    '.kbbbbbbbbBnnk..',
+    '.kkkkkkkkkkkkkk.',
+    '................',
+  ],
+};
+
+export const hob: SpriteDef = {
+  id: 'familiar/hob',
+  rows: [
+    '.......k........',
+    '......kRk.......',
+    '.....kRRrk......',
+    '.....kRRRrk.....',
+    '...kkkRRRRrkkk..',
+    '..knHkkkkkkkHnk.',
+    '..kHHknnnnnkHHk.',
+    '...kkknWnnnnkk..',
+    '.....knnnBnk....',
+    '.....kkBBBkk.ka.',
+    '....kBkwwwkBkak.',
+    '....knkwwwknak..',
+    '.....kkwwwwkk...',
+    '.....kwwwwwak...',
+    '.....kBk.kBk....',
+    '....kkkk.kkkk...',
+  ],
+};
