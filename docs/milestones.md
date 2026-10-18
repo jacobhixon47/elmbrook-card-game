@@ -110,6 +110,7 @@ Later, the Night Market becomes a walkable street the same way (Jacob, Oct 14): 
 ## M5 — Art and audio pass
 
 - Author sprite grids for every codex card (`art:check` shows 0 placeholders); portraits for regulars and patrons.
+  - Card art in batches Jacob reviews (Oct 18): batch 1, twelve ingredients (Mint Sprig to Four-leaf Clover).
 - Backdrops for every scene (painted where possible, see art-pipeline.md): Night Market street, Calendar, Guild Hall, the cottage. The shop window already regrades by season and time of day.
 - Art sheet reviewed for consistency.
 - SFX and music loops wired in, with volume settings.
