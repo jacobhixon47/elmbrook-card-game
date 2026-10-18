@@ -2,7 +2,7 @@ import { seedRng } from '../core/rng';
 import { MODIFIERS, type ModifierId } from '../codex/schema';
 import { ESSENCE_COLOR, type PaletteKey } from './palette';
 import { Pixmap } from './pixmap';
-import { litSprite, roomShell, roomSprite, wizard } from './scenes/cottage-room';
+import { DRESSING_SPRITES, litSprite, roomShell, roomSprite, roomView, wizard } from './scenes/cottage-room';
 import { shopBackdrop } from './scenes/shop';
 import { townBackdrop } from './scenes/town';
 
@@ -309,8 +309,10 @@ export function proceduralTextures(): Record<string, Pixmap> {
   }
   for (const e of Object.keys(ESSENCE_COLOR) as (keyof typeof ESSENCE_COLOR)[]) out[`pip/${e}`] = essencePip(e);
   for (const m of MODIFIERS) out[`badge/${m}`] = modifierBadge(m);
-  // The walkable cottage (M4.5): the room for each season, its furniture plain and lit, and you.
-  for (const season of ['spring', 'summer', 'autumn', 'winter'] as const) out[`room/shell-${season}`] = roomShell(season);
+  // The walkable cottage (M4.5): the room and its window view for each season, its furniture and seasonal dressing plain and lit, and you.
+  out['room/shell'] = roomShell();
+  for (const season of ['spring', 'summer', 'autumn', 'winter'] as const) out[`room/view-${season}`] = roomView(season);
+  for (const id of DRESSING_SPRITES) out[`room/${id}`] = roomSprite(id);
   for (const id of ['bookshelf', 'lectern', 'pinboard', 'calendar', 'wardrobe', 'workbench', 'door', 'hearth', 'bed', 'plant', 'rug']) {
     const sprite = roomSprite(id);
     out[`room/${id}`] = sprite;

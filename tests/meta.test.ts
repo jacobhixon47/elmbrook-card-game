@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { SEASONS, type Season, allCards, almanacMet, CODEX_TABLES, codexMet, almanacUnlocks, ALMANAC_GOALS, buyPerk, newStats, relicPool, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, migrateRun, newProfile, nextSeason, perkBlocked, perkTierOpen, perkTierGoal, PERK_TIERS, CAULDRON_SLOTS, PROFILE_VERSION, recordRun, reduce, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
+import { SEASONS, type Season, allCards, almanacMet, CODEX_TABLES, codexMet, almanacUnlocks, ALMANAC_GOALS, buyPerk, newStats, relicPool, migrateProfile, newRun, SHELF_SLOTS, START_GOLD, FAMILIAR_SLOTS, homeSeason, migrateRun, newProfile, nextSeason, perkBlocked, perkTierOpen, perkTierGoal, PERK_TIERS, CAULDRON_SLOTS, PROFILE_VERSION, recordRun, reduce, replay, REPUTATION, reputationFor, RUN_MIGRATIONS, RUN_VERSION } from '../src/core';
 import { loadProfile, recordFinishedRun, saveProfile } from '../src/profile';
 import { playRun } from '../src/sim/run';
 import { brewing, withHand } from './helpers';
@@ -49,6 +49,21 @@ describe('the profile', () => {
     expect(lost).toMatchObject({ opened: null, yearDone: false, profile: { runs: 1, yearSeasons: [['spring']] } });
     const p = newProfile();
     expect(recordRun(p, end('spring', 'morning')).profile).toBe(p);
+  });
+
+  it('dresses the cottage for the season you play next (GDD §13)', () => {
+    const all = { ...newProfile(), yearSeasons: [[...SEASONS]] };
+    expect(recordRun(all, end('summer', 'victory')).profile.home).toBe('autumn');
+    expect(recordRun({ ...all, home: 'autumn' }, end('autumn', 'game-over')).profile.home).toBe('autumn');
+    // Losing an older season keeps the house in that one; winning Winter brings Spring round again.
+    expect(recordRun({ ...all, home: 'winter' }, end('spring', 'game-over')).profile.home).toBe('spring');
+    expect(recordRun(all, end('winter', 'victory')).profile.home).toBe('spring');
+    // A home season not open in the chosen Year falls back to that Year's newest.
+    expect(homeSeason({ ...all, home: 'winter' })).toBe('winter');
+    expect(homeSeason({ ...newProfile(), yearSeasons: [[...SEASONS], ['spring', 'summer']], year: 2, home: 'winter' })).toBe('summer');
+    // Old saves start in the newest season open; a bad value is repaired.
+    expect(migrateProfile({ ...newProfile(), version: 12, home: undefined, yearSeasons: [['spring', 'summer', 'autumn']] }).home).toBe('autumn');
+    expect(migrateProfile({ ...newProfile(), home: 'monsoon' }).home).toBe('spring');
   });
 
   it('winning Winter completes a Year', () => {

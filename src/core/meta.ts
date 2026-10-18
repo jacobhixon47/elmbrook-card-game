@@ -10,7 +10,7 @@ import { RUN_VERSION, type RunState } from './state';
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 12;
+export const PROFILE_VERSION = 13;
 
 /** Sound settings: volume 0 to 1, and mute. */
 export type SoundSettings = { volume: number; muted: boolean };
@@ -61,6 +61,11 @@ export type Profile = {
   storySeen: string[];
   /** The keepsake box (GDD §13): cards chosen to add to every run's starting deck. */
   keepsakes: string[];
+  /**
+   * The season the cottage is dressed for (GDD §13): the one you'll set out for next. A win moves it
+   * on to the next season, a loss keeps the season you lost in.
+   */
+  home: Season;
 };
 
 export function newProfile(): Profile {
@@ -90,6 +95,7 @@ export function newProfile(): Profile {
     friendship: {},
     storySeen: [],
     keepsakes: [],
+    home: 'spring',
   };
 }
 
@@ -126,6 +132,12 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   10: (p) => ({ ...p, storySeen: [] }),
   // 11 → 12: the keepsake box, empty.
   11: (p) => ({ ...p, keepsakes: [] }),
+  // 12 → 13: the cottage dressed for the newest season open in the chosen Year.
+  12: (p) => {
+    const years = Array.isArray(p.yearSeasons) ? (p.yearSeasons as unknown[][]) : [];
+    const open = years[(typeof p.year === 'number' ? p.year : 1) - 1] ?? [];
+    return { ...p, home: SEASONS.filter((x) => open.includes(x)).at(-1) ?? 'spring' };
+  },
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -183,6 +195,7 @@ function sanitize(p: Raw): Profile {
     cauldronWins: Array.isArray(p.cauldronWins) ? [...codex.cauldrons.keys()].filter((id) => (p.cauldronWins as unknown[]).includes(id)) : [],
     storySeen: Array.isArray(p.storySeen) ? allStoryKeys().filter((k) => (p.storySeen as unknown[]).includes(k)) : [],
     keepsakes: Array.isArray(p.keepsakes) ? [...new Set((p.keepsakes as unknown[]).filter((k): k is string => typeof k === 'string' && allKeepsakes().includes(k)))].slice(0, KEEPSAKE_SLOTS) : [],
+    home: SEASONS.includes(p.home as Season) ? (p.home as Season) : fresh.home,
     friendship: Object.fromEntries([...codex.regulars.keys()].map((id) => [id, count((p.friendship as Raw | undefined)?.[id])] as const).filter(([, n]) => n > 0)),
   };
 }
@@ -281,6 +294,8 @@ export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' 
     // Friendship earned this run banks, won or lost.
     friendship: bankFriendship(profile.friendship, s.friendship ?? {}),
   };
+  // The cottage is dressed for the next season you'll play: the one you lost in, or the one after a win.
+  p.home = s.phase === 'game-over' ? s.season : (nextSeason(s.season) ?? 'spring');
   if (s.phase === 'game-over') return { ...same, profile: p, reputation, almanac, perkTiers: tiersOpened(profile, p), ...newlyOpen(profile, p) };
   p.wins[s.season]++;
   const year = Math.min(p.yearSeasons.length, s.year ?? 1);
@@ -312,6 +327,12 @@ export function loopOpen(p: Pick<Profile, 'years' | 'yearSeasons' | 'almanac'>):
 
 /** The seasons open in a Year (the chosen one by default). */
 export const seasonsOf = (p: Pick<Profile, 'yearSeasons' | 'year'>, year = p.year): Season[] => p.yearSeasons[year - 1] ?? [];
+
+/** The season the cottage is dressed for: `home` if it's open in the chosen Year, else that Year's newest. */
+export function homeSeason(p: Pick<Profile, 'yearSeasons' | 'year' | 'home'>): Season {
+  const open = seasonsOf(p);
+  return open.includes(p.home) ? p.home : (open.at(-1) ?? 'spring');
+}
 
 /** The boon of the chosen Year, if it has one. */
 export const boonOf = (p: Pick<Profile, 'boons' | 'year'>): string | null => p.boons[p.year - 1] ?? null;

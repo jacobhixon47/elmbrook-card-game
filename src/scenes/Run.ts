@@ -1993,7 +1993,7 @@ export class Run extends Phaser.Scene {
     const more = [perkNews(out), kitNews(out)].filter(Boolean).join(' ');
     if (more) this.text(320, news ? 240 : 222, more, { size: 7, color: 'Y', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
     this.add2(button(this, 270, 296, 'Play again', () => this.newRun(s.season), { w: 80 }));
-    this.add2(button(this, 370, 296, 'Home', () => this.scene.start('Cottage', {}), { w: 80, color: 'Y' }));
+    this.add2(button(this, 370, 296, 'Home', () => this.scene.start('Cottage', { home: s.season }), { w: 80, color: 'Y' }));
   }
 
   /** Play the same season again, or go home to the cottage to choose another. */
@@ -2007,7 +2007,7 @@ export class Run extends Phaser.Scene {
     }
     if (kitNews(out)) this.text(320, 132, kitNews(out), { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5);
     this.add2(button(this, 270, 190, again, () => this.newRun(s.season), { w: 80, color: 'Y' }));
-    this.add2(button(this, 370, 190, 'Home', () => this.scene.start('Cottage', {}), { w: 80 }));
+    this.add2(button(this, 370, 190, 'Home', () => this.scene.start('Cottage', { home: s.season }), { w: 80 }));
   }
 
   /**
