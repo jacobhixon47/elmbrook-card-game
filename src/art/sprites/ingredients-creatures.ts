@@ -1,0 +1,246 @@
+import type { SpriteDef } from '../sprite';
+
+// 16x16 ingredient icons (creatures). Shown 1x in lists and 2x on cards.
+// Light comes from the top-left; outlines use 'k', never pure black.
+
+export const gingerRoot: SpriteDef = {
+  id: 'ingredient/ginger-root',
+  rows: [
+    '................',
+    '..........kk....',
+    '.........kIak...',
+    '.........kaHk...',
+    '...kk...kaaHk...',
+    '..kIak.kaaHk....',
+    '..kaHkkaHaHk.kk.',
+    '...kaaaaHaHkkaIk',
+    '..kaWaaaHaaaaaHk',
+    '.kaaaaHaaaHaHHk.',
+    'kIaaaHHaaaHHkk..',
+    '.kkHHkkHHHkk....',
+    '...kk.kHHk......',
+    '.......kk.......',
+    '................',
+    '................',
+  ],
+};
+
+export const hollyberry: SpriteDef = {
+  id: 'ingredient/hollyberry',
+  rows: [
+    '................',
+    '.........k..k...',
+    '........kGkkGk..',
+    '.......kGlGlGGk.',
+    '......kGlGGGGk..',
+    '.....kGGGGgGGk..',
+    '......kkgkkkk...',
+    '...kkkk.kkkk....',
+    '..kWRRRkWRRRk...',
+    '..kRRRrkRRRrk...',
+    '..kRRkkkkRrrk...',
+    '...kkWRRRkkk....',
+    '....kRRRrk......',
+    '....kRRrrk......',
+    '.....kkkk.......',
+    '................',
+  ],
+};
+
+export const frostcap: SpriteDef = {
+  id: 'ingredient/frostcap',
+  rows: [
+    '................',
+    '................',
+    '......kkkk......',
+    '....kkWWWWkk....',
+    '...kWWWwWWWwk...',
+    '..kWwWWWWwWWWk..',
+    '..kcWcWWcWWcck..',
+    '.kUcUcUcUUcUUuk.',
+    '.kUUUUUUUUUUUuk.',
+    '.kkuuuuuuuuuukk.',
+    '....kkkmmekkk...',
+    '......kmmek.....',
+    '......kmmek.....',
+    '.....kmmmmek....',
+    '.....kkkkkkk....',
+    '................',
+  ],
+};
+
+export const larkFeather: SpriteDef = {
+  id: 'ingredient/lark-feather',
+  rows: [
+    '.........kk.....',
+    '........kawk....',
+    '.......kaawnk...',
+    '......kaBawnnk..',
+    '......kaaawnbk..',
+    '.....kaBaawnnk..',
+    '.....kaaawnnbk..',
+    '.....kakawnnnk..',
+    '.....kaBawnbk...',
+    '.....kaawnnk....',
+    '......kawnk.....',
+    '.......kwk......',
+    '.......kwk......',
+    '......kwk.......',
+    '......kk........',
+    '................',
+  ],
+};
+
+export const mandrake: SpriteDef = {
+  id: 'ingredient/mandrake',
+  rows: [
+    '......k..k......',
+    '....kklkklkk....',
+    '...kGlGklGlGk...',
+    '....kkGGGGkk....',
+    '.....kkkkkk.....',
+    '....kaaaaaHk....',
+    '...kakaaaakHk...',
+    '...kaakaakaHk...',
+    '.kkaaaaaaaaHkk..',
+    'kak.aaakkaaH.kHk',
+    '.k.kaakaakaHk.k.',
+    '...kaaaaaaHHk...',
+    '....kHHkHHhk....',
+    '....khk.khhk....',
+    '...khk...khk....',
+    '...kk.....kk....',
+  ],
+};
+
+export const crowFeather: SpriteDef = {
+  id: 'ingredient/crow-feather',
+  rows: [
+    '.....kk.........',
+    '....kvPk........',
+    '...kpWPPk.......',
+    '..kppvPqPk......',
+    '..kqpvPPPk......',
+    '..kppvPPqPk.....',
+    '..kqppvPPPk.....',
+    '..kpppvPkPk.....',
+    '...kppvPqPk.....',
+    '....kqpvPPk.....',
+    '.....kpvPk......',
+    '......kvk.......',
+    '......kvk.......',
+    '.......kvk......',
+    '........kk......',
+    '................',
+  ],
+};
+
+export const salamanderScale: SpriteDef = {
+  id: 'ingredient/salamander-scale',
+  rows: [
+    '................',
+    '.y..............',
+    '....kkkk........',
+    '...kYYYYkk...y..',
+    '..kYooooYyk.....',
+    '.kYoWRRRooyk....',
+    '.kYoRrrrRRoyk...',
+    '.kYoRrRRrRRoyk..',
+    '.kyoRrRWRrRRoyk.',
+    '..kyoRrRRRrRRyk.',
+    '...kyoRrRRRrRyk.',
+    '....kyoRrrrRryk.',
+    '.....kyoRRRryk..',
+    '......kkyyyyk...',
+    '.........kkk.y..',
+    '................',
+  ],
+};
+
+export const shadowroot: SpriteDef = {
+  id: 'ingredient/shadowroot',
+  rows: [
+    '.Q.......QQ.....',
+    '..Q..kkk...Q....',
+    '..Q.kPvpk..Q....',
+    '...kPvppk.Q.....',
+    '...kPpppk.......',
+    '....kqPpPk......',
+    '.....kqPvpk.....',
+    '.....kppvPk..Q..',
+    '....kpPpqk..Q...',
+    '...kPvpqk...Q...',
+    '...kPppqk.......',
+    '....kqPpPk......',
+    '...kkkqPpqkk....',
+    '..kpk.kqpkPpk...',
+    '.kpk..kpk..kpk..',
+    '..k....k....k...',
+  ],
+};
+
+export const hollySprig: SpriteDef = {
+  id: 'ingredient/holly-sprig',
+  rows: [
+    '.kk..........kk.',
+    'kWlk.k....k.klWk',
+    '.klGkGk..kGkGlk.',
+    'kGlGGGlk.lGGGlGk',
+    '.kGlGGgk.kgGGlk.',
+    '..kGGGggkggGGGk.',
+    '.kGGgGGgkgGGgGk.',
+    '..kkGGGgkgGGkk..',
+    '....kkGgkgGk....',
+    '.....kkRkRkk....',
+    '....kWRkRWRk....',
+    '....kRrkkRrk....',
+    '.....kkRRkk.....',
+    '......kWrk......',
+    '.......kk.......',
+    '................',
+  ],
+};
+
+export const moonmothWing: SpriteDef = {
+  id: 'ingredient/moonmoth-wing',
+  rows: [
+    '................',
+    '.kkkkk..........',
+    'kvvvvvkkk.......',
+    'kmLmmmmmmkk.....',
+    'ktLLmmmmmmmk....',
+    'kttLmmyymmmmk...',
+    '.kttmykWymmmk...',
+    '.kttmykkymmk....',
+    '..kttmyymmmk....',
+    '...kttmmmmk.....',
+    '....kttmmk......',
+    '.....kttmk......',
+    '......ktmk......',
+    '.......ktmk.....',
+    '........kmmk....',
+    '.........kk.....',
+  ],
+};
+
+export const graveMoss: SpriteDef = {
+  id: 'ingredient/grave-moss',
+  rows: [
+    '................',
+    '..m.........L...',
+    '.....kkkkk......',
+    '....keeeeSk.....',
+    '...keSSSSSSk....',
+    '...keSSkSSSk..m.',
+    '...keSkkkSSk....',
+    '...keSSkSSsk....',
+    '...keSSkSSsk....',
+    '..LkeSSSSSsk....',
+    '..kLleSSSSsk.L..',
+    '.kLlGlSSSssk....',
+    'kLlGGlGlLsskk...',
+    'kLlGgGGlGlGLlk..',
+    'kGGgGgGGgGgGGk..',
+    '.kkkkkkkkkkkkk..',
+  ],
+};
