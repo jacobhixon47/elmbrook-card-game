@@ -12,7 +12,8 @@ const BARS = 10;
  * along the bars), sound on or off, and whether each run opens with its season's scene screen.
  * Returns the container; `onClose` runs after it is destroyed.
  */
-export function openSettings(scene: Phaser.Scene, onClose: () => void = () => undefined): Phaser.GameObjects.Container {
+/** `onTitle`, when given, adds a button back to the title screen (from the cottage, where Esc opens Settings). */
+export function openSettings(scene: Phaser.Scene, onClose: () => void = () => undefined, onTitle?: () => void): Phaser.GameObjects.Container {
   const c = scene.add.container(0, 0).setDepth(1000);
   // Swallows clicks meant for the screen underneath.
   c.add(scene.add.rectangle(0, 0, 640, 360, hex('k'), 0.5).setOrigin(0).setInteractive());
@@ -70,7 +71,12 @@ export function openSettings(scene: Phaser.Scene, onClose: () => void = () => un
     // Next frame too: Phaser sends 'keydown-ESC' before 'keydown', and the scene's own Esc must still see Settings open.
     scene.time.delayedCall(0, onClose);
   };
-  c.add(button(scene, 320, 244, 'Done', close, { w: 64, color: 'Y' }));
+  if (onTitle) {
+    c.add(button(scene, 280, 244, 'Title screen', onTitle, { w: 72 }));
+    c.add(button(scene, 364, 244, 'Done', close, { w: 64, color: 'Y' }));
+  } else {
+    c.add(button(scene, 320, 244, 'Done', close, { w: 64, color: 'Y' }));
+  }
   // Next frame, so the Esc that opened it doesn't close it too.
   scene.time.delayedCall(0, () => c.active && scene.input.keyboard?.once('keydown-ESC', close));
   show();
