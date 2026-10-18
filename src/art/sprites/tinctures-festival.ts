@@ -200,3 +200,25 @@ export const gildedCoin: SpriteDef = {
     '................',
   ],
 };
+
+export const royalJelly: SpriteDef = {
+  id: 'tincture/royal-jelly',
+  rows: [
+    '................',
+    '.....k.k.k......',
+    '....kykykyk.....',
+    '....kyyyyyyk....',
+    '....kkkkkkkk....',
+    '...kBnnnnnnBk...',
+    '...kkkkkkkkkk...',
+    '...kcwWwwwwck...',
+    '..kcwWwwwwwwck..',
+    '..kcwwwwwwwack..',
+    '..kcwwwaaaaack..',
+    '..kcwwaaaaaack..',
+    '..kcwaaaaaaack..',
+    '...kccccccccck..',
+    '....kkkkkkkkk...',
+    '................',
+  ],
+};

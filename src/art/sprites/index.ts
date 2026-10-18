@@ -4,6 +4,9 @@ import * as creatures from './ingredients-creatures';
 import * as flowers from './ingredients-flowers';
 import * as harvest from './ingredients-harvest';
 import * as minerals from './ingredients-minerals';
+import * as hearthFamiliars from './familiars-hearth';
+import * as fieldFamiliars from './familiars-field';
+import * as nightFamiliars from './familiars-night';
 import { potions } from './potions';
 import * as craft from './tinctures-craft';
 import * as fair from './tinctures-fair';
@@ -21,6 +24,9 @@ export const SPRITES: readonly SpriteDef[] = [
   ...Object.values(fair),
   ...Object.values(festival),
   ...Object.values(omens),
+  ...Object.values(hearthFamiliars),
+  ...Object.values(fieldFamiliars),
+  ...Object.values(nightFamiliars),
   ...potions,
 ];
 
