@@ -16,7 +16,7 @@ export type Rect = { x: number; y: number; w: number; h: number };
 export type Point = { x: number; y: number };
 export type Facing = 'down' | 'up' | 'left' | 'right';
 
-export type StationId = 'bookshelf' | 'lectern' | 'pinboard' | 'calendar' | 'wardrobe' | 'workbench' | 'door';
+export type StationId = 'bookshelf' | 'lectern' | 'pinboard' | 'calendar' | 'cauldron' | 'workbench' | 'door';
 
 export type Station = {
   id: StationId;
@@ -32,21 +32,28 @@ export type Station = {
 
 /** Each system's spot in the room (GDD §13). */
 export const STATIONS: readonly Station[] = [
-  { id: 'bookshelf', verb: 'Read the Codex', at: { x: 14, y: 8 }, solid: { x: 14, y: 48, w: 36, h: 12 }, zone: { x: 10, y: 60, w: 46, h: 18 } },
-  { id: 'lectern', verb: 'Open the Almanac', at: { x: 62, y: 48 }, solid: { x: 64, y: 62, w: 12, h: 8 }, zone: { x: 58, y: 70, w: 26, h: 18 } },
-  { id: 'pinboard', verb: 'Keepsake box', at: { x: 96, y: 10 }, solid: null, zone: { x: 92, y: 48, w: 36, h: 16 } },
-  { id: 'calendar', verb: 'Choose a Year', at: { x: 200, y: 12 }, solid: null, zone: { x: 194, y: 48, w: 30, h: 16 } },
-  { id: 'wardrobe', verb: 'Witch and cauldron', at: { x: 270, y: 8 }, solid: { x: 270, y: 50, w: 34, h: 12 }, zone: { x: 264, y: 62, w: 44, h: 18 } },
-  { id: 'workbench', verb: 'Spend Reputation', at: { x: 10, y: 94 }, solid: { x: 10, y: 108, w: 40, h: 16 }, zone: { x: 50, y: 104, w: 20, h: 24 } },
+  { id: 'bookshelf', verb: 'Read the Codex', at: { x: 12, y: 6 }, solid: { x: 12, y: 48, w: 36, h: 12 }, zone: { x: 8, y: 60, w: 46, h: 18 } },
+  { id: 'lectern', verb: 'Open the Almanac', at: { x: 64, y: 44 }, solid: { x: 66, y: 60, w: 14, h: 8 }, zone: { x: 60, y: 68, w: 28, h: 18 } },
+  { id: 'pinboard', verb: 'Keepsake box', at: { x: 98, y: 9 }, solid: null, zone: { x: 94, y: 48, w: 34, h: 16 } },
+  { id: 'calendar', verb: 'Choose a Year', at: { x: 199, y: 11 }, solid: null, zone: { x: 192, y: 48, w: 30, h: 16 } },
+  { id: 'cauldron', verb: 'Witch and cauldron', at: { x: 272, y: 42 }, solid: { x: 274, y: 62, w: 32, h: 12 }, zone: { x: 268, y: 74, w: 42, h: 16 } },
+  { id: 'workbench', verb: 'Spend Reputation', at: { x: 10, y: 90 }, solid: { x: 10, y: 106, w: 40, h: 16 }, zone: { x: 50, y: 102, w: 20, h: 24 } },
   { id: 'door', verb: 'Set out', at: { x: 144, y: 160 }, solid: null, zone: { x: 140, y: 150, w: 40, h: 22 } },
 ];
 
-/** Things in the room that only take up floor: the hearth, the bed, a plant. */
+/** The hearth in the chimney breast at the middle of the back wall: where the fire sits. */
+export const HEARTH: Point = { x: 160, y: 40 };
+
+/** Furniture that only takes up floor: rugs, the cat, the armchair, the bed, a plant. */
 export const PROPS: readonly { id: string; at: Point; solid: Rect | null }[] = [
-  { id: 'hearth', at: { x: 278, y: 92 }, solid: { x: 280, y: 116, w: 32, h: 16 } },
-  { id: 'bed', at: { x: 12, y: 136 }, solid: { x: 12, y: 142, w: 34, h: 28 } },
-  { id: 'plant', at: { x: 290, y: 148 }, solid: { x: 292, y: 162, w: 14, h: 8 } },
-  { id: 'rug', at: { x: 116, y: 92 }, solid: null },
+  { id: 'rug', at: { x: 106, y: 66 }, solid: null },
+  { id: 'round-rug', at: { x: 130, y: 114 }, solid: null },
+  { id: 'nightstand', at: { x: 51, y: 120 }, solid: { x: 52, y: 130, w: 10, h: 6 } },
+  { id: 'cat', at: { x: 118, y: 72 }, solid: { x: 119, y: 77, w: 14, h: 5 } },
+  { id: 'armchair', at: { x: 218, y: 74 }, solid: { x: 220, y: 92, w: 24, h: 10 } },
+  { id: 'side-table', at: { x: 290, y: 98 }, solid: { x: 290, y: 110, w: 20, h: 8 } },
+  { id: 'bed', at: { x: 12, y: 132 }, solid: { x: 12, y: 140, w: 36, h: 30 } },
+  { id: 'plant', at: { x: 290, y: 146 }, solid: { x: 292, y: 162, w: 14, h: 8 } },
 ];
 
 /**
@@ -55,21 +62,25 @@ export const PROPS: readonly { id: string; at: Point; solid: Rect | null }[] = [
  */
 export const DRESSING: Record<Season, readonly { id: string; at: Point; solid: Rect | null; flat?: boolean }[]> = {
   spring: [
-    { id: 'garland-spring', at: { x: 129, y: 1 }, solid: null },
+    { id: 'garland-spring', at: { x: 51, y: 1 }, solid: null },
+    { id: 'garland-spring', at: { x: 219, y: 1 }, solid: null },
     { id: 'blossoms', at: { x: 110, y: 138 }, solid: { x: 115, y: 162, w: 10, h: 6 } },
   ],
   summer: [
-    { id: 'firefly-jar', at: { x: 165, y: 23 }, solid: null },
+    { id: 'firefly-jar', at: { x: 237, y: 18 }, solid: null },
     { id: 'sunflowers', at: { x: 192, y: 144 }, solid: { x: 195, y: 162, w: 10, h: 6 } },
   ],
   autumn: [
-    { id: 'garland-autumn', at: { x: 129, y: 1 }, solid: null },
-    { id: 'pumpkins', at: { x: 252, y: 120 }, solid: { x: 253, y: 126, w: 22, h: 8 } },
+    { id: 'garland-autumn', at: { x: 51, y: 1 }, solid: null },
+    { id: 'garland-autumn', at: { x: 219, y: 1 }, solid: null },
+    { id: 'pumpkins', at: { x: 108, y: 154 }, solid: { x: 109, y: 160, w: 22, h: 8 } },
     { id: 'leaves', at: { x: 140, y: 156 }, solid: null, flat: true },
   ],
   winter: [
-    { id: 'garland-winter', at: { x: 129, y: 1 }, solid: null },
-    { id: 'sill-snow', at: { x: 132, y: 32 }, solid: null },
+    { id: 'garland-winter', at: { x: 51, y: 1 }, solid: null },
+    { id: 'garland-winter', at: { x: 219, y: 1 }, solid: null },
+    { id: 'sill-snow', at: { x: 51, y: 27 }, solid: null },
+    { id: 'sill-snow', at: { x: 219, y: 27 }, solid: null },
     { id: 'snowdrift', at: { x: 138, y: 164 }, solid: null, flat: true },
   ],
 };
@@ -79,8 +90,18 @@ export const SEASON_LIGHT: Record<Season, { color: 'L' | 'Y' | 'o' | 'x'; alpha:
   spring: { color: 'L', alpha: 0.06 },
   summer: { color: 'Y', alpha: 0.08 },
   autumn: { color: 'o', alpha: 0.12 },
-  winter: { color: 'x', alpha: 0.26 },
+  winter: { color: 'x', alpha: 0.14 },
 };
+
+/** Whether you're standing on a rug, where footsteps are soft: the long one by the fire or the round one. */
+export function onRug(p: Point): boolean {
+  const rug = PROPS.find((x) => x.id === 'rug')!.at;
+  const round = PROPS.find((x) => x.id === 'round-rug')!.at;
+  const inRound = ((p.x - round.x - 30) / 30) ** 2 + ((p.y - round.y - 14) / 14) ** 2 <= 1;
+  return inRound || (p.x >= rug.x && p.x <= rug.x + RUG.w && p.y >= rug.y && p.y <= rug.y + RUG.h);
+}
+/** The rug's size, in room pixels. */
+export const RUG = { w: 104, h: 40 };
 
 /** Where you stand when you come in: just inside the front door, facing in. */
 export const SPAWN: Point = { x: 160, y: 148 };
@@ -97,6 +118,8 @@ const WALLS: readonly Rect[] = [
   // The bottom wall, with the doorway in the middle.
   { x: 0, y: 172, w: 144, h: 8 },
   { x: 176, y: 172, w: 144, h: 8 },
+  // The hearth's stone apron, in front of the fire.
+  { x: 130, y: 48, w: 60, h: 10 },
   // The doorstep: the door is used, not walked through.
   { x: 144, y: 174, w: 32, h: 6 },
 ];

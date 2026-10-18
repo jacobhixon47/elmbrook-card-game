@@ -73,6 +73,18 @@ export const SOUNDS = {
   levelUp: arpeggio([NOTE.E5, NOTE.A5, NOTE.C6, NOTE.E6], { step: 0.09, dur: 0.3, wave: 'sine', volume: 0.28, delay: 0.25 }),
   /** A Curse taken. */
   curse: [{ wave: 'saw', freq: 220, to: 150, dur: 0.35, volume: 0.14 }, { wave: 'sine', freq: 233, to: 155, dur: 0.35, volume: 0.2 }],
+  /** A footstep in the cottage: a soft tap on the boards (quieter on the rug). */
+  step: [
+    { wave: 'noise', freq: 0, dur: 0.04, volume: 0.05 },
+    { wave: 'triangle', freq: 150, to: 95, dur: 0.05, volume: 0.14 },
+  ],
+  /** The hearth crackling, now and then. */
+  crackle: [
+    { wave: 'noise', freq: 0, dur: 0.02, volume: 0.06 },
+    { wave: 'noise', freq: 0, dur: 0.015, delay: 0.07, volume: 0.04 },
+  ],
+  /** Coming up to something you can use. */
+  near: [{ wave: 'sine', freq: NOTE.A5, to: NOTE.E6, dur: 0.07, volume: 0.1 }],
   /** The month won. */
   win: [
     ...arpeggio([NOTE.C5, NOTE.E5, NOTE.G5, NOTE.C6], { step: 0.12, dur: 0.3, volume: 0.35 }),

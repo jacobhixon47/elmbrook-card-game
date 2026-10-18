@@ -1,1 +1,1 @@
-{"scene": "Cottage", "profile": {"version": 2, "tutorialDone": true, "seasons": ["spring", "summer"], "runs": 3, "wins": {"spring": 1}}, "ui": {"kit": {"witch": "frost-witch", "cauldron": "silver"}, "station": "wardrobe"}}
+{"scene": "Cottage", "profile": {"version": 2, "tutorialDone": true, "seasons": ["spring", "summer"], "runs": 3, "wins": {"spring": 1}}, "ui": {"kit": {"witch": "frost-witch", "cauldron": "silver"}, "station": "cauldron"}}

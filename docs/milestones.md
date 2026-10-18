@@ -103,7 +103,7 @@ Once Reputation, the Almanac, the Codex and witch selection exist, the cottage b
 
 - ✅ Part 1: the room, walking (WASD or arrows), and a station for every between-runs screen, used with F or Space behind a prompt and a glowing outline.
 - ✅ Part 2: the house dressed for the season you'll play next (window, dressing, light), and coming home through the door.
-- Part 3: polish (footsteps, idle touches).
+- ✅ Part 3: polish: footsteps (soft on a rug), a chime by stations, the fire crackling, and idle touches; and the witch's cottage look from Jacob's concept art (stone, timber, candlelight, a cauldron and a cat).
 
 Later, the Night Market becomes a walkable street the same way (Jacob, Oct 14): stalls you walk up to, dressed for the season, so a Snowed In night is literally drifts over the closed stalls with only the Hearth Trader's glow lit.
 
