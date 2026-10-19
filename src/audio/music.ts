@@ -4,9 +4,9 @@ import { renderSound, type Voice, type Wave } from './synth';
 // Music as code (M5, Jacob chose code-made loops, Oct 19), the way the sound effects are: each tune
 // is a few bars of chords and a melody, written out as notes, and rendered by `synth.ts` into one
 // seamless loop. Every place has its own tune for each season (Jacob, Oct 19): spring serene and
-// uplifting, summer a warm summer night (a little faster, no drums), autumn calm, winter major (Jacob)
-// and staccato. The season sets the instruments and the touch; each tune sets its key, tempo, meter
-// and accompaniment. Pure and deterministic, so tests can check the loops.
+// uplifting, summer a warm summer night (a little faster, no drums), autumn calm, winter major and
+// staccato. The Night Shift and the Night Market are in minor keys all year. The season sets the
+// instruments and the touch; each tune sets its key, tempo, meter and accompaniment. Pure and deterministic, so tests can check the loops.
 
 export type TuneId = 'title' | 'shop' | 'night' | 'market' | 'cottage';
 
@@ -90,17 +90,17 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
     },
   },
   night: {
-    // F major, wide and still.
+    // F minor, wide and still.
     spring: {
-      bpm: 70, meter: 4, feel: 'pad', chords: ['F', 'C', 'Dm', 'Bb', 'F', 'C', 'Bb', 'C'],
-      melody: `C5 - - - - - F5 - | G5 - - - E5 - - - | F5 - - - A5 - - - | D5 - - - - - - -
-               C6 - - - A5 - - - | G5 - - - E5 - G5 - | F5 - - - D5 - - - | E5 - - - - - . .`,
+      bpm: 70, meter: 4, feel: 'pad', chords: ['Fm', 'C', 'Db', 'Bbm', 'Fm', 'C', 'Bbm', 'C'],
+      melody: `C5 - - - - - F5 - | G5 - - - E5 - - - | F5 - - - Ab5 - - - | Db5 - - - - - - -
+               C6 - - - Ab5 - - - | G5 - - - E5 - G5 - | F5 - - - Db5 - - - | E5 - - - - - . .`,
     },
-    // Eb major, fireflies over warm grass.
+    // C minor, fireflies over warm grass.
     summer: {
-      bpm: 84, meter: 4, feel: 'harp', chords: ['Eb', 'Cm', 'Ab', 'Bb', 'Eb', 'Gm', 'Ab', 'Bb'],
-      melody: `G5 - - - Bb5 - - - | C6 - - - G5 - Eb5 - | F5 - - - Ab5 - C6 - | Bb5 - - - - - . .
-               Eb6 - - - D6 - Bb5 - | G5 - - - Bb5 - D6 - | C6 - Ab5 - F5 - Eb5 - | D5 - - - F5 - - -`,
+      bpm: 84, meter: 4, feel: 'harp', chords: ['Cm', 'Ab', 'Fm', 'G', 'Cm', 'Eb', 'Fm', 'G'],
+      melody: `G5 - - - C6 - - - | C6 - - - Ab5 - Eb5 - | F5 - - - Ab5 - C6 - | B5 - - - - - . .
+               Eb6 - - - D6 - C6 - | G5 - - - Bb5 - Eb6 - | C6 - Ab5 - F5 - Ab5 - | G5 - - - B4 - D5 -`,
     },
     // D minor, slow, under the lamps.
     autumn: {
@@ -108,37 +108,37 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
       melody: `A4 - - - - - D5 - | F5 - - - D5 - - - | C5 - - - F5 - A5 - | G5 - - - - - . .
                F5 - - - E5 - D5 - | D5 - - - Bb4 - - - | G4 - Bb4 - D5 - G5 - | E5 - - - C#5 - - -`,
     },
-    // C major, a music box by the stove.
+    // A minor, a music box by the stove.
     winter: {
-      bpm: 84, meter: 4, feel: 'box', chords: ['C', 'Am', 'F', 'G', 'C', 'F', 'G', 'G'],
-      melody: `G5 . . . E5 . . . | C6 . . . A5 . . . | A5 . F5 . C5 . . . | D5 . . . B4 . . .
-               C5 . E5 . G5 . C6 . | A5 . . . F5 . C5 . | B4 . D5 . G5 . F5 . | D5 . . . . . . .`,
+      bpm: 84, meter: 4, feel: 'box', chords: ['Am', 'F', 'Dm', 'E', 'Am', 'Dm', 'E', 'E'],
+      melody: `E5 . . . C5 . . . | A5 . . . F5 . . . | F5 . D5 . A4 . . . | B4 . . . G#4 . . .
+               A4 . C5 . E5 . A5 . | F5 . . . D5 . A4 . | G#4 . B4 . E5 . D5 . | B4 . . . . . . .`,
     },
   },
   market: {
-    // C major, a gentle waltz.
+    // A minor, a gentle waltz.
     spring: {
-      bpm: 96, meter: 3, feel: 'waltz', chords: ['C', 'Am', 'F', 'G', 'C', 'Am', 'Dm', 'G'],
-      melody: `E5 - - - G5 - | A5 - - - C6 - | C6 - A5 - F5 - | G5 - - - - -
-               E5 - G5 - C6 - | B5 - A5 - E5 - | F5 - A5 - D6 - | B5 - - - D5 -`,
+      bpm: 96, meter: 3, feel: 'waltz', chords: ['Am', 'F', 'Dm', 'E', 'Am', 'F', 'Dm', 'E'],
+      melody: `E5 - - - A5 - | A5 - - - C6 - | D6 - A5 - F5 - | G#5 - - - - -
+               E5 - A5 - C6 - | C6 - A5 - F5 - | F5 - A5 - D6 - | B5 - - - G#5 -`,
     },
-    // G major, a slow dance under the lanterns.
+    // E minor, a slow dance under the lanterns.
     summer: {
-      bpm: 108, meter: 3, feel: 'waltz', chords: ['G', 'C', 'D', 'G', 'Em', 'C', 'D', 'G'],
-      melody: `D5 - G5 - B5 - | C6 - - - G5 - | A5 - F#5 - D5 - | G5 - - - B4 -
-               E5 - G5 - B5 - | C6 - E6 - C6 - | A5 - - - F#5 - | G5 - - - - -`,
+      bpm: 108, meter: 3, feel: 'waltz', chords: ['Em', 'Am', 'B', 'Em', 'C', 'Am', 'B', 'Em'],
+      melody: `B4 - E5 - G5 - | A5 - - - E5 - | F#5 - D#5 - B4 - | E5 - - - G5 -
+               E5 - G5 - B5 - | C6 - E6 - C6 - | B5 - - - D#5 - | E5 - - - - -`,
     },
-    // F major, a slow waltz.
+    // G minor, a slow waltz.
     autumn: {
-      bpm: 84, meter: 3, feel: 'waltz', chords: ['F', 'C', 'Dm', 'Bb', 'F', 'C', 'Bb', 'C'],
-      melody: `C5 - F5 - A5 - | G5 - - - E5 - | F5 - A5 - D6 - | Bb5 - - - D5 -
-               A5 - G5 - F5 - | E5 - G5 - C6 - | D6 - Bb5 - F5 - | G5 - - - . .`,
+      bpm: 84, meter: 3, feel: 'waltz', chords: ['Gm', 'D', 'Eb', 'Cm', 'Gm', 'D', 'Cm', 'D'],
+      melody: `D5 - G5 - Bb5 - | A5 - - - F#5 - | G5 - Bb5 - Eb6 - | Eb6 - - - G5 -
+               Bb5 - A5 - G5 - | F#5 - A5 - D6 - | Eb6 - C6 - G5 - | A5 - - - . .`,
     },
-    // D major, a waltz on tiptoe.
+    // D harmonic minor, a waltz on tiptoe.
     winter: {
-      bpm: 108, meter: 3, feel: 'waltz', chords: ['D', 'A', 'D', 'G', 'D', 'A', 'G', 'A'],
-      melody: `D5 . F#5 . A5 . | C#5 . E5 . A5 . | F#5 . E5 . D5 . | G5 . B5 . D6 .
-               A5 . F#5 . D5 . | E5 . C#5 . A4 . | B4 . D5 . G5 . | E5 . . . C#5 .`,
+      bpm: 108, meter: 3, feel: 'waltz', chords: ['Dm', 'A', 'Dm', 'Gm', 'Dm', 'A', 'Bb', 'A'],
+      melody: `D5 . F5 . A5 . | C#5 . E5 . A5 . | F5 . E5 . D5 . | G5 . Bb5 . D6 .
+               A5 . F5 . D5 . | E5 . C#5 . A4 . | Bb4 . D5 . F5 . | E5 . . . C#5 .`,
     },
   },
   cottage: {
