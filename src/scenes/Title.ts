@@ -4,7 +4,8 @@ import { markReady } from '../debug/hook';
 import { titleBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { noAnim, type Fixture } from '../debug/params';
-import { migrateProfile, type RunState } from '../core';
+import { homeSeason, migrateProfile, type RunState } from '../core';
+import { playMusic } from '../audio/sfx';
 import { loadProfile } from '../profile';
 import { clearRun, loadRun } from '../save';
 import { dayLabel } from '../view/describe';
@@ -21,6 +22,7 @@ export class Title extends Phaser.Scene {
 
   create(data: { fixture?: Fixture | null } = {}) {
     pixelCamera(this);
+    playMusic('title', homeSeason(loadProfile()));
     const bg = titleBackdrop();
     this.add.image(0, 0, bg.texture).setOrigin(0);
     for (const l of bg.lights) {

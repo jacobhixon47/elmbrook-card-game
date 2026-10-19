@@ -94,4 +94,6 @@ Sound effects are code too, like sprites (the early sound pass, pulled forward f
 - `src/audio/sfx.ts` plays them through Web Audio at the profile's volume, after the first click or key (browsers hold audio until then), and does nothing where there is no audio.
 - The brewing animation plays its own sounds in time with the numbers: a tick a semitone higher per step, bubbles per ingredient, then the tier's jingle and coins when it fills an order.
 
-To add a sound, add its voices to `SOUNDS` and a rule to `cuesFor` (or a `play` call where the animation is). Music comes in M5: CC0 or self-made loops, tracked with sources and licences in `docs/audio.md`.
+To add a sound, add its voices to `SOUNDS` and a rule to `cuesFor` (or a `play` call where the animation is).
+
+Music is code the same way (M5): `src/audio/music.ts` writes each tune (`TUNES`) as a chord a bar and a melody an eighth note a token (`E5 - G5 .`), and `BANDS` says which waves play the melody, the arpeggio and the bass each season. `renderTune` renders one pass and folds the ringing tail over the start, so the loop has no seam. `playMusic(id, season)` in `sfx.ts` crossfades to it on its own volume. Any recorded track (CC0 or made for the game) would be listed with its source and licence in `docs/audio.md`.

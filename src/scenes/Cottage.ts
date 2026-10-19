@@ -9,7 +9,7 @@ import { framedPortrait } from '../view/portrait';
 import { unlockName } from '../view/describe';
 import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
 import { backdropTexture, codeBackdrops, gradedView } from '../view/backdrop';
-import { play } from '../audio/sfx';
+import { play, playMusic } from '../audio/sfx';
 import { ROOM_LIGHTS, ROOM_WINDOWS, roomLight } from '../art/scenes/cottage-room';
 import { pixelCamera } from '../view/camera';
 import { cap } from '../view/describe';
@@ -71,6 +71,7 @@ export class Cottage extends Phaser.Scene {
     this.pos = data.at ?? (spot ? standBy(spot) : { ...SPAWN });
     this.face = 'up';
     this.season = homeSeason(profile);
+    playMusic('cottage', this.season);
     this.arriving = false;
     this.stepClock = 0;
     this.idleClock = 0;
