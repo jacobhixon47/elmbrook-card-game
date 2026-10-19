@@ -7,6 +7,7 @@ import { calendarWeeks, dayRules, WEATHER_NAME } from './calendar';
 import { deckRows, guideSections, recipeRows, undiscoveredLine } from './guide';
 import { pixelText } from './text';
 import { townsfolkRows } from './townsfolk';
+import { framedPortrait } from './portrait';
 import type { Tooltip } from './tooltip';
 import { button, panel } from './ui';
 
@@ -151,11 +152,13 @@ export function drawGrimoire(
     townsfolkRows(s, on.storySeen).forEach((r, i) => {
       const y = top + 22 + i * rh;
       add(scene.add.rectangle(X + 12, y, W - 24, rh - 6, hex('K'), 0.6).setOrigin(0)).setStrokeStyle(1, hex('n'), 0.6);
-      text(X + 20, y + 4, r.unmet ? '???' : r.name, { size: 9, color: r.level ? 'y' : 'W' });
-      if (r.nightOnly) text(X + 20, y + 17, 'Night Shifts only', { size: 6, color: 'v' });
+      for (const g of framedPortrait(scene, X + 12, y, r.id, 1, r.unmet)) add(g);
+      const nx = X + 52;
+      text(nx, y + 4, r.unmet ? '???' : r.name, { size: 9, color: r.level ? 'y' : 'W' });
+      if (r.nightOnly) text(nx, y + 17, 'Night Shifts only', { size: 6, color: 'v' });
       // Their stories so far: hover for the titles, click to read them again.
       if (r.stories.length && on.story) {
-        const label = text(X + 20, y + (r.nightOnly ? 24 : 17), `${r.stories.length === 1 ? 'A story' : `${r.stories.length} stories`} to reread`, { size: 6, color: 'c' });
+        const label = text(nx, y + (r.nightOnly ? 24 : 17), `${r.stories.length === 1 ? 'A story' : `${r.stories.length} stories`} to reread`, { size: 6, color: 'c' });
         label.setInteractive({ useHandCursor: true });
         label.on('pointerover', () => tip.text(`${r.name}'s stories`, [...r.stories.map((b) => `♥ ${b.level}: ${b.title}`), 'Click to read them again.'], label.x + label.width / 2, label.y, label.y + 8));
         label.on('pointerout', () => tip.hide());

@@ -81,7 +81,7 @@ export function townsfolkRows(s: Pick<RunState, 'friendship' | 'friendshipBase'>
 }
 
 /** A regular's story at this level, as a scene screen. */
-export function storyScene(regular: string, level: number): { name: string; lines: string[] } {
+export function storyScene(regular: string, level: number): { name: string; lines: string[]; portrait: string } {
   const beat = codex.regulars.get(regular)!.story.find((b) => b.level === level)!;
-  return { name: beat.title, lines: beat.lines };
+  return { name: beat.title, lines: beat.lines, portrait: regular };
 }

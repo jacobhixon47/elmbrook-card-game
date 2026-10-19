@@ -5,6 +5,7 @@ import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
 import { ALMANAC_FIRST_PAGE, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
 import { CODEX_TABS, codexEntries, type CodexEntry } from '../view/codex';
+import { framedPortrait } from '../view/portrait';
 import { unlockName } from '../view/describe';
 import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
 import { backdropTexture, codeBackdrops, gradedView } from '../view/backdrop';
@@ -661,9 +662,13 @@ export class Cottage extends Phaser.Scene {
         tile.on('pointerover', () => tile.setStrokeStyle(1, hex('y')));
         tile.on('pointerout', () => tile.setStrokeStyle());
       }
-      c.add(pixelText(this, x + 6, y + 3, e.name, { size: 8, color: e.met ? 'W' : 'S' }));
-      c.add(pixelText(this, x + 6, y + 14, e.sub, { size: 6, color: e.met ? 'y' : 'S' }));
-      if (e.text) c.add(pixelText(this, x + 6, y + 23, e.text, { size: 6, color: 'w', wrap: 180 }));
+      // Townsfolk wear their portrait; someone you haven't met is an empty frame.
+      const face = tab === 'townsfolk';
+      if (face) c.add(framedPortrait(this, x + 4, y + 4, e.id, 1, !e.met));
+      const tx = x + (face ? 42 : 6);
+      c.add(pixelText(this, tx, y + 3, e.name, { size: 8, color: e.met ? 'W' : 'S' }));
+      c.add(pixelText(this, tx, y + 14, e.sub, { size: 6, color: e.met ? 'y' : 'S' }));
+      if (e.text) c.add(pixelText(this, tx, y + 23, e.text, { size: 6, color: 'w', wrap: x + 186 - tx }));
     });
     if (pages > 1) {
       const prev = button(this, 230, 324, 'Prev', () => this.openCodex(p, tab, page - 1), { w: 60 });
@@ -673,11 +678,11 @@ export class Cottage extends Phaser.Scene {
       c.add([prev, next]);
     }
     const open = entries.find((e) => e.id === detail && e.met);
-    if (open) this.drawCodexEntry(c, open, () => this.openCodex(p, tab, page));
+    if (open) this.drawCodexEntry(c, open, () => this.openCodex(p, tab, page), tab === 'townsfolk');
   }
 
   /** A Codex entry's detail card: what it is and does, and a line of Elmbrook. */
-  private drawCodexEntry(c: Phaser.GameObjects.Container, e: CodexEntry, close: () => void) {
+  private drawCodexEntry(c: Phaser.GameObjects.Container, e: CodexEntry, close: () => void, face = false) {
     const W = 300;
     const x = 320 - W / 2;
     const parts: Phaser.GameObjects.GameObject[] = [];
@@ -689,14 +694,17 @@ export class Cottage extends Phaser.Scene {
     };
     const rows = [line(e.name, 12, 'y'), line(e.sub, 7, 'h'), ...(e.text ? [line(e.text, 8, 'W')] : []), ...(e.lore ? [line(e.lore, 8, 'L')] : [])];
     const gaps = [6, 8, 10];
-    const h = rows.reduce((sum, t, i) => sum + t.height + (gaps[i] ?? 0), 0) + 40;
-    const top = Math.round(180 - h / 2);
+    // Someone from town gets their portrait at twice size, set into the top edge of the card.
+    if (face) y += 32;
+    const h = rows.reduce((sum, t, i) => sum + t.height + (gaps[i] ?? 0), 0) + 40 + (face ? 32 : 0);
+    const top = Math.round(180 - h / 2 + (face ? 16 : 0));
     rows.forEach((t, i) => {
       t.setY(top + y);
       y += t.height + (gaps[i] ?? 0);
     });
     c.add(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.5).setOrigin(0).setInteractive().on('pointerdown', close));
     c.add(panel(this, x, top, W, h, 'k', 0.98, 'y'));
+    if (face) c.add(framedPortrait(this, 288, top - 32, e.id, 2));
     c.add(parts);
     c.add(button(this, 320, top + h - 16, 'Back', close, { w: 60 }));
   }
