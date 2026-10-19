@@ -4,8 +4,8 @@ import { renderSound, type Voice, type Wave } from './synth';
 // Music as code (M5, Jacob chose code-made loops, Oct 19), the way the sound effects are: each tune
 // is a few bars of chords and a melody, written out as notes, and rendered by `synth.ts` into one
 // seamless loop. Every place has its own tune for each season (Jacob, Oct 19): spring serene and
-// uplifting, summer a warm summer night (a little faster, no drums), autumn calm, winter minor and
-// staccato. The season sets the instruments and the touch; each tune sets its key, tempo, meter
+// uplifting, summer a warm summer night (a little faster, no drums), autumn calm, winter major (Jacob)
+// and staccato. The season sets the instruments and the touch; each tune sets its key, tempo, meter
 // and accompaniment. Pure and deterministic, so tests can check the loops.
 
 export type TuneId = 'title' | 'shop' | 'night' | 'market' | 'cottage';
@@ -56,11 +56,11 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
       melody: `A4 - - - C5 - F5 - | E5 - - - C5 - - - | D5 - F5 - Bb5 - A5 - | A5 - - - - - . .
                F5 - - - D5 - A4 - | Bb4 - D5 - F5 - - - | E5 - G5 - C5 - E5 - | F5 - - - - - . .`,
     },
-    // E minor, picked out note by note.
+    // E major, picked out note by note.
     winter: {
-      bpm: 96, meter: 4, feel: 'pluck', chords: ['Em', 'C', 'G', 'B', 'Em', 'C', 'Am', 'B'],
-      melody: `E5 . G5 . B5 . E6 . | C6 . B5 . G5 . E5 . | D5 . G5 . B5 . D6 . | D#6 . B5 . F#5 . . .
-               G5 G5 . F#5 E5 . B4 . | C5 . E5 . G5 . C6 . | A5 . C6 . E6 . C6 . | B5 . . . F#5 . D#5 .`,
+      bpm: 96, meter: 4, feel: 'pluck', chords: ['E', 'C#m', 'A', 'B', 'E', 'A', 'F#m', 'B'],
+      melody: `E5 . G#5 . B5 . E6 . | C#6 . G#5 . E5 . C#5 . | A5 . C#6 . E6 . A5 . | D#6 . B5 . F#5 . . .
+               G#5 G#5 . F#5 E5 . B4 . | C#5 . E5 . A5 . C#6 . | A5 . C#6 . F#6 . C#6 . | B5 . . . F#5 . D#5 .`,
     },
   },
   shop: {
@@ -82,11 +82,11 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
       melody: `D5 - F5 - Bb5 - A5 - | G5 - - - D5 - - - | Eb5 - G5 - Bb5 - G5 - | F5 - - - C5 - - -
                Bb4 - D5 - F5 - Bb5 - | A5 - G5 - D5 - - - | Eb5 - D5 - C5 - Eb5 - | F5 - - - - - . .`,
     },
-    // A minor, short and crisp, like footsteps in snow.
+    // A major, short and crisp, like footsteps in snow.
     winter: {
-      bpm: 104, meter: 4, feel: 'pluck', chords: ['Am', 'Dm', 'G', 'C', 'F', 'Dm', 'E', 'E'],
-      melody: `A5 . E5 . A5 C6 B5 A5 | F5 . A5 . D6 . A5 . | G5 . B5 . D6 C6 B5 . | C6 . G5 . E5 . . .
-               F5 . A5 . C6 . A5 F5 | D5 . F5 . A5 . F5 . | E5 . G#5 . B5 . G#5 . | E5 . . . B4 . . .`,
+      bpm: 104, meter: 4, feel: 'pluck', chords: ['A', 'D', 'E', 'A', 'D', 'Bm', 'E', 'E'],
+      melody: `A5 . E5 . A5 C#6 B5 A5 | F#5 . A5 . D6 . A5 . | G#5 . B5 . E6 D6 B5 . | C#6 . A5 . E5 . . .
+               F#5 . A5 . D6 . A5 F#5 | D5 . F#5 . B5 . F#5 . | E5 . G#5 . B5 . G#5 . | E5 . . . B4 . . .`,
     },
   },
   night: {
@@ -108,11 +108,11 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
       melody: `A4 - - - - - D5 - | F5 - - - D5 - - - | C5 - - - F5 - A5 - | G5 - - - - - . .
                F5 - - - E5 - D5 - | D5 - - - Bb4 - - - | G4 - Bb4 - D5 - G5 - | E5 - - - C#5 - - -`,
     },
-    // C minor, a cold music box in the dark.
+    // C major, a music box by the stove.
     winter: {
-      bpm: 84, meter: 4, feel: 'box', chords: ['Cm', 'Ab', 'Eb', 'G', 'Cm', 'Fm', 'G', 'G'],
-      melody: `G5 . . . Eb5 . . . | C6 . . . Ab5 . . . | Bb5 . G5 . Eb5 . . . | D5 . . . B4 . . .
-               C5 . Eb5 . G5 . C6 . | Ab5 . . . F5 . C5 . | B4 . D5 . G5 . F5 . | D5 . . . . . . .`,
+      bpm: 84, meter: 4, feel: 'box', chords: ['C', 'Am', 'F', 'G', 'C', 'F', 'G', 'G'],
+      melody: `G5 . . . E5 . . . | C6 . . . A5 . . . | A5 . F5 . C5 . . . | D5 . . . B4 . . .
+               C5 . E5 . G5 . C6 . | A5 . . . F5 . C5 . | B4 . D5 . G5 . F5 . | D5 . . . . . . .`,
     },
   },
   market: {
@@ -134,11 +134,11 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
       melody: `C5 - F5 - A5 - | G5 - - - E5 - | F5 - A5 - D6 - | Bb5 - - - D5 -
                A5 - G5 - F5 - | E5 - G5 - C6 - | D6 - Bb5 - F5 - | G5 - - - . .`,
     },
-    // D harmonic minor, a waltz on tiptoe.
+    // D major, a waltz on tiptoe.
     winter: {
-      bpm: 108, meter: 3, feel: 'waltz', chords: ['Dm', 'A', 'Dm', 'Gm', 'Dm', 'A', 'Bb', 'A'],
-      melody: `D5 . F5 . A5 . | C#5 . E5 . A5 . | F5 . E5 . D5 . | G5 . Bb5 . D6 .
-               A5 . F5 . D5 . | E5 . C#5 . A4 . | Bb4 . D5 . F5 . | E5 . . . C#5 .`,
+      bpm: 108, meter: 3, feel: 'waltz', chords: ['D', 'A', 'D', 'G', 'D', 'A', 'G', 'A'],
+      melody: `D5 . F#5 . A5 . | C#5 . E5 . A5 . | F#5 . E5 . D5 . | G5 . B5 . D6 .
+               A5 . F#5 . D5 . | E5 . C#5 . A4 . | B4 . D5 . G5 . | E5 . . . C#5 .`,
     },
   },
   cottage: {
@@ -160,11 +160,11 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
       melody: `G5 - - - E5 - - - | B5 - - - G5 - - - | A5 - - - C6 - - - | G5 - - - - - . .
                E5 - - - A5 - - - | F5 - - - C5 - - - | D5 - - - B4 - D5 - | C5 - - - - - . .`,
     },
-    // G minor, frost on the window.
+    // G major, frost on the window.
     winter: {
-      bpm: 72, meter: 4, feel: 'box', chords: ['Gm', 'Eb', 'Bb', 'D', 'Gm', 'Cm', 'D', 'D'],
-      melody: `D6 . . . Bb5 . . . | G5 . . . Eb5 . . . | F5 . D5 . Bb4 . . . | A4 . . . F#5 . . .
-               G5 . Bb5 . D6 . . . | C6 . Bb5 . G5 . Eb5 . | D5 . F#5 . A5 . C6 . | Bb5 . . . A5 . . .`,
+      bpm: 72, meter: 4, feel: 'box', chords: ['G', 'Em', 'C', 'D', 'G', 'C', 'D', 'D'],
+      melody: `D6 . . . B5 . . . | G5 . . . E5 . . . | E5 . C5 . G4 . . . | A4 . . . F#5 . . .
+               G5 . B5 . D6 . . . | C6 . B5 . G5 . E5 . | D5 . F#5 . A5 . C6 . | B5 . . . A5 . . .`,
     },
   },
 };
