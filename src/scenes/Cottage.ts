@@ -3,7 +3,7 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { ALMANAC_FIRST_PAGE, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
+import { ALMANAC_FIRST_PAGE, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, MAX_YEAR, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
 import { CODEX_TABS, codexEntries, type CodexEntry } from '../view/codex';
 import { framedPortrait } from '../view/portrait';
 import { unlockName } from '../view/describe';
@@ -16,6 +16,7 @@ import { cap } from '../view/describe';
 import { openSettings } from '../view/settings';
 import { COTTAGE_NOTES, noteDue, type CottageNote } from '../view/notes';
 import { pixelText } from '../view/text';
+import { Tooltip } from '../view/tooltip';
 import { button, panel } from '../view/ui';
 import { DOORSTEP, DRESSING, facing, HEARTH, onRug, PROPS, ROOM_SCALE, SEASON_LIGHT, SPAWN, STATIONS, standBy, stationAt, walk, type Facing, type Point, type Station, type StationId } from '../view/room';
 import type { PaletteKey } from '../art/palette';
@@ -44,6 +45,8 @@ export class Cottage extends Phaser.Scene {
   /** Until the hearth next crackles. */
   private crackleIn = 2000;
   private you!: Phaser.GameObjects.Image;
+  /** Hover help (GDD §15.1), over every panel. */
+  private tip!: Tooltip;
   private keys!: WalkKeys;
   /** Each station's sprite, its lit outline, and the prompt over it. */
   private sprites = new Map<StationId, { plain: Phaser.GameObjects.Image; lit: Phaser.GameObjects.Image }>();
@@ -63,6 +66,7 @@ export class Cottage extends Phaser.Scene {
     this.prompt = null;
     this.fixture = data.fixture ?? null;
     pixelCamera(this);
+    this.tip = new Tooltip(this, 3000);
     const profile = data.fixture ? migrateProfile(data.fixture.profile ?? null) : loadProfile();
     this.profile = profile;
     this.perkTier = data.perkTier ?? data.fixture?.ui?.perkTier ?? firstTier(profile);
@@ -250,7 +254,10 @@ export class Cottage extends Phaser.Scene {
   /** Your Year and Reputation in the corner, and how to get about. */
   private drawHud(p: Profile) {
     const head = p.year > 1 ? `Year ${p.year} · Reputation ${p.reputation}` : `Reputation ${p.reputation}`;
-    pixelText(this, 22, 8, head, { size: 8, color: 'y', stroke: 'k' }).setDepth(1500);
+    this.tip.on(pixelText(this, 22, 8, head, { size: 8, color: 'y', stroke: 'k' }).setDepth(1500), 'Reputation', [
+      'Every run earns Reputation, won or lost. Spend it at the workbench on perks, which help every run after.',
+      ...(p.year > 1 ? [`Year ${p.year} earns ×${reputationMult(p.year)}. The calendar shows its rules.`] : []),
+    ]);
     pixelText(this, 618, 8, 'WASD to walk · F or Space to use · Esc for settings', { size: 7, color: 'w', stroke: 'k', align: 'right' }).setOrigin(1, 0).setDepth(1500);
   }
 
@@ -403,7 +410,10 @@ export class Cottage extends Phaser.Scene {
       const ty = y + 50 + i * 38;
       const open = seasons.includes(season);
       const wins = p.wins[season];
-      this.add.rectangle(x + 8, ty, 160, 32, hex(open ? 'b' : 'q'), open ? 0.6 : 0.4).setOrigin(0);
+      this.tip.on(this.add.rectangle(x + 8, ty, 160, 32, hex(open ? 'b' : 'q'), open ? 0.6 : 0.4).setOrigin(0), `${cap(season)}, Year ${p.year}`, [
+        !open ? `Win ${cap(SEASONS[i - 1]!)} to open it.` : wins ? `Won ${wins === 1 ? 'once' : `${wins} times`}.` : 'Not won yet.',
+        i < SEASONS.length - 1 ? `A win opens ${cap(SEASONS[i + 1]!)}.` : `A win finishes Year ${p.year}${p.year < MAX_YEAR ? ` and opens Year ${p.year + 1}` : ''}.`,
+      ]);
       pixelText(this, x + 14, ty + 4, `${i + 1}  ${cap(season)}`, { size: 8, color: open ? 'W' : 'S' });
       // The season the house is dressed for is the one waiting outside.
       if (open && season === this.season) pixelText(this, x + 70, ty + 5, 'up next', { size: 7, color: 'y' });
@@ -446,7 +456,10 @@ export class Cottage extends Phaser.Scene {
       const ty = y + 54 + i * 41;
       const owned = p.perks.includes(perk.id);
       const why = perkBlocked(p, perk.id);
-      this.add.rectangle(x + 8, ty, 160, 38, hex(owned ? 'g' : open ? 'b' : 'q'), open ? 0.6 : 0.4).setOrigin(0);
+      this.tip.on(this.add.rectangle(x + 8, ty, 160, 38, hex(owned ? 'g' : open ? 'b' : 'q'), open ? 0.6 : 0.4).setOrigin(0), perk.name, [
+        perk.text,
+        owned ? 'Yours, for every run from now on.' : why ? `${perk.cost} Reputation: ${why[0]!.toUpperCase()}${why.slice(1).replace(/\.$/, '')}.` : `${perk.cost} Reputation. It lasts for good.`,
+      ]);
       pixelText(this, x + 14, ty + 4, perk.name, { size: 8, color: owned ? 'L' : open ? 'W' : 'S' });
       pixelText(this, x + 14, ty + 16, perk.text, { size: 6, color: open ? 'a' : 'S', wrap: 96 });
       if (owned) {
@@ -476,14 +489,19 @@ export class Cottage extends Phaser.Scene {
       rows.removeAll(true);
       const witch = witches[w]!;
       const wOpen = witchOpen(p, witch.id);
-      rows.add(this.add.rectangle(x + 8, y + 6, 232, 44, hex(wOpen ? 'b' : 'q'), wOpen ? 0.6 : 0.4).setOrigin(0));
+      rows.add(this.tip.on(this.add.rectangle(x + 8, y + 6, 232, 44, hex(wOpen ? 'b' : 'q'), wOpen ? 0.6 : 0.4).setOrigin(0), witch.name, [
+        `${witch.focus}.`, witch.quirk, wOpen ? 'Arrows choose who brews next run.' : `Win ${cap(witch.unlockSeason!)} to open.`,
+      ]));
       rows.add(pixelText(this, x + 124, y + 10, wOpen ? witch.name : `${witch.name} · locked`, { size: 8, color: wOpen ? 'W' : 'S', align: 'center' }).setOrigin(0.5, 0));
       const wNote = wOpen ? `${witch.focus}. ${witch.quirk}` : `Win ${cap(witch.unlockSeason!)} to open. ${witch.quirk}`;
       rows.add(pixelText(this, x + 124, y + 22, wNote, { size: 6, color: wOpen ? 'a' : 'S', align: 'center', wrap: 176 }).setOrigin(0.5, 0));
 
       const pot = pots[c]!;
       const cOpen = cauldronOpen(p, pot.id);
-      rows.add(this.add.rectangle(x + 8, y + 54, 232, 46, hex(cOpen ? 'b' : 'q'), cOpen ? 0.6 : 0.4).setOrigin(0));
+      const potEntry = pot.unlock ? codex.almanac.get(pot.unlock)! : null;
+      rows.add(this.tip.on(this.add.rectangle(x + 8, y + 54, 232, 46, hex(cOpen ? 'b' : 'q'), cOpen ? 0.6 : 0.4).setOrigin(0), pot.name, [
+        pot.text, cOpen ? 'Arrows choose what you brew in next run.' : `Opens with the Almanac entry ${potEntry!.name}: ${potEntry!.goal}`,
+      ]));
       rows.add(this.add.image(x + 48, y + 77, `prop/cauldron-${pot.id}`).setScale(0.5).setAlpha(cOpen ? 1 : 0.4));
       rows.add(pixelText(this, x + 72, y + 58, cOpen ? pot.name : `${pot.name} · locked`, { size: 8, color: cOpen ? 'W' : 'S' }));
       const entry = pot.unlock ? codex.almanac.get(pot.unlock)! : null;
@@ -521,7 +539,12 @@ export class Cottage extends Phaser.Scene {
       rows.removeAll(true);
       const id = choices[i] ?? null;
       const card = id ? codex.ingredients.get(id) ?? codex.tinctures.get(id) : null;
-      rows.add(pixelText(this, x + 124, y + 4, card ? `Keepsake box: ${card.name}` : 'Keepsake box: empty', { size: 8, color: card ? 'W' : 'S', align: 'center' }).setOrigin(0.5, 0));
+      const head = pixelText(this, x + 124, y + 4, card ? `Keepsake box: ${card.name}` : 'Keepsake box: empty', { size: 8, color: card ? 'W' : 'S', align: 'center' }).setOrigin(0.5, 0);
+      rows.add(head);
+      if (id) {
+        head.setInteractive().on('pointerover', () => this.tip.card(id, x + 124, y, y + 43));
+        head.on('pointerout', () => this.tip.hide());
+      }
       const note = card ? `${card.text} Added to every run's starting deck.`
         : open.length ? 'Choose a keepsake to add to every run\'s starting deck.'
           : `At Friendship ${FRIENDSHIP.vigilGiftLevel}, a regular's own vigil gift can go in here, to start every run in your deck.`;
@@ -592,6 +615,7 @@ export class Cottage extends Phaser.Scene {
   }
 
   private closeOverlay() {
+    this.tip.hide();
     this.overlay?.destroy();
     this.overlay = null;
     this.overlayKind = null;
@@ -654,7 +678,9 @@ export class Cottage extends Phaser.Scene {
       const done = p.almanac.includes(e.id);
       // A cauldron an entry opens is named with what it adds to the pools.
       const adds = [...e.unlocks.map(unlockName), ...[...codex.cauldrons.values()].filter((pot) => pot.unlock === e.id).map((pot) => `the ${pot.name}`)];
-      c.add(this.add.rectangle(x, y, 286, 33, hex(done ? 'g' : 'b'), done ? 0.6 : 0.4).setOrigin(0));
+      c.add(this.tip.on(this.add.rectangle(x, y, 286, 33, hex(done ? 'g' : 'b'), done ? 0.6 : 0.4).setOrigin(0), e.name, [
+        `${done ? 'Done' : 'Goal'}: ${e.goal}`, `Adds to the pools for good: ${adds.join(', ')}.`,
+      ]));
       c.add(pixelText(this, x + 6, y + 3, done ? `${e.name} · done` : e.name, { size: 8, color: done ? 'L' : 'W' }));
       // The goals across runs say how far along they are.
       const tally = e.id === 'every-witch' ? [p.witchWins.length, codex.witches.size] : e.id === 'every-cauldron' ? [p.cauldronWins.length, codex.cauldrons.size] : null;
@@ -681,6 +707,7 @@ export class Cottage extends Phaser.Scene {
       const y = 82 + Math.floor(i / 3) * 44;
       const tile = this.add.rectangle(x, y, 192, 40, hex(e.met ? 'b' : 'q'), e.met ? 0.6 : 0.4).setOrigin(0);
       c.add(tile);
+      this.tip.on(tile, e.name, e.met ? [e.sub, ...(e.text ? [e.text] : []), 'Click for the full entry.'] : ['Not met yet. Meet it in a run to write it here.']);
       // A met entry opens its detail card, with its lore.
       if (e.met) {
         tile.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.openCodex(p, tab, page, e.id));

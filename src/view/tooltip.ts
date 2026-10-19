@@ -15,8 +15,8 @@ const PAD = 6;
 export class Tooltip {
   private box: Phaser.GameObjects.Container;
 
-  constructor(private scene: Phaser.Scene) {
-    this.box = scene.add.container(0, 0).setDepth(1000).setVisible(false);
+  constructor(private scene: Phaser.Scene, depth = 1000) {
+    this.box = scene.add.container(0, 0).setDepth(depth).setVisible(false);
   }
 
   /** A card's details, placed above (or below) the point given. */
@@ -41,6 +41,17 @@ export class Tooltip {
 
   hide() {
     this.box.setVisible(false);
+  }
+
+  /** Hover help on anything drawn: the panel sits above it, or below when there's no room. */
+  on<T extends Hoverable>(obj: T, title: string, lines: readonly string[] | (() => readonly string[])): T {
+    if (!obj.input) obj.setInteractive();
+    obj.on('pointerover', () => {
+      const b = obj.getBounds();
+      this.text(title, [...(typeof lines === 'function' ? lines() : lines)], b.centerX, b.top, b.bottom);
+    });
+    obj.on('pointerout', () => this.hide());
+    return obj;
   }
 
   private show(rows: Row[], x: number, top: number, bottom: number) {
@@ -78,5 +89,7 @@ export class Tooltip {
     this.box.setVisible(true);
   }
 }
+
+type Hoverable = Phaser.GameObjects.GameObject & { getBounds(): Phaser.Geom.Rectangle };
 
 type Row = { text: string; size: number; color: PaletteKey } | { pips: readonly string[] } | { tags: readonly string[] };
