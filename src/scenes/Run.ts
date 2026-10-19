@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, priceAt, runKeepsakes, blessingTonight, BLACK_MARKET, eventChoiceAsk, eventChoiceBlocked, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, priceAt, runKeepsakes, blessingTonight, BLACK_MARKET, eventChoiceAsk, eventChoiceBlocked, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, WEEK_MOONS, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
   HARVEST_AUCTION, FRIENDSHIP, friendLevelOf, friendshipOf, hearthOffers, isRegular, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
@@ -14,7 +14,7 @@ import { stepAction } from '../debug/fixture-steps';
 import { markReady } from '../debug/hook';
 import { noAnim, params, type Fixture } from '../debug/params';
 import { store } from '../store';
-import { gradedView, shopBackdrop, viewOverrides } from '../view/backdrop';
+import { gradedView, guildBackdrop, marketBackdrop, shopBackdrop, viewOverrides, type PlaceBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
 import { friendshipLine, levelUpNote, storyScene, townsfolkRows } from '../view/townsfolk';
@@ -1231,9 +1231,25 @@ export class Run extends Phaser.Scene {
 
   // ---------------------------------------------------------------- twilight, night market, the end
 
+  /** Where tonight's screen takes place, when it isn't the shop. */
+  private placeOf(s: RunState): PlaceBackdrop | null {
+    if (s.phase === 'game-over' || s.phase === 'victory') return null;
+    if (s.offer?.kind === 'guild') return guildBackdrop(this, s.season);
+    if (s.offer?.kind === 'night-market') return marketBackdrop(this, s.season, WEEK_MOONS[s.week - 1] ?? 'new', snowedIn(s, s.week));
+    return null;
+  }
+
   private drawEvening(s: RunState) {
-    this.add2(this.add.rectangle(0, 0, 640, 360, hex('K'), 0.5).setOrigin(0));
     const offer = s.offer;
+    // Errands and the Night Market that happen somewhere else are drawn in that place, lightly dimmed.
+    const place = this.placeOf(s);
+    // A place goes under the HUD drawn already this render; the shop is only dimmed, HUD and all.
+    if (place) {
+      const glows = place.lights.map((l) => this.add.image(l.x, l.y, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(l.scale).setAlpha(0.5));
+      [this.add.image(0, 0, place.texture).setOrigin(0), ...glows, this.add.rectangle(0, 0, 640, 360, hex('K'), 0.4).setOrigin(0)].forEach((o, i) => this.ui.addAt(o, i));
+    } else {
+      this.add2(this.add.rectangle(0, 0, 640, 360, hex('K'), 0.5).setOrigin(0));
+    }
     const title = (t: string, sub: string) => {
       this.text(320, 46, t, { size: 16, color: 'y', stroke: 'k', align: 'center' }).setOrigin(0.5);
       this.text(320, 60, sub, { size: 8, color: 'a', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);

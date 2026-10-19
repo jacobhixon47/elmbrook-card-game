@@ -5,6 +5,8 @@ import { BACKDROPS } from '../src/art/backdrops';
 import { gradeView } from '../src/art/window';
 import { PALETTE } from '../src/art/palette';
 import { proceduralTextures, TAG_GLYPHS, tagGlyph } from '../src/art/procedural';
+import { guildHallBackdrop } from '../src/art/scenes/guild';
+import { nightMarketBackdrop } from '../src/art/scenes/market';
 import { codex } from '../src/codex';
 import { spriteSize, validateSprite } from '../src/art/sprite';
 import { PORTRAITS, SPRITES } from '../src/art/sprites';
@@ -49,6 +51,23 @@ describe('art', () => {
 
   it('sprite ids are unique', () => {
     expect(new Set(SPRITES.map((s) => s.id)).size).toBe(SPRITES.length);
+  });
+
+  it('the Night Market street and the Guild Hall only use palette colours', () => {
+    const allowed = new Set(Object.values(PALETTE).map((h) => h.toLowerCase()));
+    const places = {
+      'market-winter-snowed-in': nightMarketBackdrop({ season: 'winter', moon: 'new', snowedIn: true }),
+      'market-autumn-full': nightMarketBackdrop({ season: 'autumn', moon: 'full', snowedIn: false }),
+      'guild-spring': guildHallBackdrop({ season: 'spring' }),
+    };
+    for (const [key, pm] of Object.entries(places)) {
+      expect([pm.width, pm.height], key).toEqual([640, 360]);
+      for (let i = 0; i < pm.data.length; i += 4) {
+        if (pm.data[i + 3] === 0) continue;
+        const hex = '#' + [0, 1, 2].map((k) => (pm.data[i + k] ?? 0).toString(16).padStart(2, '0')).join('');
+        if (!allowed.has(hex)) expect.fail(`${key} uses ${hex}`);
+      }
+    }
   });
 
   it('procedural textures only use palette colours', () => {

@@ -1,9 +1,11 @@
 import type Phaser from 'phaser';
 import { BACKDROPS, type BackdropId } from '../art/backdrops';
 import { gradeView } from '../art/window';
-import { SEASONS, SKY_TIMES, WEATHERS, type Season, type SkyTime, type Weather } from '../core';
+import { SEASONS, SKY_TIMES, WEATHERS, type Moon, type Season, type SkyTime, type Weather } from '../core';
 import { COUNTER_TOP, SHOP_LANTERNS } from '../art/scenes/shop';
 import { TOWN_LAMPS } from '../art/scenes/town';
+import { GUILD_LIGHTS, guildHallBackdrop } from '../art/scenes/guild';
+import { nightMarketBackdrop, nightMarketLights } from '../art/scenes/market';
 import { params } from '../debug/params';
 
 /** `?backdrops=code` swaps painted backdrops for the code-drawn ones (useful when tuning procedural art). */
@@ -62,4 +64,28 @@ export function gradedView(scene: Phaser.Scene, viewKey: string, id: BackdropId,
   tex.getContext().putImageData(new ImageData(new Uint8ClampedArray(graded), img.width, img.height), 0, 0);
   tex.refresh();
   return key;
+}
+
+/** A code-drawn place behind an evening screen (the Night Market street, the Guild Hall), with its lamps. */
+export type PlaceBackdrop = { texture: string; lights: readonly { x: number; y: number; scale: number }[] };
+
+/** Builds a code-drawn backdrop the first time it is shown, so boot doesn't pay for every season and moon. */
+export function lazyTexture(scene: Phaser.Scene, key: string, make: () => { width: number; height: number; data: Uint8ClampedArray }): string {
+  if (scene.textures.exists(key)) return key;
+  const px = make();
+  const tex = scene.textures.createCanvas(key, px.width, px.height)!;
+  tex.getContext().putImageData(new ImageData(new Uint8ClampedArray(px.data), px.width, px.height), 0, 0);
+  tex.refresh();
+  return key;
+}
+
+export function guildBackdrop(scene: Phaser.Scene, season: Season): PlaceBackdrop {
+  return { texture: lazyTexture(scene, `bg/guild-${season}`, () => guildHallBackdrop({ season })), lights: GUILD_LIGHTS };
+}
+
+/** The Night Market street for this season and moon; snowed in, only the Hearth Trader's stall is lit. */
+export function marketBackdrop(scene: Phaser.Scene, season: Season, moon: Moon, snowedIn: boolean): PlaceBackdrop {
+  const buried = snowedIn && season === 'winter';
+  const key = `bg/market-${season}-${moon}${buried ? '-snowed-in' : ''}`;
+  return { texture: lazyTexture(scene, key, () => nightMarketBackdrop({ season, moon, snowedIn: buried })), lights: nightMarketLights(buried) };
 }
