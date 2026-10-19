@@ -660,7 +660,7 @@ Decided after the M2 playtest: the rules must explain themselves before M3 adds 
   - *Weather firsts:* the first Fog, Heatwave and Snow day in a save each get a scene with the rule. After that only the HUD's weather line says it ("Foggy: orders hidden", "Raining", "Snowing"), with the full rules on hover.
   - *Once a run:* the fair, the Longest Night vigil, the Moonless Patron arriving for the finale, and Snowed In (once a week).
   - Fixtures, `?seed=` runs and the tutorial skip season openings and weather firsts; a fixture shows one with `ui.intro`.
-- **Settings** (the title screen, the cottage, Esc or the button at the bottom right in a run): a sound effects slider and a music slider (music 50% by default), sound on or off, and season openings shown or hidden. M still mutes anywhere.
+- **Settings** (the title screen, the cottage, Esc or the button at the bottom right in a run): a sound effects slider and a music slider (music 50% by default), sound on or off, season openings shown or hidden, fullscreen (also Alt+Enter anywhere) and the scale: Auto (the largest whole-number scale that fits the window) or any smaller whole number, so pixels stay square. A new scale redraws the game by reloading it, and the run in progress is kept. M still mutes anywhere.
 
 ## 16. Out of scope for v1
 

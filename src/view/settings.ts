@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { hex } from '../art/palette';
 import { setSound, soundSettings } from '../audio/sfx';
 import { loadProfile, saveProfile } from '../profile';
+import { isFullscreen, scaleChoices, setFullscreen, setScale } from './display';
+import { fitZoom } from './zoom';
 import { button, panel } from './ui';
 import { pixelText } from './text';
 
@@ -9,7 +11,8 @@ const BARS = 10;
 
 /**
  * The Settings panel, over whatever scene opened it: the sound effects' and the music's volumes
- * (stepped sliders: click or drag along the bars), sound on or off, and whether each run opens with its season's scene screen.
+ * (stepped sliders: click or drag along the bars), sound on or off, whether each run opens with its season's scene screen,
+ * fullscreen, and the game's scale.
  * Returns the container; `onClose` runs after it is destroyed.
  */
 /** `onTitle`, when given, adds a button back to the title screen (from the cottage, where Esc opens Settings). */
@@ -17,8 +20,8 @@ export function openSettings(scene: Phaser.Scene, onClose: () => void = () => un
   const c = scene.add.container(0, 0).setDepth(1000);
   // Swallows clicks meant for the screen underneath.
   c.add(scene.add.rectangle(0, 0, 640, 360, hex('k'), 0.5).setOrigin(0).setInteractive());
-  c.add(panel(scene, 200, 88, 240, 194, 'k', 0.95, 'c'));
-  c.add(pixelText(scene, 320, 98, 'Settings', { size: 14, color: 'c', align: 'center' }).setOrigin(0.5, 0));
+  c.add(panel(scene, 200, 50, 240, 270, 'k', 0.95, 'c'));
+  c.add(pixelText(scene, 320, 60, 'Settings', { size: 14, color: 'c', align: 'center' }).setOrigin(0.5, 0));
   const label = (y: number, str: string) => c.add(pixelText(scene, 216, y, str, { size: 8, color: 'W' }).setOrigin(0, 0.5));
 
   // Two stepped sliders: the sound effects and the music. Click or drag along the bars.
@@ -53,26 +56,49 @@ export function openSettings(scene: Phaser.Scene, onClose: () => void = () => un
     sliders.forEach((f) => f());
     (soundButton.list[1] as Phaser.GameObjects.Text).setText(soundSettings().muted ? 'Off' : 'On');
   };
-  slider(142, 'Sounds', 'volume');
-  slider(164, 'Music', 'music');
+  slider(98, 'Sounds', 'volume');
+  slider(120, 'Music', 'music');
 
-  label(190, 'Sound');
-  const soundButton = button(scene, 392, 190, '', () => {
+  label(146, 'Sound');
+  const soundButton = button(scene, 392, 146, '', () => {
     setSound({ muted: !soundSettings().muted });
     show();
   }, { w: 64 });
   c.add(soundButton);
-  c.add(pixelText(scene, 216, 200, 'M mutes anywhere', { size: 6, color: 'a' }));
+  c.add(pixelText(scene, 216, 156, 'M mutes anywhere', { size: 6, color: 'a' }));
 
-  label(220, 'Season openings');
-  const openings = button(scene, 392, 220, '', () => {
+  label(178, 'Season openings');
+  const openings = button(scene, 392, 178, '', () => {
     const on = !loadProfile().seasonOpenings;
     saveProfile({ seasonOpenings: on });
     (openings.list[1] as Phaser.GameObjects.Text).setText(on ? 'Shown' : 'Hidden');
   }, { w: 64 });
   (openings.list[1] as Phaser.GameObjects.Text).setText(loadProfile().seasonOpenings ? 'Shown' : 'Hidden');
   c.add(openings);
-  c.add(pixelText(scene, 216, 230, 'The scene at the start of each run', { size: 6, color: 'a' }));
+  c.add(pixelText(scene, 216, 188, 'The scene at the start of each run', { size: 6, color: 'a' }));
+
+  label(210, 'Fullscreen');
+  const full = button(scene, 392, 210, isFullscreen() ? 'On' : 'Off', () => {
+    const on = !isFullscreen();
+    void setFullscreen(on);
+    (full.list[1] as Phaser.GameObjects.Text).setText(on ? 'On' : 'Off');
+  }, { w: 64 });
+  c.add(full);
+  c.add(pixelText(scene, 216, 220, 'Alt+Enter anywhere', { size: 6, color: 'a' }));
+
+  // Whole-number scales only, so pixels stay square; Auto is the largest that fits the window.
+  label(242, 'Scale');
+  const scaleName = (s: number) => (s === 0 ? `Auto (${fitZoom()}x)` : `${s}x`);
+  const scales = scaleChoices();
+  let chosen = scales.includes(loadProfile().display.scale) ? loadProfile().display.scale : 0;
+  const scaleButton = button(scene, 392, 242, scaleName(chosen), () => {
+    chosen = scales[(scales.indexOf(chosen) + 1) % scales.length]!;
+    (scaleButton.list[1] as Phaser.GameObjects.Text).setText(scaleName(chosen));
+    // Reloads when the drawn scale changes (Auto at the size that already fits doesn't).
+    setScale(chosen);
+  }, { w: 64 });
+  c.add(scaleButton);
+  c.add(pixelText(scene, 216, 252, 'Redraws the game; your run is kept', { size: 6, color: 'a' }));
 
   const close = () => {
     scene.input.keyboard?.off('keydown-ESC', close);
@@ -81,10 +107,10 @@ export function openSettings(scene: Phaser.Scene, onClose: () => void = () => un
     scene.time.delayedCall(0, onClose);
   };
   if (onTitle) {
-    c.add(button(scene, 280, 262, 'Title screen', onTitle, { w: 72 }));
-    c.add(button(scene, 364, 262, 'Done', close, { w: 64, color: 'Y' }));
+    c.add(button(scene, 280, 290, 'Title screen', onTitle, { w: 72 }));
+    c.add(button(scene, 364, 290, 'Done', close, { w: 64, color: 'Y' }));
   } else {
-    c.add(button(scene, 320, 262, 'Done', close, { w: 64, color: 'Y' }));
+    c.add(button(scene, 320, 290, 'Done', close, { w: 64, color: 'Y' }));
   }
   // Next frame, so the Esc that opened it doesn't close it too.
   scene.time.delayedCall(0, () => c.active && scene.input.keyboard?.once('keydown-ESC', close));
