@@ -4,9 +4,9 @@ import { renderSound, type Voice, type Wave } from './synth';
 // Music as code (M5, Jacob chose code-made loops, Oct 19), the way the sound effects are: each tune
 // is a few bars of chords and a melody, written out as notes, and rendered by `synth.ts` into one
 // seamless loop. Every place has its own tune for each season (Jacob, Oct 19): spring serene and
-// uplifting, summer adventurous, autumn calm, winter minor and staccato. The season sets the
-// instruments and the touch; each tune sets its key, tempo, meter and accompaniment. Pure and
-// deterministic, so tests can check the loops.
+// uplifting, summer a warm summer night (a little faster, no drums), autumn calm, winter minor and
+// staccato. The season sets the instruments and the touch; each tune sets its key, tempo, meter
+// and accompaniment. Pure and deterministic, so tests can check the loops.
 
 export type TuneId = 'title' | 'shop' | 'night' | 'market' | 'cottage';
 
@@ -14,13 +14,13 @@ export type TuneId = 'title' | 'shop' | 'night' | 'market' | 'cottage';
  * How the accompaniment moves under the melody:
  * - `pad`: the chord held through the bar, over a held root.
  * - `harp`: the chord rippling upward in eighths.
- * - `drive`: a bass in eighths and chord stabs off the beat.
+ * - `sway`: the chord picked slowly in quarters over a held root, like a guitar on a porch.
  * - `waltz`: the root on one, the chord on two and three (3/4).
  * - `walk`: a walking bass in quarters under a soft chord.
  * - `pluck`: a short ostinato in eighths.
  * - `box`: a music box: a few high chord notes over a low root.
  */
-export type Feel = 'pad' | 'harp' | 'drive' | 'waltz' | 'walk' | 'pluck' | 'box';
+export type Feel = 'pad' | 'harp' | 'sway' | 'waltz' | 'walk' | 'pluck' | 'box';
 
 export type Tune = {
   bpm: number;
@@ -34,8 +34,6 @@ export type Tune = {
    */
   melody: string;
   feel: Feel;
-  /** A soft kit: kick, snare and hats. */
-  drums?: boolean;
 };
 
 export const TUNES: Record<TuneId, Record<Season, Tune>> = {
@@ -46,11 +44,11 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
       melody: `F#5 - - - A5 - - - | B5 - - - D6 - B5 - | A5 - - - F#5 - D5 - | E5 - - - - - - -
                F#5 - A5 - D6 - - - | E6 - D6 - B5 - G5 - | A5 - - - C#6 - E6 - | D6 - - - - - - -`,
     },
-    // A mixolydian, a road opening up.
+    // A major, a warm evening, the windows open.
     summer: {
-      bpm: 120, meter: 4, feel: 'drive', drums: true, chords: ['A', 'G', 'D', 'A', 'A', 'G', 'D', 'E'],
-      melody: `A4 . C#5 E5 - A5 - . | G5 - . F#5 - D5 - . | D5 F#5 A5 - F#5 - D5 E5 | E5 - - - . . C#5 E5
-               A5 . A5 G5 - E5 - . | D5 - G5 - B5 - G5 . | A5 - F#5 - D6 - . . | B5 - G#5 - E5 - - .`,
+      bpm: 88, meter: 4, feel: 'sway', chords: ['A', 'F#m', 'D', 'E', 'A', 'C#m', 'D', 'E'],
+      melody: `C#5 - - - E5 - A5 - | A5 - - - G#5 - F#5 - | F#5 - - - D5 - F#5 - | E5 - - - - - B4 -
+               C#5 - E5 - A5 - - - | G#5 - - - E5 - C#5 - | D5 - F#5 - A5 - B5 - | B5 - - - G#5 - E5 -`,
     },
     // F major, an easy walk home.
     autumn: {
@@ -72,11 +70,11 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
       melody: `D5 - G5 - A5 - B5 - | C6 - - - B5 - A5 - | A5 - F#5 - D5 - - - | G5 - B5 - D6 - - -
                E6 - D6 - B5 - G5 - | E5 - G5 - C6 - - - | B5 - A5 - F#5 - A5 - | G5 - - - - - . .`,
     },
-    // E major, a busy, bright day.
+    // E major, a long golden afternoon at the counter.
     summer: {
-      bpm: 128, meter: 4, feel: 'drive', drums: true, chords: ['E', 'B', 'C#m', 'A', 'E', 'B', 'A', 'B'],
-      melody: `B4 E5 G#5 B5 - G#5 E5 . | F#5 - . D#5 - F#5 B5 - | G#5 - E5 C#5 - E5 G#5 . | A5 - - - . E5 F#5 G#5
-               B5 . B5 G#5 - E5 - . | D#5 - F#5 - B5 - A5 . | C#6 - B5 A5 - E5 - . | F#5 - - - D#5 - B4 -`,
+      bpm: 96, meter: 4, feel: 'sway', chords: ['E', 'C#m', 'A', 'B', 'E', 'G#m', 'A', 'B'],
+      melody: `B4 - E5 - G#5 - - - | G#5 - E5 - C#5 - E5 - | A5 - - - C#6 - B5 - | A5 - - - F#5 - - -
+               G#5 - - - B5 - E6 - | D#6 - - - B5 - G#5 - | A5 - C#6 - B5 - A5 - | F#5 - - - D#5 - - -`,
     },
     // Bb major, unhurried, a little swing.
     autumn: {
@@ -98,11 +96,11 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
       melody: `C5 - - - - - F5 - | G5 - - - E5 - - - | F5 - - - A5 - - - | D5 - - - - - - -
                C6 - - - A5 - - - | G5 - - - E5 - G5 - | F5 - - - D5 - - - | E5 - - - - - . .`,
     },
-    // D dorian, something out in the dark.
+    // Eb major, fireflies over warm grass.
     summer: {
-      bpm: 110, meter: 4, feel: 'pluck', drums: true, chords: ['Dm', 'G', 'Dm', 'C', 'Dm', 'G', 'Am', 'C'],
-      melody: `D5 . F5 . A5 - G5 . | B5 - . A5 G5 - D5 . | F5 - E5 D5 - - A4 . | C5 - E5 - G5 - - .
-               A5 . A5 . C6 - A5 . | B5 - G5 - D5 - B4 . | C5 - E5 - A5 - G5 . | E5 - - - G5 - - .`,
+      bpm: 84, meter: 4, feel: 'harp', chords: ['Eb', 'Cm', 'Ab', 'Bb', 'Eb', 'Gm', 'Ab', 'Bb'],
+      melody: `G5 - - - Bb5 - - - | C6 - - - G5 - Eb5 - | F5 - - - Ab5 - C6 - | Bb5 - - - - - . .
+               Eb6 - - - D6 - Bb5 - | G5 - - - Bb5 - D6 - | C6 - Ab5 - F5 - Eb5 - | D5 - - - F5 - - -`,
     },
     // D minor, slow, under the lamps.
     autumn: {
@@ -124,11 +122,11 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
       melody: `E5 - - - G5 - | A5 - - - C6 - | C6 - A5 - F5 - | G5 - - - - -
                E5 - G5 - C6 - | B5 - A5 - E5 - | F5 - A5 - D6 - | B5 - - - D5 -`,
     },
-    // G major, a quick jig.
+    // G major, a slow dance under the lanterns.
     summer: {
-      bpm: 132, meter: 3, feel: 'waltz', drums: true, chords: ['G', 'C', 'D', 'G', 'Em', 'C', 'D', 'G'],
-      melody: `D5 G5 B5 - G5 B5 | C6 - B5 A5 G5 E5 | F#5 A5 D6 - A5 F#5 | G5 - D5 - B4 -
-               E5 G5 B5 - G5 E5 | C5 E5 G5 - C6 - | A5 - F#5 - D5 A5 | G5 - - - . .`,
+      bpm: 108, meter: 3, feel: 'waltz', chords: ['G', 'C', 'D', 'G', 'Em', 'C', 'D', 'G'],
+      melody: `D5 - G5 - B5 - | C6 - - - G5 - | A5 - F#5 - D5 - | G5 - - - B4 -
+               E5 - G5 - B5 - | C6 - E6 - C6 - | A5 - - - F#5 - | G5 - - - - -`,
     },
     // F major, a slow waltz.
     autumn: {
@@ -150,11 +148,11 @@ export const TUNES: Record<TuneId, Record<Season, Tune>> = {
       melody: `C#6 - - - E5 - - - | F#5 - - - A5 - - - | G#5 - - - B5 - - - | A5 - - - - - - -
                C#6 - - - A5 - F#5 - | D6 - - - A5 - - - | B5 - - - G#5 - E5 - | A5 - - - - - . .`,
     },
-    // C major, an evening on the porch.
+    // D major, a summer night on the porch.
     summer: {
-      bpm: 100, meter: 4, feel: 'walk', chords: ['C', 'F', 'G', 'C', 'Am', 'F', 'G', 'G'],
-      melody: `E5 - G5 - . E5 G5 A5 | A5 - - - F5 - C5 - | D5 - G5 - B5 - A5 G5 | E5 - - - - - . .
-               C6 - - - A5 - E5 - | F5 - A5 - C6 - A5 - | G5 - B5 - D6 - B5 - | G5 - - - D5 - . .`,
+      bpm: 80, meter: 4, feel: 'walk', chords: ['D', 'Bm', 'G', 'A', 'D', 'F#m', 'G', 'A'],
+      melody: `F#5 - - - A5 - D6 - | D6 - - - B5 - F#5 - | G5 - B5 - D6 - B5 - | A5 - - - - - E5 -
+               F#5 - A5 - - - F#5 - | C#6 - - - A5 - F#5 - | G5 - - - B5 - A5 - | E5 - - - C#5 - - -`,
     },
     // C major, by the fire.
     autumn: {
@@ -182,10 +180,10 @@ export const BANDS: Record<Season, Band> = {
     lead: { wave: 'sine', volume: 0.24, attack: 0.06 }, accomp: { wave: 'triangle', volume: 0.07 }, bass: { wave: 'sine', volume: 0.18 },
     pad: { wave: 'sine', volume: 0.05, attack: 0.4 }, legato: 1.4, swing: 0,
   },
-  // Bright and punchy: a reedy square lead, short and on the beat.
+  // Warm and smooth like spring, a little faster, with a gentle lilt (Jacob: a summer night, nothing tinny).
   summer: {
-    lead: { wave: 'square', volume: 0.11, duty: 0.25 }, accomp: { wave: 'square', volume: 0.045, duty: 0.125 }, bass: { wave: 'triangle', volume: 0.26 },
-    pad: { wave: 'triangle', volume: 0.04, attack: 0.1 }, legato: 0.9, swing: 0,
+    lead: { wave: 'triangle', volume: 0.2, attack: 0.05 }, accomp: { wave: 'sine', volume: 0.08, attack: 0.02 }, bass: { wave: 'sine', volume: 0.2 },
+    pad: { wave: 'sine', volume: 0.05, attack: 0.4 }, legato: 1.3, swing: 0.15,
   },
   // Warm and rounded, with a lazy swing.
   autumn: {
@@ -249,7 +247,6 @@ export function tuneVoices(tune: Tune, season: Season): Voice[] {
       wave: inst.wave, freq, dur: Math.max(0.05, len * step), delay: at(start), volume: inst.volume,
       attack: attack ?? inst.attack ?? 0.01, ...(inst.duty ? { duty: inst.duty } : {}),
     });
-  const noise = (start: number, dur: number, volume: number) => voices.push({ wave: 'noise', freq: 1, dur, delay: at(start), volume, attack: 0.001 });
 
   for (const n of melodyNotes(tune.melody)) {
     add(band.lead, noteFreq(n.note), n.step, n.len * band.legato + 0.2);
@@ -270,9 +267,9 @@ export function tuneVoices(tune: Tune, season: Season): Voice[] {
         add(band.bass, freqOf(r, 2), s0, bar / 2 + 0.5, 0.03);
         add(band.bass, freqOf(f, 2), s0 + bar / 2, bar / 2 + 0.5, 0.03);
         break;
-      case 'drive':
-        for (let i = 0; i < bar; i++) add(band.bass, freqOf(i % 4 === 3 ? f : r, i % 2 ? 3 : 2), s0 + i, 0.8);
-        for (let i = 1; i < bar; i += 2) for (const s of [t, f]) add(band.accomp, freqOf(s, 4), s0 + i, 0.7);
+      case 'sway':
+        [r, f, t + 12, f].slice(0, tune.meter).forEach((s, i) => add(band.accomp, freqOf(s, 4), s0 + i * 2, 3.5));
+        add(band.bass, freqOf(r, 2), s0, bar + 0.5, 0.05);
         break;
       case 'waltz':
         add(band.bass, freqOf(r, 2), s0, 2 * short);
@@ -291,15 +288,6 @@ export function tuneVoices(tune: Tune, season: Season): Voice[] {
         [[r + 12, 0], [f, 2], [t + 12, 4], [f, 6]].filter(([, i]) => i! < bar).forEach(([s, i]) => add(band.accomp, freqOf(s!, 5), s0 + i!, 3, 0.002));
         add(band.bass, freqOf(r, 2), s0, bar, 0.08);
         break;
-    }
-    if (tune.drums) {
-      for (let beat = 0; beat < tune.meter; beat++) {
-        const s = s0 + beat * 2;
-        // A soft kick on the downbeat (and the middle of a 4/4 bar), a brushed snare on the backbeat.
-        if (beat === 0 || (tune.meter === 4 && beat === 2)) voices.push({ wave: 'sine', freq: 110, to: 45, dur: 0.18, delay: at(s), volume: 0.3, attack: 0.002 });
-        else noise(s, 0.09, 0.07);
-        noise(s + 1, 0.03, 0.035);
-      }
     }
   });
   return voices;
