@@ -15,6 +15,12 @@ export const PROFILE_VERSION = 13;
 /** Sound settings: the sound effects' volume and the music's, 0 to 1, and mute (both). */
 export type SoundSettings = { volume: number; music: number; muted: boolean };
 
+/** The game's size on screen: a whole-number scale (0 = the largest that fits), and fullscreen. */
+export type DisplaySettings = { scale: number; fullscreen: boolean };
+
+/** The largest scale offered in Settings. */
+export const MAX_SCALE = 6;
+
 export type Profile = {
   version: typeof PROFILE_VERSION;
   tutorialDone: boolean;
@@ -45,6 +51,7 @@ export type Profile = {
   /** Codex entries met in any run (cards, recipes, familiars, relics, customers), in the order first met. */
   codex: string[];
   settings: SoundSettings;
+  display: DisplaySettings;
   /** Whether each run opens with its season's scene screen (Settings, or "Don't show again" on the screen). */
   seasonOpenings: boolean;
   /** Weathers whose first-time scene screen has been shown: each shows once per save. */
@@ -86,6 +93,7 @@ export function newProfile(): Profile {
     almanac: [],
     codex: [],
     settings: { volume: 0.7, music: 0.5, muted: false },
+    display: { scale: 0, fullscreen: false },
     seasonOpenings: true,
     weatherSeen: [],
     witch: 'hedge-witch',
@@ -167,6 +175,7 @@ function sanitize(p: Raw): Profile {
   const wins = (p.wins && typeof p.wins === 'object' ? p.wins : {}) as Partial<Record<Season, unknown>>;
   const count = (n: unknown) => (typeof n === 'number' && n >= 0 ? Math.floor(n) : 0);
   const sound = (p.settings && typeof p.settings === 'object' ? p.settings : {}) as Partial<Record<keyof SoundSettings, unknown>>;
+  const display = (p.display && typeof p.display === 'object' ? p.display : {}) as Partial<Record<keyof DisplaySettings, unknown>>;
   return {
     version: PROFILE_VERSION,
     tutorialDone: p.tutorialDone === true,
@@ -187,6 +196,10 @@ function sanitize(p: Raw): Profile {
       volume: typeof sound.volume === 'number' && Number.isFinite(sound.volume) ? Math.min(1, Math.max(0, sound.volume)) : fresh.settings.volume,
       music: typeof sound.music === 'number' && Number.isFinite(sound.music) ? Math.min(1, Math.max(0, sound.music)) : fresh.settings.music,
       muted: sound.muted === true,
+    },
+    display: {
+      scale: typeof display.scale === 'number' && Number.isInteger(display.scale) && display.scale >= 0 && display.scale <= MAX_SCALE ? display.scale : 0,
+      fullscreen: display.fullscreen === true,
     },
     seasonOpenings: p.seasonOpenings !== false,
     weatherSeen: Array.isArray(p.weatherSeen) ? WEATHERS.filter((w) => (p.weatherSeen as unknown[]).includes(w)) : [],

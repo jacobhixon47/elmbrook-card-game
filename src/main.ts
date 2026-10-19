@@ -10,7 +10,8 @@ import { Boot } from './scenes/Boot';
 import { Run } from './scenes/Run';
 import { Title } from './scenes/Title';
 import { Cottage } from './scenes/Cottage';
-import { BASE_H, BASE_W, ZOOM, integerZoom } from './view/zoom';
+import { BASE_H, BASE_W, ZOOM } from './view/zoom';
+import { installDisplay, isFullscreen, setFullscreen } from './view/display';
 import { installDigits } from './view/text';
 import { play, setSound, soundSettings, unlockAudio } from './audio/sfx';
 
@@ -36,9 +37,7 @@ async function start() {
     scene: [Boot, Title, Cottage, Run, ArtSheet],
   });
   // Textures and text are rendered for one zoom level; a different one needs a fresh boot.
-  window.addEventListener('resize', () => {
-    if (integerZoom() !== ZOOM) location.reload();
-  });
+  installDisplay(game.canvas);
   // Browsers hold audio until the first click or key. M mutes and unmutes anywhere.
   window.addEventListener('pointerdown', unlockAudio);
   window.addEventListener('keydown', (e) => {
@@ -46,6 +45,11 @@ async function start() {
     if ((e.key === 'm' || e.key === 'M') && !e.repeat) {
       setSound({ muted: !soundSettings().muted });
       play('click');
+    }
+    // Alt+Enter goes fullscreen and back, as in most desktop games.
+    if (e.key === 'Enter' && e.altKey && !e.repeat) {
+      e.preventDefault();
+      void setFullscreen(!isFullscreen());
     }
   });
   installHook(game);

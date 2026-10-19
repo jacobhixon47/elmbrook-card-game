@@ -121,7 +121,7 @@ The Night Market becomes a walkable square the same way (Jacob, Oct 14; built in
 
 ## M6 — Ship prep
 
-- Tutorial tips for the M3+ systems, tooltips on anything new since M2.5, settings menu (✅ volume and season openings in M4; fullscreen and scale still to add), achievements (10).
+- Tutorial tips for the M3+ systems, tooltips on anything new since M2.5, settings menu (✅ volume and season openings in M4; ✅ fullscreen and scale in M6), achievements (10).
 - Endless, Daily seed, Challenge runs.
 - Tauri desktop builds (Windows, Mac, Linux) from CI, ready for Steam; the game is sold on Steam, with no free public or browser version. Private builds for friends come from CI as a download link. The GitHub repo goes private before release.
 - Optional: Claude Code terminal preview mod.
