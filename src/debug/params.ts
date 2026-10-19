@@ -53,8 +53,8 @@ export type Fixture = {
     eventCard?: number;
     /** In the walkable cottage, standing by this station (its prompt showing). */
     at?: StationId;
-    /** In the Night Market, standing by this stall's home (its prompt showing), or on the bridge. */
-    square?: HomeId | 'exit';
+    /** In the Night Market, standing by this stall's home (its prompt showing), on the bridge, or with the list of tonight's stalls open. */
+    square?: HomeId | 'exit' | 'list';
     /** In the walkable cottage, this station's panel open. */
     station?: StationId;
     /** The cottage as you come home from a run in this season. */

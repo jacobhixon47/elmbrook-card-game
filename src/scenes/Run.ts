@@ -179,7 +179,7 @@ export class Run extends Phaser.Scene {
     this.save();
     const state = store.getState()!;
     const at = fixture?.ui?.square;
-    if (at) this.walkState = { ...newWalk(state.week), pos: at === 'exit' ? { x: SPAWN.x, y: 170 } : standBy(at), face: at === 'exit' ? 'down' : 'up' };
+    if (at) this.walkState = { ...newWalk(state.week), pos: at === 'exit' ? { x: SPAWN.x, y: 170 } : at === 'list' ? SPAWN : standBy(at), face: at === 'exit' ? 'down' : 'up', list: at === 'list' };
     if (fixture?.ui?.dialog !== undefined) {
       const order = state.orders.at(fixture.ui.dialog);
       if (order) this.mode = { kind: 'dialog', order: order.id };
@@ -1673,8 +1673,15 @@ export class Run extends Phaser.Scene {
         exitLabel: short ? `Can't pay ${due}g: leave` : `Pay ${due}g rent and go home`,
         exitShort: short,
       }, this.walkState, {
-        visit: (index) => void this.dispatch({ type: 'visitStall', index }),
+        visit: (index) => {
+          this.walkState!.list = false;
+          void this.dispatch({ type: 'visitStall', index });
+        },
         leave: () => void this.dispatch({ type: 'leaveMarket' }),
+        toggleList: () => {
+          this.walkState!.list = !this.walkState!.list;
+          this.render();
+        },
         tip: this.tip,
       });
       return;
@@ -2117,6 +2124,11 @@ export class Run extends Phaser.Scene {
       }
       if (s.phase === 'morning' && (e.key === 'Enter' || e.key === ' ')) return void this.dispatch({ type: 'openShop' });
       if (this.market && this.mode.kind === 'idle' && (e.key === 'f' || e.key === 'F' || e.key === ' ')) return void this.market.use();
+      if (this.market && this.mode.kind === 'idle' && e.key === 'Tab') {
+        e.preventDefault();
+        this.walkState!.list = !this.walkState!.list;
+        return this.render();
+      }
       if (s.phase !== 'brewing' || this.mode.kind === 'dialog') return;
       const n = Number(e.key);
       if (n >= 1 && n <= 9 && s.hand[n - 1]) return this.clickCard(s, s.hand[n - 1]!);

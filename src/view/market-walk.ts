@@ -9,6 +9,7 @@ import { lazyTexture, type PlaceBackdrop } from './backdrop';
 import { EXIT, HOMES, openHomes, SPAWN, SQUARE_SCALE, spotAt, STALL_HOME, walk, type Home, type HomeId, type Point } from './market-square';
 import { facing, type Facing } from './room';
 import { pixelText } from './text';
+import { button, panel } from './ui';
 import type { Tooltip } from './tooltip';
 
 // The Night Market you walk round (GDD §9): the square drawn at 2x, tonight's stalls lit and the
@@ -17,8 +18,9 @@ import type { Tooltip } from './tooltip';
 // render of the Run scene; where you stand and which way you face live in `WalkState`, so a visit
 // to a stall brings you back to the same spot.
 
-export type WalkState = { pos: Point; face: Facing; week: number };
-export const newWalk = (week: number): WalkState => ({ pos: { ...SPAWN }, face: 'up', week });
+/** Where you stand, which way you face, and whether the list of tonight's stalls is open. */
+export type WalkState = { pos: Point; face: Facing; week: number; list: boolean };
+export const newWalk = (week: number): WalkState => ({ pos: { ...SPAWN }, face: 'up', week, list: false });
 
 export type WalkKeys = Record<'w' | 'a' | 's' | 'd' | 'up' | 'down' | 'left' | 'right', Phaser.Input.Keyboard.Key>;
 
@@ -79,7 +81,7 @@ export class MarketWalk {
     private readonly layer: Phaser.GameObjects.Container,
     private readonly opts: MarketWalkOptions,
     private readonly state: WalkState,
-    private readonly on: { visit: (index: number) => void; leave: () => void; tip: Tooltip },
+    private readonly on: { visit: (index: number) => void; leave: () => void; toggleList: () => void; tip: Tooltip },
   ) {
     const o = squareOpts(opts.season, opts.snowedIn);
     this.open = openHomes(opts.stalls);
@@ -112,9 +114,45 @@ export class MarketWalk {
     bridge.on('pointerover', () => on.tip.text('The bridge home', [opts.exitLabel], (EXIT.x + EXIT.w / 2) * Z, EXIT.y * Z - 4));
     bridge.on('pointerout', () => on.tip.hide());
     const hint = pixelText(scene, 8, 350, 'WASD to walk · F or Space at a stall · or click one', { size: 7, color: 'a', stroke: 'k' }).setOrigin(0, 1);
-    [ground, this.world, this.aura, ...glows, bridge, hint].forEach((g, i) => layer.addAt(g, i));
+    const list = button(scene, 60, 330, "Tonight's stalls (Tab)", on.toggleList, { w: 104 });
+    [ground, this.world, this.aura, ...glows, bridge, hint, list].forEach((g, i) => layer.addAt(g, i));
     this.place(0);
     this.updateNear(false);
+    if (state.list) this.drawList();
+  }
+
+  /**
+   * Tonight's stalls in one list, for when you'd rather not walk (Jacob, Oct 19): what each trades,
+   * and a click to visit it. What's in stock you still see at the stall.
+   */
+  private drawList() {
+    const sc = this.scene;
+    const n = this.opts.stalls.length;
+    const rowH = 30;
+    const h = 30 + n * rowH + 26;
+    const y0 = Math.max(44, 196 - h / 2);
+    const items: Phaser.GameObjects.GameObject[] = [
+      sc.add.rectangle(0, 0, 640, 360, hex('K'), 0.55).setOrigin(0).setInteractive(),
+      panel(sc, 110, y0, 420, h, 'k', 0.96, 'n'),
+      pixelText(sc, 320, y0 + 8, "Tonight's stalls", { size: 12, color: 'y', align: 'center' }).setOrigin(0.5, 0),
+    ];
+    this.opts.stalls.forEach((st, i) => {
+      const d = this.opts.describe(st);
+      const y = y0 + 30 + i * rowH;
+      const row = panel(sc, 118, y, 404, rowH - 4, 'q', 0.9, 'h').setInteractive({ useHandCursor: true });
+      row.on('pointerover', () => row.setStrokeStyle(2, hex('y')));
+      row.on('pointerout', () => row.setStrokeStyle(1, hex('h')));
+      row.on('pointerdown', () => this.on.visit(i));
+      const [currency, text, note] = d.lines;
+      items.push(
+        row,
+        pixelText(sc, 126, y + 3, d.name, { size: 8, color: 'y' }),
+        pixelText(sc, 514, y + 4, `${currency ?? ''}${note ? ` · ${note}` : ''}`, { size: 6, color: 'a', align: 'right' }).setOrigin(1, 0),
+        pixelText(sc, 126, y + 14, text ?? '', { size: 6, color: 'w', wrap: 390 }),
+      );
+    });
+    items.push(button(sc, 320, y0 + h - 14, 'Close (Tab)', this.on.toggleList, { w: 72 }));
+    this.layer.add(items);
   }
 
   /** Hover a stall for what it sells; click an open one to visit. */
@@ -149,6 +187,7 @@ export class MarketWalk {
   /** A frame of walking. Returns false once the scene has thrown this square away. */
   update(delta: number, keys: WalkKeys): boolean {
     if (!this.you.active) return false;
+    if (this.state.list) return true;
     const dx = (keys.d.isDown || keys.right.isDown ? 1 : 0) - (keys.a.isDown || keys.left.isDown ? 1 : 0);
     const dy = (keys.s.isDown || keys.down.isDown ? 1 : 0) - (keys.w.isDown || keys.up.isDown ? 1 : 0);
     const from = this.state.pos;
@@ -170,6 +209,7 @@ export class MarketWalk {
 
   /** F or Space: visit the stall you're standing by, or take the bridge home. */
   use(): boolean {
+    if (this.state.list) return false;
     if (this.near === 'exit') this.on.leave();
     else if (this.near) this.on.visit(this.open.get(this.near)!);
     else return false;
