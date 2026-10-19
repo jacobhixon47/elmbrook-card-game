@@ -30,6 +30,12 @@ export const BACKDROPS = {
     source: 'Elmbrook 1.0 Midjourney firefly-jar grid (3f40becf), panel 2: pnpm art:import <image> title --grid 2 --panel 2',
     lights: [{ x: 160, y: 268, scale: 1.1 }],
   },
+  'night-market-winter': {
+    file: 'backdrops/night-market-winter.png',
+    source: "Jacob's generated top-down winter market square (Oct 19, 1254x1254): pnpm art:import <image> night-market-winter --focus 0.5,0.48",
+    // The painting's own lanterns carry the light; no extra glows.
+    lights: [],
+  },
 } as const satisfies Record<string, Backdrop>;
 
 export type BackdropId = keyof typeof BACKDROPS;
