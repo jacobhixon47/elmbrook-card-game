@@ -1,6 +1,7 @@
 import type { FixtureStep } from './fixture-steps';
 import type { ModifierId } from '../codex/schema';
 import type { StationId } from '../view/room';
+import type { HomeId } from '../view/market-square';
 import type { Season } from '../core';
 
 // Dev URL params: ?fixture=<name> ?seed=<s> ?noanim=1 ?renderer=canvas
@@ -52,6 +53,8 @@ export type Fixture = {
     eventCard?: number;
     /** In the walkable cottage, standing by this station (its prompt showing). */
     at?: StationId;
+    /** In the Night Market, standing by this stall's home (its prompt showing), on the bridge, or with the list of tonight's stalls open. */
+    square?: HomeId | 'exit' | 'list';
     /** In the walkable cottage, this station's panel open. */
     station?: StationId;
     /** The cottage as you come home from a run in this season. */

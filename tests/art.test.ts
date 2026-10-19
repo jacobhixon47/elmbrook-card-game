@@ -5,6 +5,9 @@ import { BACKDROPS } from '../src/art/backdrops';
 import { gradeView } from '../src/art/window';
 import { PALETTE } from '../src/art/palette';
 import { proceduralTextures, TAG_GLYPHS, tagGlyph } from '../src/art/procedural';
+import { guildHallBackdrop } from '../src/art/scenes/guild';
+import { homeSprite, squareGround } from '../src/art/scenes/market-square';
+import { HOMES, STALL_HOME } from '../src/view/market-square';
 import { codex } from '../src/codex';
 import { spriteSize, validateSprite } from '../src/art/sprite';
 import { PORTRAITS, SPRITES } from '../src/art/sprites';
@@ -49,6 +52,25 @@ describe('art', () => {
 
   it('sprite ids are unique', () => {
     expect(new Set(SPRITES.map((s) => s.id)).size).toBe(SPRITES.length);
+  });
+
+  it('the Night Market square and the Guild Hall only use palette colours', () => {
+    const allowed = new Set(Object.values(PALETTE).map((h) => h.toLowerCase()));
+    const places = {
+      'square-winter-snowed-in': squareGround({ season: 'winter', snowedIn: true }),
+      'square-autumn': squareGround({ season: 'autumn', snowedIn: false }),
+      ...Object.fromEntries(HOMES.flatMap((h) => [true, false].map((open) => [`${h.id}-${open}`, homeSprite(h.id, { season: 'summer', snowedIn: false, open, stall: Object.entries(STALL_HOME).find(([, home]) => home === h.id)![0] })]))),
+      'well-black-market': homeSprite('well', { season: 'spring', snowedIn: false, open: true, stall: 'black-market' }),
+      'guild-spring': guildHallBackdrop({ season: 'spring' }),
+    };
+    for (const [key, pm] of Object.entries(places)) {
+      if (key === 'guild-spring') expect([pm.width, pm.height], key).toEqual([640, 360]);
+      for (let i = 0; i < pm.data.length; i += 4) {
+        if (pm.data[i + 3] === 0) continue;
+        const hex = '#' + [0, 1, 2].map((k) => (pm.data[i + k] ?? 0).toString(16).padStart(2, '0')).join('');
+        if (!allowed.has(hex)) expect.fail(`${key} uses ${hex}`);
+      }
+    }
   });
 
   it('procedural textures only use palette colours', () => {
