@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop", { "modify": [2, "blessed"] }], "ui": { "note": "modifier" } }

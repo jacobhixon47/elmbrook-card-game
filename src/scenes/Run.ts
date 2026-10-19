@@ -39,6 +39,7 @@ import { TIER_SOUND, tickPitch } from '../audio/sounds';
 import { addWeather } from '../view/weather';
 import { isIntroWeather, patronArrival, SEASON_OPENING, WEATHER_INTRO, type Intro } from '../view/intros';
 import { openSettings } from '../view/settings';
+import { noteDue, RUN_NOTES, type RunNote } from '../view/notes';
 import { framedPortrait } from '../view/portrait';
 import { MarketWalk, newWalk, squareBackdrop, type WalkKeys, type WalkState } from '../view/market-walk';
 import { standBy, SPAWN } from '../view/market-square';
@@ -124,6 +125,8 @@ export class Run extends Phaser.Scene {
   private openingPending = false;
   /** The scene screen over the shop right now (Enter walks on); null when none. */
   private intro: { done: () => void } | null = null;
+  /** First-time notes dismissed in this scene (a fixture's, or before the profile saves). */
+  private notesShown = new Set<string>();
   private settingsOpen = false;
   private tip!: Tooltip;
   /** The first-run tutorial, while it lasts (GDD §15.1). Kept across restarts for a new sky. */
@@ -377,6 +380,7 @@ export class Run extends Phaser.Scene {
       this.add2(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.6).setOrigin(0).setInteractive());
       this.seasonScene(story.name, story.lines, () => this.reread.shift(), undefined, story.portrait);
     }
+    if (!this.intro && !story) this.drawNote(s);
     this.drawTutorial(s);
   }
 
@@ -613,7 +617,29 @@ export class Run extends Phaser.Scene {
     });
   }
 
-  private drawTip(tip: Tip, gotIt: () => void) {
+  /** A first-time note (Jacob, Oct 19): one at a time, over the shop, when nothing else is open. */
+  private drawNote(s: RunState) {
+    if (this.tutorial || this.book || this.mode.kind !== 'idle' || (s.phase !== 'morning' && s.phase !== 'brewing')) return;
+    const note = this.noteNow(s);
+    if (!note) return;
+    this.drawTip(note, () => {
+      this.notesShown.add(note.id);
+      if (!this.fixtureRun) saveProfile({ notesSeen: [...loadProfile().notesSeen, note.id] });
+      this.render();
+    }, note.title);
+  }
+
+  private noteNow(s: RunState): RunNote | null {
+    if (this.fixture) {
+      const want = this.fixture.ui?.note;
+      return want && !this.notesShown.has(want) ? (noteDue(RUN_NOTES.filter((n) => n.id === want), s, []) ?? null) : null;
+    }
+    if (this.fixtureRun || !wantsIntros()) return null;
+    const p = loadProfile();
+    return p.notes ? noteDue(RUN_NOTES, s, [...p.notesSeen, ...this.notesShown]) : null;
+  }
+
+  private drawTip(tip: Pick<Tip, 'text' | 'target' | 'at' | 'until'>, gotIt: () => void, header = 'Tutorial') {
     if (tip.target) {
       const r = tip.target;
       this.add2(this.add.rectangle(r.x, r.y, r.w, r.h).setOrigin(0).setStrokeStyle(2, hex('y')));
@@ -623,7 +649,7 @@ export class Run extends Phaser.Scene {
     const body = pixelText(this, x + 8, tip.at.y + 18, tip.text, { size: 8, color: 'W', wrap: w - 16 });
     const h = 18 + body.height + (tip.until ? 8 : 28);
     this.add2(panel(this, x, tip.at.y, w, h, 'k', 0.97, 'y'));
-    this.text(x + 8, tip.at.y + 5, 'Tutorial', { size: 7, color: 'v' });
+    this.text(x + 8, tip.at.y + 5, header, { size: 7, color: 'v' });
     this.add2(body);
     if (!tip.until) this.add2(button(this, x + w / 2, tip.at.y + h - 14, 'Got it', gotIt, { w: 56, color: 'Y' }));
   }
