@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, priceAt, runKeepsakes, blessingTonight, BLACK_MARKET, eventChoiceAsk, eventChoiceBlocked, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, WEEK_MOONS, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, priceAt, runKeepsakes, blessingTonight, BLACK_MARKET, eventChoiceAsk, eventChoiceBlocked, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
   HARVEST_AUCTION, FRIENDSHIP, friendLevelOf, friendshipOf, hearthOffers, isRegular, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
@@ -14,7 +14,7 @@ import { stepAction } from '../debug/fixture-steps';
 import { markReady } from '../debug/hook';
 import { noAnim, params, type Fixture } from '../debug/params';
 import { store } from '../store';
-import { gradedView, guildBackdrop, marketBackdrop, shopBackdrop, viewOverrides, type PlaceBackdrop } from '../view/backdrop';
+import { gradedView, guildBackdrop, shopBackdrop, viewOverrides, type PlaceBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { createCard } from '../view/card';
 import { friendshipLine, levelUpNote, storyScene, townsfolkRows } from '../view/townsfolk';
@@ -40,6 +40,8 @@ import { addWeather } from '../view/weather';
 import { isIntroWeather, patronArrival, SEASON_OPENING, WEATHER_INTRO, type Intro } from '../view/intros';
 import { openSettings } from '../view/settings';
 import { framedPortrait } from '../view/portrait';
+import { MarketWalk, newWalk, squareBackdrop, type WalkKeys, type WalkState } from '../view/market-walk';
+import { standBy, SPAWN } from '../view/market-square';
 
 /** The Hearth Trader's three trades (Winter). */
 type HearthTab = 'trade' | 'yule' | 'crown';
@@ -131,6 +133,10 @@ export class Run extends Phaser.Scene {
   /** What the run that just ended changed in the profile, for the end screen. */
   private outcome: RunOutcome | null = null;
   private fixture: Fixture | null = null;
+  /** The Night Market you walk round, while it's on screen, and where you stand in it this week. */
+  private market: MarketWalk | null = null;
+  private walkState: WalkState | null = null;
+  private walkKeys!: WalkKeys;
 
   constructor() {
     super('Run');
@@ -172,6 +178,8 @@ export class Run extends Phaser.Scene {
     if (!data.saved && !data.resume) this.openingPending = fixture ? fixture.ui?.intro === 'season' : wantsIntros() && !this.tutorial && loadProfile().seasonOpenings;
     this.save();
     const state = store.getState()!;
+    const at = fixture?.ui?.square;
+    if (at) this.walkState = { ...newWalk(state.week), pos: at === 'exit' ? { x: SPAWN.x, y: 170 } : standBy(at), face: at === 'exit' ? 'down' : 'up' };
     if (fixture?.ui?.dialog !== undefined) {
       const order = state.orders.at(fixture.ui.dialog);
       if (order) this.mode = { kind: 'dialog', order: order.id };
@@ -229,6 +237,8 @@ export class Run extends Phaser.Scene {
     this.events.once('shutdown', off);
     this.input.mouse?.disableContextMenu();
     this.bindKeys();
+    const K = Phaser.Input.Keyboard.KeyCodes;
+    this.walkKeys = this.input.keyboard!.addKeys({ w: K.W, a: K.A, s: K.S, d: K.D, up: K.UP, down: K.DOWN, left: K.LEFT, right: K.RIGHT }, false) as WalkKeys;
     this.settingsOpen = false;
     if (fixture?.ui?.settings) this.openSettings();
     this.time.delayedCall(noAnim ? 0 : 400, () => markReady(this));
@@ -317,7 +327,13 @@ export class Run extends Phaser.Scene {
 
   // ---------------------------------------------------------------- render
 
+  override update(_time: number, delta: number) {
+    if (!this.market || this.busy || this.book || this.settingsOpen || this.intro || this.mode.kind !== 'idle') return;
+    if (!this.market.update(delta, this.walkKeys)) this.market = null;
+  }
+
   private render() {
+    this.market = null;
     this.ui.removeAll(true);
     this.tip.hide();
     const s = store.getState()!;
@@ -332,7 +348,8 @@ export class Run extends Phaser.Scene {
     } else {
       this.drawEvening(s);
     }
-    if (s.phase !== 'game-over' && s.phase !== 'victory') this.drawFamiliars(s);
+    // Familiars stay off the square, where the Hollow Tailor's stall stands in their corner.
+    if (s.phase !== 'game-over' && s.phase !== 'victory' && !this.walking(s)) this.drawFamiliars(s);
     if (this.mode.kind === 'familiar') this.drawFamiliarCard(s, this.mode.index);
     if (this.book) {
       drawGrimoire(this, this.ui, s, this.book, this.tip, {
@@ -1233,21 +1250,29 @@ export class Run extends Phaser.Scene {
 
   /** Where tonight's screen takes place, when it isn't the shop. */
   private placeOf(s: RunState): PlaceBackdrop | null {
-    if (s.phase === 'game-over' || s.phase === 'victory') return null;
+    if (s.phase === 'game-over' || s.phase === 'victory' || this.walking(s)) return null;
     if (s.offer?.kind === 'guild') return guildBackdrop(this, s.season);
-    if (s.offer?.kind === 'night-market') return marketBackdrop(this, s.season, WEEK_MOONS[s.week - 1] ?? 'new', snowedIn(s, s.week));
+    if (s.offer?.kind === 'night-market') return squareBackdrop(this, s.season, snowedIn(s, s.week), s.offer.stalls);
     return null;
+  }
+
+  /** Walking round the Night Market: its street, once any Snowed In scene has been read. */
+  private walking(s: RunState): boolean {
+    const o = s.offer;
+    if (o?.kind !== 'night-market' || o.at !== null || s.phase === 'game-over' || s.phase === 'victory') return false;
+    return !(snowedIn(s, s.week) && !this.scenesSeen.has(`snowed-in-${s.week}`));
   }
 
   private drawEvening(s: RunState) {
     const offer = s.offer;
     // Errands and the Night Market that happen somewhere else are drawn in that place, lightly dimmed.
-    const place = this.placeOf(s);
     // A place goes under the HUD drawn already this render; the shop is only dimmed, HUD and all.
+    // The Night Market you walk round draws itself (see `drawNightMarket`).
+    const place = this.placeOf(s);
     if (place) {
       const glows = place.lights.map((l) => this.add.image(l.x, l.y, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(l.scale).setAlpha(0.5));
       [this.add.image(0, 0, place.texture).setOrigin(0), ...glows, this.add.rectangle(0, 0, 640, 360, hex('K'), 0.4).setOrigin(0)].forEach((o, i) => this.ui.addAt(o, i));
-    } else {
+    } else if (!this.walking(s)) {
       this.add2(this.add.rectangle(0, 0, 640, 360, hex('K'), 0.5).setOrigin(0));
     }
     const title = (t: string, sub: string) => {
@@ -1633,24 +1658,25 @@ export class Run extends Phaser.Scene {
         this.seasonScene('Snowed In', SNOWED_IN_SCENE, () => this.scenesSeen.add(`snowed-in-${s.week}`));
         return;
       }
-      title(buried ? 'The Night Market, Snowed In' : 'The Night Market', `${buried ? SNOWED_IN_LINE : MOON_LINE[moonOf(s.week)]} Visit any stall, then the Guild collects this week's rent: ${due}g. You have ${s.gold}g.${s.halfPrice > 0 ? ' The Firefly Keeper put in a word: your next buy here is half price.' : ''}`);
-      const n = offer.stalls.length;
-      const w = Math.min(84, Math.floor(600 / n) - 6);
-      offer.stalls.forEach((st, i) => {
-        const x = 320 + (i - (n - 1) / 2) * (w + 6);
-        const meta = codex.stalls.get(st.id)!;
-        const tile = this.add2(panel(this, x - w / 2, 96, w, 96, 'k', 0.95, 'n'));
-        this.text(x, 102, meta.name, { size: 8, color: 'y', align: 'center', wrap: w - 8 }).setOrigin(0.5, 0);
-        this.text(x, 128, meta.currency, { size: 7, color: 'a', align: 'center', wrap: w - 8 }).setOrigin(0.5, 0);
-        this.text(x, 142, meta.text, { size: 6, color: 'w', align: 'center', wrap: w - 8 }).setOrigin(0.5, 0);
-        const note = stallNote(s, st);
-        if (note) this.text(x, 180, note, { size: 6, color: 'h', align: 'center' }).setOrigin(0.5, 0);
-        tile.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'visitStall', index: i }));
-        tile.on('pointerover', () => tile.setStrokeStyle(2, hex('y')));
-        tile.on('pointerout', () => tile.setStrokeStyle(1, hex('n')));
-      });
+      if (!this.walkState || this.walkState.week !== s.week) this.walkState = newWalk(s.week);
       const short = s.gold < due;
-      this.add2(button(this, 320, 214, short ? `Can't pay ${due}g: leave` : `Pay ${due}g rent and go home`, () => this.dispatch({ type: 'leaveMarket' }), { w: 160, color: short ? 'I' : 'Y' }));
+      const line = `${buried ? SNOWED_IN_LINE : MOON_LINE[moonOf(s.week)]} Rent tonight: ${due}g. You have ${s.gold}g.${s.halfPrice > 0 ? ' Your next buy here is half price.' : ''}`;
+      this.text(320, 36, line, { size: 7, color: 'a', stroke: 'k', align: 'center', wrap: 420 }).setOrigin(0.5, 0);
+      this.market = new MarketWalk(this, this.ui, {
+        season: s.season, snowedIn: buried, stalls: offer.stalls,
+        describe: (st) => {
+          const meta = codex.stalls.get(st.id)!;
+          const full = offer.stalls.find((x) => x.id === st.id);
+          const note = full ? stallNote(s, full) : null;
+          return { name: meta.name, lines: [meta.currency, meta.text, ...(note ? [note] : [])] };
+        },
+        exitLabel: short ? `Can't pay ${due}g: leave` : `Pay ${due}g rent and go home`,
+        exitShort: short,
+      }, this.walkState, {
+        visit: (index) => void this.dispatch({ type: 'visitStall', index }),
+        leave: () => void this.dispatch({ type: 'leaveMarket' }),
+        tip: this.tip,
+      });
       return;
     }
 
@@ -2090,6 +2116,7 @@ export class Run extends Phaser.Scene {
         return this.render();
       }
       if (s.phase === 'morning' && (e.key === 'Enter' || e.key === ' ')) return void this.dispatch({ type: 'openShop' });
+      if (this.market && this.mode.kind === 'idle' && (e.key === 'f' || e.key === 'F' || e.key === ' ')) return void this.market.use();
       if (s.phase !== 'brewing' || this.mode.kind === 'dialog') return;
       const n = Number(e.key);
       if (n >= 1 && n <= 9 && s.hand[n - 1]) return this.clickCard(s, s.hand[n - 1]!);

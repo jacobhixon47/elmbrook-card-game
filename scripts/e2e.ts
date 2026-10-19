@@ -5,6 +5,7 @@ import { createServer } from 'vite';
 import type { Action, RunState } from '../src/core';
 import { codex } from '../src/codex';
 import { greedyAction } from '../src/sim/bot';
+import { HOMES, STALL_HOME } from '../src/view/market-square';
 import { launchBrowser } from './browser';
 const server = await createServer({ server: { port: 0 }, logLevel: 'error' });
 await server.listen();
@@ -91,13 +92,22 @@ while (steps++ < 400 && !(s.week === 2 && s.day === 2) && s.phase !== 'game-over
     case 'takeGift': { const n = (s.offer as { cards: string[] }).cards.length; await click(320 + (a.index - (n - 1) / 2) * 80, 150); break; }
     case 'passGift': await click(320, 250); break;
     case 'visitStall': {
-      const n = (s.offer as { stalls: unknown[] }).stalls.length;
-      const w = Math.min(84, Math.floor(600 / n) - 6);
-      await click(320 + (a.index - (n - 1) / 2) * (w + 6), 140);
+      // Click the stall where it stands in the square.
+      const id = (s.offer as { stalls: { id: string }[] }).stalls[a.index]!.id;
+      const h = HOMES.find((x) => x.id === STALL_HOME[id])!;
+      await click((h.at.x + h.size.w / 2) * 2, (h.at.y + h.size.h / 2) * 2);
       break;
     }
     case 'leaveStall': await click(320, 262); break;
-    case 'leaveMarket': await click(320, 214); break;
+    case 'leaveMarket': {
+      // Walk back down onto the bridge and take it.
+      await page.keyboard.down('s');
+      await page.waitForFunction(`${run}.walkState.pos.y > 166`, null, { timeout: 5000 }).catch(() => {});
+      await page.keyboard.up('s');
+      await frames();
+      await key('f');
+      break;
+    }
     case 'sellPotion': { const i = s.shelf.findIndex((p) => p.uid === a.uid); await click(320 + (i - (s.shelf.length - 1) / 2) * 50, 140); break; }
     case 'buy': {
       const o = s.offer as { kind: string; stock?: unknown[]; stalls?: { stock?: unknown[] }[]; at?: number };
