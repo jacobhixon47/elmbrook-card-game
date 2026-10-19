@@ -6,7 +6,8 @@ import { renderSound, type Voice, type Wave } from './synth';
 // seamless loop. Every place has its own tune for each season (Jacob, Oct 19): spring serene and
 // uplifting, summer a warm summer night (a little faster, no drums), autumn calm, winter major and
 // staccato. The Night Shift and the Night Market are in minor keys all year. The season sets the
-// instruments and the touch; each tune sets its key, tempo, meter and accompaniment. Pure and deterministic, so tests can check the loops.
+// instruments and the touch; each tune sets its key, tempo, meter and accompaniment. Pure and
+// deterministic, so tests can check the loops.
 
 export type TuneId = 'title' | 'shop' | 'night' | 'market' | 'cottage';
 
