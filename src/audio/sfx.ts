@@ -108,7 +108,7 @@ function startWanted() {
   try {
     let b = tuneBuffers.get(key);
     if (!b) {
-      const samples = renderTune(TUNES[wanted.id], wanted.season, c.sampleRate);
+      const samples = renderTune(TUNES[wanted.id][wanted.season], wanted.season, c.sampleRate);
       b = c.createBuffer(1, samples.length, c.sampleRate);
       b.copyToChannel(samples, 0);
       tuneBuffers.set(key, b);

@@ -115,7 +115,7 @@ The Night Market becomes a walkable square the same way (Jacob, Oct 14; built in
   - Code-drawn for now (Oct 19), to swap for paintings later: the Guild Hall, its window dressed for the season, built the first time it's shown. The Calendar is a Grimoire page and needs none.
   - ✅ The walkable Night Market (Jacob, Oct 19): built now rather than later, from Jacob's painted market square. A code-drawn top-down square you walk round like the cottage, each stall in its own spot, dressed for the season, and buried in drifts with only the Hearth Trader lit when Snowed In (GDD §9). It replaces the side-on street backdrop.
 - ✅ Art sheet reviewed for consistency (Oct 19): the 160 sprites and 30 portraits read as one hand (dark outlines, the shared palette, light from the top left). The one outlier was the Cobweb, a flat grey grid with no outline; it is now a corner web with its spider.
-- ✅ SFX and music loops wired in, with volume settings. Music (Oct 19, Jacob chose code-made loops, with CC0 tracks to compare once the music sites are reachable): five loops (title, shop, Night Shift, Night Market, cottage), scored per season, with a Music slider in Settings.
+- ✅ SFX and music loops wired in, with volume settings. Music (Oct 19, Jacob chose code-made loops and skipped CC0 tracks): twenty loops, a distinct tune for each place (title, shop, Night Shift, Night Market, cottage) in each season, with a Music slider in Settings.
 
 **Accept:** no placeholders remain; the art sheet looks like one artist.
 

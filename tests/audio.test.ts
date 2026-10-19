@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cuesFor, SOUNDS, TIER_SOUND, tickPitch, type SoundId } from '../src/audio/sounds';
 import { arpeggio, renderSound, soundLength } from '../src/audio/synth';
-import { melodyNotes, noteFreq, renderTune, tuneLength, TUNES, type TuneId } from '../src/audio/music';
+import { melodyNotes, noteFreq, renderTune, stepsPerBar, tuneLength, TUNES, type TuneId } from '../src/audio/music';
 import { migrateProfile, newProfile, PROFILE_VERSION, SEASONS, type GameEvent } from '../src/core';
 
 const RATE = 22050;
@@ -87,18 +87,31 @@ describe('the music', () => {
     expect(melodyNotes('E5 - G5 . | C6 - - .')).toEqual([{ step: 0, len: 2, note: 'E5' }, { step: 2, len: 1, note: 'G5' }, { step: 4, len: 3, note: 'C6' }]);
   });
 
-  it('writes every tune as one melody step per eighth, eight bars long', () => {
-    for (const [id, tune] of Object.entries(TUNES)) {
-      const steps = tune.melody.split(/\s+/).filter((t) => t && t !== '|').length;
-      expect(steps, id).toBe(tune.chords.length * 8);
+  it('writes every tune as one melody step per eighth, filling every bar', () => {
+    for (const id of Object.keys(TUNES) as TuneId[]) {
+      for (const season of SEASONS) {
+        const tune = TUNES[id][season];
+        const steps = tune.melody.split(/\s+/).filter((t) => t && t !== '|').length;
+        expect(steps, `${id} ${season}`).toBe(tune.chords.length * stepsPerBar(tune));
+      }
+    }
+  });
+
+  it('gives each season its own tune, and each place its own sound', () => {
+    for (const id of Object.keys(TUNES) as TuneId[]) {
+      expect(new Set(SEASONS.map((s) => TUNES[id][s].melody)).size, id).toBe(SEASONS.length);
+    }
+    for (const season of SEASONS) {
+      const tunes = (Object.keys(TUNES) as TuneId[]).map((id) => TUNES[id][season]);
+      expect(new Set(tunes.map((t) => t.melody)).size, season).toBe(tunes.length);
     }
   });
 
   it('renders each tune in each season to a loop of the right length, never clipping', () => {
     for (const id of Object.keys(TUNES) as TuneId[]) {
       for (const season of SEASONS) {
-        const s = renderTune(TUNES[id], season, RATE);
-        expect(s.length, `${id} ${season}`).toBe(Math.round(tuneLength(TUNES[id]) * RATE));
+        const s = renderTune(TUNES[id][season], season, RATE);
+        expect(s.length, `${id} ${season}`).toBe(Math.round(tuneLength(TUNES[id][season]) * RATE));
         const peak = s.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
         expect(peak, `${id} ${season}`).toBeGreaterThan(0.1);
         expect(peak, `${id} ${season}`).toBeLessThan(0.9);

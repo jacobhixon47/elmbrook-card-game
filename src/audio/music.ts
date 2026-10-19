@@ -3,13 +3,29 @@ import { renderSound, type Voice, type Wave } from './synth';
 
 // Music as code (M5, Jacob chose code-made loops, Oct 19), the way the sound effects are: each tune
 // is a few bars of chords and a melody, written out as notes, and rendered by `synth.ts` into one
-// seamless loop. The season changes the instruments, not the tune, so a place always sounds like
-// itself. Pure and deterministic, so tests can check the loops.
+// seamless loop. Every place has its own tune for each season (Jacob, Oct 19): spring serene and
+// uplifting, summer adventurous, autumn calm, winter minor and staccato. The season sets the
+// instruments and the touch; each tune sets its key, tempo, meter and accompaniment. Pure and
+// deterministic, so tests can check the loops.
 
 export type TuneId = 'title' | 'shop' | 'night' | 'market' | 'cottage';
 
+/**
+ * How the accompaniment moves under the melody:
+ * - `pad`: the chord held through the bar, over a held root.
+ * - `harp`: the chord rippling upward in eighths.
+ * - `drive`: a bass in eighths and chord stabs off the beat.
+ * - `waltz`: the root on one, the chord on two and three (3/4).
+ * - `walk`: a walking bass in quarters under a soft chord.
+ * - `pluck`: a short ostinato in eighths.
+ * - `box`: a music box: a few high chord notes over a low root.
+ */
+export type Feel = 'pad' | 'harp' | 'drive' | 'waltz' | 'walk' | 'pluck' | 'box';
+
 export type Tune = {
   bpm: number;
+  /** Beats a bar: 4, or 3 for a waltz. */
+  meter: 3 | 4;
   /** One chord a bar: a root, then `m` for minor (`Bb`, `F#m`, `E`). */
   chords: readonly string[];
   /**
@@ -17,58 +33,172 @@ export type Tune = {
    * `.` rests. Bars may be split with `|` for reading.
    */
   melody: string;
+  feel: Feel;
+  /** A soft kit: kick, snare and hats. */
+  drums?: boolean;
 };
 
-export const TUNES: Record<TuneId, Tune> = {
-  // The title screen: G major, unhurried, rising like a door opening.
+export const TUNES: Record<TuneId, Record<Season, Tune>> = {
   title: {
-    bpm: 84,
-    chords: ['G', 'Em', 'C', 'D', 'G', 'Em', 'C', 'D'],
-    melody: `B4 - D5 - G5 - - - | G5 - F#5 - E5 - B4 - | C5 - E5 - G5 - E5 - | F#5 - - - A5 - - -
-             B5 - A5 - G5 - D5 - | E5 - G5 - B5 - - - | A5 - G5 - E5 - C5 - | D5 - - - F#5 - - -`,
+    // D major, long rising notes over a harp.
+    spring: {
+      bpm: 76, meter: 4, feel: 'harp', chords: ['D', 'G', 'Bm', 'A', 'D', 'G', 'A', 'D'],
+      melody: `F#5 - - - A5 - - - | B5 - - - D6 - B5 - | A5 - - - F#5 - D5 - | E5 - - - - - - -
+               F#5 - A5 - D6 - - - | E6 - D6 - B5 - G5 - | A5 - - - C#6 - E6 - | D6 - - - - - - -`,
+    },
+    // A mixolydian, a road opening up.
+    summer: {
+      bpm: 120, meter: 4, feel: 'drive', drums: true, chords: ['A', 'G', 'D', 'A', 'A', 'G', 'D', 'E'],
+      melody: `A4 . C#5 E5 - A5 - . | G5 - . F#5 - D5 - . | D5 F#5 A5 - F#5 - D5 E5 | E5 - - - . . C#5 E5
+               A5 . A5 G5 - E5 - . | D5 - G5 - B5 - G5 . | A5 - F#5 - D6 - . . | B5 - G#5 - E5 - - .`,
+    },
+    // F major, an easy walk home.
+    autumn: {
+      bpm: 68, meter: 4, feel: 'walk', chords: ['F', 'Am', 'Bb', 'F', 'Dm', 'Bb', 'C', 'F'],
+      melody: `A4 - - - C5 - F5 - | E5 - - - C5 - - - | D5 - F5 - Bb5 - A5 - | A5 - - - - - . .
+               F5 - - - D5 - A4 - | Bb4 - D5 - F5 - - - | E5 - G5 - C5 - E5 - | F5 - - - - - . .`,
+    },
+    // E minor, picked out note by note.
+    winter: {
+      bpm: 96, meter: 4, feel: 'pluck', chords: ['Em', 'C', 'G', 'B', 'Em', 'C', 'Am', 'B'],
+      melody: `E5 . G5 . B5 . E6 . | C6 . B5 . G5 . E5 . | D5 . G5 . B5 . D6 . | D#6 . B5 . F#5 . . .
+               G5 G5 . F#5 E5 . B4 . | C5 . E5 . G5 . C6 . | A5 . C6 . E6 . C6 . | B5 . . . F#5 . D#5 .`,
+    },
   },
-  // The shop by day: C major, a little bustle.
   shop: {
-    bpm: 96,
-    chords: ['C', 'Am', 'F', 'G', 'C', 'Am', 'Dm', 'G'],
-    melody: `E5 - G5 - C6 - B5 A5 | G5 - E5 - - - . . | F5 - A5 - C6 - A5 F5 | G5 - - - D5 - . .
-             E5 G5 C6 - B5 - G5 - | A5 - G5 E5 - - C5 D5 | F5 - E5 - D5 - A4 - | B4 - D5 - G5 - - -`,
+    // G major, stepping lightly.
+    spring: {
+      bpm: 88, meter: 4, feel: 'harp', chords: ['G', 'C', 'D', 'G', 'Em', 'C', 'D', 'G'],
+      melody: `D5 - G5 - A5 - B5 - | C6 - - - B5 - A5 - | A5 - F#5 - D5 - - - | G5 - B5 - D6 - - -
+               E6 - D6 - B5 - G5 - | E5 - G5 - C6 - - - | B5 - A5 - F#5 - A5 - | G5 - - - - - . .`,
+    },
+    // E major, a busy, bright day.
+    summer: {
+      bpm: 128, meter: 4, feel: 'drive', drums: true, chords: ['E', 'B', 'C#m', 'A', 'E', 'B', 'A', 'B'],
+      melody: `B4 E5 G#5 B5 - G#5 E5 . | F#5 - . D#5 - F#5 B5 - | G#5 - E5 C#5 - E5 G#5 . | A5 - - - . E5 F#5 G#5
+               B5 . B5 G#5 - E5 - . | D#5 - F#5 - B5 - A5 . | C#6 - B5 A5 - E5 - . | F#5 - - - D#5 - B4 -`,
+    },
+    // Bb major, unhurried, a little swing.
+    autumn: {
+      bpm: 76, meter: 4, feel: 'walk', chords: ['Bb', 'Gm', 'Eb', 'F', 'Bb', 'Gm', 'Cm', 'F'],
+      melody: `D5 - F5 - Bb5 - A5 - | G5 - - - D5 - - - | Eb5 - G5 - Bb5 - G5 - | F5 - - - C5 - - -
+               Bb4 - D5 - F5 - Bb5 - | A5 - G5 - D5 - - - | Eb5 - D5 - C5 - Eb5 - | F5 - - - - - . .`,
+    },
+    // A minor, short and crisp, like footsteps in snow.
+    winter: {
+      bpm: 104, meter: 4, feel: 'pluck', chords: ['Am', 'Dm', 'G', 'C', 'F', 'Dm', 'E', 'E'],
+      melody: `A5 . E5 . A5 C6 B5 A5 | F5 . A5 . D6 . A5 . | G5 . B5 . D6 C6 B5 . | C6 . G5 . E5 . . .
+               F5 . A5 . C6 . A5 F5 | D5 . F5 . A5 . F5 . | E5 . G#5 . B5 . G#5 . | E5 . . . B4 . . .`,
+    },
   },
-  // The Night Shift: A minor, slower, the lamps lit.
   night: {
-    bpm: 76,
-    chords: ['Am', 'F', 'C', 'G', 'Am', 'F', 'E', 'E'],
-    melody: `A4 - - - C5 - E5 - | F5 - - - E5 - C5 - | E5 - - - G5 - E5 - | D5 - - - - - . .
-             C5 - B4 - A4 - E5 - | F5 - E5 - D5 - C5 - | B4 - - - G#4 - B4 - | E5 - - - - - . .`,
+    // F major, wide and still.
+    spring: {
+      bpm: 70, meter: 4, feel: 'pad', chords: ['F', 'C', 'Dm', 'Bb', 'F', 'C', 'Bb', 'C'],
+      melody: `C5 - - - - - F5 - | G5 - - - E5 - - - | F5 - - - A5 - - - | D5 - - - - - - -
+               C6 - - - A5 - - - | G5 - - - E5 - G5 - | F5 - - - D5 - - - | E5 - - - - - . .`,
+    },
+    // D dorian, something out in the dark.
+    summer: {
+      bpm: 110, meter: 4, feel: 'pluck', drums: true, chords: ['Dm', 'G', 'Dm', 'C', 'Dm', 'G', 'Am', 'C'],
+      melody: `D5 . F5 . A5 - G5 . | B5 - . A5 G5 - D5 . | F5 - E5 D5 - - A4 . | C5 - E5 - G5 - - .
+               A5 . A5 . C6 - A5 . | B5 - G5 - D5 - B4 . | C5 - E5 - A5 - G5 . | E5 - - - G5 - - .`,
+    },
+    // D minor, slow, under the lamps.
+    autumn: {
+      bpm: 62, meter: 4, feel: 'pad', chords: ['Dm', 'Bb', 'F', 'C', 'Dm', 'Bb', 'Gm', 'A'],
+      melody: `A4 - - - - - D5 - | F5 - - - D5 - - - | C5 - - - F5 - A5 - | G5 - - - - - . .
+               F5 - - - E5 - D5 - | D5 - - - Bb4 - - - | G4 - Bb4 - D5 - G5 - | E5 - - - C#5 - - -`,
+    },
+    // C minor, a cold music box in the dark.
+    winter: {
+      bpm: 84, meter: 4, feel: 'box', chords: ['Cm', 'Ab', 'Eb', 'G', 'Cm', 'Fm', 'G', 'G'],
+      melody: `G5 . . . Eb5 . . . | C6 . . . Ab5 . . . | Bb5 . G5 . Eb5 . . . | D5 . . . B4 . . .
+               C5 . Eb5 . G5 . C6 . | Ab5 . . . F5 . C5 . | B4 . D5 . G5 . F5 . | D5 . . . . . . .`,
+    },
   },
-  // The Night Market: D minor and a skip in its step.
   market: {
-    bpm: 104,
-    chords: ['Dm', 'C', 'Bb', 'A', 'Dm', 'C', 'Bb', 'A'],
-    melody: `D5 F5 A5 F5 D5 - A4 - | E5 G5 C6 G5 E5 - C5 - | D5 F5 Bb5 - A5 G5 F5 - | E5 - C#5 - A4 - . .
-             A5 - F5 - D5 F5 A5 - | G5 - E5 - C5 E5 G5 - | F5 E5 D5 - Bb4 - D5 - | C#5 - E5 - A5 - - -`,
+    // C major, a gentle waltz.
+    spring: {
+      bpm: 96, meter: 3, feel: 'waltz', chords: ['C', 'Am', 'F', 'G', 'C', 'Am', 'Dm', 'G'],
+      melody: `E5 - - - G5 - | A5 - - - C6 - | C6 - A5 - F5 - | G5 - - - - -
+               E5 - G5 - C6 - | B5 - A5 - E5 - | F5 - A5 - D6 - | B5 - - - D5 -`,
+    },
+    // G major, a quick jig.
+    summer: {
+      bpm: 132, meter: 3, feel: 'waltz', drums: true, chords: ['G', 'C', 'D', 'G', 'Em', 'C', 'D', 'G'],
+      melody: `D5 G5 B5 - G5 B5 | C6 - B5 A5 G5 E5 | F#5 A5 D6 - A5 F#5 | G5 - D5 - B4 -
+               E5 G5 B5 - G5 E5 | C5 E5 G5 - C6 - | A5 - F#5 - D5 A5 | G5 - - - . .`,
+    },
+    // F major, a slow waltz.
+    autumn: {
+      bpm: 84, meter: 3, feel: 'waltz', chords: ['F', 'C', 'Dm', 'Bb', 'F', 'C', 'Bb', 'C'],
+      melody: `C5 - F5 - A5 - | G5 - - - E5 - | F5 - A5 - D6 - | Bb5 - - - D5 -
+               A5 - G5 - F5 - | E5 - G5 - C6 - | D6 - Bb5 - F5 - | G5 - - - . .`,
+    },
+    // D harmonic minor, a waltz on tiptoe.
+    winter: {
+      bpm: 108, meter: 3, feel: 'waltz', chords: ['Dm', 'A', 'Dm', 'Gm', 'Dm', 'A', 'Bb', 'A'],
+      melody: `D5 . F5 . A5 . | C#5 . E5 . A5 . | F5 . E5 . D5 . | G5 . Bb5 . D6 .
+               A5 . F5 . D5 . | E5 . C#5 . A4 . | Bb4 . D5 . F5 . | E5 . . . C#5 .`,
+    },
   },
-  // The cottage: F major, a music box by the fire.
   cottage: {
-    bpm: 66,
-    chords: ['F', 'Dm', 'Bb', 'C', 'F', 'Am', 'Bb', 'C'],
-    melody: `A5 - C6 - F5 - - - | D5 - F5 - A5 - - - | D6 - C6 - Bb5 - A5 - | G5 - - - - - . .
-             A5 - G5 - F5 - C5 - | E5 - A5 - C6 - - - | Bb5 - A5 - G5 - D5 - | E5 - - - G5 - - -`,
+    // A major, a lullaby.
+    spring: {
+      bpm: 64, meter: 4, feel: 'box', chords: ['A', 'D', 'E', 'A', 'F#m', 'D', 'E', 'A'],
+      melody: `C#6 - - - E5 - - - | F#5 - - - A5 - - - | G#5 - - - B5 - - - | A5 - - - - - - -
+               C#6 - - - A5 - F#5 - | D6 - - - A5 - - - | B5 - - - G#5 - E5 - | A5 - - - - - . .`,
+    },
+    // C major, an evening on the porch.
+    summer: {
+      bpm: 100, meter: 4, feel: 'walk', chords: ['C', 'F', 'G', 'C', 'Am', 'F', 'G', 'G'],
+      melody: `E5 - G5 - . E5 G5 A5 | A5 - - - F5 - C5 - | D5 - G5 - B5 - A5 G5 | E5 - - - - - . .
+               C6 - - - A5 - E5 - | F5 - A5 - C6 - A5 - | G5 - B5 - D6 - B5 - | G5 - - - D5 - . .`,
+    },
+    // C major, by the fire.
+    autumn: {
+      bpm: 60, meter: 4, feel: 'box', chords: ['C', 'Em', 'F', 'C', 'Am', 'F', 'G', 'C'],
+      melody: `G5 - - - E5 - - - | B5 - - - G5 - - - | A5 - - - C6 - - - | G5 - - - - - . .
+               E5 - - - A5 - - - | F5 - - - C5 - - - | D5 - - - B4 - D5 - | C5 - - - - - . .`,
+    },
+    // G minor, frost on the window.
+    winter: {
+      bpm: 72, meter: 4, feel: 'box', chords: ['Gm', 'Eb', 'Bb', 'D', 'Gm', 'Cm', 'D', 'D'],
+      melody: `D6 . . . Bb5 . . . | G5 . . . Eb5 . . . | F5 . D5 . Bb4 . . . | A4 . . . F#5 . . .
+               G5 . Bb5 . D6 . . . | C6 . Bb5 . G5 . Eb5 . | D5 . F#5 . A5 . C6 . | Bb5 . . . A5 . . .`,
+    },
   },
 };
 
-/** How each season plays a tune: the melody's voice, the arpeggio's, the bass's, and a bell an octave up in winter. */
-type Band = { lead: Instrument; arp: Instrument; bass: Instrument; bell?: Instrument };
-type Instrument = { wave: Wave; volume: number; duty?: number };
+type Instrument = { wave: Wave; volume: number; duty?: number; attack?: number };
+
+/** How each season plays: its instruments, how long notes ring (legato), and its swing. */
+type Band = { lead: Instrument; bell?: Instrument; accomp: Instrument; bass: Instrument; pad: Instrument; legato: number; swing: number };
 
 export const BANDS: Record<Season, Band> = {
-  spring: { lead: { wave: 'triangle', volume: 0.24 }, arp: { wave: 'sine', volume: 0.1 }, bass: { wave: 'triangle', volume: 0.16 } },
-  summer: { lead: { wave: 'square', volume: 0.09, duty: 0.25 }, arp: { wave: 'triangle', volume: 0.09 }, bass: { wave: 'triangle', volume: 0.17 } },
-  autumn: { lead: { wave: 'triangle', volume: 0.24 }, arp: { wave: 'square', volume: 0.04, duty: 0.125 }, bass: { wave: 'sine', volume: 0.2 } },
-  winter: { lead: { wave: 'sine', volume: 0.24 }, arp: { wave: 'sine', volume: 0.09 }, bass: { wave: 'sine', volume: 0.18 }, bell: { wave: 'sine', volume: 0.05 } },
+  // Soft and flowing: a breathy lead, notes that run into each other.
+  spring: {
+    lead: { wave: 'sine', volume: 0.24, attack: 0.06 }, accomp: { wave: 'triangle', volume: 0.07 }, bass: { wave: 'sine', volume: 0.18 },
+    pad: { wave: 'sine', volume: 0.05, attack: 0.4 }, legato: 1.4, swing: 0,
+  },
+  // Bright and punchy: a reedy square lead, short and on the beat.
+  summer: {
+    lead: { wave: 'square', volume: 0.11, duty: 0.25 }, accomp: { wave: 'square', volume: 0.045, duty: 0.125 }, bass: { wave: 'triangle', volume: 0.26 },
+    pad: { wave: 'triangle', volume: 0.04, attack: 0.1 }, legato: 0.9, swing: 0,
+  },
+  // Warm and rounded, with a lazy swing.
+  autumn: {
+    lead: { wave: 'triangle', volume: 0.22, attack: 0.03 }, accomp: { wave: 'triangle', volume: 0.06 }, bass: { wave: 'sine', volume: 0.2 },
+    pad: { wave: 'sine', volume: 0.05, attack: 0.3 }, legato: 1.15, swing: 0.3,
+  },
+  // Glassy and staccato, with a bell over the tune.
+  winter: {
+    lead: { wave: 'sine', volume: 0.3, attack: 0.005 }, bell: { wave: 'sine', volume: 0.08, attack: 0.002 }, accomp: { wave: 'sine', volume: 0.11, attack: 0.002 },
+    bass: { wave: 'triangle', volume: 0.22 }, pad: { wave: 'sine', volume: 0.035, attack: 0.3 }, legato: 0.45, swing: 0,
+  },
 };
 
-const STEPS_PER_BAR = 8;
 const SEMITONE: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
 /** A note's pitch in Hz: `A4` is 440, `C#5`, `Bb3`. */
@@ -89,7 +219,7 @@ function chordTones(chord: string): [number, number, number] {
 
 const freqOf = (semisAboveC: number, octave: number) => 440 * Math.pow(2, (semisAboveC + (octave - 4) * 12 - 9) / 12);
 
-/** The melody as notes: when each starts (in steps) and how many steps it lasts. */
+/** The melody as notes: when each starts (in eighths) and how many eighths it lasts. */
 export function melodyNotes(melody: string): { step: number; len: number; note: string }[] {
   const tokens = melody.split(/\s+/).filter((t) => t && t !== '|');
   const out: { step: number; len: number; note: string }[] = [];
@@ -104,31 +234,79 @@ export function melodyNotes(melody: string): { step: number; len: number; note: 
   return out;
 }
 
-/** Every voice in one pass of the tune, for the season's band. */
+/** Eighths in a bar. */
+export const stepsPerBar = (tune: Tune) => tune.meter * 2;
+
+/** Every voice in one pass of the tune, played by the season's band. */
 export function tuneVoices(tune: Tune, season: Season): Voice[] {
   const step = 60 / tune.bpm / 2;
   const band = BANDS[season];
   const voices: Voice[] = [];
-  const add = (inst: Instrument, freq: number, at: number, len: number, attack = 0.01) =>
-    voices.push({ wave: inst.wave, freq, dur: len * step, delay: at * step, volume: inst.volume, attack, ...(inst.duty ? { duty: inst.duty } : {}) });
+  // Swing pushes every off-beat eighth late.
+  const at = (s: number) => (Math.floor(s) % 2 === 1 ? s + band.swing * 0.5 : s) * step;
+  const add = (inst: Instrument, freq: number, start: number, len: number, attack?: number) =>
+    voices.push({
+      wave: inst.wave, freq, dur: Math.max(0.05, len * step), delay: at(start), volume: inst.volume,
+      attack: attack ?? inst.attack ?? 0.01, ...(inst.duty ? { duty: inst.duty } : {}),
+    });
+  const noise = (start: number, dur: number, volume: number) => voices.push({ wave: 'noise', freq: 1, dur, delay: at(start), volume, attack: 0.001 });
+
   for (const n of melodyNotes(tune.melody)) {
-    add(band.lead, noteFreq(n.note), n.step, n.len + 0.6);
-    if (band.bell) add(band.bell, noteFreq(n.note) * 2, n.step, n.len + 1.5, 0.004);
+    add(band.lead, noteFreq(n.note), n.step, n.len * band.legato + 0.2);
+    if (band.bell) add(band.bell, noteFreq(n.note) * 2, n.step, 2.5);
   }
-  tune.chords.forEach((chord, bar) => {
-    const [root, third, fifth] = chordTones(chord);
-    const at = bar * STEPS_PER_BAR;
-    // The bass: the root on the first beat, the fifth on the third.
-    add(band.bass, freqOf(root, 2), at, 4.2, 0.02);
-    add(band.bass, freqOf(fifth, 2), at + 4, 4.2, 0.02);
-    // An arpeggio of the chord in eighths, rocking up and back.
-    [root, third, fifth, third + 12, fifth, third, root + 12, fifth].forEach((s, i) => add(band.arp, freqOf(s, 4), at + i, 1.6, 0.01));
+  const bar = stepsPerBar(tune);
+  const short = band.legato < 1 ? 0.6 : 1.4;
+  tune.chords.forEach((chord, b) => {
+    const [r, t, f] = chordTones(chord);
+    const s0 = b * bar;
+    switch (tune.feel) {
+      case 'pad':
+        for (const s of [r, t, f]) add(band.pad, freqOf(s, 4), s0, bar + 0.5);
+        add(band.bass, freqOf(r, 2), s0, bar + 0.5, 0.05);
+        break;
+      case 'harp':
+        [r, t, f, r + 12, t + 12, f + 12, r + 24, f + 12].slice(0, bar).forEach((s, i) => add(band.accomp, freqOf(s, 4), s0 + i, 3));
+        add(band.bass, freqOf(r, 2), s0, bar / 2 + 0.5, 0.03);
+        add(band.bass, freqOf(f, 2), s0 + bar / 2, bar / 2 + 0.5, 0.03);
+        break;
+      case 'drive':
+        for (let i = 0; i < bar; i++) add(band.bass, freqOf(i % 4 === 3 ? f : r, i % 2 ? 3 : 2), s0 + i, 0.8);
+        for (let i = 1; i < bar; i += 2) for (const s of [t, f]) add(band.accomp, freqOf(s, 4), s0 + i, 0.7);
+        break;
+      case 'waltz':
+        add(band.bass, freqOf(r, 2), s0, 2 * short);
+        for (const beat of [2, 4]) for (const s of [t, f, r + 12]) add(band.accomp, freqOf(s, 4), s0 + beat, 1.5 * short);
+        break;
+      case 'walk':
+        [r, t, f, t].slice(0, tune.meter).forEach((s, i) => add(band.bass, freqOf(s, 2), s0 + i * 2, 1.9));
+        for (const s of [t, f]) add(band.pad, freqOf(s, 4), s0, bar);
+        break;
+      case 'pluck':
+        [r, f, r + 12, f, t + 12, f, r + 12, f].slice(0, bar).forEach((s, i) => add(band.accomp, freqOf(s, 4), s0 + i, 0.6, 0.002));
+        add(band.bass, freqOf(r, 2), s0, 1.5);
+        add(band.bass, freqOf(r, 2), s0 + bar / 2, 1.5);
+        break;
+      case 'box':
+        [[r + 12, 0], [f, 2], [t + 12, 4], [f, 6]].filter(([, i]) => i! < bar).forEach(([s, i]) => add(band.accomp, freqOf(s!, 5), s0 + i!, 3, 0.002));
+        add(band.bass, freqOf(r, 2), s0, bar, 0.08);
+        break;
+    }
+    if (tune.drums) {
+      for (let beat = 0; beat < tune.meter; beat++) {
+        const s = s0 + beat * 2;
+        // A soft kick on the downbeat (and the middle of a 4/4 bar), a brushed snare on the backbeat.
+        if (beat === 0 || (tune.meter === 4 && beat === 2)) voices.push({ wave: 'sine', freq: 110, to: 45, dur: 0.18, delay: at(s), volume: 0.3, attack: 0.002 });
+        else noise(s, 0.09, 0.07);
+        noise(s + 1, 0.03, 0.035);
+      }
+    }
   });
   return voices;
 }
 
 /** Seconds in one pass of the tune. */
-export const tuneLength = (tune: Tune) => (tune.chords.length * STEPS_PER_BAR * 60) / tune.bpm / 2;
+export const tuneLength = (tune: Tune) => (tune.chords.length * stepsPerBar(tune) * 60) / tune.bpm / 2;
 
 /**
  * One pass of the tune as mono samples that loop without a seam: the notes still ringing at the end
