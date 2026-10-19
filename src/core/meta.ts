@@ -12,8 +12,8 @@ import { RUN_VERSION, type RunState } from './state';
 
 export const PROFILE_VERSION = 13;
 
-/** Sound settings: volume 0 to 1, and mute. */
-export type SoundSettings = { volume: number; muted: boolean };
+/** Sound settings: the sound effects' volume and the music's, 0 to 1, and mute (both). */
+export type SoundSettings = { volume: number; music: number; muted: boolean };
 
 export type Profile = {
   version: typeof PROFILE_VERSION;
@@ -85,7 +85,7 @@ export function newProfile(): Profile {
     perks: [],
     almanac: [],
     codex: [],
-    settings: { volume: 0.7, muted: false },
+    settings: { volume: 0.7, music: 0.5, muted: false },
     seasonOpenings: true,
     weatherSeen: [],
     witch: 'hedge-witch',
@@ -185,6 +185,7 @@ function sanitize(p: Raw): Profile {
     codex: Array.isArray(p.codex) ? [...new Set(p.codex)].filter((id): id is string => typeof id === 'string' && inCodex(id)) : [],
     settings: {
       volume: typeof sound.volume === 'number' && Number.isFinite(sound.volume) ? Math.min(1, Math.max(0, sound.volume)) : fresh.settings.volume,
+      music: typeof sound.music === 'number' && Number.isFinite(sound.music) ? Math.min(1, Math.max(0, sound.music)) : fresh.settings.music,
       muted: sound.muted === true,
     },
     seasonOpenings: p.seasonOpenings !== false,

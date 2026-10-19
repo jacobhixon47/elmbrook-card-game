@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { cuesFor, SOUNDS, TIER_SOUND, tickPitch, type SoundId } from '../src/audio/sounds';
 import { arpeggio, renderSound, soundLength } from '../src/audio/synth';
-import { migrateProfile, newProfile, PROFILE_VERSION, type GameEvent } from '../src/core';
+import { melodyNotes, noteFreq, renderTune, stepsPerBar, tuneLength, TUNES, type TuneId } from '../src/audio/music';
+import { migrateProfile, newProfile, PROFILE_VERSION, SEASONS, type GameEvent } from '../src/core';
 
 const RATE = 22050;
 
@@ -63,15 +64,58 @@ describe('which sounds an action plays', () => {
 });
 
 describe('sound settings in the profile', () => {
-  it('start at 70% and unmuted, and survive a migration from version 5', () => {
-    expect(newProfile().settings).toEqual({ volume: 0.7, muted: false });
+  it('start at 70% (music at 50%) and unmuted, and survive a migration from version 5', () => {
+    expect(newProfile().settings).toEqual({ volume: 0.7, music: 0.5, muted: false });
     const p = migrateProfile({ version: 5, tutorialDone: true, yearSeasons: [['spring']], runs: 3 });
-    expect(p).toMatchObject({ version: PROFILE_VERSION, tutorialDone: true, runs: 3, settings: { volume: 0.7, muted: false } });
+    expect(p).toMatchObject({ version: PROFILE_VERSION, tutorialDone: true, runs: 3, settings: { volume: 0.7, music: 0.5, muted: false } });
   });
 
-  it('repair bad values', () => {
-    expect(migrateProfile({ version: PROFILE_VERSION, settings: { volume: 4, muted: true } }).settings).toEqual({ volume: 1, muted: true });
-    expect(migrateProfile({ version: PROFILE_VERSION, settings: { volume: 'loud', muted: 'yes' } }).settings).toEqual({ volume: 0.7, muted: false });
-    expect(migrateProfile({ version: PROFILE_VERSION, settings: null }).settings).toEqual({ volume: 0.7, muted: false });
+  it('repair bad values, and give a profile from before music its default', () => {
+    expect(migrateProfile({ version: PROFILE_VERSION, settings: { volume: 4, music: -1, muted: true } }).settings).toEqual({ volume: 1, music: 0, muted: true });
+    expect(migrateProfile({ version: PROFILE_VERSION, settings: { volume: 'loud', music: 'yes', muted: 'yes' } }).settings).toEqual({ volume: 0.7, music: 0.5, muted: false });
+    expect(migrateProfile({ version: PROFILE_VERSION, settings: null }).settings).toEqual({ volume: 0.7, music: 0.5, muted: false });
+    expect(migrateProfile({ version: PROFILE_VERSION, settings: { volume: 0.3, muted: false } }).settings).toEqual({ volume: 0.3, music: 0.5, muted: false });
+  });
+});
+
+describe('the music', () => {
+  it('reads notes and melodies', () => {
+    expect(noteFreq('A4')).toBeCloseTo(440);
+    expect(noteFreq('C5')).toBeCloseTo(523.25, 1);
+    expect(noteFreq('Bb4')).toBeCloseTo(466.16, 1);
+    expect(noteFreq('C#5')).toBeCloseTo(554.37, 1);
+    expect(melodyNotes('E5 - G5 . | C6 - - .')).toEqual([{ step: 0, len: 2, note: 'E5' }, { step: 2, len: 1, note: 'G5' }, { step: 4, len: 3, note: 'C6' }]);
+  });
+
+  it('writes every tune as one melody step per eighth, filling every bar', () => {
+    for (const id of Object.keys(TUNES) as TuneId[]) {
+      for (const season of SEASONS) {
+        const tune = TUNES[id][season];
+        const steps = tune.melody.split(/\s+/).filter((t) => t && t !== '|').length;
+        expect(steps, `${id} ${season}`).toBe(tune.chords.length * stepsPerBar(tune));
+      }
+    }
+  });
+
+  it('gives each season its own tune, and each place its own sound', () => {
+    for (const id of Object.keys(TUNES) as TuneId[]) {
+      expect(new Set(SEASONS.map((s) => TUNES[id][s].melody)).size, id).toBe(SEASONS.length);
+    }
+    for (const season of SEASONS) {
+      const tunes = (Object.keys(TUNES) as TuneId[]).map((id) => TUNES[id][season]);
+      expect(new Set(tunes.map((t) => t.melody)).size, season).toBe(tunes.length);
+    }
+  });
+
+  it('renders each tune in each season to a loop of the right length, never clipping', () => {
+    for (const id of Object.keys(TUNES) as TuneId[]) {
+      for (const season of SEASONS) {
+        const s = renderTune(TUNES[id][season], season, RATE);
+        expect(s.length, `${id} ${season}`).toBe(Math.round(tuneLength(TUNES[id][season]) * RATE));
+        const peak = s.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+        expect(peak, `${id} ${season}`).toBeGreaterThan(0.1);
+        expect(peak, `${id} ${season}`).toBeLessThan(0.9);
+      }
+    }
   });
 });

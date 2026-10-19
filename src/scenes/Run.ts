@@ -34,7 +34,7 @@ import { TIPS, TUTORIAL_SEED, TutorialProgress, type Tip } from '../view/tutoria
 import { loadProfile, recordFinishedRun, saveProfile } from '../profile';
 import { clearRun, saveRun } from '../save';
 import { button, panel } from '../view/ui';
-import { play, playEvents } from '../audio/sfx';
+import { play, playEvents, playMusic } from '../audio/sfx';
 import { TIER_SOUND, tickPitch } from '../audio/sounds';
 import { addWeather } from '../view/weather';
 import { isIntroWeather, patronArrival, SEASON_OPENING, WEATHER_INTRO, type Intro } from '../view/intros';
@@ -337,6 +337,9 @@ export class Run extends Phaser.Scene {
     this.ui.removeAll(true);
     this.tip.hide();
     const s = store.getState()!;
+    // The shop's tune by day, the night's on a Night Shift, the market's at the market.
+    const shift = s.day === NIGHT_SHIFT_DAY && (s.phase === 'morning' || s.phase === 'brewing');
+    playMusic(s.offer?.kind === 'night-market' ? 'market' : shift ? 'night' : 'shop', s.season);
     this.drawHud(s);
     if (s.phase === 'morning' || s.phase === 'brewing') {
       this.drawOrders(s);
