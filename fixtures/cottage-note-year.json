@@ -1,0 +1,1 @@
+{ "scene": "Cottage", "profile": { "version": 2, "tutorialDone": true, "seasons": ["spring", "summer", "autumn", "winter"], "runs": 20, "wins": { "spring": 3, "summer": 2, "autumn": 2, "winter": 2 }, "years": 2, "yearSeasons": [["spring", "summer", "autumn", "winter"], ["spring"]] }, "ui": { "note": "year" } }

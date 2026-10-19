@@ -14,6 +14,7 @@ import { ROOM_LIGHTS, ROOM_WINDOWS, roomLight } from '../art/scenes/cottage-room
 import { pixelCamera } from '../view/camera';
 import { cap } from '../view/describe';
 import { openSettings } from '../view/settings';
+import { COTTAGE_NOTES, noteDue, type CottageNote } from '../view/notes';
 import { pixelText } from '../view/text';
 import { button, panel } from '../view/ui';
 import { DOORSTEP, DRESSING, facing, HEARTH, onRug, PROPS, ROOM_SCALE, SEASON_LIGHT, SPAWN, STATIONS, standBy, stationAt, walk, type Facing, type Point, type Station, type StationId } from '../view/room';
@@ -91,6 +92,7 @@ export class Cottage extends Phaser.Scene {
     if (ui?.almanac) this.openAlmanac(profile, ui.almanacPage ?? 0);
     if (ui?.codex) this.openCodex(profile, ui.codex as CodexTable, ui.codexPage ?? 0, ui.codexEntry);
     if (ui?.settings) this.openSettings();
+    if (!this.overlay && !this.settingsOpen && !profile.boonOffer) this.showNote(profile);
 
     const kb = this.input.keyboard!;
     const K = Phaser.Input.Keyboard.KeyCodes;
@@ -594,6 +596,28 @@ export class Cottage extends Phaser.Scene {
     this.overlay = null;
     this.overlayKind = null;
     this.updateNear();
+  }
+
+  /** A first-time note (Jacob, Oct 19), once per save: the first one due, over the room. */
+  private showNote(p: Profile) {
+    const want = this.fixture?.ui?.note;
+    const note: CottageNote | null = this.fixture
+      ? (want ? noteDue(COTTAGE_NOTES.filter((n) => n.id === want), p, []) : null)
+      : p.notes ? noteDue(COTTAGE_NOTES, p, p.notesSeen) : null;
+    if (!note) return;
+    if (!this.fixture) saveProfile({ notesSeen: [...loadProfile().notesSeen, note.id] });
+    const c = this.add.container(0, 0).setDepth(2000);
+    this.overlay = c;
+    this.overlayKind = 'other';
+    c.add(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.35).setOrigin(0).setInteractive());
+    const w = 230;
+    const x = note.at.x - w / 2;
+    const body = pixelText(this, x + 8, note.at.y + 18, note.text, { size: 8, color: 'W', wrap: w - 16 });
+    const h = 18 + body.height + 28;
+    c.add(panel(this, x, note.at.y, w, h, 'k', 0.97, 'y'));
+    c.add(pixelText(this, x + 8, note.at.y + 5, note.title, { size: 7, color: 'v' }));
+    c.add(body);
+    c.add(button(this, x + w / 2, note.at.y + h - 14, 'Got it', () => this.closeOverlay(), { w: 56, color: 'Y' }));
   }
 
   /** A panel over the room with a title and a Close button. */

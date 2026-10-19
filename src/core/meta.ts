@@ -54,6 +54,10 @@ export type Profile = {
   display: DisplaySettings;
   /** Whether each run opens with its season's scene screen (Settings, or "Don't show again" on the screen). */
   seasonOpenings: boolean;
+  /** Whether first-time notes show (Settings). */
+  notes: boolean;
+  /** First-time notes already shown (`view/notes.ts`), each once per save. */
+  notesSeen: string[];
   /** Weathers whose first-time scene screen has been shown: each shows once per save. */
   weatherSeen: string[];
   /** The witch and cauldron last chosen at the cottage (GDD §12); runs set out with them. */
@@ -95,6 +99,8 @@ export function newProfile(): Profile {
     settings: { volume: 0.7, music: 0.5, muted: false },
     display: { scale: 0, fullscreen: false },
     seasonOpenings: true,
+    notes: true,
+    notesSeen: [],
     weatherSeen: [],
     witch: 'hedge-witch',
     cauldron: 'copper',
@@ -202,6 +208,8 @@ function sanitize(p: Raw): Profile {
       fullscreen: display.fullscreen === true,
     },
     seasonOpenings: p.seasonOpenings !== false,
+    notes: p.notes !== false,
+    notesSeen: Array.isArray(p.notesSeen) ? [...new Set((p.notesSeen as unknown[]).filter((id): id is string => typeof id === 'string'))] : [],
     weatherSeen: Array.isArray(p.weatherSeen) ? WEATHERS.filter((w) => (p.weatherSeen as unknown[]).includes(w)) : [],
     witch: typeof p.witch === 'string' && codex.witches.has(p.witch) ? p.witch : fresh.witch,
     cauldron: typeof p.cauldron === 'string' && codex.cauldrons.has(p.cauldron) ? p.cauldron : fresh.cauldron,
