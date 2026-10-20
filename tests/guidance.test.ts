@@ -98,6 +98,9 @@ describe('tutorial', () => {
     const act = (a: Action) => (s = ok(s, a).state);
     const tip = (v: Partial<TutorialView> = {}) => t.current(s, view(s, v))?.id ?? null;
 
+    // First, that the tutorial can be skipped.
+    expect(tip()).toBe('skip');
+    t.dismiss('skip');
     expect(tip()).toBe('welcome');
     expect(tip({ dialog: true })).toBe('order');
     expect(tip()).toBe('open');

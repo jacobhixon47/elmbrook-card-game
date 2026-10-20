@@ -30,7 +30,7 @@ import { todayLine, todayRules, WEATHER_NAME } from '../view/calendar';
 import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
 import type { CardExtras } from '../view/inspect';
-import { TIPS, TUTORIAL_SEED, TutorialProgress, type Tip } from '../view/tutorial';
+import { SKIP_BUTTON, TIPS, TUTORIAL_SEED, TutorialProgress, type Tip } from '../view/tutorial';
 import { loadProfile, recordFinishedRun, saveProfile } from '../profile';
 import { clearRun, saveRun } from '../save';
 import { button, panel } from '../view/ui';
@@ -604,10 +604,17 @@ export class Run extends Phaser.Scene {
     const t = this.tutorial;
     if (!t) return;
     if (t.finished(s)) {
-      saveProfile({ tutorialDone: true });
+      // A finished week goes back to the title, where New game now leads to the cottage (Jacob, Oct 19).
+      // The tutorial's own market tip already showed the stall list, so its first-time note is spent.
+      saveProfile({ tutorialDone: true, notesSeen: [...loadProfile().notesSeen, 'market-list'] });
       this.tutorial = null;
+      if (s.phase !== 'game-over' && s.phase !== 'victory') this.leaveTutorial();
       return;
     }
+    this.add2(button(this, SKIP_BUTTON.x, SKIP_BUTTON.y, 'Skip tutorial', () => {
+      saveProfile({ tutorialDone: true });
+      this.leaveTutorial();
+    }, { w: SKIP_BUTTON.w }));
     const preview = s.phase === 'brewing' ? this.previewOf(s).kind : 'empty';
     const tip = t.current(s, { dialog: this.mode.kind === 'dialog', book: this.book !== null, preview });
     if (!tip || (this.book && tip.id !== 'grimoire')) return;
@@ -617,9 +624,17 @@ export class Run extends Phaser.Scene {
     });
   }
 
-  /** A first-time note (Jacob, Oct 19): one at a time, over the shop, when nothing else is open. */
+  /** Out of the tutorial and back to the title screen: the tutorial run isn't kept. */
+  private leaveTutorial() {
+    this.tutorial = null;
+    clearRun();
+    this.scene.start('Title', {});
+  }
+
+  /** A first-time note (Jacob, Oct 19): one at a time, over the shop or the Night Market's street, when nothing else is open. */
   private drawNote(s: RunState) {
-    if (this.tutorial || this.book || this.mode.kind !== 'idle' || (s.phase !== 'morning' && s.phase !== 'brewing')) return;
+    const street = s.offer?.kind === 'night-market' && s.offer.at === null && !this.walkState?.list;
+    if (this.tutorial || this.book || this.mode.kind !== 'idle' || (s.phase !== 'morning' && s.phase !== 'brewing' && !street)) return;
     const note = this.noteNow(s);
     if (!note) return;
     this.drawTip(note, () => {

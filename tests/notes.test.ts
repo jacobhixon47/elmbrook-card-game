@@ -25,11 +25,20 @@ describe('first-time notes', () => {
   });
 
   it('greet the cottage as the save grows', () => {
-    const p = newProfile();
+    const p = { ...newProfile(), runs: 1 };
+    // A new save's first look at home says how to get about and out.
+    expect(noteDue(COTTAGE_NOTES, newProfile(), [])?.id).toBe('home');
     expect(noteDue(COTTAGE_NOTES, p, [])).toBeNull();
     expect(noteDue(COTTAGE_NOTES, { ...p, reputationEarned: 12 }, [])?.id).toBe('reputation');
     expect(noteDue(COTTAGE_NOTES, { ...p, wins: { ...p.wins, spring: 1 } }, [])?.id).toBe('kit');
     expect(noteDue(COTTAGE_NOTES, { ...p, yearSeasons: [['spring'], ['spring']] }, [])?.id).toBe('year');
+  });
+
+  it('point out the stall list on the Night Market\'s street, not at a stall', () => {
+    const street = { ...run(), phase: 'night-market' as const, offer: { kind: 'night-market' as const, stalls: [], at: null } };
+    expect(noteDue(RUN_NOTES, street, [])?.id).toBe('market-list');
+    expect(noteDue(RUN_NOTES, { ...street, offer: { ...street.offer, at: 0 } }, [])).toBeNull();
+    expect(noteDue(RUN_NOTES, street, ['market-list'])).toBeNull();
   });
 
   it('have unique ids', () => {
