@@ -172,5 +172,17 @@ export function finaleMet(s: Pick<RunState, 'orders' | 'patrons' | 'week'>): boo
   return s.orders.filter((o) => o.customer === patron.id && o.status === 'filled').length >= FINALE_ORDERS;
 }
 
+/**
+ * The Moonless Patron's orders on the finale's Night Shift, for the HUD, the tickets and the End day
+ * warning: how many they posted, filled and still open. Null on any other day.
+ */
+export function finaleProgress(s: Pick<RunState, 'orders' | 'patrons' | 'week' | 'day'>): { total: number; filled: number; open: number } | null {
+  const patron = patronOf(s);
+  if (s.day !== NIGHT_SHIFT_DAY || patron?.reward.kind !== 'win') return null;
+  const theirs = s.orders.filter((o) => o.customer === patron.id);
+  if (!theirs.length) return null;
+  return { total: theirs.length, filled: theirs.filter((o) => o.status === 'filled').length, open: theirs.filter((o) => o.status === 'open').length };
+}
+
 /** Is this customer id a patron? */
 export const isPatron = (id: string) => codex.patrons.has(id);

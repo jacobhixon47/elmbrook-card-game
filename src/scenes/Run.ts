@@ -3,8 +3,8 @@ import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { SPRITE_IDS } from '../art/sprites';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, priceAt, runKeepsakes, blessingTonight, BLACK_MARKET, eventChoiceAsk, eventChoiceBlocked, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD, MAX_DISCARD, TIER_MIN, TIERS,
-  skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
+  allCards, priceAt, runKeepsakes, finaleProgress, BLACK_MARKET, eventChoiceAsk, eventChoiceBlocked, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD, MAX_DISCARD, TIER_MIN, TIERS,
+  skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
   HARVEST_AUCTION, FRIENDSHIP, friendLevelOf, friendshipOf, hearthOffers, isRegular, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
   type NameTakerDeal, type StockItem, type Weather, migrateProfile, storyDue, storyKey, recordRun, type RunOutcome, almanacUnlocks, boonOf, runStartChoice, cauldronOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
@@ -23,7 +23,7 @@ import { friendshipLine, levelUpNote, storyScene, townsfolkRows } from '../view/
 import {
   BONUS_TEXT, cardText, commissionDue, commissionReward, customerBlurb, customerLine, customerName, dayLabel, ERRAND_TEXT, extraPay, favouriteNote, orderNeeds, orderTerms, recipeName,
   requestText, TIER_NAME, newRecipeHint, unknownRecipe, familiesName, familyRecipesNote, patronTwistText,
-  cap, listOf,
+  cap, listOf, finaleEndWarning, finaleHudLine, finaleTicketLine,
 } from '../view/describe';
 import { DECK_VIEWS, drawGrimoire, type GrimoireTab } from '../view/grimoire';
 import { stages } from '../view/guide';
@@ -82,6 +82,8 @@ const ORDERS = { x: 8, y: 46, w: 134 };
 /** The season's colour in the HUD. */
 const SEASON_COLOR: Record<Season, PaletteKey> = { spring: 'L', summer: 'y', autumn: 'o', winter: 'c' };
 const TICKET_H = 40;
+/** The finale's tickets are taller, for the "1 of 3" line under the portrait (Jacob, Oct 21). */
+const FINALE_TICKET_H = 50;
 /** Where a ticket's words start, right of the portrait. */
 const TICKET_TEXT = 40;
 const SIDE = { x: 498, y: 42, w: 134 };
@@ -206,6 +208,7 @@ export class Run extends Phaser.Scene {
     if (fixture?.ui?.familiar !== undefined) this.mode = { kind: 'familiar', index: fixture.ui.familiar };
     if (fixture?.ui?.creek) this.mode = { kind: 'creek', pick: fixture.ui.creek };
     if (fixture?.ui?.pour) this.mode = { kind: 'pour' };
+    if (fixture?.ui?.confirm) this.confirm = fixture.ui.confirm;
     if (fixture?.ui?.eventCard !== undefined) this.mode = { kind: 'event-card', choice: fixture.ui.eventCard };
     if (fixture?.ui?.scenesSeen) for (const k of fixture.ui.scenesSeen) this.scenesSeen.add(k);
     if (fixture?.ui?.grimoire) this.book = fixture.ui.grimoire;
@@ -421,7 +424,7 @@ export class Run extends Phaser.Scene {
       }
     }
     if (s.week === WEEKS && s.day === NIGHT_SHIFT_DAY && patronOf(s)?.id === 'moonless-patron' && !this.scenesSeen.has('moonless-patron')) {
-      return show(patronArrival(this.grimoireHidden(s), s), () => this.scenesSeen.add('moonless-patron'));
+      return show(patronArrival(s), () => this.scenesSeen.add('moonless-patron'));
     }
     // A regular's story (GDD §13): one a morning, when they have an order; never in the tutorial or on the finale night.
     const today = `story-${s.week}-${s.day}`;
@@ -716,13 +719,20 @@ export class Run extends Phaser.Scene {
       'Orders pay gold, and the Night Market and evening stops spend it.',
       `${rentOf(s)}g of it goes on rent after this week's Night Shift.`,
     ]);
+    // The finale's count, all night (Jacob, Oct 21): the Moonless Patron's orders filled so far.
+    const finale = s.phase === 'morning' || s.phase === 'brewing' ? finaleHudLine(s) : null;
+    const count = (x: number) => this.tip.on(this.text(x, 24, finale!, { size: 8, color: 'v', shadow: true }), 'The Moonless Patron', [
+      `Fill all ${FINALE_ORDERS} of their orders tonight to win the month. Ending the day with one still open loses it.`,
+    ]);
     if (s.phase === 'brewing') {
-      this.tip.on(this.text(10, 24, `Brews ${s.brewsLeft} · Discards ${s.discardsLeft}`, { size: 8, color: 'w', shadow: true }), 'Brews and Discards', [
+      const brews = this.tip.on(this.text(10, 24, `Brews ${s.brewsLeft} · Discards ${s.discardsLeft}`, { size: 8, color: 'w', shadow: true }), 'Brews and Discards', [
         'Brews: potions you can still make today. Each one uses the cauldron.',
         `Discards: throw away 1 to ${MAX_DISCARD} cards and draw that many, or pour out a Shelf potion.`,
         'Both refill each morning.',
       ]);
+      if (finale) count(brews.x + brews.width + 8);
     }
+    else if (s.phase === 'morning' && finale) count(10);
     else if (s.phase === 'morning') this.text(10, 24, s.day === NIGHT_SHIFT_DAY ? 'The night customers are here' : "Today's orders", { size: 8, color: 'w', shadow: true });
     if (s.phase === 'morning' || s.phase === 'brewing') {
       // Today's weather, festival and sky event (GDD §4.2); hover for the rules.
@@ -736,8 +746,7 @@ export class Run extends Phaser.Scene {
     ]);
     this.drawCommissions(s);
     if (s.phase !== 'game-over' && s.phase !== 'victory') this.drawRibbon(s);
-    const hidden = this.grimoireHidden(s);
-    this.add2(button(this, 478, 16, hidden ? 'Grimoire hidden' : 'Grimoire (G)', () => this.toggleBook(s), { w: 74, enabled: !hidden }));
+    this.add2(button(this, 478, 16, 'Grimoire (G)', () => this.toggleBook(), { w: 74 }));
     this.add2(button(this, 606, 348, 'Settings', () => this.openSettings(), { w: 56 }));
     this.drawRelics(s);
   }
@@ -778,14 +787,8 @@ export class Run extends Phaser.Scene {
     }
   }
 
-  /** The Moonless Patron hides the Grimoire for the finale's Night Shift (GDD §10). */
-  private grimoireHidden(s: RunState) {
-    return twistNow(s) === 'grimoire-hidden' && !blessingTonight(s, 'candle-in-the-window') && (s.phase === 'morning' || s.phase === 'brewing');
-  }
-
-  private toggleBook(s: RunState) {
+  private toggleBook() {
     if (this.book) return this.openBook(null);
-    if (this.grimoireHidden(s)) return this.toast('The Moonless Patron has hidden your Grimoire tonight.');
     this.openBook('recipes');
   }
 
@@ -811,16 +814,22 @@ export class Run extends Phaser.Scene {
   }
 
   private ticketY(i: number) {
-    return ORDERS.y + i * (TICKET_H + 4);
+    return ORDERS.y + i * (this.ticketH() + 4);
+  }
+
+  private ticketH() {
+    const s = store.getState();
+    return s && finaleProgress(s) ? FINALE_TICKET_H : TICKET_H;
   }
 
   private drawOrders(s: RunState) {
+    const h = this.ticketH();
     s.orders.forEach((o, i) => {
       const y = this.ticketY(i);
       const open = o.status === 'open';
       // The patron's order stands out: it is the night's featured guest (GDD §10).
       const patron = isPatron(o.customer);
-      const bg = this.add2(panel(this, ORDERS.x, y, ORDERS.w, TICKET_H, patron ? 'W' : 'w', 0.95, o.id === this.pinned ? 'y' : patron ? 'v' : 'n'));
+      const bg = this.add2(panel(this, ORDERS.x, y, ORDERS.w, h, patron ? 'W' : 'w', 0.95, o.id === this.pinned ? 'y' : patron ? 'v' : 'n'));
       if (o.id === this.pinned || patron) bg.setStrokeStyle(2, hex(o.id === this.pinned ? 'y' : 'v'));
       const friend = isRegular(o.customer) ? friendLevelOf(s, o.customer) : null;
       // Who's asking: their portrait at the left of the ticket (GDD §4).
@@ -844,10 +853,13 @@ export class Run extends Phaser.Scene {
         }
         this.text(tx, y + 26, orderTerms(o), { size: 7, color: 'r' });
       }
+      // The finale: which of the Moonless Patron's orders this is, and that all of them win the month.
+      const finale = finaleTicketLine(s, o);
+      if (finale) this.text(ORDERS.x + 5, y + 39, finale, { size: 7, color: 'P' });
       if (o.bonus && !s.fog) this.text(ORDERS.x + ORDERS.w - 5, y + 26, '★', { size: 8, color: 'o' }).setOrigin(1, 0);
       if (!open) {
         bg.setAlpha(0.6);
-        this.text(ORDERS.x + ORDERS.w / 2, y + TICKET_H / 2, o.status === 'filled' ? 'FILLED' : o.expiresIn === 0 ? 'LEFT' : 'DECLINED', { size: 10, font: 'display', color: o.status === 'filled' ? 'G' : 'r', stroke: 'w' })
+        this.text(ORDERS.x + ORDERS.w / 2, y + h / 2, o.status === 'filled' ? 'FILLED' : o.expiresIn === 0 ? 'LEFT' : 'DECLINED', { size: 10, font: 'display', color: o.status === 'filled' ? 'G' : 'r', stroke: 'w' })
           .setOrigin(0.5).setAngle(-8);
       }
       bg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
@@ -1097,8 +1109,14 @@ export class Run extends Phaser.Scene {
       `Pick 1 to ${MAX_DISCARD} cards from your hand to throw away, then draw that many. ${s.discardsLeft} left today.`,
     ]);
     const open = s.orders.filter((o) => o.status === 'open').length;
-    const endLabel = this.confirm === 'endDay' ? `Decline ${open} & end?` : 'End day';
+    const warning = this.confirm === 'endDay' ? finaleEndWarning(s) : null;
+    const endLabel = warning ? 'End anyway?' : this.confirm === 'endDay' ? `Decline ${open} & end?` : 'End day';
     this.add2(button(this, 580, y, endLabel, () => this.endDay(), { w: this.confirm === 'endDay' ? 96 : 60, color: this.confirm === 'endDay' ? 'I' : 'W' }));
+    if (warning) {
+      // Asks, never blocks: a second press ends the day and the month is lost (Jacob, Oct 21).
+      this.add2(panel(this, 446, y - 40, 182, 28, 'k', 0.95, 'v'));
+      this.text(452, y - 36, warning, { size: 7, color: 'w', wrap: 170 });
+    }
   }
 
   private startDiscard(s: RunState) {
@@ -1313,7 +1331,7 @@ export class Run extends Phaser.Scene {
         const filled = events.find((e) => e.type === 'orderFilled');
         const spilled = events.some((e) => e.type === 'potionSpilled');
         const idx = filled ? after.orders.findIndex((o) => o.id === filled.order) : -1;
-        const dest = filled ? { x: ORDERS.x + ORDERS.w - 20, y: this.ticketY(idx) + TICKET_H / 2 } : spilled ? { x: 320, y: 230 } : { x: SIDE.x + 20, y: SHELF_Y + 30 };
+        const dest = filled ? { x: ORDERS.x + ORDERS.w - 20, y: this.ticketY(idx) + this.ticketH() / 2 } : spilled ? { x: 320, y: 230 } : { x: SIDE.x + 20, y: SHELF_Y + 30 };
         this.tweens.add({
           targets: bottle, y: this.cauldronY - 50, duration: 300, delay: 250, ease: 'Quad.easeOut',
           onComplete: () => this.tweens.add({ targets: bottle, x: dest.x, y: dest.y, scale: 1, alpha: spilled ? 0 : 1, duration: 420, ease: 'Quad.easeInOut' }),
@@ -2259,7 +2277,7 @@ export class Run extends Phaser.Scene {
         }
         return;
       }
-      if (e.key === 'g' || e.key === 'G') return this.toggleBook(s);
+      if (e.key === 'g' || e.key === 'G') return this.toggleBook();
       if (this.book) {
         if (e.key === 'Escape') this.openBook(null);
         return;

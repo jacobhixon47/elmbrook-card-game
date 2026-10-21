@@ -25,8 +25,10 @@ describe('the scene screens', () => {
     expect(isIntroWeather('clear')).toBe(false);
   });
 
-  it('the Patron\'s arrival says whether the Grimoire is hidden', () => {
-    expect(patronArrival(true, { blessing: null }).lines.at(-1)).toMatch(/shut/);
-    expect(patronArrival(false, { blessing: 'candle-in-the-window' }).lines.at(-1)).toMatch(/candle/);
+  it('the Patron\'s arrival never hides the Grimoire, and mentions the candle when it is lit', () => {
+    const plain = patronArrival({ blessing: null }).lines.join(' ');
+    expect(plain).not.toMatch(/Grimoire/);
+    expect(plain).toMatch(/all 3 of their orders/);
+    expect(patronArrival({ blessing: 'candle-in-the-window' }).lines.at(-1)).toMatch(/candle.*first order/);
   });
 });

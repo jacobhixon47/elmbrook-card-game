@@ -427,9 +427,9 @@ function greedyDusk(s: RunState): Action {
       return best && best.v >= 8 ? { type: 'buyAtFair', stall: best.stall, index: best.index } : { type: 'leaveErrand' };
     }
     case 'vigil': {
-      // Any blessing helps the finale; prefer the ones that add Brews or ease the last order.
+      // Any blessing helps the finale; prefer the ones that add Brews or ease an order (the last, then the first).
       if (offer.chose) return { type: 'leaveErrand' };
-      const rank = ['hearthfire', 'starlight', 'old-songs', 'warm-hands', 'the-long-watch', 'candle-in-the-window'];
+      const rank = ['hearthfire', 'starlight', 'candle-in-the-window', 'old-songs', 'warm-hands', 'the-long-watch'];
       const best = offer.blessings.map((id, index) => ({ index, r: rank.indexOf(id) })).sort((a, b) => a.r - b.r)[0]!;
       return { type: 'chooseBlessing', index: best.index };
     }

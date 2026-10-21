@@ -179,7 +179,7 @@ export type Visitor = z.infer<typeof Visitor>;
 /** Rule twists a patron puts on their Night Shift (GDD §10). Each is handled by id in the core. */
 export const TWISTS = [
   'wicks-burn', 'origin-chain', 'orders-double', 'ember-zero', 'orders-expire-2', 'family-chain', 'hand-refresh',
-  'brew-costs-gold-2', 'non-frost-minus-2', 'pale-courier', 'grimoire-hidden',
+  'brew-costs-gold-2', 'non-frost-minus-2', 'pale-courier',
 ] as const;
 export const Twist = z.enum(TWISTS);
 export type Twist = z.infer<typeof Twist>;
@@ -206,7 +206,8 @@ export const Patron = z.object({
   weeks: z.array(z.number().int().min(1).max(4)).min(1),
   /** Only in this season. */
   season: Season.optional(),
-  twist: Twist,
+  /** None for the Moonless Patron: their three orders are the whole challenge (Jacob, Oct 21). */
+  twist: Twist.optional(),
   /** The twist in a sentence, for the Calendar and the HUD. */
   text: z.string().min(1),
   /** Orders the shift posts in all: the patron's, then night customers. */
