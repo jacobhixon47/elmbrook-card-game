@@ -153,7 +153,7 @@ export type Favour = { kind: 'favour'; visitor: string; job: 'burn' | 'temper' }
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 22;
+export const RUN_VERSION = 23;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -270,6 +270,10 @@ export type RunState = {
   blindBrew: boolean;
   /** Every patron of the month is known, whatever the Year (An Old Cookbook). */
   patronsRead: boolean;
+  /** An Endless run (GDD §13): its own mode, where each finale rolls on into a new month instead of winning. */
+  endlessMode: boolean;
+  /** Months an Endless run has rolled on past its first (0, 1, 2, ...). Always 0 outside Endless. */
+  endless: number;
   nextUid: number;
   /** Why a lost run ended: the rent, or the Moonless Patron left unsatisfied. */
   lostTo?: 'rent' | 'finale';
