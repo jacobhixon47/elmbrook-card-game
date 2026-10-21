@@ -101,7 +101,8 @@ while (steps++ < 400 && !(s.week === 2 && s.day === 2) && s.phase !== 'game-over
       await click((h.at.x + h.size.w / 2) * 2, (h.at.y + h.size.h / 2) * 2);
       break;
     }
-    case 'leaveStall': await click(320, 262); break;
+    // Esc goes back to the street, as the button at (320, 262) does.
+    case 'leaveStall': await page.keyboard.press('Escape'); break;
     case 'leaveMarket': {
       // Walk back down onto the bridge and take it.
       await page.keyboard.down('s');
