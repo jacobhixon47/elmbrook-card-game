@@ -24,7 +24,10 @@
     "art:import": "tsx scripts/import-backdrop.ts",
     "art:window": "tsx scripts/window-sheet.ts",
     "sim": "tsx scripts/sim.ts",
-    "balance": "tsx scripts/balance.ts"
+    "balance": "tsx scripts/balance.ts",
+    "desktop": "tauri dev",
+    "desktop:icons": "tsx scripts/app-icon.ts && tauri icon src-tauri/app-icon.png",
+    "desktop:build": "pnpm desktop:icons && tauri build"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
@@ -35,6 +38,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tauri-apps/cli": "2.5.0",
     "@types/node": "^26.6.4",
     "@types/pngjs": "^6.0.5",
     "@vitest/coverage-v8": "5.0.3",
