@@ -88,11 +88,12 @@ export function extraPay(customer: string): string | null {
   if (patron) return PATRON_REWARD_TEXT(patron.reward);
   const visitor = codex.visitors.get(customer);
   if (visitor) return visitorPayText(visitor.paysIn);
-  const pays = codex.nightCustomers.get(customer)?.paysIn.kind;
-  return pays ? NIGHT_PAY_TEXT[pays] : null;
+  const pays = codex.nightCustomers.get(customer)?.paysIn;
+  if (!pays) return null;
+  return pays.kind in NIGHT_PAY_TEXT ? NIGHT_PAY_TEXT[pays.kind as keyof typeof NIGHT_PAY_TEXT] : visitorPayText(pays as VisitorPayment);
 }
 
-/** What a seasonal visitor gives beyond the gold (GDD §4.1). */
+/** What a seasonal visitor (or a night customer paying the same way) gives beyond the gold (GDD §4.1). */
 function visitorPayText(p: VisitorPayment): string | null {
   switch (p.kind) {
     case 'gold':
@@ -111,12 +112,14 @@ function visitorPayText(p: VisitorPayment): string | null {
 /** The short form for an order ticket's terms. */
 const VISITOR_TERMS: Record<VisitorPayment['kind'], string | null> = { gold: null, 'card-pick': 'pick', burn: 'burn 1', temper: '+2 Potency', 'half-price': 'half price' };
 
-const NIGHT_PAY_TEXT: Record<NightPayment['kind'], string | null> = {
+/** Night customers' own payments; the rest are worded as a visitor's. */
+const NIGHT_PAY_TEXT: Record<Exclude<NightPayment['kind'], VisitorPayment['kind']> | 'gold', string | null> = {
   gold: null,
   omen: 'an Omen for your Satchel',
   'lunar-card': 'pick a Lunar card',
   'rare-card': 'pick a Rare card',
   'lift-curse': 'lifts your oldest Curse',
+  'next-brew': '+1 Brew on your next day',
 };
 
 function PATRON_REWARD_TEXT(r: PatronReward): string {
@@ -193,8 +196,9 @@ export function orderTerms(order: Pick<Order, 'minTier' | 'pay'> & Partial<Pick<
   if (extra === 'omen') return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + Omen`;
   if (extra === 'lunar-card') return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + Lunar`;
   if (extra === 'rare-card') return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + Rare`;
-  const visit = order.customer ? codex.visitors.get(order.customer) : undefined;
-  const short = visit && VISITOR_TERMS[visit.paysIn.kind];
+  if (extra === 'next-brew') return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + 1 Brew`;
+  const visit = order.customer ? (codex.visitors.get(order.customer) ?? codex.nightCustomers.get(order.customer)) : undefined;
+  const short = visit && visit.paysIn.kind in VISITOR_TERMS ? VISITOR_TERMS[visit.paysIn.kind as VisitorPayment['kind']] : null;
   if (short) return `${TIER_NAME[order.minTier]}+ · ${order.pay}g + ${short}`;
   return `${TIER_NAME[order.minTier]} or better · ${order.pay}g`;
 }

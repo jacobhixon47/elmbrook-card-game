@@ -3,7 +3,6 @@ import { hex } from '../art/palette';
 import { setSound, soundSettings } from '../audio/sfx';
 import { loadProfile, saveProfile } from '../profile';
 import { isFullscreen, scaleChoices, setFullscreen, setScale } from './display';
-import { fitZoom } from './zoom';
 import { button, panel } from './ui';
 import { pixelText } from './text';
 
@@ -99,15 +98,15 @@ export function openSettings(scene: Phaser.Scene, onClose: () => void = () => un
   c.add(full);
   c.add(pixelText(scene, 216, 222, 'Alt+Enter anywhere', { size: 6, color: 'a' }));
 
-  // Whole-number scales only, so pixels stay square; Auto is the largest that fits the window.
+  // Fill (the default) fills the window; a whole-number scale keeps every pixel exactly square.
   label(240, 'Scale');
-  const scaleName = (s: number) => (s === 0 ? `Auto (${fitZoom()}x)` : `${s}x`);
+  const scaleName = (s: number) => (s === 0 ? 'Fill window' : `${s}x`);
   const scales = scaleChoices();
   let chosen = scales.includes(loadProfile().display.scale) ? loadProfile().display.scale : 0;
   const scaleButton = button(scene, 392, 240, scaleName(chosen), () => {
     chosen = scales[(scales.indexOf(chosen) + 1) % scales.length]!;
     (scaleButton.list[1] as Phaser.GameObjects.Text).setText(scaleName(chosen));
-    // Reloads when the drawn scale changes (Auto at the size that already fits doesn't).
+    // Reloads when the drawn scale changes; otherwise the canvas is just resized.
     setScale(chosen);
   }, { w: 64 });
   c.add(scaleButton);

@@ -130,7 +130,8 @@ describe('the Nectar Trader', () => {
     const shelf = [potion(901, 'fine'), potion(902, 'masterwork', 120), potion(903, 'superb', 40)];
     let s = visit(market('summer', 2, { shelf }), 'nectar-trader');
     const card = at(s, 'nectar-trader').cards[2]!;
-    expect(codex.ingredients.get(card)!.rarity).toBe('rare');
+    // A Rare day card: an ingredient or a Tincture.
+    expect((codex.ingredients.get(card) ?? codex.tinctures.get(card))!.rarity).toBe('rare');
     s = ok(s, { type: 'tradeNectar', index: 2 }).state;
     expect(s.shelf.map((p) => p.uid)).toEqual([901, 902]);
     expect(allCards(s).some((c) => c.card === card)).toBe(true);

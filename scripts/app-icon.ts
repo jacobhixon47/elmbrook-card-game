@@ -1,24 +1,24 @@
-// The desktop app's icon, drawn from the firefly jar sprite (art is code, so no icon PNGs are
-// committed). Writes src-tauri/app-icon.png; `pnpm desktop:icons` then makes every size Tauri needs.
-import { mkdirSync, writeFileSync } from 'node:fs';
+// The desktop app's icon: the firefly jar cut from the title screen's painted backdrop (Jacob, Oct 21),
+// so no icon PNGs are committed. Writes src-tauri/app-icon.png; `pnpm desktop:icons` then makes every
+// size Tauri needs.
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
-import { Pixmap } from '../src/art/pixmap';
-import { rasterize } from '../src/art/sprite';
-import { SPRITES } from '../src/art/sprites';
+import { BACKDROPS } from '../src/art/backdrops';
 
-const jar = SPRITES.find((s) => s.id === 'tincture/firefly-jar');
-if (!jar) throw new Error('no firefly jar sprite');
-// A 32px tile: the night-blue ground, a lighter rim, and the jar doubled in the middle.
-const tile = new Pixmap(32, 32).fillRect(0, 0, 32, 32, 'n').fillRect(1, 1, 30, 30, 'k');
-tile.blit(rasterize(jar), 0, 0, 2);
+/** The jar, in the backdrop's 640×360 pixels: a square from the lid to the base. */
+const JAR = { x: 71, y: 150, size: 182 };
+const OUT = 1024;
 
-const SCALE = 32;
-const png = new PNG({ width: tile.width * SCALE, height: tile.height * SCALE });
-for (let y = 0; y < png.height; y++) {
-  for (let x = 0; x < png.width; x++) {
-    const si = (Math.floor(y / SCALE) * tile.width + Math.floor(x / SCALE)) * 4;
-    const di = (y * png.width + x) * 4;
-    for (let k = 0; k < 4; k++) png.data[di + k] = tile.data[si + k] ?? 0;
+const backdrop = PNG.sync.read(readFileSync(`public/${BACKDROPS.title.file}`));
+const png = new PNG({ width: OUT, height: OUT });
+for (let y = 0; y < OUT; y++) {
+  for (let x = 0; x < OUT; x++) {
+    // Nearest-neighbour, so the painted pixels stay crisp.
+    const sx = JAR.x + Math.floor((x * JAR.size) / OUT);
+    const sy = JAR.y + Math.floor((y * JAR.size) / OUT);
+    const si = (sy * backdrop.width + sx) * 4;
+    const di = (y * OUT + x) * 4;
+    for (let k = 0; k < 4; k++) png.data[di + k] = backdrop.data[si + k]!;
   }
 }
 mkdirSync('src-tauri', { recursive: true });

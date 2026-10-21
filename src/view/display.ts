@@ -2,7 +2,7 @@
 // so a new scale reloads the page; the run in progress is saved after every action, so nothing is lost.
 
 import { loadProfile, saveProfile } from '../profile';
-import { BASE_H, BASE_W, ZOOM, fitZoom, integerZoom } from './zoom';
+import { BASE_H, BASE_W, ZOOM, fitOf, fitZoom, integerZoom } from './zoom';
 
 export const isFullscreen = () => typeof document !== 'undefined' && document.fullscreenElement != null;
 
@@ -17,31 +17,36 @@ export async function setFullscreen(on: boolean): Promise<void> {
   }
 }
 
-/** Choose a scale (0 = the largest that fits) and redraw at it. */
+/** Choose a scale (0 = fill the window) and redraw at it. */
 export function setScale(scale: number): void {
   saveProfile({ display: { ...loadProfile().display, scale } });
   if (integerZoom() !== ZOOM) location.reload();
+  else window.dispatchEvent(new Event('resize'));
 }
 
-/** The scales Settings offers: 0 (fit) and every whole scale that fits this screen. */
+/** The scales Settings offers: 0 (fill the window) and every whole scale that fits it. */
 export function scaleChoices(): number[] {
   return [0, ...Array.from({ length: fitZoom() }, (_, i) => i + 1)];
 }
 
 /**
- * Keep the game fitted to the window. Leaving the page would drop browser fullscreen, so while
- * fullscreen the canvas is stretched by CSS instead of reloaded; anywhere else a new scale reloads.
+ * Keep the game fitted to the window. Fill (the default) sizes the canvas to the biggest 16:9 that
+ * fits, shrinking the drawn image smoothly; a chosen whole scale shows it at exactly that size. A
+ * new drawn scale reloads, except while fullscreen, which leaving the page would drop.
  */
 export function installDisplay(canvas: HTMLCanvasElement): void {
   const fit = () => {
-    if (isFullscreen()) {
-      const z = integerZoom();
-      canvas.style.width = `${BASE_W * z}px`;
-      canvas.style.height = `${BASE_H * z}px`;
-      return;
-    }
-    canvas.style.width = canvas.style.height = '';
-    if (integerZoom() !== ZOOM) location.reload();
+    const scale = loadProfile().display.scale;
+    const dpr = window.devicePixelRatio || 1;
+    if (!isFullscreen() && integerZoom() !== ZOOM) return location.reload();
+    // CSS pixels across: whole device pixels, so the edges stay crisp.
+    const k = scale > 0 ? Math.min(scale, fitZoom()) : fitOf(window.innerWidth, window.innerHeight);
+    const w = Math.floor((BASE_W * k * dpr)) / dpr;
+    const h = Math.floor((BASE_H * k * dpr)) / dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    // Shown at the size it's drawn: nearest-neighbour. Shrunk to fit: smooth, so no pixel rows drop.
+    canvas.style.imageRendering = Math.abs(w * dpr - BASE_W * ZOOM) < 1 ? 'pixelated' : 'auto';
   };
   window.addEventListener('resize', fit);
   document.addEventListener('fullscreenchange', () => {
@@ -57,4 +62,5 @@ export function installDisplay(canvas: HTMLCanvasElement): void {
   };
   window.addEventListener('pointerdown', resume);
   window.addEventListener('keydown', resume);
+  fit();
 }
