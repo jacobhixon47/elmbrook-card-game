@@ -12,6 +12,7 @@ import { dayLabel } from '../view/describe';
 import { button } from '../view/ui';
 import { pixelText } from '../view/text';
 import { openSettings } from '../view/settings';
+import { params } from '../debug/params';
 
 const cap = (w: string) => w[0]!.toUpperCase() + w.slice(1);
 
@@ -60,7 +61,9 @@ export class Title extends Phaser.Scene {
     // A run saved in this browser can be continued; a fixture shows one from its `state`, and its `profile`.
     const saved = data.fixture ? ((data.fixture.state as RunState | undefined) ?? null) : loadRun();
     const profile = data.fixture ? migrateProfile(data.fixture.profile ?? null) : loadProfile();
-    // The first run is the tutorial; after that every run starts from the cottage (GDD §13).
+    // A new save plays the tutorial from here; once it's done (or skipped), New game opens the cottage,
+    // where every run starts (GDD §13, Jacob, Oct 19). A chosen ?seed= or ?tutorial=0 goes straight to a run.
+    const tutorial = !profile.tutorialDone && (params.get('tutorial') === '1' || (params.get('tutorial') !== '0' && !params.get('seed')));
     const fresh = () => (profile.tutorialDone ? this.scene.start('Cottage', {}) : this.scene.start('Run', {}));
     const keys = this.input.keyboard;
     // Keys do nothing here while Settings is open, and Esc never starts a run.
@@ -94,8 +97,20 @@ export class Title extends Phaser.Scene {
         if (e.key === 'n') newRun();
       };
       keys?.on('keydown', onKey);
+    } else if (tutorial) {
+      this.add.existing(button(this, TX, 222, 'Tutorial', fresh, { w: 96, color: 'y' }));
+      this.add.existing(button(this, TX, 246, 'New game', fresh, { w: 96, enabled: false }));
+      pixelText(this, TX, 266, 'New game opens once the tutorial is done', { size: 7, color: 'm', stroke: 'k', align: 'center' }).setOrigin(0.5);
+      pixelText(this, TX, 280, 'Enter to start the tutorial', { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
+      const onKey = (e: KeyboardEvent) => {
+        if (!idle(e) || (e.key !== 'Enter' && e.key !== ' ')) return;
+        keys?.off('keydown', onKey);
+        fresh();
+      };
+      keys?.on('keydown', onKey);
     } else {
-      const prompt = pixelText(this, TX, 226, 'press any key', { size: 8, color: 'v', align: 'center' }).setOrigin(0.5);
+      this.add.existing(button(this, TX, 222, 'New game', fresh, { w: 96, color: 'y' }));
+      const prompt = pixelText(this, TX, 244, 'press any key', { size: 8, color: 'v', align: 'center' }).setOrigin(0.5);
       if (!noAnim) this.tweens.add({ targets: prompt, alpha: 0.2, duration: 700, yoyo: true, repeat: -1 });
       const onAnyKey = (e: KeyboardEvent) => {
         if (!idle(e)) return;

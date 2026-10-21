@@ -1,6 +1,6 @@
 import { codex } from '../codex';
 import { cauldronOpen, witchOpen, type Profile, type RunState } from '../core';
-import type { Rect } from './tutorial';
+import { STALL_LIST, type Rect } from './tutorial';
 
 // First-time notes (Jacob, Oct 19): the systems the week-1 tutorial never reaches each get a short
 // note the first time you meet them, once per save, and Settings can turn them off. Pure, so tests
@@ -64,6 +64,13 @@ export const RUN_NOTES: readonly RunNote[] = [
     at: { x: 320, y: 110 },
   },
   {
+    id: 'market-list',
+    title: 'The Night Market',
+    text: 'Walk to a stall to visit it, or open Tonight\'s stalls (Tab) to see every stall at once and go straight to one. Pay rent at the bridge when you\'re done.',
+    when: (s) => s.offer?.kind === 'night-market' && s.offer.at === null,
+    target: STALL_LIST, at: { x: 320, y: 230 },
+  },
+  {
     id: 'commission',
     title: 'Guild Commissions',
     text: 'A Guild Commission. Meet its goal by the Night Shift it names and the Guild pays a relic. Its progress shows here; hover it for the goal and the reward.',
@@ -75,6 +82,13 @@ export const RUN_NOTES: readonly RunNote[] = [
 const others = (open: (id: string) => boolean, ids: Iterable<string>) => [...ids].filter((id) => id !== 'hedge-witch' && id !== 'copper' && open(id)).length > 0;
 
 export const COTTAGE_NOTES: readonly CottageNote[] = [
+  {
+    id: 'home',
+    title: 'Your cottage',
+    text: 'Home, between runs. Walk with WASD and press F by anything that glows. When you\'re ready, walk out of the front door (or press F by it) to set out for Spring.',
+    when: (p) => p.runs === 0,
+    at: { x: 320, y: 120 },
+  },
   {
     id: 'reputation',
     title: 'Reputation',

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SEASONS, type Season } from '../src/core';
 import { DRESSING_SPRITES } from '../src/art/scenes/cottage-room';
-import { DOORSTEP, DRESSING, facing, onRug, ROOM_H, ROOM_W, SOLIDS, SPAWN, STATIONS, standBy, stationAt, walk, type Point } from '../src/view/room';
+import { DOORSTEP, DRESSING, facing, onRug, ROOM_H, ROOM_W, SOLIDS, SPAWN, STATIONS, standBy, stationAt, walk, walkingOut, type Point } from '../src/view/room';
 
 /** Walks in one direction for a while, a frame at a time. */
 const hold = (p: Point, dx: number, dy: number, seconds: number) => {
@@ -34,6 +34,17 @@ describe('the walkable cottage', () => {
   it('starts you on open floor, by no station', () => {
     expect(walk(SPAWN, 0, -1, 0.1)).not.toEqual(SPAWN);
     expect(stationAt(SPAWN)).toBeNull();
+  });
+
+  it('lets you walk out of the front door, in every season', () => {
+    for (const season of SEASONS) {
+      let at = SPAWN;
+      for (let t = 0; t < 2; t += 1 / 60) at = walk(at, 0, 1, 1 / 60, season);
+      expect(walkingOut(at, 1)).toBe(true);
+      expect(walkingOut(at, 0)).toBe(false);
+    }
+    // Walking down by the side wall isn't the door.
+    expect(walkingOut(hold({ x: 40, y: 150 }, 0, 1, 2), 1)).toBe(false);
   });
 
   it('keeps you inside the walls', () => {
