@@ -8,10 +8,11 @@ import { noAnim } from '../debug/params';
  * Seasonal and weather particles inside a window. Add this between the view and the painted
  * room, so the room's frame hides anything outside the glass. With ?noanim=1 they hold still.
  */
-export function addWeather(scene: Phaser.Scene, area: Area, season: Season, time: SkyTime, weather: Weather = 'clear'): void {
+export function addWeather(scene: Phaser.Scene, area: Area, season: Season, time: SkyTime, weather: Weather = 'clear', depth?: number): void {
   for (const q of windowParticles(season, time, weather, area)) {
     const p = (q.texture ? scene.add.image(q.x, q.y, q.texture) : scene.add.rectangle(q.x, q.y, q.w, q.h, hex(q.color))).setOrigin(0).setAlpha(q.alpha);
     if (q.blink) p.setBlendMode(Phaser.BlendModes.ADD);
+    if (depth !== undefined) p.setDepth(depth);
     if (noAnim) continue;
     let t = q.phase;
     scene.events.on('update', (_: number, dt: number) => {

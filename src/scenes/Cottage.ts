@@ -3,7 +3,7 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { ALMANAC_FIRST_PAGE, ENDLESS_RENT, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, MAX_YEAR, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
+import { ALMANAC_FIRST_PAGE, ENDLESS_RENT, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, MAX_YEAR, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season, type Weather } from '../core';
 import { CODEX_TABS, codexEntries, type CodexEntry } from '../view/codex';
 import { framedPortrait } from '../view/portrait';
 import { unlockName } from '../view/describe';
@@ -18,6 +18,7 @@ import { COTTAGE_NOTES, noteDue, type CottageNote } from '../view/notes';
 import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
 import { button, panel } from '../view/ui';
+import { addWeather } from '../view/weather';
 import { DOORSTEP, DRESSING, facing, HEARTH, onRug, PROPS, ROOM_SCALE, SEASON_LIGHT, SPAWN, STATIONS, standBy, stationAt, walk, walkingOut, type Facing, type Point, type Station, type StationId } from '../view/room';
 import type { PaletteKey } from '../art/palette';
 
@@ -197,16 +198,21 @@ export class Cottage extends Phaser.Scene {
     const Z = ROOM_SCALE;
     const season = this.season;
     this.add.image(0, 0, 'room/shell').setOrigin(0).setScale(Z).setDepth(-1000);
-    // Through the windows, the shop window's painted view graded for the season at twilight, cropped
-    // to each window's panes.
+    // Through the windows, the shop window's painted view graded for the season at twilight, in the
+    // season's own weather (Jacob, Oct 21), cropped to each window's panes.
+    const weather = WINDOW_WEATHER[season];
     for (const [n, w] of ROOM_WINDOWS.entries()) {
       if (codeBackdrops) {
         this.add.image(w.x * Z, w.y * Z, `room/view-${season}`).setOrigin(0).setScale(Z).setDepth(-1001);
-        continue;
+      } else {
+        const src = { x: VIEW_CROP.x + n * 150, y: VIEW_CROP.y, w: (w.w * Z) / VIEW_SCALE, h: (w.h * Z) / VIEW_SCALE };
+        const view = this.add.image(0, 0, gradedView(this, `${backdropTexture('shop')}-view`, 'shop', season, 'twilight', weather)).setOrigin(0).setDepth(-1001);
+        view.setCrop(src.x, src.y, src.w, src.h).setScale(VIEW_SCALE).setPosition(w.x * Z - src.x * VIEW_SCALE, w.y * Z - src.y * VIEW_SCALE);
       }
-      const src = { x: VIEW_CROP.x + n * 150, y: VIEW_CROP.y, w: (w.w * Z) / VIEW_SCALE, h: (w.h * Z) / VIEW_SCALE };
-      const view = this.add.image(0, 0, gradedView(this, `${backdropTexture('shop')}-view`, 'shop', season, 'twilight')).setOrigin(0).setDepth(-1001);
-      view.setCrop(src.x, src.y, src.w, src.h).setScale(VIEW_SCALE).setPosition(w.x * Z - src.x * VIEW_SCALE, w.y * Z - src.y * VIEW_SCALE);
+      // Spring's breeze is its blossom blowing past, which the window only shows by day. Summer's heat
+      // is the haze in the grade: through panes this small, the rising shimmer reads as rain.
+      const area = { x0: w.x * Z, y0: w.y * Z, x1: (w.x + w.w) * Z, y1: (w.y + w.h) * Z };
+      addWeather(this, area, season, season === 'spring' ? 'afternoon' : 'twilight', season === 'summer' ? 'clear' : weather, -1000.5);
     }
     for (const prop of PROPS) {
       const img = this.add.image(prop.at.x * Z, prop.at.y * Z, `room/${prop.id}`).setOrigin(0).setScale(Z);
@@ -275,7 +281,7 @@ export class Cottage extends Phaser.Scene {
       ...(p.year > 1 ? [`Year ${p.year} earns ×${reputationMult(p.year)}. The calendar shows its rules.`] : []),
     ]);
     if (this.endless) {
-      this.tip.on(pixelText(this, 320, 8, 'ENDLESS MODE', { size: 10, color: 'Y', stroke: 'k', align: 'center' }).setOrigin(0.5, 0).setDepth(1500), 'Endless mode', [
+      this.tip.on(pixelText(this, 22, 20, 'Endless mode', { size: 8, color: 'Y', stroke: 'k' }).setDepth(1500), 'Endless mode', [
         'Set out from the door in any season. The weeks go on, month after month, with rent climbing, until it beats you.',
         'Everything you have unlocked comes along; Endless plays Year 1\'s rules and earns no Reputation. Esc, then Title, to leave.',
       ]);
@@ -809,11 +815,14 @@ const TOP_TIER = 1 + PERK_TIERS.length;
 
 type WalkKeys = Record<'w' | 'a' | 's' | 'd' | 'up' | 'down' | 'left' | 'right', Phaser.Input.Keyboard.Key>;
 
+/** The weather out of the cottage's window, always the season's own: autumn has none of its own. */
+const WINDOW_WEATHER: Record<Season, Weather> = { spring: 'clear', summer: 'heatwave', autumn: 'clear', winter: 'snow' };
+
 /** The season the house is dressed for: the newest open season of the Year you're playing. */
 
 /** Where the cottage's windows look into the shop window's painted view (640x360): the left window here, the right one further along. And its scale. */
-const VIEW_CROP = { x: 196, y: 96 };
-const VIEW_SCALE = 0.5;
+const VIEW_CROP = { x: 182, y: 58 };
+const VIEW_SCALE = 0.6;
 
 /** The perk board opens at the first open tier with something left to buy, else the top open tier. */
 function firstTier(p: Profile): number {

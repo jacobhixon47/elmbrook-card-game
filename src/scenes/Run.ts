@@ -1776,6 +1776,7 @@ export class Run extends Phaser.Scene {
         },
         exitLabel: short ? `Can't pay ${due}g: leave` : `Pay ${due}g rent and go home`,
         exitShort: short,
+        moon: moonOf(s.week),
       }, this.walkState, {
         visit: (index) => {
           this.walkState!.list = false;
