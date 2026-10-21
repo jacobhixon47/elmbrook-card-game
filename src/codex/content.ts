@@ -349,10 +349,10 @@ export const nightCustomers: In<typeof NightCustomer>[] = [
   { id: 'moth-duchess', name: 'The Moth Duchess', blurb: 'Aristocrat of the lamplight.', prefers: ['illusion', 'fortune'], weight: 2, goldMult: 1.5, paysIn: { kind: 'gold' } },
   { id: 'sleepless-miller', name: 'The Sleepless Miller', blurb: "Hasn't slept in years.", prefers: ['calming'], weight: 2, goldMult: 1, paysIn: { kind: 'lift-curse', noCurseMult: 1.5 } },
   // Five more (Jacob, Oct 21), each paying in something the game already gives.
-  { id: 'ferryman', name: 'The Ferryman', blurb: 'Poles a flat boat across the brook all night.', prefers: ['protection'], weight: 2, goldMult: 0.5, paysIn: { kind: 'burn' } },
-  { id: 'owl-archivist', name: 'The Owl Archivist', blurb: "Keeps the town's night records.", prefers: ['secrets', 'calming'], weight: 2, goldMult: 0.5, paysIn: { kind: 'card-pick', tincture: true, count: 2 } },
-  { id: 'fox-peddler', name: 'The Fox Peddler', blurb: 'Knows every stall at the Night Market.', prefers: ['fortune', 'vigor'], weight: 2, goldMult: 0.5, paysIn: { kind: 'half-price' } },
-  { id: 'bell-ringer', name: 'The Bell-Ringer', blurb: 'Rings the bell of the drowned chapel.', prefers: ['healing', 'protection'], weight: 2, goldMult: 0.5, paysIn: { kind: 'temper' } },
+  { id: 'ferryman', name: 'The Ferryman', blurb: 'Poles a flat boat across the brook all night.', prefers: ['protection'], weight: 2, goldMult: 1.25, paysIn: { kind: 'burn' } },
+  { id: 'owl-archivist', name: 'The Owl Archivist', blurb: "Keeps the town's night records.", prefers: ['secrets', 'calming'], weight: 2, goldMult: 1.25, paysIn: { kind: 'card-pick', tincture: true, count: 2 } },
+  { id: 'fox-peddler', name: 'The Fox Peddler', blurb: 'Knows every stall at the Night Market.', prefers: ['fortune', 'vigor'], weight: 2, goldMult: 1.25, paysIn: { kind: 'half-price' } },
+  { id: 'bell-ringer', name: 'The Bell-Ringer', blurb: 'Rings the bell of the drowned chapel.', prefers: ['healing', 'protection'], weight: 2, goldMult: 1.25, paysIn: { kind: 'temper' } },
   { id: 'starwatcher', name: 'The Starwatcher', blurb: 'Maps the stars from the old hill.', prefers: ['lunar', 'illusion'], weight: 2, goldMult: 1, paysIn: { kind: 'next-brew' } },
 ];
 

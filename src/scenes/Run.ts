@@ -1753,7 +1753,7 @@ export class Run extends Phaser.Scene {
     };
     const backButton = () => this.add2(button(this, 320, 262, 'Back to the street', back, { w: 110 }));
     const info = stall ? codex.stalls.get(stall.id)! : null;
-    const half = s.halfPrice > 0 ? ' The Firefly Keeper put in a word: your next buy is half price.' : '';
+    const half = s.halfPrice > 0 ? ' Someone put in a word for you: your next buy is half price.' : '';
     const head = (sub: string) => title(info!.name, `${sub}${half} You have ${s.gold}g.`);
 
     if (!stall) {
