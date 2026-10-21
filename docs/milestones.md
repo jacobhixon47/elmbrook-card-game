@@ -121,8 +121,8 @@ The Night Market becomes a walkable square the same way (Jacob, Oct 14; built in
 
 ## M6 — Ship prep
 
-- ✅ Tutorial tips for the M3+ systems, as first-time notes (Jacob, Oct 19); ✅ onboarding: a Tutorial button on a new save's title screen, Skip tutorial, New game to the cottage, the stall list note and walking out of the door (Jacob, Oct 19); ✅ tooltips on anything new since M2.5 (GDD §15.1, Hover help), settings menu (✅ volume and season openings in M4; ✅ fullscreen and scale in M6), achievements (10).
-- Endless (opens at Year 5, earns no progression) and per-Year mutations (challenge runs, with a Reputation bonus tuned by sim); see GDD §13. No Daily seed (Jacob, Oct 19).
+- ✅ Tutorial tips for the M3+ systems, as first-time notes (Jacob, Oct 19); ✅ onboarding: a Tutorial button on a new save's title screen, Skip tutorial, New game to the cottage, the stall list note and walking out of the door (Jacob, Oct 19); ✅ tooltips on anything new since M2.5 (GDD §15.1, Hover help), settings menu (✅ volume and season openings in M4; ✅ fullscreen and scale in M6), achievements: Steam achievements that mirror the Almanac's 20 goals plus a few milestones (Jacob, Oct 21).
+- ✅ Endless (its own mode from the title, open from the start, with its own save; brings every unlock and earns no progression; Jacob, Oct 21) and per-Year mutations (the six on the cards, approved by Jacob, Oct 21) (challenge runs, with a Reputation bonus tuned by sim); see GDD §13. No Daily seed (Jacob, Oct 19).
 - Tauri desktop builds (Windows, Mac, Linux) from CI, ready for Steam; the game is sold on Steam, with no free public or browser version. Private builds for friends come from CI as a download link. The GitHub repo goes private before release.
 
 **Accept:** a friend can play a private desktop build without help.

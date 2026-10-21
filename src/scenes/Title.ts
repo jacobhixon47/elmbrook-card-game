@@ -4,7 +4,7 @@ import { markReady } from '../debug/hook';
 import { titleBackdrop } from '../view/backdrop';
 import { pixelCamera } from '../view/camera';
 import { noAnim, type Fixture } from '../debug/params';
-import { homeSeason, migrateProfile, type RunState } from '../core';
+import { endlessOpen, homeSeason, migrateProfile, runWeek, type RunState } from '../core';
 import { playMusic } from '../audio/sfx';
 import { loadProfile } from '../profile';
 import { clearRun, loadRun } from '../save';
@@ -76,15 +76,28 @@ export class Title extends Phaser.Scene {
     this.add.existing(button(this, 590, 334, 'Settings', settings, { w: 72 }));
     pixelText(this, 590, 345, 'M mutes', { size: 6, color: 'a', stroke: 'k', align: 'center' }).setOrigin(0.5, 0);
     if (data.fixture?.ui?.settings) settings();
-    if (saved) {
-      const resume = () => this.scene.start('Run', { saved });
-      const line = `${dayLabel(saved)} · ${cap(saved.season)} · ${saved.gold} gold`;
+    // Endless (GDD §13): its own mode with its own save, open once the tutorial is done. A saved Endless
+    // run continues; otherwise it opens the cottage in Endless mode, to pick a season.
+    const endlessSaved = data.fixture ? (saved?.endlessMode ? saved : null) : loadRun('endless');
+    const storySaved = saved?.endlessMode ? null : saved;
+    const endless = () => (endlessSaved ? this.scene.start('Run', { saved: endlessSaved }) : this.scene.start('Cottage', { endless: true }));
+    const endlessButton = (y: number) => {
+      if (!endlessOpen(profile)) return;
+      this.add.existing(button(this, TX, y, 'Endless', endless, { w: 96 }));
+      const line = endlessSaved ? `Continue: week ${runWeek(endlessSaved)} · ${cap(endlessSaved.season)} · E` : 'A run that never ends · E';
+      pixelText(this, TX, y + 14, line, { size: 7, color: 'm', stroke: 'k', align: 'center' }).setOrigin(0.5);
+      keys?.on('keydown', (e: KeyboardEvent) => idle(e) && e.key === 'e' && endless());
+    };
+    if (storySaved) {
+      const resume = () => this.scene.start('Run', { saved: storySaved });
+      const line = `${dayLabel(storySaved)} · ${cap(storySaved.season)} · ${storySaved.gold} gold`;
       const shown = [
         this.add.existing(button(this, TX, 222, 'Continue', resume, { w: 96, color: 'y' })),
         pixelText(this, TX, 236, line, { size: 7, color: 'm', stroke: 'k', align: 'center' }).setOrigin(0.5),
         this.add.existing(button(this, TX, 256, 'New run', () => newRun(), { w: 96 })),
         pixelText(this, TX, 274, 'Enter to continue · N for a new run', { size: 7, color: 'v', align: 'center' }).setOrigin(0.5),
       ];
+      endlessButton(296);
       const newRun = () => {
         keys?.off('keydown', onKey);
         clearRun();
@@ -112,8 +125,9 @@ export class Title extends Phaser.Scene {
       this.add.existing(button(this, TX, 222, 'New game', fresh, { w: 96, color: 'y' }));
       const prompt = pixelText(this, TX, 244, 'press any key', { size: 8, color: 'v', align: 'center' }).setOrigin(0.5);
       if (!noAnim) this.tweens.add({ targets: prompt, alpha: 0.2, duration: 700, yoyo: true, repeat: -1 });
+      endlessButton(266);
       const onAnyKey = (e: KeyboardEvent) => {
-        if (!idle(e)) return;
+        if (!idle(e) || (endlessOpen(profile) && e.key === 'e')) return;
         keys?.off('keydown', onAnyKey);
         fresh();
       };

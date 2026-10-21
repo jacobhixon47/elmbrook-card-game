@@ -1,5 +1,5 @@
 import { codex } from '../codex';
-import { allCards, isPatron, reduce, type Action, type GameEvent, type RunState, type Season } from '../core';
+import { allCards, endlessWeeks, isPatron, reduce, type Action, type GameEvent, type RunState, type Season } from '../core';
 import { isOver, makePlayer, type Strategy } from './bot';
 
 export type RunRecord = {
@@ -38,21 +38,23 @@ export type RunRecord = {
   modifiers: string[];
   /** Each day's requests (a recipe id, or `family:<id>`), by week: [week][day]. */
   boards: string[][][];
+  /** With `endless`: weeks the Endless run lasted. */
+  endlessWeeks: number;
   /** The state the run ended in, for counting it into a profile. */
   final?: RunState;
   error?: string;
 };
 
-export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; unlocks?: readonly string[]; perks?: readonly string[]; year?: number; boon?: string; cauldron?: string; friendship?: Readonly<Record<string, number>>; keepsakes?: readonly string[]; maxActions?: number };
+export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; unlocks?: readonly string[]; perks?: readonly string[]; year?: number; boon?: string; cauldron?: string; friendship?: Readonly<Record<string, number>>; keepsakes?: readonly string[]; maxActions?: number; endless?: boolean };
 
 /** Play one full run headlessly. Never throws: a crash is recorded with the action log that caused it. */
 export function playRun(seed: string, opts: SimOptions): RunRecord {
   const rec: RunRecord = {
     seed, won: false, lostWeek: null, finished: false, actions: [], quality: [], gold: [],
     offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {}, commissions: {}, events: {},
-    finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [], modifiers: [], boards: [],
+    finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [], modifiers: [], boards: [], endlessWeeks: 0,
   };
-  const max = opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000);
+  const max = (opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000)) * (opts.endless ? 25 : 1);
   const player = makePlayer(opts.strategy, seed);
 
   const observe = (s: RunState, events: GameEvent[]) => {
@@ -123,13 +125,14 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
   };
 
   try {
-    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}), ...(opts.unlocks ? { unlocks: [...opts.unlocks] } : {}), ...(opts.perks ? { perks: [...opts.perks] } : {}), ...(opts.year ? { year: opts.year } : {}), ...(opts.boon ? { boon: opts.boon } : {}), ...(opts.cauldron ? { cauldron: opts.cauldron } : {}), ...(opts.friendship ? { friendship: { ...opts.friendship } } : {}), ...(opts.keepsakes?.length ? { keepsakes: [...opts.keepsakes] } : {}) };
+    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}), ...(opts.unlocks ? { unlocks: [...opts.unlocks] } : {}), ...(opts.perks ? { perks: [...opts.perks] } : {}), ...(opts.year ? { year: opts.year } : {}), ...(opts.boon ? { boon: opts.boon } : {}), ...(opts.cauldron ? { cauldron: opts.cauldron } : {}), ...(opts.friendship ? { friendship: { ...opts.friendship } } : {}), ...(opts.keepsakes?.length ? { keepsakes: [...opts.keepsakes] } : {}), ...(opts.endless ? { endless: true } : {}) };
     rec.actions.push(start);
     const first = reduce(null, start);
     let state = first.state;
     observe(state, first.events);
-    while (!isOver(state) && rec.actions.length < max) {
-      const action = player(state);
+    while (rec.actions.length < max) {
+      if (isOver(state)) break;
+      const action: Action = player(state);
       rec.actions.push(action);
       const r = reduce(state, action);
       // Gold is observed on the state the day started in, so observe after applying.
@@ -138,6 +141,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
     }
     rec.finished = isOver(state);
     rec.final = state;
+    rec.endlessWeeks = endlessWeeks(state);
     rec.familiars = [...state.familiars];
     rec.relics = [...state.relics];
     rec.curses = [...state.curses];

@@ -14,7 +14,7 @@ const runFixtures = readdirSync(dir)
 
 describe('fixtures', () => {
   it.each(runFixtures)('%s replays without a rejected step', (_, fx) => {
-    let s: RunState = reduce(null, { type: 'startRun', seed: fx.seed ?? 'fixture', witch: fx.witch ?? 'hedge-witch', cauldron: fx.cauldron ?? 'copper', ...(fx.season ? { season: fx.season as Season } : {}), ...(fx.year ? { year: fx.year } : {}), ...(fx.perks ? { perks: fx.perks } : {}), ...(fx.boon ? { boon: fx.boon } : {}) }).state;
+    let s: RunState = reduce(null, { type: 'startRun', seed: fx.seed ?? 'fixture', witch: fx.witch ?? 'hedge-witch', cauldron: fx.cauldron ?? 'copper', ...(fx.season ? { season: fx.season as Season } : {}), ...(fx.year ? { year: fx.year } : {}), ...(fx.perks ? { perks: fx.perks } : {}), ...(fx.boon ? { boon: fx.boon } : {}), ...(fx.endless ? { endless: true } : {}) }).state;
     const today = () => {
       if (fx.today) s = reduce(s, { type: 'debug', op: 'setWeather', weather: fx.today as Weather }).state;
     };

@@ -4,7 +4,7 @@ import type { Essence, ModifierId, StallId } from '../codex/schema';
 import type { Errand, GiftSource, Order, Potion } from './state';
 
 export type Action =
-  | { type: 'startRun'; seed: string; witch: string; season?: Season; unlocks?: string[]; perks?: string[]; year?: number; boon?: string; cauldron?: string; friendship?: Record<string, number>; keepsakes?: string[] }
+  | { type: 'startRun'; seed: string; witch: string; season?: Season; unlocks?: string[]; perks?: string[]; year?: number; boon?: string; cauldron?: string; friendship?: Record<string, number>; keepsakes?: string[]; endless?: boolean }
   // Afternoon: read the Order Board, then open the shop to draw a hand.
   | { type: 'openShop' }
   // Sunset: brewing.
@@ -68,6 +68,7 @@ export type Action =
   | { type: 'burnYule'; uids: number[] }
   | { type: 'wearCrown'; index: number }
   | { type: 'leaveMarket' }
+  // After a won finale, once Endless is open (GDD §13): the run goes on into another month.
   // Familiars, at any time in a run: sell one for half its price, or move it to another slot.
   | { type: 'sellFamiliar'; index: number }
   | { type: 'moveFamiliar'; from: number; to: number }
@@ -189,6 +190,7 @@ export type GameEvent =
   | { type: 'rentPaid'; week: number; amount: number }
   | { type: 'rentFailed'; week: number; amount: number; gold: number }
   | { type: 'runWon' }
+  | { type: 'endlessMonth'; month: number }
   | { type: 'runLost'; week: number }
   /** The action broke a rule; state is unchanged. */
   | { type: 'rejected'; action: Action['type']; reason: string };

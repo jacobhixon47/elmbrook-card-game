@@ -13,7 +13,7 @@ import { hasRelic, RELIC_RULES } from './relics';
 import { rollVisitor } from './visitors';
 import {
   BONUS_TIP, CLOCKLESS_BREWS, RAIN_MIN_ORDERS, NIGHT_PAY, ORDER_PAY, ORDER_TIERS, orderCount,
-  HERMIT_PAY, PALE_COURIER_PAY, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, TOWER_PAY, WEEK_PAY_STEP, type Tier,
+  HERMIT_PAY, PALE_COURIER_PAY, runWeek, SEASON_RULES, TIER_PAY, tierIndex, tierOf, tierStep, TOWER_PAY, WEEK_PAY_STEP, type Tier,
 } from './rules';
 import { allCards, type CardInstance, type Order, type OrderBonus, type OrderRequest, type Potion, type RunState } from './state';
 import { finaleTier, YEAR_RULES, yearRule } from './year';
@@ -237,7 +237,7 @@ function postOrder(ctx: Ctx, o: OrderOpts): void {
   ctx.ev.push({ type: 'orderPosted', order });
 }
 
-const weekScale = (s: RunState, night: boolean) => (1 + WEEK_PAY_STEP * (s.week - 1)) * (night ? NIGHT_PAY : 1) * SEASON_RULES[s.season].payMult;
+const weekScale = (s: RunState, night: boolean) => (1 + WEEK_PAY_STEP * (runWeek(s) - 1)) * (night ? NIGHT_PAY : 1) * SEASON_RULES[s.season].payMult;
 
 /**
  * Post the day's orders. Customers ask for what they like (GDD §14 regulars) from what your deck can
@@ -251,7 +251,7 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
   if (nightShift) return postNightOrders(ctx, r);
 
   const customers = weightedOrder(ctx, [...codex.regulars.values()].filter((x) => !x.nightOnly));
-  let count = orderCount(s.week, false, rand(ctx));
+  let count = orderCount(runWeek(s), false, rand(ctx));
   // Rain keeps one customer home, but only on a busy day (sim: cutting quiet days too halves the win rate).
   if (todaysWeather(s) === 'rain' && count >= RAIN_MIN_ORDERS) count -= 1;
   // Fortune Tent twists on this week: The Hermit (fewer, richer orders) and The Tower (harder, richer).
@@ -266,7 +266,7 @@ export function postOrders(ctx: Ctx, nightShift: boolean): void {
   for (let i = 0; i < count; i++) {
     const customer = customers[i % customers.length]!;
     const asked = requestFor(ctx, r, customer.prefers);
-    let rolled = pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
+    let rolled = pickWeighted(ctx, ORDER_TIERS[Math.min(4, runWeek(s))]!);
     // Year 6: week 2 asks for Superb or better.
     if (yearRule(s, 6) && s.week === 2 && tierIndex(rolled) < tierIndex(YEAR_RULES.weekTwoTier)) rolled = YEAR_RULES.weekTwoTier;
     const minTier = tower ? tierStep(rolled, 1) : rolled;
@@ -299,7 +299,7 @@ function visitorOrder(ctx: Ctx, r: Reach, v: Visitor): void {
   const families = v.prefers.filter((f) => r.recipes.some((x) => inFamily(x, f)) && (!v.needsTag || tagFits(s, r, f, v.needsTag)));
   if (!families.length) return;
   const request: OrderRequest = { kind: 'family', family: pick(ctx, families) };
-  const minTier = pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
+  const minTier = pickWeighted(ctx, ORDER_TIERS[Math.min(4, runWeek(s))]!);
   postOrder(ctx, {
     customer: v.id, request, minTier, ceiling: ceilingOf(r, request), payScale: weekScale(s, false) * v.goldMult, bonus: null,
     quantity: v.quantity, needsTag: v.needsTag ?? null,
@@ -327,7 +327,7 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
   if (todaysWeather(s) === 'rain' && count >= RAIN_MIN_ORDERS && !patron.ladder) count -= 1;
   const scale = weekScale(s, true) * patron.payMult;
   const every = { quantity: twist === 'orders-double' ? 2 : 1, expiresIn: twist === 'orders-expire-2' ? CLOCKLESS_BREWS : null };
-  const rolled = () => pickWeighted(ctx, ORDER_TIERS[Math.min(4, s.week)]!);
+  const rolled = () => pickWeighted(ctx, ORDER_TIERS[Math.min(4, runWeek(s))]!);
 
   // The patron's order(s).
   const ladder = patron.ladder ?? [];

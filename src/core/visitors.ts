@@ -32,8 +32,8 @@ export function visitorsToday(s: Pick<RunState, 'season' | 'week' | 'day' | 'cal
  * Today's visitor, if one comes: rolled on its own stream from the seed, so a visitor doesn't change
  * the rest of the day's orders. `canServe` says whether the deck can brew what they want.
  */
-export function rollVisitor(s: Pick<RunState, 'seed' | 'season' | 'week' | 'day' | 'calendar'>, canServe: (v: Visitor) => boolean): Visitor | null {
-  const [roll, rng] = nextFloat(seedRng(`${s.seed}:visitor:${s.week}:${s.day}`));
+export function rollVisitor(s: Pick<RunState, 'seed' | 'season' | 'week' | 'day' | 'calendar'> & Partial<Pick<RunState, 'endless'>>, canServe: (v: Visitor) => boolean): Visitor | null {
+  const [roll, rng] = nextFloat(seedRng(`${s.seed}:visitor:${s.endless ? `${s.endless}:` : ''}${s.week}:${s.day}`));
   if (roll >= VISITOR_RULES.chance) return null;
   const able = visitorsToday(s).filter(canServe);
   if (!able.length) return null;
