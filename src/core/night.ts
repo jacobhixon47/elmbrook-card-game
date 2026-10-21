@@ -155,6 +155,13 @@ export function nightPayment(ctx: Ctx, order: Order): void {
       // The Miller's order paid the no-curse rate if you had none when it was posted.
       liftCurse(ctx, order.customer);
       return;
+    case 'next-brew':
+      ctx.s.tomorrow.brews += 1;
+      ctx.ev.push({ type: 'brewTomorrow', from: order.customer });
+      return;
+    default:
+      // A pick, a favour or a half-price buy, paid like a seasonal visitor's (visitors.ts).
+      return;
   }
 }
 

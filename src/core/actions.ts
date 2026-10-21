@@ -153,6 +153,7 @@ export type GameEvent =
   | { type: 'favourQueued'; visitor: string; job: 'burn' | 'temper' }
   | { type: 'favourDone'; visitor: string; uid: number | null }
   | { type: 'halfPriceGained'; visitor: string }
+  | { type: 'brewTomorrow'; from: string }
   /** The customer gave up waiting (The Clockless Man). */
   | { type: 'orderExpired'; order: number; customer: string }
   /** The finale's orders weren't all filled, so the month is lost. */

@@ -104,8 +104,15 @@ A separate cast who only come after dark. Stranger and more formal than the day 
 | wisp-courier | The Wisp Courier | Delivers letters between the living and the not-quite | Secrets, Lunar | ×0.5 | A random Omen into the Night Satchel |
 | lantern-witch | The Lantern Witch | Lights the Night Market's lamps, sharp-tongued | Vigor, Warming | ×0.5 | Pick 1 of 2 Lunar ingredients after the shift |
 | bog-hag | Granny Bogwort | Lives in the fen, surprisingly sweet | Healing, and it must have an Umbra ingredient | ×0.5 | Pick 1 of 3 Rare ingredients after the shift |
-| moth-duchess | The Moth Duchess | Aristocrat of the lamplight | Illusion, Fortune | ×2.5 | Gold, lavishly |
+| moth-duchess | The Moth Duchess | Aristocrat of the lamplight | Illusion, Fortune | ×1.5 | Gold, lavishly (was ×2.5: a Superb Four-leaf Tea paid most of week 2's rent; Jacob, Oct 21) |
 | sleepless-miller | The Sleepless Miller | Hasn't slept in years | Calming | ×1 | Lifts your oldest Curse, or ×1.5 gold if you carried none when the order was posted |
+| ferryman | The Ferryman | Poles a flat boat across the brook all night | Protection | ×1.25 | Takes one card of your choice out of your deck (as Rook does) |
+| owl-archivist | The Owl Archivist | Keeps the town's night records | Secrets, Calming | ×1.25 | Pick 1 of 2 Tinctures |
+| fox-peddler | The Fox Peddler | Knows every stall at the Night Market | Fortune, Vigor | ×1.25 | Your next buy at tonight's Night Market is half price (as the Firefly Keeper's) |
+| bell-ringer | The Bell-Ringer | Rings the bell of the drowned chapel | Healing, Protection | ×1.25 | +2 Potency on one ingredient of your choice for the run (as the Toymaker's) |
+| starwatcher | The Starwatcher | Maps the stars from the old hill | Lunar, Illusion | ×1 | +1 Brew on the first day of next week |
+
+The last five were added with Jacob (Oct 21) so ten night customers share the other orders, each as likely as the rest; each pays in something the game already gives, and Protection has night customers for the first time. As drafted at ×0.5 gold they cost the skilled bot about 2 points of Year 1 win rate each (they take order slots that paid full gold), so Jacob set them to ×1.25; the Starwatcher stays ×1.
 
 The Night Shift patron (§10) is the featured guest; night customers fill the other orders that night, along with the regulars who only come at night (The Gardener). Gold is the order's normal night pay times the multiplier. Picks wait until after the shift's twilight reward, before the Night Market. Granny Bogwort only insists on Umbra when your deck can brew it into her potion.
 
@@ -333,7 +340,7 @@ Pay, tips, Fence prices and shop prices live in `src/core/rules.ts` and are tune
 
 ### 6.5 The Shelf
 
-Brewed potions not delivered go to the Shelf (4 slots, upgradable). Shelf potions can fill later orders (from 1.0's "fulfil from inventory"), carry between days, and sell at the Night Market. Potions on the Shelf at rent time are not worth anything unless sold. A Shelf potion can be poured away during a day for one of the day's Discards (the Pour out button, or right-click it), so a full Shelf costs a choice rather than a brew (pouring was free until the balance pass, Jacob, Oct 17: a Shelf of the best potions was trivial to keep); hovering one shows its quality, ingredients, the order it would fill and what the Fence pays (decided with Jacob).
+Brewed potions not delivered go to the Shelf (4 slots, upgradable). Shelf potions can fill later orders (from 1.0's "fulfil from inventory"), carry between days, and sell at the Night Market. Potions on the Shelf at rent time are not worth anything unless sold. A Shelf potion can be poured away during a day for one of the day's Discards (the Pour out button, then the potion; no right-click shortcut, so it's always deliberate, Jacob, Oct 21), so a full Shelf costs a choice rather than a brew (pouring was free until the balance pass, Jacob, Oct 17: a Shelf of the best potions was trivial to keep); hovering one shows its quality, ingredients, the order it would fill and what the Fence pays (decided with Jacob).
 
 ## 7. Dusk errands
 
@@ -668,7 +675,7 @@ Decided after the M2 playtest: the rules must explain themselves before M3 adds 
   - *Weather firsts:* the first Fog, Heatwave and Snow day in a save each get a scene with the rule. After that only the HUD's weather line says it ("Foggy: orders hidden", "Raining", "Snowing"), with the full rules on hover.
   - *Once a run:* the fair, the Longest Night vigil, the Moonless Patron arriving for the finale, and Snowed In (once a week).
   - Fixtures, `?seed=` runs and the tutorial skip season openings and weather firsts; a fixture shows one with `ui.intro`.
-- **Settings** (the title screen, the cottage, Esc or the button at the bottom right in a run): a sound effects slider and a music slider (music 50% by default), sound on or off, season openings shown or hidden, first-time notes shown or hidden, fullscreen (also Alt+Enter anywhere) and the scale: Auto (the largest whole-number scale that fits the window) or any smaller whole number, so pixels stay square. A new scale redraws the game by reloading it, and the run in progress is kept. M still mutes anywhere.
+- **Settings** (the title screen, the cottage, Esc or the button at the bottom right in a run): a sound effects slider and a music slider (music 50% by default), sound on or off, season openings shown or hidden, first-time notes shown or hidden, fullscreen (also Alt+Enter anywhere) and the scale: Fill window (the default; Jacob, Oct 21) or a whole number. Fill draws the game at the full size of the screen (or the window, if bigger) and fits it to the window, letterboxed only to keep 16:9, so fullscreen is sharp without a redraw and a smaller window is shrunk smoothly. A whole-number scale keeps every pixel exactly square at that size. A new scale redraws the game by reloading it when it needs to, and the run in progress is kept. M still mutes anywhere.
 
 ## 16. Out of scope for v1
 

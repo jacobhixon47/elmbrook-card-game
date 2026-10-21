@@ -32,6 +32,11 @@ describe('UI wording', () => {
     expect(orderTerms({ minTier: 'fine', pay: 4, customer: 'wisp-courier' })).toBe('Fine+ · 4g + Omen');
     expect(orderTerms({ minTier: 'fine', pay: 4, customer: 'lantern-witch' })).toBe('Fine+ · 4g + Lunar');
     expect(orderTerms({ minTier: 'fine', pay: 4, customer: 'bog-hag' })).toBe('Fine+ · 4g + Rare');
+    expect(orderTerms({ minTier: 'fine', pay: 4, customer: 'starwatcher' })).toBe('Fine+ · 4g + 1 Brew');
+    expect(orderTerms({ minTier: 'fine', pay: 4, customer: 'ferryman' })).toBe('Fine+ · 4g + burn 1');
+    expect(extraPay('fox-peddler')).toMatch(/half price/);
+    expect(extraPay('owl-archivist')).toBe('pick 1 of 2 Tinctures');
+    expect(extraPay('starwatcher')).toBe('+1 Brew on your next day');
     expect(extraPay('lamplighter')).toBe('+6g');
     expect(extraPay('twin-owls')).toBe('pick 1 of 3 Rare cards');
     expect(extraPay('mother-hollow')).toMatch(/familiar/);

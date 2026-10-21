@@ -42,15 +42,25 @@ export function rollVisitor(s: Pick<RunState, 'seed' | 'season' | 'week' | 'day'
   return able[Math.floor(nextFloat(rng)[0] * able.length)]!;
 }
 
-/** What a visitor gives when their order is filled, beyond its gold. */
+/**
+ * What a visitor gives when their order is filled, beyond its gold. Night customers who pay the
+ * same way (a pick, a favour, a half-price buy) are paid here too; their own kinds are in night.ts.
+ */
 export function visitorPayment(ctx: Ctx, order: Pick<Order, 'customer'>): void {
-  const v = codex.visitors.get(order.customer);
+  const v = codex.visitors.get(order.customer) ?? codex.nightCustomers.get(order.customer);
   if (!v) return;
   const s = ctx.s;
   const pay = v.paysIn;
   switch (pay.kind) {
-    case 'gold':
+    case 'card-pick':
+    case 'burn':
+    case 'temper':
+    case 'half-price':
+      break;
+    default:
       return;
+  }
+  switch (pay.kind) {
     case 'card-pick': {
       const pool = pay.tincture
         ? [...codex.tinctures.values()].filter((t) => t.rarity !== 'lunar' && inPool(t, s)).map((t) => t.id)
