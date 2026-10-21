@@ -60,7 +60,7 @@ describe('the walkable cottage', () => {
   });
 
   it('slides along a wall when you walk into it diagonally', () => {
-    const atWall = hold({ x: 160, y: 80 }, 0, -1, 5);
+    const atWall = hold({ x: 100, y: 80 }, 0, -1, 5);
     const slid = hold(atWall, 1, -1, 0.5);
     expect(slid.y).toBeCloseTo(atWall.y);
     expect(slid.x).toBeGreaterThan(atWall.x + 10);
@@ -74,7 +74,7 @@ describe('the walkable cottage', () => {
   });
 
   it('knows the rug, where footsteps are soft', () => {
-    expect(onRug({ x: 160, y: 86 })).toBe(true);
+    expect(onRug({ x: 230, y: 92 })).toBe(true);
     expect(onRug({ x: 160, y: 128 })).toBe(true);
     expect(onRug(SPAWN)).toBe(false);
     expect(onRug(standBy('workbench'))).toBe(false);

@@ -776,8 +776,8 @@ type WalkKeys = Record<'w' | 'a' | 's' | 'd' | 'up' | 'down' | 'left' | 'right',
 /** The season the house is dressed for: the newest open season of the Year you're playing. */
 
 /** Where the cottage's windows look into the shop window's painted view (640x360): the left window here, the right one further along. And its scale. */
-const VIEW_CROP = { x: 196, y: 96 };
-const VIEW_SCALE = 0.5;
+const VIEW_CROP = { x: 182, y: 58 };
+const VIEW_SCALE = 0.6;
 
 /** The perk board opens at the first open tier with something left to buy, else the top open tier. */
 function firstTier(p: Profile): number {

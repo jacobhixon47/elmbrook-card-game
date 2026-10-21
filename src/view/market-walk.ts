@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { hex } from '../art/palette';
 import { Pixmap } from '../art/pixmap';
-import { homeSprite, litHomeSprite, squareFire, squareGround, squareLights, type SquareOptions } from '../art/scenes/market-square';
+import { homeSprite, litHomeSprite, squareFire, squareGround, squareLights, squareShade, type SquareMoon, type SquareOptions } from '../art/scenes/market-square';
 import { play } from '../audio/sfx';
 import type { Season } from '../core';
 import { noAnim } from '../debug/params';
@@ -32,6 +32,8 @@ export type MarketWalkOptions = SquareOptions & {
   /** What the bridge says: pay the rent, or leave without it. */
   exitLabel: string;
   exitShort: boolean;
+  /** Tonight's moon: how dark the square is away from the lanterns. */
+  moon: SquareMoon;
 };
 
 const Z = SQUARE_SCALE;
@@ -115,7 +117,10 @@ export class MarketWalk {
     bridge.on('pointerout', () => on.tip.hide());
     const hint = pixelText(scene, 8, 350, 'WASD to walk · F or Space at a stall · or click one', { size: 7, color: 'a', stroke: 'k' }).setOrigin(0, 1);
     const list = button(scene, 60, 330, "Tonight's stalls (Tab)", on.toggleList, { w: 104 });
-    [ground, this.world, this.aura, ...glows, bridge, hint, list].forEach((g, i) => layer.addAt(g, i));
+    const openSet = new Set(this.open.keys());
+    const shadeKey = `sq/shade-${opts.moon}-${optsKey(o)}-${[...openSet].sort().join('.')}`;
+    const shade = scene.add.image(0, 0, lazyTexture(scene, shadeKey, () => squareShade(openSet, o, opts.moon))).setOrigin(0).setScale(Z);
+    [ground, this.world, shade, this.aura, ...glows, bridge, hint, list].forEach((g, i) => layer.addAt(g, i));
     this.place(0);
     this.updateNear(false);
     if (state.list) this.drawList();

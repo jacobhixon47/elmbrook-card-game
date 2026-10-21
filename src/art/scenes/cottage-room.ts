@@ -1,6 +1,6 @@
 import { seedRng } from '../../core/rng';
 import type { Season } from '../../core';
-import { fbm, valueNoise } from '../noise';
+import { cellRandom, fbm, valueNoise } from '../noise';
 import { PALETTE, type PaletteKey } from '../palette';
 import { Pixmap } from '../pixmap';
 import { pick, rand, type Rng } from './town';
@@ -18,11 +18,10 @@ export type RoomLight = { x: number; y: number; radius: number; power: number; k
 
 /** Everything that gives light, in room pixels. The scene puts a flickering glow on each. */
 export const ROOM_LIGHTS: readonly RoomLight[] = [
-  { x: 160, y: 40, radius: 130, power: 1, kind: 'fire' },
-  { x: 137, y: 15, radius: 34, power: 0.3, kind: 'candle' },
-  { x: 183, y: 15, radius: 34, power: 0.3, kind: 'candle' },
-  { x: 88, y: 30, radius: 44, power: 0.35, kind: 'candle' },
-  { x: 228, y: 30, radius: 44, power: 0.35, kind: 'candle' },
+  { x: 238, y: 40, radius: 130, power: 1, kind: 'fire' },
+  { x: 215, y: 15, radius: 34, power: 0.3, kind: 'candle' },
+  { x: 261, y: 15, radius: 34, power: 0.3, kind: 'candle' },
+  { x: 129, y: 34, radius: 44, power: 0.35, kind: 'candle' },
   { x: 44, y: 92, radius: 60, power: 0.55, kind: 'candle' },
   { x: 299, y: 98, radius: 60, power: 0.55, kind: 'candle' },
   { x: 134, y: 164, radius: 62, power: 0.55, kind: 'lantern' },
@@ -90,11 +89,11 @@ const VIEW: Record<Season, [PaletteKey, PaletteKey, PaletteKey]> = {
   winter: ['x', 'm', 'e'],
 };
 
-/** Where the two windows' panes are, room pixels: the view shows through them. */
-export const ROOM_WINDOWS = [
-  { x: 56, y: 8, w: 34, h: 22 },
-  { x: 224, y: 8, w: 34, h: 22 },
-] as const;
+/**
+ * Where the window's panes are, room pixels: the view shows through them. One big window in the
+ * middle of the back wall (Jacob, Oct 21), so the season outside is easy to see.
+ */
+export const ROOM_WINDOWS = [{ x: 124, y: 8, w: 76, h: 29 }] as const;
 
 // ---------------------------------------------------------------- the shell
 
@@ -152,11 +151,15 @@ function windowFrame(p: Pixmap, w: { x: number; y: number; w: number; h: number 
   timber(p, w.x - 3, w.y - 3, w.w + 6, 3, false);
   timber(p, w.x - 3, w.y, 3, w.h, true);
   timber(p, w.x + w.w, w.y, 3, w.h, true);
-  // Four panes: a cross of mullions.
-  const mx = w.x + Math.floor(w.w / 2) - 1;
+  // Panes in a grid of mullions: four across, two down, the middle mullion heavier.
+  const across = Math.max(2, Math.round(w.w / 19));
+  for (let i = 1; i < across; i++) {
+    const mx = w.x + Math.round((w.w * i) / across) - 1;
+    for (let y = w.y; y < w.y + w.h; y++) p.set(mx, y, 'b').set(mx + 1, y, 'k');
+    if (i === across / 2) for (let y = w.y; y < w.y + w.h; y++) p.set(mx - 1, y, 'B');
+  }
   const my = w.y + Math.floor(w.h / 2);
-  for (let y = w.y; y < w.y + w.h; y++) p.set(mx, y, 'b').set(mx + 1, y, 'k');
-  p.hline(w.x, w.x + w.w - 1, my, 'b');
+  p.hline(w.x, w.x + w.w - 1, my, 'b').hline(w.x, w.x + w.w - 1, my + 1, 'k');
   // The sill, deep enough for a candle and a plant.
   timber(p, w.x - 5, w.y + w.h, w.w + 10, 4, false);
   p.hline(w.x - 5, w.x + w.w + 4, w.y + w.h + 4, 'K');
@@ -182,7 +185,10 @@ function herbs(p: Pixmap, x: number, y: number, leaf: readonly PaletteKey[]): vo
   }
 }
 
-/** Walls, floor, hearth and windows: everything you walk on or can't reach. */
+/** The middle of the chimney breast and its fire (`HEARTH` in view/room.ts). */
+const HEARTH_X = 238;
+
+/** Walls, floor, hearth and window: everything you walk on or can't reach. */
 export function roomShell(): Pixmap {
   const p = new Pixmap(ROOM_SPRITE_W, ROOM_SPRITE_H);
   const rng: Rng = { s: seedRng('witch-cottage') };
@@ -196,59 +202,53 @@ export function roomShell(): Pixmap {
   fieldstone(p, rng, 0, ROOM_SPRITE_W, 5, 46, STONE, 0.06, [7, 10]);
   timber(p, 0, 0, ROOM_SPRITE_W, 5, false);
   p.hline(0, ROOM_SPRITE_W - 1, 5, 'K');
-  for (const bx of [8, 50, 94, 194, 264, 310]) {
+  for (const bx of [8, 50, 88, 204, 268, 310]) {
     timber(p, bx, 5, 4, 41, true);
     p.set(bx + 1, 7, 'k').set(bx + 1, 40, 'k');
   }
   timber(p, 0, 44, ROOM_SPRITE_W, 4, false);
   p.hline(0, ROOM_SPRITE_W - 1, 47, 'K');
 
-  // The chimney breast: bigger, paler stones standing out from the wall, the hearth in it.
-  fieldstone(p, rng, 128, 192, 0, 48, STONE, 0.14, [8, 12]);
-  for (let y = 0; y < 48; y++) p.set(127, y, 'K').set(192, y, 'K');
+  // The chimney breast, off to the right: bigger, paler stones standing out from the wall, the hearth in it.
+  const H = HEARTH_X;
+  fieldstone(p, rng, H - 28, H + 28, 0, 48, STONE, 0.14, [8, 12]);
+  for (let y = 0; y < 48; y++) p.set(H - 29, y, 'K').set(H + 28, y, 'K');
   // The hearth's mouth, an arch over the fire and its blackened back.
+  const arch = (x: number) => 24 + Math.round((1 - Math.sqrt(Math.max(0, 1 - ((x - H + 0.5) / 17) ** 2))) * 7);
   for (let y = 24; y < 46; y++) {
-    for (let x = 140; x < 180; x++) {
-      const dx = (x - 159.5) / 20;
-      const top = 24 + Math.round((1 - Math.sqrt(Math.max(0, 1 - dx * dx))) * 8);
-      if (y < top) continue;
+    for (let x = H - 17; x < H + 17; x++) {
+      if (y < arch(x)) continue;
       p.set(x, y, y > 40 ? 'k' : dither(x, y) < (y - 24) / 30 ? 'K' : 'k');
     }
   }
-  for (let x = 140; x < 180; x++) {
-    const dx = (x - 159.5) / 20;
-    const top = 24 + Math.round((1 - Math.sqrt(Math.max(0, 1 - dx * dx))) * 8);
-    p.set(x, top - 1, 'j').set(x, top - 2, 'J');
-  }
+  for (let x = H - 17; x < H + 17; x++) p.set(x, arch(x) - 1, 'j').set(x, arch(x) - 2, 'J');
   // Logs and the grate (the flames are the scene's, so they can dance).
-  p.fillRect(146, 40, 28, 3, 'b').hline(146, 173, 40, 'B').fillRect(150, 38, 20, 2, 'B').hline(150, 169, 38, 'n');
-  p.hline(144, 175, 43, 'S').hline(144, 175, 44, 's');
-  for (let x = 146; x < 175; x += 4) p.set(x, 42, 'S');
+  p.fillRect(H - 13, 40, 26, 3, 'b').hline(H - 13, H + 12, 40, 'B').fillRect(H - 9, 38, 18, 2, 'B').hline(H - 9, H + 8, 38, 'n');
+  p.hline(H - 15, H + 14, 43, 'S').hline(H - 15, H + 14, 44, 's');
+  for (let x = H - 13; x < H + 14; x += 4) p.set(x, 42, 'S');
   // Log niches either side of the mouth.
-  for (const nx of [130, 182]) {
-    p.fillRect(nx, 30, 9, 15, 'K');
-    for (let j = 0; j < 3; j++) for (let i = 0; i < 2; i++) p.fillEllipse(nx + 2.5 + i * 4, 33 + j * 4.5, 2, 2, j % 2 ? 'B' : 'n').set(nx + 2 + i * 4, 33 + j * 4, 'a');
+  for (const nx of [H - 27, H + 19]) {
+    p.fillRect(nx, 30, 8, 15, 'K');
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 2; i++) p.fillEllipse(nx + 2 + i * 4, 33 + j * 4.5, 2, 2, j % 2 ? 'B' : 'n').set(nx + 1.5 + i * 4, 33 + j * 4, 'a');
   }
   // The mantel, with a candle at each end and a little painting above.
-  timber(p, 128, 19, 64, 4, false);
-  p.hline(128, 191, 23, 'K');
-  candle(p, 136, 13);
-  candle(p, 182, 13);
-  p.fillRect(150, 5, 20, 13, 'b').fillRect(152, 7, 16, 9, 'Z');
-  for (let x = 152; x < 168; x++) for (let y = 11 + Math.round(Math.sin(x / 2.5) * 1.5); y < 16; y++) p.set(x, y, y > 13 ? 'g' : 'G');
-  p.set(164, 8, 'Y').hline(150, 169, 5, 'B');
+  timber(p, H - 28, 19, 56, 4, false);
+  p.hline(H - 28, H + 27, 23, 'K');
+  candle(p, H - 24, 13);
+  candle(p, H + 22, 13);
+  p.fillRect(H - 10, 5, 20, 13, 'b').fillRect(H - 8, 7, 16, 9, 'Z');
+  for (let x = H - 8; x < H + 8; x++) for (let y = 11 + Math.round(Math.sin(x / 2.5) * 1.5); y < 16; y++) p.set(x, y, y > 13 ? 'g' : 'G');
+  p.set(H + 4, 8, 'Y').hline(H - 10, H + 9, 5, 'B');
   // The apron: one big hearthstone in front of the fire.
-  for (let y = 48; y < 58; y++) for (let x = 130; x < 190; x++) {
-    const edge = y === 57 || x === 130 || x === 189;
+  for (let y = 48; y < 58; y++) for (let x = H - 30; x < H + 30; x++) {
+    const edge = y === 57 || x === H - 30 || x === H + 29;
     p.shade(x, y, STONE, edge ? 0.15 : 0.3 + roomLight(x, y) * 0.55 + (fbm(x, y, 4, 3) - 0.5) * 0.2 + (y === 48 ? 0.15 : 0));
   }
 
-  // The two windows, each with a sill candle and a pot.
-  windowFrame(p, ROOM_WINDOWS[0], 82);
-  windowFrame(p, ROOM_WINDOWS[1], 226);
+  // The big window, with a sill candle and a pot.
+  windowFrame(p, ROOM_WINDOWS[0], 128);
   // Herbs drying from the beam, and a spare hat and broom on pegs above the cauldron.
-  herbs(p, 104, 5, ['g', 'G', 'G']);
-  herbs(p, 112, 5, ['G', 'l', 'g']);
+  herbs(p, 116, 5, ['g', 'G', 'G']);
   herbs(p, 208, 5, ['B', 'n', 'G']);
   herbs(p, 270, 5, ['g', 'G', 'l']);
   herbs(p, 278, 5, ['j', 'P', 'G']);
@@ -288,18 +288,19 @@ export function roomShell(): Pixmap {
   return p;
 }
 
-/** The window's view drawn in code, for ?backdrops=code. 34x22. */
+/** The window's view drawn in code, for ?backdrops=code, the size of the window's panes. */
 export function roomView(season: Season): Pixmap {
-  const p = new Pixmap(34, 22);
+  const { w, h } = ROOM_WINDOWS[0];
+  const p = new Pixmap(w, h);
   const [sky, far, near] = VIEW[season];
-  p.fillRect(0, 0, 34, 22, sky);
-  for (let x = 0; x < 34; x++) {
-    const h1 = 9 + Math.round(Math.sin(x / 6) * 2);
-    const h2 = 15 + Math.round(Math.sin(x / 4 + 1) * 1.5);
-    for (let y = h1; y < 22; y++) p.set(x, y, y >= h2 ? near : far);
+  p.fillRect(0, 0, w, h, sky);
+  const hill1 = (x: number) => Math.round(h * 0.45 + Math.sin(x / 9) * 2.5);
+  for (let x = 0; x < w; x++) {
+    const h2 = Math.round(h * 0.7 + Math.sin(x / 6 + 1) * 2);
+    for (let y = hill1(x); y < h; y++) p.set(x, y, y >= h2 ? near : far);
   }
-  if (season === 'winter') for (let x = 0; x < 34; x += 3) p.set(x, 9 + Math.round(Math.sin(x / 6) * 2), 'W');
-  p.set(26, 3, 'w').set(8, 5, 'W').set(17, 2, 'w');
+  if (season === 'winter') for (let x = 0; x < w; x += 3) p.set(x, hill1(x), 'W');
+  p.set(Math.round(w * 0.75), 3, 'w').set(Math.round(w * 0.24), 5, 'W').set(Math.round(w * 0.5), 2, 'w');
   return p;
 }
 
@@ -331,9 +332,11 @@ export function roomSprite(id: string): Pixmap {
     case 'firefly-jar': return fireflyJar();
     case 'sunflowers': return sunflowers();
     case 'pumpkins': return pumpkins();
-    case 'leaves': return leaves();
-    case 'sill-snow': return sillSnow();
-    case 'snowdrift': return snowdrift();
+    case 'pumpkin': return pumpkin();
+    case 'leaves-in': return leavesIn();
+    case 'stockings': return stockings();
+    case 'yule-tree': return yuleTree();
+    case 'snow-in': return snowIn();
     default: throw new Error(`no room sprite ${id}`);
   }
 }
@@ -578,7 +581,7 @@ function plant(): Pixmap {
 
 // The season's dressing (M4.5 part 2): what the house puts out for the season you'll play next.
 // Where each goes is `DRESSING` in view/room.ts.
-export const DRESSING_SPRITES = ['garland-spring', 'garland-autumn', 'garland-winter', 'blossoms', 'firefly-jar', 'sunflowers', 'pumpkins', 'leaves', 'sill-snow', 'snowdrift'] as const;
+export const DRESSING_SPRITES = ['garland-spring', 'garland-autumn', 'garland-winter', 'blossoms', 'firefly-jar', 'sunflowers', 'pumpkins', 'pumpkin', 'leaves-in', 'stockings', 'yule-tree', 'snow-in'] as const;
 
 /** A swag of leaves and blooms over a window: `bloom` colours on a `leaf` vine. 44x12. */
 function garland(bloom: readonly PaletteKey[], leaf: PaletteKey): Pixmap {
@@ -647,34 +650,89 @@ function pumpkins(): Pixmap {
   return p.outline('k');
 }
 
-/** Autumn: a few leaves blown in over the step. 40x14, flat on the floor. */
-function leaves(): Pixmap {
-  const p = new Pixmap(40, 14);
-  for (const [x, y, c] of [[4, 10, 'o'], [10, 6, 'R'], [17, 11, 'y'], [24, 4, 'o'], [30, 9, 'R'], [35, 12, 'o'], [14, 2, 'y']] as const) {
-    p.fillRect(x, y, 3, 2, c).set(x + 1, y - 1, c).set(x + 3, y + 1, 'n');
+/** Autumn: one more pumpkin, on its own. 12x10. */
+function pumpkin(): Pixmap {
+  const p = new Pixmap(12, 10);
+  p.fillEllipse(6, 6, 5.5, 3.8, 'o');
+  for (const dx of [-3, 0, 3]) for (let y = 3; y < 9; y++) p.set(6 + dx, y, 'R');
+  p.set(4, 4, 'y').set(5, 4, 'y');
+  p.fillRect(5, 0, 2, 3, 'G').set(7, 0, 'l');
+  return p.outline('k');
+}
+
+/**
+ * Autumn: leaves blown in at the door, thick on the step and thinning on into the room. 68x36,
+ * flat on the floor, its bottom middle at the doorway.
+ */
+function leavesIn(): Pixmap {
+  const p = new Pixmap(68, 36);
+  const colours: readonly PaletteKey[] = ['o', 'R', 'y', 'B', 'o', 'r'];
+  for (let i = 0; i < 60; i++) {
+    const a = cellRandom(i, 1, 71);
+    const b = cellRandom(i, 2, 72);
+    // Most land near the door; a few skitter further in.
+    const y = Math.round(35 - (b ** 2.2) * 34);
+    const spread = 12 + (35 - y) * 0.6;
+    const x = Math.round(34 + (a - 0.5) * 2 * spread);
+    if (x < 1 || x > 65) continue;
+    const c = colours[Math.floor(cellRandom(i, 3, 73) * colours.length)]!;
+    const flip = cellRandom(i, 4, 74) > 0.5;
+    p.set(x, y, c).set(x + 1, y, c).set(flip ? x : x + 1, y - 1, c).set(flip ? x + 2 : x - 1, y + 1, 'n');
   }
   return p;
 }
 
-/** Winter: snow along a windowsill. 44x4. */
-function sillSnow(): Pixmap {
-  const p = new Pixmap(44, 4);
-  for (let x = 1; x < 43; x++) {
-    const h = 2 + Math.round(Math.sin(x / 3) * 0.8 + Math.sin(x / 7));
-    for (let y = 4 - h; y < 4; y++) p.set(x, y, y === 4 - h ? 'W' : 'm');
-  }
-  return p;
+/** Winter: three short stockings hung from the mantel, clear of the flames below. 52x10. */
+function stockings(): Pixmap {
+  const p = new Pixmap(52, 10);
+  [['R', 'W'], ['G', 'W'], ['R', 'y']].forEach(([body, cuff], i) => {
+    const x = 5 + i * 17;
+    p.set(x + 2, 0, 'n');
+    p.fillRect(x, 1, 6, 2, cuff as PaletteKey);
+    p.fillRect(x, 3, 6, 4, body as PaletteKey).fillRect(x + 2, 6, 7, 3, body as PaletteKey);
+    p.set(x + 2, 4, cuff as PaletteKey).set(x + 4, 6, cuff as PaletteKey);
+  });
+  return p.outline('K');
 }
 
-/** Winter: snow blown in over the step, in low drifts. 44x9, flat on the floor. */
-function snowdrift(): Pixmap {
-  const p = new Pixmap(44, 9);
-  for (let x = 0; x < 44; x++) {
-    const edge = Math.min(x, 43 - x);
-    const h = Math.min(edge / 2, 3 + Math.round(Math.sin(x / 3) * 1.2 + Math.sin(x / 5 + 2)));
-    for (let y = Math.round(9 - h); y < 9; y++) p.set(x, y, y === Math.round(9 - h) ? 'W' : 'm');
+/** Winter: a little Yule tree in a tub, hung with lights, a star on top. 24x36. */
+function yuleTree(): Pixmap {
+  const p = new Pixmap(24, 36);
+  p.fillRect(8, 30, 8, 6, 'B').hline(8, 15, 30, 'n').hline(8, 15, 33, 'b');
+  p.fillRect(11, 27, 2, 3, 'b');
+  for (let y = 3; y < 28; y++) {
+    const k = (y - 3) / 25;
+    const tier = (k * 3) % 1;
+    const half = 1 + k * 9 * (0.6 + 0.4 * tier);
+    for (let x = Math.floor(12 - half); x <= 12 + half; x++) {
+      const side = (12 - x) / half;
+      p.set(x, y, side > 0.25 ? 'G' : side < -0.4 ? 'T' : 'g');
+    }
   }
-  for (const [x, y] of [[4, 3], [12, 1], [30, 2], [39, 4], [21, 0]] as const) p.set(x, y, 'W');
+  // Lights strung across, and baubles.
+  for (const [x, y, c] of [[10, 9, 'Y'], [14, 11, 'R'], [8, 15, 'y'], [13, 16, 'L'], [17, 19, 'Y'], [6, 21, 'R'], [11, 22, 'y'], [16, 24, 'L'], [9, 25, 'Y'], [12, 6, 'y']] as const) p.set(x, y, c);
+  p.set(12, 0, 'Y').set(11, 1, 'y').set(12, 1, 'Y').set(13, 1, 'y').set(12, 2, 'y');
+  return p.outline('K');
+}
+
+/**
+ * Winter: snow blown in at the door, drifted on the step and dusted thinner on into the room.
+ * 68x32, flat on the floor, its bottom middle at the doorway.
+ */
+function snowIn(): Pixmap {
+  const p = new Pixmap(68, 32);
+  for (let y = 0; y < 32; y++) {
+    for (let x = 0; x < 68; x++) {
+      const up = 31 - y;
+      const dx = (x - 34) / (16 + up * 0.6);
+      const n = fbm(x, y, 4, 75);
+      // A low drift along the step, its edge scalloped by the wind.
+      const drift = 6 + n * 4 - Math.abs(dx) * 5;
+      if (up < drift) p.set(x, y, up < drift - 2 ? 'm' : 'W');
+      // A dusting blown further in, thinning with distance.
+      else if (Math.abs(dx) < 1 && cellRandom(x, y, 76) < (1 - Math.abs(dx)) * (1 - up / 32) * 0.22) p.set(x, y, cellRandom(x, y, 77) > 0.5 ? 'W' : 'm');
+    }
+  }
   return p;
 }
 
