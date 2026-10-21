@@ -247,17 +247,25 @@ export function curseToken(severity: 1 | 2 | 3): Pixmap {
   return p;
 }
 
-/** Each card modifier's colours: the frame ring, and the badge's ground and glyph (GDD §5.5). */
-export const MODIFIER_LOOK: Record<ModifierId, { ring: PaletteKey; ground: PaletteKey; glyph: PaletteKey; rows: string[] }> = {
+/**
+ * Each card modifier's colours (GDD §5.5): the frame ring, the badge's ground and glyph, and the colour
+ * its Potency and name are written in, on a card (`ink`) and in a tooltip (`glow`) (Jacob, Oct 21).
+ */
+export const MODIFIER_LOOK: Record<ModifierId, { ring: PaletteKey; ground: PaletteKey; glyph: PaletteKey; ink: PaletteKey; glow: PaletteKey; rows: string[] }> = {
   // A crescent moon.
-  moonlit: { ring: 'v', ground: 'p', glyph: 'm', rows: ['..##.', '.##..', '.##..', '.##..', '..##.'] },
+  moonlit: { ring: 'v', ground: 'p', glyph: 'm', ink: 'P', glow: 'v', rows: ['..##.', '.##..', '.##..', '.##..', '..##.'] },
   // An hourglass.
-  aged: { ring: 'o', ground: 'b', glyph: 'y', rows: ['#####', '.###.', '..#..', '.###.', '#####'] },
+  aged: { ring: 'o', ground: 'b', glyph: 'y', ink: 'o', glow: 'o', rows: ['#####', '.###.', '..#..', '.###.', '#####'] },
   // A four-point sparkle.
-  blessed: { ring: 'c', ground: 'U', glyph: 'W', rows: ['..#..', '..#..', '#####', '..#..', '..#..'] },
+  blessed: { ring: 'c', ground: 'U', glyph: 'W', ink: 'U', glow: 'c', rows: ['..#..', '..#..', '#####', '..#..', '..#..'] },
   // An open eye.
-  cursed: { ring: 'r', ground: 'k', glyph: 'R', rows: ['.....', '.###.', '##.##', '.###.', '.....'] },
+  cursed: { ring: 'r', ground: 'k', glyph: 'R', ink: 'R', glow: 'R', rows: ['.....', '.###.', '##.##', '.###.', '.....'] },
+  // An anvil: tempered steel.
+  tempered: { ring: 'e', ground: 's', glyph: 'W', ink: 'S', glow: 'e', rows: ['.....', '#####', '.###.', '..#..', '.###.'] },
 };
+
+/** Infused: extra Potency from Infuse, the Hollow Tailor, the Cider Press or Primrose, which stacks with a modifier. */
+export const INFUSED_LOOK: { ink: PaletteKey; glow: PaletteKey } = { ink: 'G', glow: 'l' };
 
 /** A modifier's corner badge: 9x9, a dark-edged tile with its glyph. */
 export function modifierBadge(id: ModifierId): Pixmap {

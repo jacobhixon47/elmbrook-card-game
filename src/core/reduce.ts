@@ -889,7 +889,7 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
         const card = [...allCards(s), ...s.satchel].find((c) => c.uid === action.uid);
         if (!card) reject(`no card ${action.uid}`);
         addModifier(ctx, card, action.modifier, 'debug');
-      } else if (action.op === 'temper') {
+      } else if (action.op === 'infuse') {
         const card = [...allCards(s), ...s.satchel].find((c) => c.uid === action.uid);
         if (!card) reject(`no card ${action.uid}`);
         card.bonus = (card.bonus ?? 0) + action.amount;

@@ -392,7 +392,7 @@ function greedyDusk(s: RunState): Action {
         const worst = deck.slice().sort((a, b) => cardValue(s, a.card) - cardValue(s, b.card))[0];
         return worst && deck.length > 10 && cardValue(s, worst.card) < 6 ? { type: 'doFavour', uid: worst.uid } : { type: 'passGift' };
       }
-      const best = deck.filter((c) => codex.ingredients.has(c.card)).sort((a, b) => cardPotency(b) - cardPotency(a))[0];
+      const best = deck.filter((c) => codex.ingredients.has(c.card) && !c.modifier).sort((a, b) => cardPotency(b) - cardPotency(a))[0];
       return best ? { type: 'doFavour', uid: best.uid } : { type: 'passGift' };
     }
     case 'gift': {

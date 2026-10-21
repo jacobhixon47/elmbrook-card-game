@@ -466,6 +466,8 @@ export const modifiers: In<typeof Modifier>[] = [
   { id: 'moonlit', name: 'Moonlit', text: '+2 Harmony when brewed.', price: 6 },
   { id: 'aged', name: 'Aged', text: '+2 Potency for each day in the deck, reset when brewed.', price: 3 },
   { id: 'blessed', name: 'Blessed', text: 'Retrigger: its Potency and effect count twice.', price: 12 },
+  // Tempering was extra Potency that stacked with the rest; it's a modifier, one per card (Jacob, Oct 21).
+  { id: 'tempered', name: 'Tempered', text: '+2 Potency.', price: null },
   { id: 'cursed', name: 'Cursed', text: 'Potency x2. The delivery earns no Friendship.', price: null },
 ];
 

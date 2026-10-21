@@ -24,7 +24,9 @@ describe('card inspect', () => {
     expect(cardInfo('ginger-root').kind).toMatch(/· Root$/);
     expect(cardInfo('ginger-root').tags).toEqual(['spice']);
     expect(info.essences).toEqual(['gale']);
-    expect(info.text).toBe('Gale essence. Potency 3. When discarded, draw 1.');
+    // Potency has its own line in the tooltip, with what was added to this copy (Jacob, Oct 21).
+    expect(info.text).toBe('Gale essence. When discarded, draw 1.');
+    expect(info.potency).toBe(3);
     expect(info.terms).toEqual([]);
     expect(cardInfo('stir').terms).toEqual([]);
     expect(cardInfo('amber-sap').terms.map(([t]) => t)).toEqual(['Aged']);

@@ -2,7 +2,8 @@ import { TAG_GLYPHS } from '../art/procedural';
 import { cardKind, codex } from '../codex';
 import { lore } from '../codex/lore';
 import type { Essence } from '../codex/schema';
-import { BREWS_PER_DAY, DISCARDS_PER_DAY, MAX_DISCARD, TIER_MIN, TIERS, type CardInstance } from '../core';
+import { BREWS_PER_DAY, cardPotency, DISCARDS_PER_DAY, isAged, MAX_DISCARD, MODIFIER_RULES, TIER_MIN, TIERS, type CardInstance } from '../core';
+import type { ModifierId } from '../codex/schema';
 
 // What a hovered card says about itself (GDD §15.1). Pure, so tests can read every card.
 
@@ -39,20 +40,50 @@ export type CardInfo = {
 
 const cap = (s: string) => s[0]!.toUpperCase() + s.slice(1);
 
-/** What this copy carries beyond the printed card: a modifier, Infused or tempered Potency. */
-export type CardExtras = Partial<Pick<CardInstance, 'modifier' | 'bonus'>>;
+/** What this copy carries beyond the printed card: a modifier, Infused Potency and Aged days. */
+export type CardExtras = Partial<Pick<CardInstance, 'modifier' | 'bonus' | 'aged'>>;
 
-export function cardInfo(id: string, extras: CardExtras = {}): CardInfo {
+/** One addition to a card's printed Potency, written in its own colour (Jacob, Oct 21). */
+export type PotencyPart = { amount: number; tone: ModifierId | 'infused' };
+
+/**
+ * A copy's Potency as the printed number plus what was done to it: Infused, then its modifier's share
+ * (Tempered's +2, Aged's days so far, or the second count from Blessed or Cursed). Moonlit adds Harmony, not Potency.
+ */
+export function potencyParts(id: string, extras: CardExtras = {}): { base: number; parts: PotencyPart[] } {
+  const ing = codex.ingredients.get(id);
+  if (!ing) return { base: 0, parts: [] };
+  const parts: PotencyPart[] = [];
+  const infused = extras.bonus ?? 0;
+  if (infused) parts.push({ amount: infused, tone: 'infused' });
+  const aged = isAged({ card: id, modifier: extras.modifier }) ? extras.aged ?? 0 : 0;
+  const own = cardPotency({ uid: 0, card: id, ...extras } as CardInstance, ing);
+  switch (extras.modifier) {
+    case 'tempered': parts.push({ amount: MODIFIER_RULES.temperPotency, tone: 'tempered' }); break;
+    case 'blessed': case 'cursed': if (aged) parts.push({ amount: aged, tone: 'aged' }); parts.push({ amount: own, tone: extras.modifier }); break;
+    default: if (aged) parts.push({ amount: aged, tone: 'aged' });
+  }
+  return { base: ing.potency, parts };
+}
+
+/** What each addition is called, and what it is, for the tooltip. */
+export function extraLines(id: string, extras: CardExtras = {}): { tone: ModifierId | 'infused'; text: string }[] {
+  if (!codex.ingredients.has(id)) return [];
+  const out: { tone: ModifierId | 'infused'; text: string }[] = [];
+  if (extras.bonus) out.push({ tone: 'infused', text: `Infused: +${extras.bonus} Potency on this copy.` });
+  const mod = extras.modifier && codex.modifiers.get(extras.modifier);
+  if (mod) out.push({ tone: mod.id, text: `${mod.name}: ${mod.text}` });
+  else if (isAged({ card: id })) out.push({ tone: 'aged', text: 'Aged: gains Potency each day in the deck.' });
+  return out;
+}
+
+export function cardInfo(id: string): CardInfo {
   const kind = cardKind(id);
   if (kind === 'ingredient') {
     const ing = codex.ingredients.get(id)!;
     const essences = ing.essences.map(cap).join(' and ');
-    const lines = [`${essences} essence${ing.essences.length > 1 ? 's' : ''}. Potency ${ing.potency}.`];
+    const lines = [`${essences} essence${ing.essences.length > 1 ? 's' : ''}.`];
     if (ing.text) lines.push(ing.text);
-    // What's been done to this copy, each named with its effect (Jacob, Oct 21).
-    const mod = extras.modifier && codex.modifiers.get(extras.modifier);
-    if (mod) lines.push(`${mod.name}: ${mod.text}`);
-    if (extras.bonus) lines.push(`Tempered: +${extras.bonus} Potency on this copy (${ing.potency + extras.bonus} in all).`);
     if (ing.nightOnly) lines.push('Kept in your Night Satchel: Night Shifts only.');
     const text = lines.join(' ');
     const ruled = Object.keys(TAG_GLYPHS).filter((t) => ing.tags.includes(t));

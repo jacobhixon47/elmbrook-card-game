@@ -132,7 +132,8 @@ describe('seasonal visitors (GDD §4.1)', () => {
     expect(no(s, { type: 'doFavour', uid: stir.uid })).toMatch(/ingredients/);
     const card = allCards(s).find((c) => codex.ingredients.has(c.card))!;
     const t = ok(s, { type: 'doFavour', uid: card.uid }).state;
-    expect(allCards(t).find((c) => c.uid === card.uid)!.bonus).toBe(MODIFIER_RULES.temperPotency);
+    expect(allCards(t).find((c) => c.uid === card.uid)!.modifier).toBe('tempered');
+    expect(MODIFIER_RULES.temperPotency).toBe(2);
   });
 
   it('the Firefly Keeper makes the next Night Market buy half price, for that week only', () => {

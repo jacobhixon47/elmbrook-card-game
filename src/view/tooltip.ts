@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import type { PaletteKey } from '../art/palette';
-import { TAG_GLYPHS } from '../art/procedural';
-import { cardInfo, type CardExtras } from './inspect';
+import { INFUSED_LOOK, MODIFIER_LOOK, TAG_GLYPHS } from '../art/procedural';
+import { cardInfo, extraLines, potencyParts, type CardExtras, type PotencyPart } from './inspect';
 import { pixelText } from './text';
 import { panel } from './ui';
 
@@ -21,13 +21,19 @@ export class Tooltip {
 
   /** A card's details, placed above (or below) the point given. */
   card(id: string, x: number, top: number, bottom = top, extras: CardExtras = {}) {
-    const info = cardInfo(id, extras);
+    const info = cardInfo(id);
     const rows: Row[] = [
       { text: info.title, size: 10, color: 'y' },
       { text: info.kind, size: 7, color: 'h' },
     ];
     if (info.essences.length) rows.push({ pips: info.essences });
     if (info.tags.length) rows.push({ tags: info.tags });
+    // "Potency: 5 + 2", each addition in its own colour, then what each one is (Jacob, Oct 21).
+    if (info.potency !== null) {
+      const { base, parts } = potencyParts(id, extras);
+      rows.push({ spans: [{ text: `Potency: ${base}`, color: 'W' }, ...parts.map((p) => ({ text: ` + ${p.amount}`, color: toneGlow(p.tone) }))] });
+      for (const line of extraLines(id, extras)) rows.push({ text: line.text, size: 8, color: toneGlow(line.tone) });
+    }
     rows.push({ text: info.text, size: 8, color: 'W' });
     for (const [term, def] of info.terms) rows.push({ text: `${term}: ${def}`, size: 7, color: 'a' });
     if (info.lore) rows.push({ text: info.lore, size: 7, color: 'L' });
@@ -65,6 +71,16 @@ export class Tooltip {
         y += 9;
         continue;
       }
+      if ('spans' in row) {
+        let tx = PAD;
+        for (const span of row.spans) {
+          const t = pixelText(s, tx, y, span.text, { size: 8, color: span.color });
+          parts.push(t);
+          tx += t.width;
+        }
+        y += 10;
+        continue;
+      }
       if ('tags' in row) {
         // Each tag the rules read, in its mark's colour, side by side.
         let tx = PAD;
@@ -92,4 +108,7 @@ export class Tooltip {
 
 type Hoverable = Phaser.GameObjects.GameObject & { getBounds(): Phaser.Geom.Rectangle };
 
-type Row = { text: string; size: number; color: PaletteKey } | { pips: readonly string[] } | { tags: readonly string[] };
+type Row = { text: string; size: number; color: PaletteKey } | { pips: readonly string[] } | { tags: readonly string[] } | { spans: readonly { text: string; color: PaletteKey }[] };
+
+/** The colour an addition to Potency is written in, on the tooltip's dark panel. */
+const toneGlow = (tone: PotencyPart['tone']): PaletteKey => (tone === 'infused' ? INFUSED_LOOK.glow : MODIFIER_LOOK[tone].glow);
