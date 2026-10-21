@@ -19,7 +19,7 @@ type PoolCard = { id: string; rarity: ShopRarity; wychwood: boolean; inSeason: b
 export const IN_SEASON_WEIGHT = 3;
 
 // No Vital (a mutation) bars Vital ingredients from every pool.
-const inPool = (c: { id: string; pool: Pool }, s: Pick<RunState, 'unlocks'> & Partial<Pick<RunState, 'mutation'>>) =>
+const inPool = (c: { id: string; pool: Pool }, s: Pick<RunState, 'unlocks'> & Partial<Pick<RunState, 'mutations'>>) =>
   !barredCard(s, c.id) && (c.pool === 'base' || (c.pool === 'unlock' && s.unlocks.includes(c.id)));
 
 /**

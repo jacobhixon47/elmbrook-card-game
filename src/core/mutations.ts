@@ -2,8 +2,9 @@ import { codex } from '../codex';
 import type { RunState } from './state';
 
 // Mutations (GDD §13, approved by Jacob, Oct 21): optional challenge twists chosen for a whole Year
-// at the cottage. Each changes how you play and makes the Year a little harder (about 10 points of win
-// rate, by sim); a mutated run earns a little more Reputation, and beating that Year's Winter with one on ticks it off for good.
+// at the cottage, any number at once. Each changes how you play and makes the Year a little harder
+// (about 10 points of win rate, by sim); each one on multiplies the run's Reputation, and beating that
+// Year's Winter with them on ticks each off for good.
 
 export type MutationId = 'no-vital' | 'lone-witch' | 'steady-hands' | 'threes-company' | 'open-market' | 'lean-times';
 
@@ -17,7 +18,7 @@ export const MUTATIONS: readonly { id: MutationId; name: string; text: string }[
 ];
 
 export const MUTATION_RULES = {
-  /** What a mutated run's Reputation is multiplied by. */
+  /** What a run's Reputation is multiplied by, once for each mutation on. */
   reputation: 1.25,
   steadyHand: 2,
   openPrice: 1.5,
@@ -34,9 +35,15 @@ export const isMutation = (id: string): id is MutationId => MUTATIONS.some((m) =
 export const mutationName = (id: string) => MUTATIONS.find((m) => m.id === id)?.name ?? id;
 
 /** Whether this run has a mutation on. */
-export const mutated = (s: Partial<Pick<RunState, 'mutation'>>, id: MutationId) => s.mutation === id;
+export const mutated = (s: Partial<Pick<RunState, 'mutations'>>, id: MutationId) => s.mutations?.includes(id) ?? false;
+
+/** What Reputation is multiplied by with these mutations on: ×1.25 for each. */
+export const mutationsMult = (n: number) => MUTATION_RULES.reputation ** n;
+
+/** Mutation ids in the codex's order, each once, unknown ones dropped. */
+export const mutationList = (ids: readonly unknown[]): MutationId[] => MUTATIONS.map((m) => m.id).filter((id) => ids.includes(id));
 
 /** No Vital: whether a card is barred from the run. */
-export function barredCard(s: Partial<Pick<RunState, 'mutation'>>, id: string): boolean {
+export function barredCard(s: Partial<Pick<RunState, 'mutations'>>, id: string): boolean {
   return mutated(s, 'no-vital') && (codex.ingredients.get(id)?.essences.includes('vital') ?? false);
 }

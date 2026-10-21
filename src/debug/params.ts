@@ -23,8 +23,8 @@ export type Fixture = {
   /** Cottage perks and the Year's boon a Run fixture starts with. */
   perks?: string[];
   boon?: string;
-  /** The Year's mutation a Run fixture plays under (GDD §13). */
-  mutation?: string;
+  /** The Year's mutations a Run fixture plays under (GDD §13). */
+  mutations?: string[];
   time?: string;
   weather?: string;
   /** Today's weather for the rules (the Calendar's roll), set before `steps` run. `weather` only changes the window. */
@@ -76,6 +76,8 @@ export type Fixture = {
     perkTier?: number;
     /** The cottage's witch and cauldron picker, showing these (open or locked). */
     kit?: { witch?: string; cauldron?: string };
+    /** The cottage's mutation picker (GDD §13), open. */
+    mutations?: boolean;
     /** The Settings panel, open. */
     settings?: boolean;
     /** A scene screen to show that otherwise shows only on a real run: a season's opening, a weather's first time, or a regular's story (from the fixture's profile). */

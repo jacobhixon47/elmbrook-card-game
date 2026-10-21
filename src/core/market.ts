@@ -1,3 +1,4 @@
+import { mutated } from './mutations';
 import { codex } from '../codex';
 import type { StallId, TarotEffect } from '../codex/schema';
 import { essencesOf, recipeAvailable } from './brew';
@@ -31,11 +32,11 @@ export function moonOf(week: number): 'quarter' | 'full-moon' | 'new-moon' {
  * the Hearth Trader opens. Rolled from the seed so the Calendar can show it in advance.
  */
 /** The moon the Night Market keeps: always full under Open Market (a mutation). */
-export function marketMoon(s: Partial<Pick<RunState, 'mutation'>>, week: number): ReturnType<typeof moonOf> {
-  return s.mutation === 'open-market' ? 'full-moon' : moonOf(week);
+export function marketMoon(s: Partial<Pick<RunState, 'mutations'>>, week: number): ReturnType<typeof moonOf> {
+  return mutated(s, 'open-market') ? 'full-moon' : moonOf(week);
 }
 
-export function snowedIn(s: Pick<RunState, 'season' | 'seed' | 'calendar'> & Partial<Pick<RunState, 'mutation'>>, week: number): boolean {
+export function snowedIn(s: Pick<RunState, 'season' | 'seed' | 'calendar'> & Partial<Pick<RunState, 'mutations'>>, week: number): boolean {
   if (s.season !== 'winter' || marketMoon(s, week) !== 'quarter' || weatherOn(s, week, NIGHT_SHIFT_DAY) !== 'snow') return false;
   return nextFloat(seedRng(`${s.seed}:snowed-in:${week}`))[0] < SNOWED_IN_CHANCE;
 }

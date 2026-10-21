@@ -1,4 +1,4 @@
-import { barredCard, MUTATION_RULES } from './mutations';
+import { barredCard, mutated, MUTATION_RULES } from './mutations';
 import { codex } from '../codex';
 import type { Visitor } from '../codex/schema';
 import { todaysWeather } from './calendar';
@@ -20,7 +20,7 @@ export const VISITOR_RULES = {
 } as const;
 
 // No Vital (a mutation) bars Vital ingredients from every pool.
-const inPool = (c: { pool: string; id: string }, s: Pick<RunState, 'unlocks'> & Partial<Pick<RunState, 'mutation'>>) => !barredCard(s, c.id) && (c.pool === 'base' || (c.pool === 'unlock' && s.unlocks.includes(c.id)));
+const inPool = (c: { pool: string; id: string }, s: Pick<RunState, 'unlocks'> & Partial<Pick<RunState, 'mutations'>>) => !barredCard(s, c.id) && (c.pool === 'base' || (c.pool === 'unlock' && s.unlocks.includes(c.id)));
 
 /** The visitors who could come today: this season, this week and day, this weather. */
 export function visitorsToday(s: Pick<RunState, 'season' | 'week' | 'day' | 'calendar'>): Visitor[] {
@@ -95,9 +95,9 @@ export function doFavour(ctx: Ctx, uid: number): void {
 }
 
 /** A Night Market price after the Firefly Keeper's half-price buy, rounded up. */
-export function priceAt(s: Pick<RunState, 'halfPrice' | 'offer'> & Partial<Pick<RunState, 'mutation'>>, item: Pick<StockItem, 'price'>): number {
+export function priceAt(s: Pick<RunState, 'halfPrice' | 'offer'> & Partial<Pick<RunState, 'mutations'>>, item: Pick<StockItem, 'price'>): number {
   const night = s.offer?.kind === 'night-market';
   // Open Market (a mutation): every Night Market price is higher.
-  const price = night && s.mutation === 'open-market' ? Math.round(item.price * MUTATION_RULES.openPrice) : item.price;
+  const price = night && mutated(s, 'open-market') ? Math.round(item.price * MUTATION_RULES.openPrice) : item.price;
   return s.halfPrice > 0 && night ? Math.ceil(price / 2) : price;
 }

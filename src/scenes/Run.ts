@@ -171,7 +171,7 @@ export class Run extends Phaser.Scene {
       this.tutorial = fixture ? null : wantsTutorial() ? new TutorialProgress() : null;
       const seed = fixture?.seed ?? params.get('seed') ?? (this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`);
       const season = data.season ?? (fixture?.season as Season | undefined) ?? viewOverrides().season;
-      store.dispatch({ type: 'startRun', seed, ...this.kit(fixture), ...(season ? { season } : {}), ...(fixture?.year ? { year: fixture.year } : {}), ...(fixture?.perks ? { perks: fixture.perks } : {}), ...(fixture?.boon ? { boon: fixture.boon } : {}), ...(fixture?.mutation ? { mutation: fixture.mutation } : {}), ...this.fromProfile(!!fixture, !!(data.endless || fixture?.endless)) });
+      store.dispatch({ type: 'startRun', seed, ...this.kit(fixture), ...(season ? { season } : {}), ...(fixture?.year ? { year: fixture.year } : {}), ...(fixture?.perks ? { perks: fixture.perks } : {}), ...(fixture?.boon ? { boon: fixture.boon } : {}), ...(fixture?.mutations ? { mutations: fixture.mutations } : {}), ...this.fromProfile(!!fixture, !!(data.endless || fixture?.endless)) });
       // `today` sets the weather of the day the fixture starts on and of the day its steps end on.
       const today = () => fixture?.today && store.dispatch({ type: 'debug', op: 'setWeather', weather: fixture.today as Weather });
       today();
@@ -688,13 +688,14 @@ export class Run extends Phaser.Scene {
   }
 
   private drawHud(s: RunState) {
-    const mutation = s.mutation ? ` · ${mutationName(s.mutation)}` : '';
+    const on = s.mutations;
+    const mutation = on.length === 1 ? ` · ${mutationName(on[0]!)}` : on.length ? ` · ${on.length} mutations` : '';
     const year = this.text(10, 2, `${s.endlessMode ? 'Endless' : `Year ${s.year}`} · ${s.season[0]!.toUpperCase()}${s.season.slice(1)}${mutation}`, { size: 7, color: SEASON_COLOR[s.season], shadow: true });
     // Hover for who is brewing and in what (GDD §12).
     const witch = codex.witches.get(s.witch)!;
     const pot = cauldronOf(s);
-    const twist = MUTATIONS.find((m) => m.id === s.mutation);
-    year.setInteractive().on('pointerover', () => this.tip.text(`${witch.name}, ${pot.name}`, [`${witch.name}: ${witch.quirk}`, `${pot.name}: ${pot.text}`, ...(twist ? [`${twist.name}: ${twist.text}`] : [])], year.x + year.width / 2, year.y + 10));
+    const twists = MUTATIONS.filter((m) => on.includes(m.id)).map((m) => `${m.name}: ${m.text}`);
+    year.setInteractive().on('pointerover', () => this.tip.text(`${witch.name}, ${pot.name}`, [`${witch.name}: ${witch.quirk}`, `${pot.name}: ${pot.text}`, ...twists], year.x + year.width / 2, year.y + 10));
     year.on('pointerout', () => this.tip.hide());
     const left = NIGHT_SHIFT_DAY - s.day;
     this.tip.on(this.text(10, 10, dayLabel(s), { size: 12, color: 'a', shadow: true }), dayLabel(s), [
@@ -2126,7 +2127,7 @@ export class Run extends Phaser.Scene {
    * What the profile brings to a new run: cottage perks, and what the Almanac added to the pools.
    * Neither in the tutorial, which plays a fixed deal, or in fixtures.
    */
-  private fromProfile(fixture: boolean, endless = false): { perks?: string[]; unlocks?: string[]; year?: number; boon?: string; friendship?: Record<string, number>; keepsakes?: string[]; endless?: boolean; mutation?: string } {
+  private fromProfile(fixture: boolean, endless = false): { perks?: string[]; unlocks?: string[]; year?: number; boon?: string; friendship?: Record<string, number>; keepsakes?: string[]; endless?: boolean; mutations?: string[] } {
     const mode = endless ? { endless: true } : {};
     // A fixture's own profile can bring Friendship from earlier runs (the Townsfolk page) and keepsakes.
     if (fixture) {
@@ -2135,14 +2136,14 @@ export class Run extends Phaser.Scene {
       return { ...mode, ...(p && Object.keys(p.friendship).length ? { friendship: p.friendship } : {}), ...(keepsakes.length ? { keepsakes } : {}) };
     }
     if (this.tutorial) return {};
-    // Setting out fixes this Year's mutation (GDD §13), chosen or not.
+    // Setting out fixes this Year's mutations (GDD §13), chosen or not.
     const p = lockMutationNow();
     const unlocks = almanacUnlocks(p.almanac);
-    // Endless brings everything the profile has ever opened, but plays Year 1 without a boon or a mutation (GDD §13).
-    const mutation = endless ? null : p.mutations[p.year - 1];
+    // Endless brings everything the profile has ever opened, but plays Year 1 without a boon or mutations (GDD §13).
+    const mutations = endless ? [] : (p.mutations[p.year - 1] ?? []);
     return {
       ...mode,
-      ...(mutation ? { mutation } : {}),
+      ...(mutations.length ? { mutations } : {}),
       ...(p.perks.length ? { perks: p.perks } : {}),
       ...(unlocks.length ? { unlocks } : {}),
       ...(p.year > 1 && !endless ? { year: p.year } : {}),
