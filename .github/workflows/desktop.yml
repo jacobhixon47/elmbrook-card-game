@@ -1,10 +1,13 @@
 name: Desktop
 # Tauri builds for Windows, Mac and Linux (docs/milestones.md, M6): run it from the Actions tab, or
-# push a v* tag. Each build is a workflow artifact, the private download link for friends.
+# push a v* tag. Each build is a workflow artifact, the private download link for friends. A PR that
+# changes the wrapper builds too, to prove it still does.
 on:
   workflow_dispatch:
   push:
     tags: ['v*']
+  pull_request:
+    paths: ['src-tauri/**', '.github/workflows/desktop.yml', 'scripts/app-icon.ts']
 
 jobs:
   build:
