@@ -374,7 +374,7 @@ export const patrons: In<typeof Patron>[] = [
   { id: 'tithe-reeve', name: 'The Tithe Reeve', blurb: 'Collects the harvest due.', weeks: [1, 3], season: 'autumn', twist: 'brew-costs-gold-2', text: 'Every brew costs 2 gold. Orders pay ×1.5.', orderCount: 3, payMult: 1.5, reward: { kind: 'gold', amount: 10 } },
   { id: 'frost-warden', name: 'The Frost Warden', blurb: 'Guards the long cold.', weeks: [1, 3], season: 'winter', twist: 'non-frost-minus-2', text: 'Ingredients without the Frost tag have -2 Potency.', orderCount: 3, reward: { kind: 'relic', tier: 2 } },
   { id: 'pale-courier', name: 'The Pale Courier', blurb: 'Comes at the full moon with a sealed request.', weeks: [2], twist: 'pale-courier', text: 'Wants a Masterwork potion of the Lunar family, or your best if your deck can\'t brew one. The other orders pay double.', orderCount: 3, fixedOrder: { family: 'lunar', minTier: 'masterwork' }, reward: { kind: 'relic', tier: 2 } },
-  { id: 'moonless-patron', name: 'The Moonless Patron', blurb: 'Comes on the new moon. Nobody sees a face.', weeks: [4], twist: 'grimoire-hidden', text: 'Three escalating orders, and your Grimoire is hidden. Fill them all to win the month.', orderCount: 3, ladder: ['superb', 'masterwork', 'masterwork'], reward: { kind: 'win' } },
+  { id: 'moonless-patron', name: 'The Moonless Patron', blurb: 'Comes on the new moon. Nobody sees a face.', weeks: [4], text: 'Three escalating orders. Fill all three to win the month.', orderCount: 3, ladder: ['superb', 'masterwork', 'masterwork'], reward: { kind: 'win' } },
 ];
 
 // Familiars (GDD §11), from the balance tables. Numbers live with their rules in core/familiars.ts.
@@ -837,7 +837,7 @@ export const fairs: In<typeof Fair>[] = [
 
 // The Solstice Fire at the Longest Night vigil (GDD §4.2): three are offered, one is chosen, and it lasts the finale's Night Shift.
 export const blessings: In<typeof Blessing>[] = [
-  { id: 'candle-in-the-window', name: 'Candle in the Window', text: 'Your Grimoire stays open tonight, whatever the Moonless Patron says.' },
+  { id: 'candle-in-the-window', name: 'Candle in the Window', text: 'The Moonless Patron\'s first order asks for one tier lower.' },
   { id: 'hearthfire', name: 'Hearthfire', text: '+1 Brew tonight.' },
   { id: 'warm-hands', name: 'Warm Hands', text: '+2 Discards tonight.' },
   { id: 'old-songs', name: 'Old Songs', text: 'Every brew tonight: +2 Harmony.' },

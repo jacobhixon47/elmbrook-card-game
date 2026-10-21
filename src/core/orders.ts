@@ -340,10 +340,10 @@ function postNightOrders(ctx: Ctx, r: Reach): void {
     const minTier = finaleTier(s, tier);
     const request = freshRecipe(ctx, r, ['lunar', 'rare'], fitRequest(ctx, r, ['lunar', 'rare'], asked, minTier), minTier, s.orders);
     const ceiling = ceilingOf(r, request);
-    // Starlight, from the Longest Night vigil: the last order asks one tier below what it would have.
+    // The Longest Night's blessings: Candle in the Window eases the first order a tier, Starlight the last.
     const asks = tierIndex(minTier) > tierIndex(ceiling) ? ceiling : minTier;
-    const starlight = i === ladder.length - 1 && blessingTonight(s, 'starlight');
-    postOrder(ctx, { customer: patron.id, request, minTier: starlight ? tierStep(asks, -1) : asks, ceiling, payScale: scale, bonus: null, ...every });
+    const eased = (i === 0 && blessingTonight(s, 'candle-in-the-window')) || (i === ladder.length - 1 && blessingTonight(s, 'starlight'));
+    postOrder(ctx, { customer: patron.id, request, minTier: eased ? tierStep(asks, -1) : asks, ceiling, payScale: scale, bonus: null, ...every });
   });
   if (!ladder.length) {
     const fixed = patron.fixedOrder;

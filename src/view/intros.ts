@@ -65,21 +65,19 @@ export const WEATHER_INTRO: Record<IntroWeather, Intro> = {
   },
 };
 
-/** The finale's Night Shift, as it opens: who has come, what they want, and whether the Grimoire is hidden. */
-export function patronArrival(grimoireHidden: boolean, s: Pick<RunState, 'blessing'>): Intro {
+/** The finale's Night Shift, as it opens: who has come, what they want, and the vigil's candle if you lit one. */
+export function patronArrival(s: Pick<RunState, 'blessing'>): Intro {
   const patron = codex.patrons.get('moonless-patron')!;
-  const book = grimoireHidden
-    ? 'Something about them makes the pages stick: your Grimoire stays shut until morning, so brew from memory.'
-    : s.blessing === 'candle-in-the-window'
-      ? 'The candle you set in the window last night is still burning. Whatever they say, your Grimoire stays open.'
-      : 'Your Grimoire is still open to you tonight.';
+  const candle = s.blessing === 'candle-in-the-window'
+    ? ['The candle you set in the window last night is still burning, and their first order asks a little less for it.']
+    : [];
   return {
     name: patron.name,
     portrait: patron.id,
     lines: [
       'The new moon. The lane is dark, the regulars went home early, and someone is waiting at the counter. Nobody sees a face.',
       `Fill all ${FINALE_ORDERS} of their orders tonight to win the month.`,
-      book,
+      ...candle,
     ],
   };
 }

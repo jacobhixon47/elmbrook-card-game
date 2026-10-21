@@ -99,9 +99,16 @@ describe('the Longest Night vigil', () => {
     expect(eased.at(-1)).toBe(tierStep(plain.at(-1)!, -1));
   });
 
-  it('Candle in the Window is a blessing the Grimoire reads', () => {
-    expect(codex.blessings.has('candle-in-the-window')).toBe(true);
-    expect(finale('candle-in-the-window').blessing).toBe('candle-in-the-window');
+  it('Candle in the Window lowers the Moonless Patron\'s first order by a tier (Jacob, Oct 21)', () => {
+    const patronTiers = (s: RunState) => s.orders.filter((o) => o.customer === 'moonless-patron').map((o) => o.minTier);
+    const plain = patronTiers(finale('hearthfire'));
+    const lit = finale('candle-in-the-window');
+    expect(lit.blessing).toBe('candle-in-the-window');
+    const eased = patronTiers(lit);
+    expect(eased).toHaveLength(3);
+    expect(eased[0]).toBe(tierStep(plain[0]!, -1));
+    expect(eased.slice(1)).toEqual(plain.slice(1));
+    expect(codex.blessings.get('candle-in-the-window')!.text).toMatch(/first order/);
   });
 });
 

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  allCards, brewBlocked, CLOCKLESS_BREWS, FINALE_ORDERS, familiesOf, finaleMet, fits, satisfies, LAMPLIGHTER_HARMONY, isSatchelCard, lunarPool, NIGHT_SHIFT_DAY, omenPool, patronOf, previewBrew, reduce,
+  allCards, brewBlocked, CLOCKLESS_BREWS, FINALE_ORDERS, familiesOf, finaleMet, finaleProgress, fits, satisfies, LAMPLIGHTER_HARMONY, isSatchelCard, lunarPool, NIGHT_SHIFT_DAY, omenPool, patronOf, previewBrew, reduce,
   rollCalendar, rollPatrons, SEASONS, tierIndex, tierStep, TITHE_GOLD, twistNow, WEEKS,
   type Calendar, type Order, type Potion, type RunState, type Season,
 } from '../src/core';
 import { no, ofType, ok, slotAll, start, withHand } from './helpers';
-import { familiesName, familyRecipesNote, patronTwistText } from '../src/view/describe';
+import { familiesName, familyRecipesNote, finaleEndWarning, finaleHudLine, finaleTicketLine, patronTwistText } from '../src/view/describe';
 
 const clear = (): Calendar => ({ weather: Array.from({ length: WEEKS }, () => Array.from({ length: NIGHT_SHIFT_DAY }, () => 'clear' as const)), sky: null });
 
@@ -110,6 +110,36 @@ describe('patrons', () => {
     expect(finaleMet({ ...s, orders: s.orders.map((o, i) => ({ ...o, status: i === 0 ? 'filled' as const : o.status })) })).toBe(FINALE_ORDERS <= 1);
     expect(finaleMet({ ...s, orders: s.orders.map((o) => ({ ...o, status: 'filled' as const })) })).toBe(true);
     expect(finaleMet({ ...s, week: 3, patrons: ['lamplighter', 'pale-courier', 'sir-bramble', 'moonless-patron'] })).toBe(true);
+  });
+
+  it('the Moonless Patron has no twist and leaves the Grimoire open (Jacob, Oct 21)', () => {
+    const patron = codex.patrons.get('moonless-patron')!;
+    expect(patron.twist).toBeUndefined();
+    expect(patron.text).not.toMatch(/Grimoire/);
+    expect(twistNow(night('moonless-patron', 4, { morning: true }))).toBeNull();
+  });
+
+  it('the finale counts the Moonless Patron\'s orders: tickets say "N of 3", the HUD the filled, End day warns', () => {
+    const s = night('moonless-patron', 4, { morning: true });
+    expect(finaleProgress(s)).toEqual({ total: 3, filled: 0, open: 3 });
+    expect(s.orders.map((o) => finaleTicketLine(s, o))).toEqual([
+      '1 of 3 · all three win the month', '2 of 3 · all three win the month', '3 of 3 · all three win the month',
+    ]);
+    expect(finaleHudLine(s)).toBe('Moonless Patron: 0 of 3');
+    expect(finaleEndWarning(s)).toBe('The Moonless Patron still wants 3 orders. Ending now loses the month. End anyway?');
+    const two = { ...s, orders: s.orders.map((o, i) => ({ ...o, status: i < 2 ? 'filled' as const : o.status })) };
+    expect(finaleHudLine(two)).toBe('Moonless Patron: 2 of 3');
+    expect(finaleEndWarning(two)).toBe('The Moonless Patron still wants 1 order. Ending now loses the month. End anyway?');
+    const all = { ...s, orders: s.orders.map((o) => ({ ...o, status: 'filled' as const })) };
+    expect(finaleHudLine(all)).toBe('Moonless Patron: 3 of 3');
+    expect(finaleEndWarning(all)).toBeNull();
+    // Any other night, or the finale's day before its Night Shift: nothing.
+    const other = night('sir-bramble', 1, { morning: true });
+    expect(finaleProgress(other)).toBeNull();
+    expect(finaleTicketLine(other, other.orders[0]!)).toBeNull();
+    expect(finaleHudLine(other)).toBeNull();
+    expect(finaleEndWarning(other)).toBeNull();
+    expect(finaleProgress({ ...s, day: NIGHT_SHIFT_DAY - 1 })).toBeNull();
   });
 
   it('the Lamplighter: each brew tonight has 2 less Harmony than the one before, never below 1', () => {

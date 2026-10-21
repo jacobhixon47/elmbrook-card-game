@@ -1,7 +1,7 @@
 import { codex } from '../codex';
 import type { PotionFamily } from '../codex/schema';
 import type { NightPayment, PatronReward, VisitorPayment } from '../codex/schema';
-import { familiesOf, inFamily, MODIFIER_RULES, NIGHT_SHIFT_DAY, runWeek, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
+import { familiesOf, finaleProgress, FINALE_ORDERS, inFamily, MODIFIER_RULES, NIGHT_SHIFT_DAY, runWeek, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
 
 // Plain words for what the rules engine holds. Pure, so the wording is tested without a browser.
 
@@ -80,6 +80,33 @@ export function patronTwistText(s: Pick<RunState, 'orders'>, patron: { id: strin
   if (!patron.fixedOrder || !o || (o.request.kind === 'family' && o.request.family === patron.fixedOrder.family)) return patron.text;
   const rest = patron.text.slice(patron.text.indexOf('. ') + 2);
   return `Your deck can't brew a ${familyName(patron.fixedOrder.family)} potion tonight, so they want your best: ${requestText(o)}, ${TIER_NAME[o.minTier]} or better. ${rest}`;
+}
+
+const COUNT_WORD = ['none', 'one', 'both', 'all three', 'all four'];
+
+/** A Moonless Patron ticket's place in the finale (Jacob, Oct 21): "1 of 3 · all three win the month". Null for any other order. */
+export function finaleTicketLine(s: Pick<RunState, 'orders' | 'patrons' | 'week' | 'day'>, order: Pick<Order, 'id' | 'customer'>): string | null {
+  const progress = finaleProgress(s);
+  if (!progress) return null;
+  const theirs = s.orders.filter((o) => o.customer === order.customer);
+  const at = theirs.findIndex((o) => o.id === order.id);
+  if (at < 0) return null;
+  const need = FINALE_ORDERS >= progress.total ? COUNT_WORD[progress.total] ?? `all ${progress.total}` : `${FINALE_ORDERS}`;
+  return `${at + 1} of ${progress.total} · ${need} win the month`;
+}
+
+/** The HUD's count on the finale's Night Shift: "Moonless Patron: 1 of 3" filled. Null on any other night. */
+export function finaleHudLine(s: Pick<RunState, 'orders' | 'patrons' | 'week' | 'day'>): string | null {
+  const progress = finaleProgress(s);
+  return progress && `Moonless Patron: ${progress.filled} of ${progress.total}`;
+}
+
+/** Asked before End day while the Moonless Patron still has open orders and the month isn't won yet; null when ending is safe. */
+export function finaleEndWarning(s: Pick<RunState, 'orders' | 'patrons' | 'week' | 'day'>): string | null {
+  const progress = finaleProgress(s);
+  if (!progress || !progress.open || progress.filled >= FINALE_ORDERS) return null;
+  const n = progress.open;
+  return `The Moonless Patron still wants ${n} order${n === 1 ? '' : 's'}. Ending now loses the month. End anyway?`;
 }
 
 /** What a night customer or patron gives beyond the gold, if anything. */

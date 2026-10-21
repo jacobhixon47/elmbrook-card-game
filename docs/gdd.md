@@ -190,7 +190,7 @@ Fruit (Sunberry, Blackberry, Hollyberry, Harvest Gourd and the Fruit fair cards)
 Familiars and relics you already hold stay off the stalls. Each stall lists its stock in codex `fairs` with `show: 2`, and the fair rolls which two come out on the run's seed. Winter has no fair on week 2, day 3.
 
 The Longest Night vigil (decided with Jacob, Oct 15): after closing on week 4, day 4, the vigil replaces the day's reward and errand. Each regular at Friendship level 2 or more brings a gift, which goes into the Night Satchel for the finale: Roast Chestnuts (Ember+Stone, P6, +2 Harmony on a Night Shift), Holly Sprig (Vital+Umbra, P5, Frost, +2 Potency on a Night Shift), Gingerbread (Tincture: next brew +2 Harmony, draw 1), Mulled Wine (Tincture: +1 Brew), Wool Mittens (Tincture: +1 Discard, draw 1) or Snow Globe (Tincture: peek 3 and reorder). Gifts are festival-only. Then you choose one of three blessings for the finale's Night Shift:
-- *Candle in the Window:* the Grimoire stays open, whatever the Moonless Patron says.
+- *Candle in the Window:* the Patron's first order asks one tier lower, the pair to Starlight (decided with Jacob, Oct 21; it used to keep the Grimoire open against the Patron's hidden-Grimoire twist, which is gone).
 - *Hearthfire:* +1 Brew.
 - *Warm Hands:* +2 Discards.
 - *Old Songs:* +2 Harmony on every brew.
@@ -450,9 +450,11 @@ In the build the whole month's patrons are rolled at run start (on their own see
 | The Tithe Reeve (autumn) | 1, 3 | Every brew costs 2 gold; orders pay ×1.5. | 10 gold |
 | The Frost Warden (winter) | 1, 3 | Ingredients without the Frost tag have -2 Potency. | Tier 2 relic |
 | The Pale Courier (Full Moon) | 2 | Needs a Masterwork Lunar potion; ordinary orders pay double. With no way to brew Lunar yet, it asks for your best family at your best tier, and its twist text on that night says so. | Tier 2 relic |
-| The Moonless Patron (finale) | 4 | Three escalating orders (Superb, Masterwork, Masterwork, capped by reach); your Grimoire is hidden. | The month |
+| The Moonless Patron (finale) | 4 | No twist: three escalating orders (Superb, Masterwork, Masterwork, capped by reach), all of which must be filled. The Grimoire stays open (decided with Jacob, Oct 21). | The month |
 
 Familiar picks offer real familiars, and a relic reward gives a random relic of that tier you don't hold (the nearest tier if you hold them all, or 8 / 12 / 16 gold once you hold all 12).
+
+*The finale on screen (decided with Jacob, Oct 21):* the Moonless Patron no longer hides the Grimoire; the three orders are the whole challenge, and the screen keeps them in view. Each of their tickets says which it is and what it's for ("1 of 3 · all three win the month"), the HUD counts the filled ones all night ("Moonless Patron: 1 of 3"), and End day with any of their orders still open asks first ("The Moonless Patron still wants 2 orders. Ending now loses the month. End anyway?"). It never blocks: confirming ends the day as before, and the month is lost.
 
 *Balance note (M3 part 3):* requiring all three of the Moonless Patron's orders dropped the greedy bot from about 27% wins to 5% in Spring (two of three: 17%, one of three: 25%), because Masterwork is out of reach without familiars and the Night Market. The build still needs all three, as designed (`FINALE_ORDERS` in `rules.ts`), so expect a low win rate until those systems land.
 

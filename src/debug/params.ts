@@ -53,6 +53,8 @@ export type Fixture = {
     recipe?: string;
     /** Pouring out a Shelf potion. */
     pour?: boolean;
+    /** End day pressed once, so its confirm is showing (on the finale, the Moonless Patron's warning). */
+    confirm?: 'endDay';
     /** At a dusk event, choosing the card for the choice at this index. */
     eventCard?: number;
     /** In the walkable cottage, standing by this station (its prompt showing). */
