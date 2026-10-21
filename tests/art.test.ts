@@ -22,15 +22,18 @@ describe('art', () => {
     for (const def of SPRITES) expect(spriteSize(def)).toEqual({ width: 16, height: 16 });
   });
 
-  it('tag marks are 7x7 line drawings in one palette colour, for tags cards carry', () => {
+  it('tag marks are 8x8 on-palette pictograms, for tags cards carry', () => {
     const tags = new Set([...codex.ingredients.values()].flatMap((i) => i.tags));
     for (const [tag, g] of Object.entries(TAG_GLYPHS)) {
       expect(tags.has(tag), tag).toBe(true);
-      expect(g.rows).toHaveLength(7);
-      expect(g.rows.every((r) => r.length === 7 && /^[.#]+$/.test(r))).toBe(true);
-      expect(PALETTE[g.color]).toBeDefined();
+      expect(g.rows).toHaveLength(8);
+      for (const r of g.rows) {
+        expect(r, tag).toHaveLength(8);
+        for (const ch of r) if (ch !== '.') expect(PALETTE[ch as keyof typeof PALETTE], `${tag} '${ch}'`).toBeDefined();
+      }
       expect(PALETTE[g.text]).toBeDefined();
       expect(tagGlyph(tag).width).toBe(8);
+      expect(tagGlyph(tag).height).toBe(8);
     }
   });
 

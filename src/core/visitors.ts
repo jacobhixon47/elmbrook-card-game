@@ -3,7 +3,7 @@ import { codex } from '../codex';
 import type { Visitor } from '../codex/schema';
 import { todaysWeather } from './calendar';
 import { reject, type Ctx } from './ctx';
-import { MODIFIER_RULES } from './modifiers';
+import { addModifier } from './modifiers';
 import { queueGift } from './night';
 import { nextFloat, seedRng } from './rng';
 import { MIN_DECK } from './rules';
@@ -100,8 +100,7 @@ export function doFavour(ctx: Ctx, uid: number): void {
   const card = allCards(s).find((c) => c.uid === uid);
   if (!card) reject(`card ${uid} is not in the deck`);
   if (!codex.ingredients.has(card.card)) reject('only ingredients can be tuned up');
-  card.bonus = (card.bonus ?? 0) + MODIFIER_RULES.temperPotency;
-  ctx.ev.push({ type: 'cardInfused', uid, bonus: card.bonus });
+  addModifier(ctx, card, 'tempered', 'favour');
 }
 
 /** A Night Market price after the Firefly Keeper's half-price buy, rounded up. */

@@ -26,9 +26,9 @@ export function isAged(card: Pick<CardInstance, 'card' | 'modifier'>): boolean {
   return card.modifier === 'aged' || hasEffect(card.card, 'aged');
 }
 
-/** One card's own Potency in a brew: printed, Infused or tempered, and Aged days. */
+/** One card's own Potency in a brew: printed, Infused, Tempered, and Aged days. */
 export function cardPotency(card: CardInstance, ing: Pick<Ingredient, 'potency'> = codex.ingredients.get(card.card) ?? { potency: 0 }): number {
-  return ing.potency + (card.bonus ?? 0) + (isAged(card) ? card.aged ?? 0 : 0);
+  return ing.potency + (card.bonus ?? 0) + (card.modifier === 'tempered' ? MODIFIER_RULES.temperPotency : 0) + (isAged(card) ? card.aged ?? 0 : 0);
 }
 
 /** Why this card can't take this modifier, or null when it can. */
@@ -119,12 +119,11 @@ function creekCard(ctx: Ctx, uid: number): CardInstance {
   return card;
 }
 
-/** The free option: +2 Potency on one ingredient for the run. */
+/** The free option: Temper one ingredient, +2 Potency for the run. It's the card's one modifier. */
 export function temper(ctx: Ctx, uid: number): void {
   const card = creekCard(ctx, uid);
   if (!codex.ingredients.has(card.card)) reject('only ingredients can be tempered');
-  card.bonus = (card.bonus ?? 0) + MODIFIER_RULES.temperPotency;
-  ctx.ev.push({ type: 'cardInfused', uid, bonus: card.bonus });
+  addModifier(ctx, card, 'tempered', 'creek');
   (ctx.s.offer as { done: boolean }).done = true;
 }
 

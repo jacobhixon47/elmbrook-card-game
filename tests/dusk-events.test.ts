@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  allCards, EVENT_CHOICES, EVENT_GOLD, EVENT_RULES, friendshipOf, migrateRun, MIN_DECK, NIGHT_SHIFT_DAY, patronKnown, transformable,
+  allCards, eventChoiceAsk, EVENT_CHOICES, EVENT_GOLD, EVENT_RULES, friendshipOf, migrateRun, MIN_DECK, NIGHT_SHIFT_DAY, patronKnown, transformable,
   type Potion, type RunState, type Tier,
 } from '../src/core';
 import { rarityOf } from '../src/core/dusk';
@@ -72,6 +72,16 @@ describe('dusk events', () => {
     const r = choose(s, 0, card.uid);
     expect(allCards(r.state).find((c) => c.uid === card.uid)!.modifier).toBe('blessed');
     expect(r.state.gold).toBe(20 - EVENT_GOLD.shrine);
+  });
+
+  it('the Shrine Blessing shows a card that already has a modifier, greyed, and never replaces it', () => {
+    let s = at('shrine-blessing');
+    const aged = allCards(s).find((c) => codex.ingredients.has(c.card))!;
+    s = ok(s, { type: 'debug', op: 'setModifier', uid: aged.uid, modifier: 'aged' }).state;
+    const ask = eventChoiceAsk(s, 'shrine-blessing', 0);
+    expect(ask?.kind === 'deck' && ask.greyed?.map((c) => c.uid)).toEqual([aged.uid]);
+    expect(ask?.kind === 'deck' && ask.cards.some((c) => c.uid === aged.uid)).toBe(false);
+    expect(no(s, { type: 'chooseEvent', index: 0, uid: aged.uid })).toMatch(/choose a card/);
   });
 
   it('the Moonlit Walk and the Kettle modify a random ingredient', () => {

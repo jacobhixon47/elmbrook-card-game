@@ -1,0 +1,1 @@
+{"scene": "Run", "seed": "fixture-hand", "today": "snow", "season": "winter", "steps": ["openShop", {"give": "foxglove"}, {"give": "hollyberry"}, {"give": "dandelion-fluff"}, {"modify": [9, "blessed"]}, {"infuse": [9, 2]}], "ui": {"inspect": 9}}

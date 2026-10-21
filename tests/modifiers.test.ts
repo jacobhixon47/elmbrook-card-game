@@ -55,9 +55,9 @@ function visit(s: RunState, stall: string): RunState {
 }
 
 describe('modifiers in the codex', () => {
-  it('has the four modifiers from the balance tables, Cursed not for sale', () => {
+  it('has the four modifiers from the balance tables and Tempered; Cursed and Tempered not sold', () => {
     expect([...codex.modifiers.values()].map((m) => [m.id, m.price])).toEqual([
-      ['moonlit', 6], ['aged', 3], ['blessed', 12], ['cursed', null],
+      ['moonlit', 6], ['aged', 3], ['blessed', 12], ['tempered', null], ['cursed', null],
     ]);
   });
 
@@ -155,11 +155,23 @@ describe('the Creek Bank', () => {
     const s = creek();
     const card = allCards(s).find((c) => c.card === 'elmroot')!;
     const r = ok(s, { type: 'temper', uid: card.uid });
-    expect(allCards(r.state).find((c) => c.uid === card.uid)!.bonus).toBe(MODIFIER_RULES.temperPotency);
+    // Tempered is the card's one modifier (Jacob, Oct 21), worth +2 Potency in a brew.
+    const tempered = allCards(r.state).find((c) => c.uid === card.uid)!;
+    expect(tempered.modifier).toBe('tempered');
+    expect(cardPotency(tempered)).toBe(codex.ingredients.get('elmroot')!.potency + MODIFIER_RULES.temperPotency);
     expect(r.state.gold).toBe(s.gold);
     expect(no(r.state, { type: 'temper', uid: card.uid })).toMatch(/one card a visit/);
     const stir = allCards(s).find((c) => c.card === 'stir')!;
     expect(no(s, { type: 'temper', uid: stir.uid })).toMatch(/only ingredients/);
+  });
+
+  it('never tempers a card that already has a modifier, nor gives a Tempered card another', () => {
+    const s = creek(30);
+    const [a, b] = allCards(s).filter((c) => c.card === 'elmroot');
+    const aged = ok(s, { type: 'debug', op: 'setModifier', uid: a!.uid, modifier: 'aged' }).state;
+    expect(no(aged, { type: 'temper', uid: a!.uid })).toMatch(/already Aged/);
+    const tempered = ok(s, { type: 'temper', uid: b!.uid }).state;
+    expect(no({ ...tempered, offer: s.offer }, { type: 'enchant', uid: b!.uid, modifier: 'blessed' })).toMatch(/already Tempered/);
   });
 
   it('sells a modifier at its price, but never Cursed', () => {

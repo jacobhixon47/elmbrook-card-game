@@ -43,7 +43,8 @@ export const EVENT_RULES = {
 
 /** What a choice asks you to pick, and what it can be. */
 export type EventAsk =
-  | { kind: 'deck'; cards: CardInstance[] }
+  /** `greyed`: cards shown but not pickable, such as ones that already carry a modifier (Jacob, Oct 21). */
+  | { kind: 'deck'; cards: CardInstance[]; greyed?: CardInstance[] }
   | { kind: 'shelf'; potions: Potion[] }
   | { kind: 'recipe'; recipes: string[] }
   /** A new card to gain (the Spice Merchant). */
@@ -148,7 +149,7 @@ export const EVENT_CHOICES: Record<string, Choice[]> = {
   'shrine-blessing': [
     {
       blocked: (s) => costs(EVENT_GOLD.shrine)(s) ?? (modifiable(s, 'blessed').length ? null : 'no ingredient can take Blessed'),
-      ask: (s) => ({ kind: 'deck', cards: modifiable(s, 'blessed') }),
+      ask: (s) => ({ kind: 'deck', cards: modifiable(s, 'blessed'), greyed: allCards(s).filter((c) => c.modifier && codex.ingredients.has(c.card)) }),
       run: (ctx, { card }) => {
         changeGold(ctx, -EVENT_GOLD.shrine, 'event');
         addModifier(ctx, card!, 'blessed', 'event');

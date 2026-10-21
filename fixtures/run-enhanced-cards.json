@@ -1,0 +1,1 @@
+{"scene": "Run", "seed": "fixture-hand", "today": "snow", "season": "winter", "steps": ["openShop", {"give": "foxglove"}, {"give": "hollyberry"}, {"give": "dandelion-fluff"}, {"modify": [0, "tempered"]}, {"modify": [1, "aged"]}, {"modify": [3, "cursed"]}, {"modify": [5, "moonlit"]}, {"modify": [9, "blessed"]}, {"infuse": [9, 2]}, {"infuse": [10, 2]}]}

@@ -4,7 +4,7 @@ import { CODEX_TABS, codexEntries } from '../src/view/codex';
 import { stepAction } from '../src/debug/fixture-steps';
 import { newRecipeHint, unknownRecipe, cardText, customerBlurb, customerLine, customerName, dayLabel, extraPay, orderNeeds, orderTerms, requestText } from '../src/view/describe';
 import { FONT_BODY, FONT_DISPLAY } from '../src/view/text';
-import { cardInfo } from '../src/view/inspect';
+import { cardInfo, extraLines, potencyParts } from '../src/view/inspect';
 import { bestOrderFor, previewPotion } from '../src/view/plan';
 import { brewing, slotAll, withHand } from './helpers';
 
@@ -48,6 +48,20 @@ describe('UI wording', () => {
     expect(orderNeeds({ needsUmbra: false, expiresIn: null, status: 'open' })).toBeNull();
     expect(cardInfo('blood-moon').kind).toMatch(/Omen/);
     expect(cardInfo('starlit-dew').text).toMatch(/Night Satchel/);
+  });
+
+  it('breaks a copy\'s Potency into the printed number and each addition, in its own colour (Jacob, Oct 21)', () => {
+    expect(potencyParts('foxglove')).toEqual({ base: 5, parts: [] });
+    expect(potencyParts('foxglove', { modifier: 'tempered' })).toEqual({ base: 5, parts: [{ amount: 2, tone: 'tempered' }] });
+    expect(potencyParts('foxglove', { bonus: 2, modifier: 'aged', aged: 4 }).parts).toEqual([{ amount: 2, tone: 'infused' }, { amount: 4, tone: 'aged' }]);
+    // Blessed counts the whole card again, Infused Potency included.
+    expect(potencyParts('foxglove', { bonus: 1, modifier: 'blessed' }).parts).toEqual([{ amount: 1, tone: 'infused' }, { amount: 6, tone: 'blessed' }]);
+    expect(potencyParts('foxglove', { modifier: 'moonlit' }).parts).toEqual([]);
+    expect(extraLines('foxglove', { bonus: 2, modifier: 'tempered' })).toEqual([
+      { tone: 'infused', text: 'Infused: +2 Potency on this copy.' },
+      { tone: 'tempered', text: 'Tempered: +2 Potency.' },
+    ]);
+    expect(extraLines('foxglove')).toEqual([]);
   });
 });
 

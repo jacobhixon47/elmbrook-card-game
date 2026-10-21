@@ -32,6 +32,8 @@ export type FixtureStep =
   | { reward: string }
   /** Give the hand card at this index a modifier. */
   | { modify: [number, ModifierId] }
+  /** Infuse the hand card at this index with this much Potency. */
+  | { infuse: [number, number] }
   /** Hold a Guild Commission. */
   | { commission: string }
   /** Take the Guild Hall commission at this index. */
@@ -82,6 +84,7 @@ export function stepAction(state: RunState, step: FixtureStep): Action {
   if ('chooseEvent' in step) return { type: 'chooseEvent', index: step.chooseEvent };
   if ('takeCommission' in step) return { type: 'takeCommission', index: step.takeCommission };
   if ('commission' in step) return { type: 'debug', op: 'giveCommission', commission: step.commission };
+  if ('infuse' in step) return { type: 'debug', op: 'infuse', uid: state.hand[step.infuse[0]]?.uid ?? -1, amount: step.infuse[1] };
   if ('modify' in step) return { type: 'debug', op: 'setModifier', uid: state.hand[step.modify[0]]?.uid ?? -1, modifier: step.modify[1] };
   if ('forget' in step) return { type: 'forgetRecipe', recipe: step.forget };
   const deck = [...state.drawPile, ...state.hand, ...state.discardPile];

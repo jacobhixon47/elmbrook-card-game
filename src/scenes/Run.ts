@@ -484,7 +484,7 @@ export class Run extends Phaser.Scene {
       const top = s.drawPile.slice(0, FAMILIAR_RULES.owlPeek);
       this.text(36, 230, 'Next up', { size: 6, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
       top.forEach((inst, i) => {
-        const c = this.add2(createCard(this, 16 + i * 20, 254, inst.card, inst.woven, inst.modifier).setScale(0.35));
+        const c = this.add2(createCard(this, 16 + i * 20, 254, inst.card, inst.woven, inst.modifier, inst.bonus, inst.aged).setScale(0.35));
         c.setInteractive();
         this.inspect(c, inst.card, 0.35, inst);
       });
@@ -981,7 +981,7 @@ export class Run extends Phaser.Scene {
         this.add2(this.add.rectangle(x, SLOT_Y, 34, 46, hex('k'), 0.35).setStrokeStyle(1, hex('a'), 0.5));
         continue;
       }
-      const c = this.add2(createCard(this, x, SLOT_Y, card.card, card.woven, card.modifier).setScale(0.6));
+      const c = this.add2(createCard(this, x, SLOT_Y, card.card, card.woven, card.modifier, card.bonus, card.aged).setScale(0.6));
       c.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'unslot', uid: card.uid }));
       this.inspect(c, card.card, 0.6, card);
     }
@@ -1011,7 +1011,7 @@ export class Run extends Phaser.Scene {
     s.hand.forEach((inst, i) => {
       const x = this.handX(i, s.hand.length);
       const lifted = picked.includes(inst.uid) || inst.uid === tincture;
-      const card = createCard(this, x, lifted ? HAND_Y - 14 : HAND_Y, inst.card, inst.woven, inst.modifier);
+      const card = createCard(this, x, lifted ? HAND_Y - 14 : HAND_Y, inst.card, inst.woven, inst.modifier, inst.bonus, inst.aged);
       if (lifted) card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex(inst.uid === tincture ? 'Y' : 'R')), 0);
       this.add2(card);
       card.setInteractive({ useHandCursor: s.phase === 'brewing' });
@@ -1119,7 +1119,7 @@ export class Run extends Phaser.Scene {
     this.text(320, 122, 'Taste Test: top of your draw pile', { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
     top.forEach((inst, i) => {
       const x = 320 + (i - (top.length - 1) / 2) * 70;
-      const card = this.add2(createCard(this, x, 178, inst.card, inst.woven, inst.modifier));
+      const card = this.add2(createCard(this, x, 178, inst.card, inst.woven, inst.modifier, inst.bonus, inst.aged));
       const at = picked.indexOf(inst.uid);
       if (at >= 0) {
         card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex('Y')), 0);
@@ -1254,7 +1254,7 @@ export class Run extends Phaser.Scene {
       const layer = this.add.container(0, 0);
       const n = before.cauldronSlots;
       const cards = before.cauldron.map((c, i) => {
-        const card = createCard(this, 320 + (i - (n - 1) / 2) * 40, SLOT_Y, c.card, c.woven, c.modifier).setScale(0.6);
+        const card = createCard(this, 320 + (i - (n - 1) / 2) * 40, SLOT_Y, c.card, c.woven, c.modifier, c.bonus, c.aged).setScale(0.6);
         layer.add(card);
         return card;
       });
@@ -1453,8 +1453,8 @@ export class Run extends Phaser.Scene {
         const burn = offer.job === 'burn';
         title(burn ? `${v.name} carries one off` : `${v.name} tunes one up`, burn
           ? 'Choose a card for them to take out of your deck for good, or keep them all.'
-          : `Choose an ingredient: +${MODIFIER_RULES.temperPotency} Potency for the rest of the run.`);
-        this.deckGrid(burn ? blackMarketDeck(s) : allCards(s).filter((c) => codex.ingredients.has(c.card)), (inst) => this.dispatch({ type: 'doFavour', uid: inst.uid }));
+          : `Choose an ingredient to Temper: +${MODIFIER_RULES.temperPotency} Potency for the rest of the run. One modifier per card.`);
+        this.deckGrid(burn ? blackMarketDeck(s) : allCards(s).filter((c) => codex.ingredients.has(c.card)), (inst) => this.dispatch({ type: 'doFavour', uid: inst.uid }), [], 112, (inst) => !burn && cantModify(inst, 'tempered') !== null);
         this.add2(button(this, 320, 262, 'No thanks', () => this.dispatch({ type: 'passGift' }), { w: 72 }));
         return;
       }
@@ -1580,7 +1580,7 @@ export class Run extends Phaser.Scene {
         const across = Math.min(labels.length, 3);
         this.add2(button(this, 320 + (col - (across - 1) / 2) * 140, 120 + row * 24, label, () => onPick(i), { w: 132 }));
       });
-      if (ask?.kind === 'deck') this.deckGrid(ask.cards, (inst) => choose({ uid: inst.uid }));
+      if (ask?.kind === 'deck') this.deckGrid([...ask.cards, ...(ask.greyed ?? [])], (inst) => choose({ uid: inst.uid }), [], 112, (inst) => !ask.cards.includes(inst));
       else if (ask?.kind === 'shelf') rows(ask.potions.map((p) => `${TIER_NAME[p.tier]} ${recipeName(p.recipe)}`), (i) => choose({ uid: ask.potions[i]!.uid }));
       else if (ask?.kind === 'recipe') rows(ask.recipes.map(recipeName), (i) => choose({ pick: ask.recipes[i] }));
       else if (ask?.kind === 'card') ask.cards.forEach((id, i) => this.offerCard(320 + (i - (ask.cards.length - 1) / 2) * 76, 140, id, () => choose({ pick: id })));
@@ -1681,17 +1681,19 @@ export class Run extends Phaser.Scene {
       const m = p === 'temper' ? null : codex.modifiers.get(p)!;
       this.tip.on(b, m ? m.name : 'Temper', [
         m ? m.text : `+${MODIFIER_RULES.temperPotency} Potency on one ingredient for the run.`,
-        m ? `${price}g. One modifier per card, for the run.` : 'Free. One card a visit.',
+        m ? `${price}g. One modifier per card, for the run.` : 'Free. Tempered is a modifier: one per card, for the run.',
         ...(price > s.gold ? [`You have ${s.gold}g.`] : []),
       ]);
     });
-    const what = pick === 'temper' ? `+${MODIFIER_RULES.temperPotency} Potency on one ingredient for the run.` : `${codex.modifiers.get(pick)!.name}. ${codex.modifiers.get(pick)!.text} One per card.`;
+    const what = pick === 'temper' ? `Tempered. +${MODIFIER_RULES.temperPotency} Potency. One per card.` : `${codex.modifiers.get(pick)!.name}. ${codex.modifiers.get(pick)!.text} One per card.`;
     this.text(320, 104, what, { size: 8, color: 'w', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);
-    const cards = allCards(s).filter((c) => (pick === 'temper' ? codex.ingredients.has(c.card) : cantModify(c, pick) === null));
+    // Every ingredient shows; one that already has a modifier is greyed out, since a card holds one (Jacob, Oct 21).
+    const mod = pick === 'temper' ? 'tempered' : pick;
+    const cards = allCards(s).filter((c) => codex.ingredients.has(c.card) && (cantModify(c, mod) === null || c.modifier));
     this.deckGrid(cards, (inst) => {
       const events = this.dispatch(pick === 'temper' ? { type: 'temper', uid: inst.uid } : { type: 'enchant', uid: inst.uid, modifier: pick });
       if (!events.some((e) => e.type === 'rejected')) this.mode = { kind: 'idle' };
-    }, [], 136);
+    }, [], 136, (inst) => cantModify(inst, mod) !== null);
     this.add2(button(this, 320, 262, 'Head home', leave, { w: 72 }));
   }
 
@@ -1726,18 +1728,20 @@ export class Run extends Phaser.Scene {
   }
 
   /** Deck cards laid out to pick from, sorted by name (the Hearth, the Hollow Tailor, the Black Market). */
-  private deckGrid(cards: readonly CardInstance[], onPick: ((inst: CardInstance) => void) | null, picked: readonly number[] = [], top = 112) {
+  /** `blocked` cards show greyed out and can't be picked (a card that already has a modifier, Jacob, Oct 21). */
+  private deckGrid(cards: readonly CardInstance[], onPick: ((inst: CardInstance) => void) | null, picked: readonly number[] = [], top = 112, blocked: (inst: CardInstance) => boolean = () => false) {
     const deck = sortedDeck(cards);
     const perRow = 12;
     deck.forEach((inst, i) => {
       const x = 320 + ((i % perRow) - (Math.min(deck.length, perRow) - 1) / 2) * 32;
       const y = top + Math.floor(i / perRow) * 44;
       const on = picked.includes(inst.uid);
-      const c = this.add2(createCard(this, x, on ? y - 6 : y, inst.card, inst.woven, inst.modifier).setScale(0.5));
+      const c = this.add2(createCard(this, x, on ? y - 6 : y, inst.card, inst.woven, inst.modifier, inst.bonus, inst.aged).setScale(0.5));
       if (on) this.add2(this.add.rectangle(x, y - 6, 29, 41).setStrokeStyle(1, hex('y')));
       c.setInteractive();
       this.inspect(c, inst.card, 0.5, inst);
       if (!onPick) return void c.setAlpha(0.6);
+      if (blocked(inst)) return void c.setAlpha(0.35);
       c.setInteractive({ useHandCursor: true }).on('pointerdown', () => onPick(inst));
       c.on('pointerover', () => c.setScale(0.6));
       c.on('pointerout', () => c.setScale(0.5));

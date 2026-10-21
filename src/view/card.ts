@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CARD_H, CARD_W, cardFrame, essencePip, modifyFrame, TAG_GLYPHS, tagGlyph } from '../art/procedural';
+import { CARD_H, CARD_W, cardFrame, essencePip, INFUSED_LOOK, MODIFIER_LOOK, modifyFrame, TAG_GLYPHS, tagGlyph } from '../art/procedural';
 import { rasterize } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { placeholder } from '../art/procedural';
@@ -7,19 +7,20 @@ import { codex, cardKind, type Essence, type ModifierId } from '../codex';
 import { PALETTE, type PaletteKey } from '../art/palette';
 import { FONT_BODY, FONT_DISPLAY } from './text';
 import { ZOOM } from './zoom';
+import { potencyParts } from './inspect';
 
 const spriteById = new Map(SPRITES.map((s) => [s.id, s]));
 
-export function cardTextureKey(cardId: string, woven?: Essence, modifier?: ModifierId): string {
-  return `card/face/${cardId}${woven ? `~${woven}` : ''}${modifier ? `+${modifier}` : ''}`;
+export function cardTextureKey(cardId: string, woven?: Essence, modifier?: ModifierId, bonus = 0, aged = 0): string {
+  return `card/face/${cardId}${woven ? `~${woven}` : ''}${modifier ? `+${modifier}` : ''}${bonus ? `^${bonus}` : ''}${aged ? `@${aged}` : ''}`;
 }
 
 /**
  * Bakes a card face into one texture: frame + 2x icon + pips (Pixmap) + crisp text (canvas).
  * One texture per card id (and weave and modifier), so a card is a single sprite that rotates and scales cleanly.
  */
-export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essence, modifier?: ModifierId): string {
-  const key = cardTextureKey(cardId, woven, modifier);
+export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essence, modifier?: ModifierId, bonus = 0, aged = 0): string {
+  const key = cardTextureKey(cardId, woven, modifier, bonus, aged);
   if (scene.textures.exists(key)) return key;
 
   const kind = cardKind(cardId);
@@ -35,7 +36,8 @@ export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essenc
     const essences = woven && !ing.essences.includes(woven) ? [ing.essences[0]!, woven] : ing.essences;
     essences.forEach((e, i) => face.blit(essencePip(e), CARD_W - 12 - i * 8, CARD_H - 11));
     // Tags the rules read (Flower, Frost, Fruit, Herb, Mineral, Spice, Water) get a small line-drawn mark in the top-left corner, like a suit.
-    faceTags(ing.tags).forEach((tag, i) => face.blit(tagGlyph(tag), 2, 4 + i * 9));
+    // A modifier's badge takes the corner, so the marks start under it.
+    faceTags(ing.tags).forEach((tag, i) => face.blit(tagGlyph(tag), 2, (modifier ? 11 : 4) + i * 9));
   }
 
   // Bake at screen resolution: art is scaled up whole-pixel, text is drawn sharp on top.
@@ -56,10 +58,21 @@ export function bakeCardFace(scene: Phaser.Scene, cardId: string, woven?: Essenc
   if (kind === 'ingredient') {
     const ing = codex.ingredients.get(cardId)!;
     text(ing.name, CARD_W / 2, 44, 7, 'k', FONT_BODY, 52);
+    // The printed Potency, then each addition in its own colour: "5+2" (Jacob, Oct 21).
     ctx.textAlign = 'left';
-    ctx.font = `${8 * Z}px ${FONT_DISPLAY}`;
-    ctx.fillStyle = PALETTE.r;
-    ctx.fillText(String(ing.potency), 5 * Z, (CARD_H - 13) * Z);
+    const { base, parts } = potencyParts(cardId, { modifier, bonus, aged });
+    const spans: [string, PaletteKey][] = [[String(base), 'r'], ...parts.map((p): [string, PaletteKey] => [`+${p.amount}`, p.tone === 'infused' ? INFUSED_LOOK.ink : MODIFIER_LOOK[p.tone].ink])];
+    // Shrinks to fit in front of the essence pips.
+    const room = (CARD_W - 13 - ing.essences.length * 8) * Z;
+    let size = 8;
+    const width = () => (ctx.font = `${size * Z}px ${FONT_DISPLAY}`, spans.reduce((w, [s]) => w + ctx.measureText(s).width, 0));
+    while (size > 5 && width() > room) size--;
+    let sx = 5 * Z;
+    for (const [str, color] of spans) {
+      ctx.fillStyle = PALETTE[color];
+      ctx.fillText(str, sx, (CARD_H - 13 + (8 - size)) * Z);
+      sx += ctx.measureText(str).width;
+    }
   } else if (kind === 'tincture') {
     const t = codex.tinctures.get(cardId)!;
     text(t.name, CARD_W / 2, 44, 7, 'k', FONT_BODY, 52);
@@ -108,8 +121,8 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth?: numbe
 }
 
 /** A card in the world. A container so later milestones can add glows, badges and hover states. */
-export function createCard(scene: Phaser.Scene, x: number, y: number, cardId: string, woven?: Essence, modifier?: ModifierId): Phaser.GameObjects.Container {
-  const c = scene.add.container(x, y, [scene.add.image(0, 0, bakeCardFace(scene, cardId, woven, modifier)).setScale(1 / ZOOM)]);
+export function createCard(scene: Phaser.Scene, x: number, y: number, cardId: string, woven?: Essence, modifier?: ModifierId, bonus = 0, aged = 0): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y, [scene.add.image(0, 0, bakeCardFace(scene, cardId, woven, modifier, bonus, aged)).setScale(1 / ZOOM)]);
   c.setSize(CARD_W, CARD_H);
   return c;
 }

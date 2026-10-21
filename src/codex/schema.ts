@@ -343,7 +343,7 @@ export const Curse = z.object({
 export type Curse = z.infer<typeof Curse>;
 
 /** Card modifiers (GDD §5.5): one per ingredient card, for the run. Rules live in core/modifiers.ts. */
-export const MODIFIERS = ['moonlit', 'aged', 'blessed', 'cursed'] as const;
+export const MODIFIERS = ['moonlit', 'aged', 'blessed', 'cursed', 'tempered'] as const;
 export const ModifierId = z.enum(MODIFIERS);
 export type ModifierId = z.infer<typeof ModifierId>;
 
@@ -351,7 +351,7 @@ export const Modifier = z.object({
   id: ModifierId,
   name: z.string().min(1),
   text: z.string().min(1),
-  /** Gold at the Creek Bank; null when it isn't sold (Cursed comes from the Name-Taker). */
+  /** Gold at the Creek Bank; null when it isn't sold (Cursed comes from the Name-Taker; Tempering is the Creek Bank's free option). */
   price: z.number().int().positive().nullable(),
 });
 export type Modifier = z.infer<typeof Modifier>;
