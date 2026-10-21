@@ -1449,10 +1449,10 @@ export class Run extends Phaser.Scene {
       case 'event':
         return this.drawEvent(s, offer, title);
       case 'favour': {
-        const v = codex.visitors.get(offer.visitor)!;
+        const v = codex.visitors.get(offer.visitor) ?? codex.nightCustomers.get(offer.visitor)!;
         const burn = offer.job === 'burn';
         title(burn ? `${v.name} carries one off` : `${v.name} tunes one up`, burn
-          ? 'Choose a card for him to take out of your deck for good, or keep them all.'
+          ? 'Choose a card for them to take out of your deck for good, or keep them all.'
           : `Choose an ingredient: +${MODIFIER_RULES.temperPotency} Potency for the rest of the run.`);
         this.deckGrid(burn ? blackMarketDeck(s) : allCards(s).filter((c) => codex.ingredients.has(c.card)), (inst) => this.dispatch({ type: 'doFavour', uid: inst.uid }));
         this.add2(button(this, 320, 262, 'No thanks', () => this.dispatch({ type: 'passGift' }), { w: 72 }));
@@ -1754,7 +1754,7 @@ export class Run extends Phaser.Scene {
     };
     const backButton = () => this.add2(button(this, 320, 262, 'Back to the street', back, { w: 110 }));
     const info = stall ? codex.stalls.get(stall.id)! : null;
-    const half = s.halfPrice > 0 ? ' The Firefly Keeper put in a word: your next buy is half price.' : '';
+    const half = s.halfPrice > 0 ? ' Someone put in a word for you: your next buy is half price.' : '';
     const head = (sub: string) => title(info!.name, `${sub}${half} You have ${s.gold}g.`);
 
     if (!stall) {
@@ -2361,9 +2361,9 @@ const GIFT_TITLE: Record<Gift['source'], [string, string]> = {
   visitor: ['A visitor pays', 'Take one, with their thanks.'],
 };
 
-/** A visitor's card pick: who pays, and with what. */
+/** A visitor's (or night customer's) card pick: who pays, and with what. */
 function visitorGiftTitle(id: string): [string, string] {
-  const v = codex.visitors.get(id);
+  const v = codex.visitors.get(id) ?? codex.nightCustomers.get(id);
   const pays = v?.paysIn.kind === 'card-pick' ? v.paysIn : null;
   const what = pays?.tincture ? 'one Tincture' : pays?.tag ? `one ${cap(pays.tag)} ingredient` : pays?.essence ? `one ${cap(pays.essence)} ingredient` : 'one';
   return [`${v?.name ?? 'A visitor'} pays`, `Take ${what}, with their thanks.`];

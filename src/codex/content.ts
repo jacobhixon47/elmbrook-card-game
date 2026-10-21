@@ -346,8 +346,14 @@ export const nightCustomers: In<typeof NightCustomer>[] = [
   { id: 'wisp-courier', name: 'The Wisp Courier', blurb: 'Carries letters for the not-quite-living.', prefers: ['secrets', 'lunar'], weight: 2, goldMult: 0.5, paysIn: { kind: 'omen' } },
   { id: 'lantern-witch', name: 'The Lantern Witch', blurb: 'Lights the Night Market. Sharp-tongued.', prefers: ['vigor', 'warming'], weight: 2, goldMult: 0.5, paysIn: { kind: 'lunar-card' } },
   { id: 'bog-hag', name: 'Granny Bogwort', blurb: 'Lives in the fen. Surprisingly sweet.', prefers: ['healing'], weight: 2, goldMult: 0.5, paysIn: { kind: 'rare-card' }, requiresUmbra: true },
-  { id: 'moth-duchess', name: 'The Moth Duchess', blurb: 'Aristocrat of the lamplight.', prefers: ['illusion', 'fortune'], weight: 2, goldMult: 2.5, paysIn: { kind: 'gold' } },
+  { id: 'moth-duchess', name: 'The Moth Duchess', blurb: 'Aristocrat of the lamplight.', prefers: ['illusion', 'fortune'], weight: 2, goldMult: 1.5, paysIn: { kind: 'gold' } },
   { id: 'sleepless-miller', name: 'The Sleepless Miller', blurb: "Hasn't slept in years.", prefers: ['calming'], weight: 2, goldMult: 1, paysIn: { kind: 'lift-curse', noCurseMult: 1.5 } },
+  // Five more (Jacob, Oct 21), each paying in something the game already gives.
+  { id: 'ferryman', name: 'The Ferryman', blurb: 'Poles a flat boat across the brook all night.', prefers: ['protection'], weight: 2, goldMult: 1.25, paysIn: { kind: 'burn' } },
+  { id: 'owl-archivist', name: 'The Owl Archivist', blurb: "Keeps the town's night records.", prefers: ['secrets', 'calming'], weight: 2, goldMult: 1.25, paysIn: { kind: 'card-pick', tincture: true, count: 2 } },
+  { id: 'fox-peddler', name: 'The Fox Peddler', blurb: 'Knows every stall at the Night Market.', prefers: ['fortune', 'vigor'], weight: 2, goldMult: 1.25, paysIn: { kind: 'half-price' } },
+  { id: 'bell-ringer', name: 'The Bell-Ringer', blurb: 'Rings the bell of the drowned chapel.', prefers: ['healing', 'protection'], weight: 2, goldMult: 1.25, paysIn: { kind: 'temper' } },
+  { id: 'starwatcher', name: 'The Starwatcher', blurb: 'Maps the stars from the old hill.', prefers: ['lunar', 'illusion'], weight: 2, goldMult: 1, paysIn: { kind: 'next-brew' } },
 ];
 
 // Seasonal visitors (GDD §4.1, Jacob, Oct 16): daytime guests of one season, no Friendship, odd payments.

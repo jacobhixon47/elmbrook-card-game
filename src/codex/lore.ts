@@ -257,6 +257,11 @@ export const lore: Record<string, string> = {
   'bog-hag': 'Lives out in the fen with a hundred frogs and the best kettle in the county.',
   'moth-duchess': 'Holds court under the brightest lantern, in a gown of dust and wings.',
   'sleepless-miller': 'His mill turns all night. He says he\'ll sleep once the grinding\'s done.',
+  ferryman: "Takes anyone across the brook for a coin, and anything you'd rather not carry home for free.",
+  'owl-archivist': 'Has written down every night in Elmbrook for two hundred years, in very small handwriting.',
+  'fox-peddler': 'Sells nothing himself. He just knows who does, and what they would take for it.',
+  'bell-ringer': 'The chapel went under the millpond long ago. Its bell still rings on still nights, and so does she.',
+  starwatcher: 'Names a star after every good night she has, and has run out of names twice.',
   // Seasonal visitors
   'wren-hollis': 'Has a notebook for every spring she\'s spent in Elmbrook, and a pressed flower on every page.',
   'may-herald': 'Has a bell, a ribbon and a very loud voice, all for the Bloomtide Fair.',

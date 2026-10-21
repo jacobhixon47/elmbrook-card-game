@@ -274,6 +274,18 @@ describe('night customers', () => {
     expect(bog.state.gifts[0]!.cards).toHaveLength(3);
   });
 
+  it('the five newer night customers pay in favours, picks, a half-price buy and a Brew', () => {
+    expect(filled('ferryman').state.favours[0]).toMatchObject({ visitor: 'ferryman', job: 'burn' });
+    expect(filled('bell-ringer').state.favours[0]).toMatchObject({ visitor: 'bell-ringer', job: 'temper' });
+    const owl = filled('owl-archivist').state.gifts[0]!;
+    expect(owl).toMatchObject({ source: 'visitor', from: 'owl-archivist', into: 'deck' });
+    expect(owl.cards.every((id) => codex.tinctures.has(id))).toBe(true);
+    expect(filled('fox-peddler').state.halfPrice).toBe(1);
+    const star = filled('starwatcher');
+    expect(star.state.tomorrow.brews).toBe(1);
+    expect(ofType(star.events, 'brewTomorrow')[0]!.from).toBe('starwatcher');
+  });
+
   it('Granny Bogwort can insist on Umbra', () => {
     expect(fits({}, potion(), order({ needsUmbra: true }))).toBe(false);
     expect(fits({}, potion({ ingredients: ['elmroot', 'nightshade'] }), order({ needsUmbra: true }))).toBe(true);

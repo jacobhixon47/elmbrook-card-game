@@ -107,6 +107,8 @@ Once Reputation, the Almanac, the Codex and witch selection exist, the cottage b
 
 The Night Market becomes a walkable square the same way (Jacob, Oct 14; built in M5, see below): stalls you walk up to, dressed for the season, so a Snowed In night is literally drifts over the closed stalls with only the Hearth Trader's glow lit.
 
+Next after the night customers (Jacob, Oct 21): the seasonal festivals become walkable too, in festive versions of the Night Market's fountain square.
+
 ## M5 — Art and audio pass
 
 - Author sprite grids for every codex card (`art:check` shows 0 placeholders); portraits for regulars and patrons.
