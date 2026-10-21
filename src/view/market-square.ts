@@ -1,7 +1,7 @@
 import type { Season } from '../core';
 
 // The walkable Night Market (GDD §9, Jacob, Oct 19): the town square after a Night Shift, seen from
-// above like the cottage, with a well in the middle and stalls round it. Each stall has a home
+// above like the cottage, with a fountain in the middle and stalls round it. Each stall has a home
 // of its own, so the Fence is always in the same corner; the ones not open tonight stand shuttered.
 // Square space is a 320x180 grid drawn at 2x. Pure, so tests can walk it.
 
@@ -31,22 +31,23 @@ export type Home = {
 };
 
 export const HOMES: readonly Home[] = [
-  // The back row, under the eaves of the houses.
-  { id: 'lantern', kind: 'stall', at: { x: 28, y: 16 }, size: { w: 40, h: 32 }, solid: { x: 28, y: 30, w: 40, h: 16 }, zone: { x: 30, y: 46, w: 36, h: 14 } },
-  { id: 'fortune', kind: 'stall', at: { x: 92, y: 16 }, size: { w: 40, h: 32 }, solid: { x: 92, y: 30, w: 40, h: 16 }, zone: { x: 94, y: 46, w: 36, h: 14 } },
-  { id: 'name', kind: 'stall', at: { x: 188, y: 16 }, size: { w: 40, h: 32 }, solid: { x: 188, y: 30, w: 40, h: 16 }, zone: { x: 190, y: 46, w: 36, h: 14 } },
-  { id: 'fence', kind: 'stall', at: { x: 252, y: 16 }, size: { w: 40, h: 32 }, solid: { x: 252, y: 30, w: 40, h: 16 }, zone: { x: 254, y: 46, w: 36, h: 14 } },
-  // The sides: this season's two stalls, then the Moth Broker and the Hollow Tailor.
-  { id: 'west', kind: 'stall', at: { x: 6, y: 62 }, size: { w: 40, h: 32 }, solid: { x: 6, y: 76, w: 40, h: 16 }, zone: { x: 10, y: 92, w: 36, h: 14 } },
-  { id: 'east', kind: 'stall', at: { x: 274, y: 62 }, size: { w: 40, h: 32 }, solid: { x: 274, y: 76, w: 40, h: 16 }, zone: { x: 274, y: 92, w: 36, h: 14 } },
-  { id: 'moth', kind: 'stall', at: { x: 14, y: 110 }, size: { w: 40, h: 32 }, solid: { x: 14, y: 124, w: 40, h: 16 }, zone: { x: 16, y: 140, w: 36, h: 14 } },
-  { id: 'tailor', kind: 'stall', at: { x: 266, y: 110 }, size: { w: 40, h: 32 }, solid: { x: 266, y: 124, w: 40, h: 16 }, zone: { x: 268, y: 140, w: 36, h: 14 } },
-  // The well in the middle, where the Black Market sets up at the new moon.
-  { id: 'well', kind: 'well', at: { x: 132, y: 60 }, size: { w: 56, h: 48 }, solid: { x: 138, y: 78, w: 44, h: 26 }, zone: { x: 140, y: 104, w: 40, h: 14 } },
+  // Laid out as in Jacob's seasonal concepts (Oct 19): eight stalls in a ring round the fountain,
+  // each with a rug before it, the Tinker's rug by the way in and the fire pit down in the corner.
+  { id: 'lantern', kind: 'stall', at: { x: 59, y: 36 }, size: { w: 40, h: 32 }, solid: { x: 60, y: 46, w: 38, h: 20 }, zone: { x: 62, y: 66, w: 36, h: 14 } },
+  { id: 'fortune', kind: 'stall', at: { x: 107, y: 22 }, size: { w: 40, h: 32 }, solid: { x: 108, y: 32, w: 38, h: 20 }, zone: { x: 109, y: 52, w: 36, h: 13 } },
+  { id: 'name', kind: 'stall', at: { x: 181, y: 22 }, size: { w: 40, h: 32 }, solid: { x: 182, y: 32, w: 38, h: 20 }, zone: { x: 183, y: 52, w: 36, h: 13 } },
+  { id: 'fence', kind: 'stall', at: { x: 222, y: 38 }, size: { w: 40, h: 32 }, solid: { x: 223, y: 48, w: 38, h: 20 }, zone: { x: 224, y: 68, w: 36, h: 14 } },
+  // The sides: this season's two stalls, their rugs beside them, then the Moth Broker and the Hollow Tailor.
+  { id: 'west', kind: 'stall', at: { x: 47, y: 72 }, size: { w: 40, h: 32 }, solid: { x: 48, y: 82, w: 38, h: 20 }, zone: { x: 87, y: 86, w: 22, h: 16 } },
+  { id: 'east', kind: 'stall', at: { x: 222, y: 74 }, size: { w: 40, h: 32 }, solid: { x: 223, y: 84, w: 38, h: 20 }, zone: { x: 199, y: 88, w: 22, h: 16 } },
+  { id: 'moth', kind: 'stall', at: { x: 63, y: 104 }, size: { w: 40, h: 32 }, solid: { x: 64, y: 114, w: 38, h: 20 }, zone: { x: 65, y: 134, w: 36, h: 12 } },
+  { id: 'tailor', kind: 'stall', at: { x: 214, y: 104 }, size: { w: 40, h: 32 }, solid: { x: 215, y: 114, w: 38, h: 20 }, zone: { x: 216, y: 134, w: 36, h: 12 } },
+  // The fountain in the middle, where the Black Market sets up at the new moon.
+  { id: 'well', kind: 'well', at: { x: 132, y: 56 }, size: { w: 56, h: 52 }, solid: { x: 140, y: 80, w: 40, h: 26 }, zone: { x: 140, y: 106, w: 40, h: 12 } },
   // A rug by the way in, for the Wandering Tinker at the full moon.
-  { id: 'rug', kind: 'rug', at: { x: 196, y: 128 }, size: { w: 40, h: 28 }, solid: { x: 202, y: 136, w: 28, h: 10 }, zone: { x: 198, y: 146, w: 36, h: 14 } },
-  // The fire pit, where the Hearth Trader keeps a fire lit every winter night.
-  { id: 'fire', kind: 'fire', at: { x: 84, y: 128 }, size: { w: 40, h: 28 }, solid: { x: 92, y: 138, w: 24, h: 10 }, zone: { x: 86, y: 148, w: 36, h: 14 } },
+  { id: 'rug', kind: 'rug', at: { x: 176, y: 116 }, size: { w: 40, h: 28 }, solid: { x: 182, y: 124, w: 28, h: 10 }, zone: { x: 182, y: 134, w: 30, h: 12 } },
+  // The fire pit in its clearing below the fence, where the Hearth Trader keeps a fire lit every winter night.
+  { id: 'fire', kind: 'fire', at: { x: 54, y: 144 }, size: { w: 40, h: 28 }, solid: { x: 62, y: 154, w: 24, h: 10 }, zone: { x: 88, y: 158, w: 22, h: 16 } },
 ];
 
 /** Each stall's home in the square. */
@@ -69,22 +70,25 @@ export const STALL_HOME: Record<string, HomeId> = {
 };
 
 /** The bridge you came in by, at the bottom: walk back onto it to pay the rent and go home. */
-export const EXIT: Rect = { x: 144, y: 164, w: 32, h: 16 };
+export const EXIT: Rect = { x: 144, y: 166, w: 32, h: 14 };
 /** Where you arrive: just off the bridge, facing into the square. */
-export const SPAWN: Point = { x: 160, y: 160 };
+export const SPAWN: Point = { x: 160, y: 158 };
 
 /** Your feet, which is what collides: centred on x, resting on y. */
 const FEET = { w: 10, h: 5 };
 
 const EDGES: readonly Rect[] = [
-  // The houses along the back.
+  // Trees and the house along the back, and down both sides.
   { x: 0, y: 0, w: SQUARE_W, h: 30 },
-  { x: 0, y: 0, w: 4, h: SQUARE_H },
-  { x: SQUARE_W - 4, y: 0, w: 4, h: SQUARE_H },
-  // The low wall along the water, with the bridge in the middle.
-  { x: 0, y: 172, w: 144, h: 8 },
-  { x: 176, y: 172, w: 144, h: 8 },
-  // The far end of the bridge: walking onto it is enough.
+  { x: 0, y: 0, w: 59, h: 66 },
+  { x: 0, y: 0, w: 46, h: SQUARE_H },
+  { x: 264, y: 0, w: SQUARE_W - 264, h: SQUARE_H },
+  // Along the front: the fence above the fire pit's clearing, a flower bed, then flowers and water.
+  { x: 46, y: 146, w: 58, h: 4 },
+  { x: 104, y: 146, w: 40, h: 14 },
+  { x: 176, y: 148, w: SQUARE_W - 176, h: 32 },
+  { x: 0, y: 178, w: 144, h: 10 },
+  // The far end of the steps down to the bridge: walking onto them is enough.
   { x: 144, y: 180, w: 32, h: 20 },
 ];
 

@@ -1,16 +1,19 @@
 import type { Season } from '../../core';
 import { seedRng } from '../../core/rng';
-import { EXIT, HOMES, SQUARE_H, SQUARE_W, type Home, type HomeId } from '../../view/market-square';
+import { HOMES, SQUARE_H, SQUARE_W, type Home, type HomeId } from '../../view/market-square';
 import { cellRandom, fbm, valueNoise } from '../noise';
 import { PALETTE, type PaletteKey } from '../palette';
 import { Pixmap } from '../pixmap';
-import { pick, rand, type Rng } from './town';
+import { rand, type Rng } from './town';
 
 // The walkable Night Market (GDD §9): Elmbrook's square after dark, seen from above like the
-// cottage. Cobbles round a stone well, timber-and-plaster houses with steep roofs along the back,
-// a low wall over dark water along the front with the bridge you came in by, trees at the edges.
+// cottage, drawn from Jacob's four seasonal night concepts (Oct 19). Warm cobbles round a moon
+// fountain on its stepped dais, eight cloth-hung stalls in a ring with a rug before each, a timber
+// house in the top corner, a waterfall and stream down the right, trees thick down both sides, and
+// along the front a fence, flower beds, the gate with its crescent banners and the steps down to
+// the bridge, the fire pit in its clearing and dark water with a little dock.
 // Square space is 320x180 (src/view/market-square.ts), drawn at 2x. The ground is one picture;
-// each stall, the well, the tinker's rug and the fire pit are sprites the scene sorts with you.
+// each stall, the fountain, the tinker's cart and the fire pit are sprites the scene sorts with you.
 // Light is a cool moonlit night baked in, darker toward the edges; the scene adds warm glows at
 // `squareLights`, so the sprites carry only a touch of lamplight of their own.
 
@@ -46,22 +49,53 @@ const SNOW: readonly PaletteKey[] = ['x', 'X', 'e', 'm', 'W'];
 const WOOD: readonly PaletteKey[] = ['K', 'k', 'b', 'B', 'n', 'a'];
 const STONE: readonly PaletteKey[] = ['K', 'k', 's', 'S', 'e', 'm'];
 
-/** The well's middle, where the paving rings are centred. */
-const WELL_C = { x: 160, y: 88 };
-/** The paved lane from the well down to the bridge. */
-const LANE = { x0: 148, x1: 171 };
-const WALL_Y = 172;
-const WATER_Y = 176;
+/** The middle of the fountain's dais, and its radii (it is an ellipse, seen from above and in front). */
+const DAIS = { x: 160, y: 92, rx: 44, ry: 26 };
+/** The flagged lanes: north between the back stalls, south from the dais to the gate. */
+const LANE = { x0: 145, x1: 175 };
+/** The gate's banner poles either side of the lane, and the steps down to the bridge below it. */
+const POLES = [140, 179] as const;
+const POLE_TOP = 142;
+const STEPS_Y = 168;
+/** The fire pit's clearing below the fence. */
+const CLEARING = { x: 74, y: 162, rx: 32, ry: 15 };
+/** The stream runs down the right from the waterfall to the water along the front. */
+const streamX = (y: number) => 288 + Math.sin(y / 15) * 5 + Math.sin(y / 6.5) * 1.2;
 
-/** Moonlight on the ground, 0..1: open sky over the middle, shadow under the houses and trees. */
+/** Moonlight on the ground, 0..1: open sky over the middle, shadow under the trees. */
 function moon(x: number, y: number): number {
-  const centre = 1 - Math.min(1, Math.hypot((x - 160) / 190, (y - 96) / 120));
-  const eaves = y < 40 ? (40 - y) / 40 : 0;
-  return 0.3 + centre * 0.5 - eaves * 0.25;
+  const centre = 1 - Math.min(1, Math.hypot((x - 160) / 150, (y - 92) / 100));
+  return 0.3 + centre * 0.5;
 }
 
 function snowPx(p: Pixmap, x: number, y: number, t: number): void {
   flat(p, x, y, SNOW, t);
+}
+
+const smoothstep = (e0: number, e1: number, v: number) => {
+  const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0)));
+  return t * t * (3 - 2 * t);
+};
+
+// ---------------------------------------------------------------- where things are
+
+/** How far inside the cobbled plaza a point is: above 0 inside, with a ragged edge where it meets the gardens. */
+function plaza(x: number, y: number): number {
+  const sq = (Math.abs(x - 158) / 116) ** 4 + (Math.abs(y - 86) / 66) ** 4;
+  let v = 1 - sq + (fbm(x, y, 5, 201) - 0.5) * 0.12;
+  if (x >= LANE.x0 - 1 && x <= LANE.x1 + 1) v = Math.max(v, y < 40 || y > 130 ? 0.5 : v);
+  const c = 1 - Math.hypot((x - CLEARING.x) / CLEARING.rx, (y - CLEARING.y) / CLEARING.ry) + (fbm(x, y, 4, 202) - 0.5) * 0.25;
+  v = Math.max(v, c);
+  // The path from the lane round under the flower bed to the clearing.
+  if (y >= 161 && y <= 177 && x > 90 && x < LANE.x0) v = Math.max(v, 0.3);
+  return v;
+}
+
+/** The water along the front right, fed by the stream. */
+function isWater(x: number, y: number): boolean {
+  const shore = 152 + Math.max(0, 204 - x) * 0.9 + (valueNoise(x, 0, 6, 203) - 0.5) * 4;
+  if (x > 192 && y > shore) return true;
+  return y < 160 && y > 26 && Math.abs(x - streamX(y)) < 3.6 + y / 60;
 }
 
 // ---------------------------------------------------------------- the ground
@@ -104,19 +138,34 @@ function stoneStep(light: number, tone: number, pick2: number): number {
   return v > 0.42 + pick2 * 0.22 ? 3 : v < 0.12 + pick2 * 0.16 ? 1 : 2;
 }
 
+/** The gardens round the plaza: dark earth and grass, under the trees. */
+function garden(p: Pixmap, season: Season): void {
+  const ramp: readonly PaletteKey[] = season === 'autumn' ? ['K', 'k', 'g', 'b'] : season === 'summer' ? ['K', 'g', 'g', 'G'] : ['K', 'k', 'g', 'G'];
+  for (let y = 0; y < SQUARE_H; y++) {
+    for (let x = 0; x < SQUARE_W; x++) {
+      const t = 0.35 + (fbm(x, y, 5, 211) - 0.5) * 0.7 + (cellRandom(x, y, 212) - 0.5) * 0.25;
+      flat(p, x, y, ramp, t);
+    }
+  }
+}
+
 function cobbles(p: Pixmap, snowedIn: boolean): void {
   const mortar = (x: number, y: number) => {
     const c = cobbleCell(x, y, 8, 5, 11);
     return c.d2 - c.d1 < 1.05;
   };
-  for (let y = 24; y < SQUARE_H; y++) {
+  for (let y = 0; y < SQUARE_H; y++) {
     for (let x = 0; x < SQUARE_W; x++) {
+      const inside = plaza(x, y);
+      if (inside <= 0) continue;
       const c = cobbleCell(x, y, 8, 5, 11);
+      // Where the plaza meets the gardens, stones go missing and moss creeps between them.
+      if (inside < 0.06 && cellRandom(c.id, 5, 12) > inside * 12) continue;
       const tone = cellRandom(c.id, 3, 12);
-      // Mostly warm mauve stone, as in Jacob's concepts (Oct 19), with the odd grey one.
+      // Mostly warm mauve stone, as in Jacob's concepts, with the odd grey one.
       const ramp = snowedIn || tone > 0.9 ? COOL_COBBLE : WARM_COBBLE;
       if (c.d2 - c.d1 < 1.05) {
-        p.set(x, y, 'q');
+        p.set(x, y, inside < 0.1 ? 'g' : 'q');
         continue;
       }
       const step = stoneStep(moon(c.sx, c.sy), tone, cellRandom(c.id, 4, 12));
@@ -127,20 +176,21 @@ function cobbles(p: Pixmap, snowedIn: boolean): void {
   }
 }
 
-/** Fitted stones in rings round the well, with a curb of paler stone at the edge. */
-function paving(p: Pixmap, snowedIn: boolean): void {
-  const R = 54;
-  for (let y = 40; y < 140; y++) {
-    for (let x = 90; x < 230; x++) {
-      const dx = x + 0.5 - WELL_C.x;
-      const dy = (y + 0.5 - WELL_C.y) * 1.4;
+/** The dais under the fountain: fitted stones in rings, a curb of paler stone at the edge. */
+function dais(p: Pixmap, snowedIn: boolean): void {
+  const R = DAIS.rx;
+  const squash = DAIS.rx / DAIS.ry;
+  for (let y = DAIS.y - DAIS.ry - 1; y <= DAIS.y + DAIS.ry + 1; y++) {
+    for (let x = DAIS.x - R - 1; x <= DAIS.x + R + 1; x++) {
+      const dx = x + 0.5 - DAIS.x;
+      const dy = (y + 0.5 - DAIS.y) * squash;
       const rr = Math.hypot(dx, dy);
       if (rr > R) continue;
       const curb = rr > R - 5;
       const ringW = 6;
       const ring = curb ? 99 : Math.floor(rr / ringW);
       const theta = Math.atan2(dy, dx) + Math.PI;
-      const segLen = curb ? 10 : 8;
+      const segLen = curb ? 9 : 7;
       const along = (theta * (curb ? R - 2.5 : (ring + 0.5) * ringW)) / segLen + (ring % 2) * 0.5;
       const seg = Math.floor(along);
       const inRing = curb ? rr - (R - 5) : rr - ring * ringW;
@@ -152,44 +202,44 @@ function paving(p: Pixmap, snowedIn: boolean): void {
       const tone = cellRandom(ring, seg, 21);
       const ramp = snowedIn || curb || tone > 0.75 ? COOL_COBBLE : WARM_COBBLE;
       const step = curb ? 3 : stoneStep(moon(x, y) + 0.05, tone, cellRandom(ring, seg, 22));
-      // Lit on the side away from the well (the moon is high), shadowed toward it.
       const edge = dy < 0 ? (inRing < 2 ? 1 : inRing > w - 1 ? -1 : 0) : inRing > w - 1 ? 1 : inRing < 2 ? -1 : 0;
       p.set(x, y, ramp[Math.max(1, Math.min(ramp.length - 1, step + edge))]!);
     }
   }
 }
 
-/** Big flagstones down the middle, from the well's rings to the bridge. */
-function lane(p: Pixmap, snowedIn: boolean): void {
-  const y0 = 118;
-  for (let y = 30; y < WALL_Y; y++) {
-    if (y >= 60 && y < y0) continue;
+/** Big flagstones down the lanes: north between the back stalls, south from the dais to the gate. */
+function lanes(p: Pixmap, snowedIn: boolean): void {
+  for (let y = 0; y < STEPS_Y; y++) {
+    if (y >= 40 && y < 112) continue;
     for (let x = LANE.x0; x <= LANE.x1; x++) {
-      const dx = x + 0.5 - WELL_C.x;
-      const dy = (y + 0.5 - WELL_C.y) * 1.4;
-      if (Math.hypot(dx, dy) < 54) continue;
-      const row = Math.floor((y - y0 + 70) / 7);
+      if (Math.hypot(x + 0.5 - DAIS.x, (y + 0.5 - DAIS.y) * (DAIS.rx / DAIS.ry)) < DAIS.rx) continue;
+      const row = Math.floor((y + 70) / 7);
       const off = row % 2 ? 6 : 0;
-      const col = Math.floor((x - LANE.x0 + off) / 12);
-      const ry = (y - y0 + 70) % 7;
-      const rx = (x - LANE.x0 + off) % 12;
+      const col = Math.floor((x - LANE.x0 + off) / 10);
+      const ry = (y + 70) % 7;
+      const rx = (x - LANE.x0 + off) % 10;
       if (x === LANE.x0 || x === LANE.x1) {
         p.set(x, y, y % 4 === 0 ? 'k' : 'S');
         continue;
       }
-      if (ry === 6 || rx === 11) {
+      if (ry === 6 || rx === 9) {
         p.set(x, y, 'k');
         continue;
       }
       const tone = cellRandom(row, col, 31);
       const ramp = snowedIn || tone > 0.75 ? COOL_COBBLE : WARM_COBBLE;
       const step = stoneStep(moon(x, y) + 0.05, tone, cellRandom(row, col, 32));
-      p.set(x, y, ramp[ry === 0 ? step + 1 : ry === 5 || rx === 10 ? step - 1 : step]!);
+      p.set(x, y, ramp[ry === 0 ? step + 1 : ry === 5 || rx === 8 ? step - 1 : step]!);
     }
+  }
+  // A low stone wall closing the north lane, under the trees.
+  for (let x = LANE.x0 - 2; x <= LANE.x1 + 2; x++) {
+    for (let y = 8; y < 13; y++) p.set(x, y, y === 8 ? 'e' : y === 12 ? 'k' : (x + (y > 10 ? 4 : 0)) % 8 === 0 ? 'k' : y < 10 ? 'S' : 's');
   }
 }
 
-// ---------------------------------------------------------------- the houses
+// ---------------------------------------------------------------- the house
 
 type House = {
   x: number;
@@ -203,16 +253,9 @@ type House = {
 };
 
 const EAVE = 15;
+/** The timber house in the top-left corner, its windows lit. */
 const HOUSES: readonly House[] = [
-  { x: -6, w: 36, roof: 'slate', windows: [{ x: 21, y: 22 }], chimney: 8 },
-  { x: 30, w: 34, roof: 'shingle', gable: 34, windows: [{ x: 45, y: 7 }] },
-  { x: 64, w: 32, roof: 'shingle', door: 70, windows: [{ x: 82, y: 22, lit: true }, { x: 82, y: 16 }], chimney: 86 },
-  { x: 96, w: 36, roof: 'slate', gable: 36, windows: [{ x: 112, y: 7 }] },
-  { x: 132, w: 56, roof: 'shingle', gable: 26, door: 157, windows: [{ x: 140, y: 22, lit: true }, { x: 176, y: 22 }, { x: 158, y: 9 }, { x: 140, y: 16 }, { x: 176, y: 16 }], chimney: 178 },
-  { x: 188, w: 38, roof: 'slate', windows: [], chimney: 200 },
-  { x: 226, w: 28, roof: 'shingle', gable: 28, windows: [{ x: 238, y: 9 }, { x: 232, y: 22 }, { x: 244, y: 22 }] },
-  { x: 254, w: 38, roof: 'slate', windows: [], chimney: 280 },
-  { x: 292, w: 34, roof: 'shingle', gable: 34, windows: [{ x: 307, y: 7 }, { x: 296, y: 22 }] },
+  { x: 40, w: 60, roof: 'shingle', gable: 24, door: 86, windows: [{ x: 47, y: 18, lit: true }, { x: 58, y: 18, lit: true }, { x: 69, y: 18, lit: true }, { x: 66, y: 6 }], chimney: 46 },
 ];
 
 /** The two lit windows' middles, for glows. */
@@ -315,7 +358,157 @@ function door(p: Pixmap, x: number, y: number): void {
   p.set(x + 5, y + 3, 'n');
 }
 
-// ---------------------------------------------------------------- trees
+// ---------------------------------------------------------------- water
+
+/** The waterfall at the top right, the stream it feeds, and the water along the front with a dock. */
+function water(p: Pixmap, season: Season, frozen: boolean): void {
+  // The rocks the waterfall drops from.
+  for (let y = 0; y < 30; y++) {
+    for (let x = 270; x < 312; x++) {
+      const d = Math.hypot((x - 290) / 20, (y - 6) / 24);
+      if (d > 1 + (fbm(x, y, 4, 221) - 0.5) * 0.4) continue;
+      const k = cellRandom(Math.floor(x / 5), Math.floor(y / 4), 222);
+      p.set(x, y, k > 0.7 ? 'S' : k > 0.3 ? 's' : 'k');
+    }
+  }
+  for (let y = 0; y < SQUARE_H; y++) {
+    for (let x = 180; x < SQUARE_W; x++) {
+      const fall = y < 28 && Math.abs(x - 290) < 5;
+      if (!fall && !isWater(x, y)) continue;
+      if (fall) {
+        // Falling water in streaks, foam at the foot.
+        const streak = cellRandom(x, Math.floor((y + x * 3) / 3), 223);
+        p.set(x, y, frozen ? (streak > 0.5 ? 'm' : 'e') : y > 24 ? (streak > 0.4 ? 'W' : 'c') : streak > 0.7 ? 'c' : streak > 0.3 ? 'U' : 'u');
+        continue;
+      }
+      const edge = !isWater(x, y - 1) || !isWater(x - 1, y) || !isWater(x + 1, y);
+      if (edge) {
+        p.set(x, y, 'k');
+        continue;
+      }
+      if (frozen) {
+        const crack = valueNoise(x, y * 4, 5, 71) > 0.7;
+        p.set(x, y, crack ? 'x' : cellRandom(x >> 2, y, 72) > 0.8 ? 'm' : 'e');
+        continue;
+      }
+      const ripple = cellRandom(Math.floor((x + y * 3) / 4), y, 73) > 0.84;
+      p.set(x, y, ripple ? 'u' : !isWater(x, y - 2) ? 'K' : 'z');
+    }
+  }
+  if (!frozen) {
+    // The moon on the water, broken into dashes, and lily pads out of winter.
+    for (const [x, y, w] of [[232, 170, 3], [236, 172, 2], [288, 174, 3], [292, 176, 2], [262, 160, 2]] as const) p.hline(x, x + w - 1, y, 'X');
+    if (season !== 'winter') {
+      for (const [x, y] of [[214, 166], [222, 174], [244, 164], [276, 168], [300, 164], [306, 176], [284, 130], [210, 176]] as const) {
+        p.hline(x, x + 2, y, 'G').set(x + 1, y + 1, 'g').set(x, y, 'l');
+        if (season === 'spring' && x % 3 === 0) p.set(x + 1, y - 1, 'I');
+      }
+    }
+  }
+  // The dock: planks on posts, with a lantern at the end.
+  for (let y = 164; y < SQUARE_H; y++) {
+    for (let x = 252; x < 272; x++) {
+      const plank = Math.floor((x - 252) / 4);
+      p.set(x, y, (x - 252) % 4 === 3 ? 'b' : (y + plank * 5) % 11 === 0 ? 'b' : y === 164 ? 'n' : 'B');
+    }
+  }
+  for (const [x, y] of [[251, 164], [271, 164], [251, 176], [271, 176]] as const) p.fillRect(x, y - 1, 2, 4, 'k').set(x, y - 1, 'b');
+  if (season === 'winter') for (let x = 252; x < 272; x++) if (cellRandom(x, 1, 224) > 0.3) p.set(x, 164, 'm').set(x, 165, cellRandom(x, 2, 224) > 0.5 ? 'e' : 'B');
+  lanternPx(p, 258, 160, true);
+}
+
+/** The wooden steps from the gate down to the bridge, with rails either side. */
+function steps(p: Pixmap, snowy: boolean): void {
+  const bx = LANE.x0;
+  const w = LANE.x1 - LANE.x0 + 1;
+  for (let y = STEPS_Y; y < SQUARE_H; y++) {
+    const r = (y - STEPS_Y) % 4;
+    for (let x = bx; x < bx + w; x++) {
+      const plank = Math.floor((y - STEPS_Y) / 4);
+      const end = (x - bx + plank * 7) % 13 === 0;
+      p.set(x, y, r === 3 ? 'k' : end ? 'b' : r === 0 ? 'n' : 'B');
+    }
+  }
+  if (snowy) for (let x = bx; x < bx + w; x++) for (let y = STEPS_Y; y < SQUARE_H; y += 4) if (cellRandom(x, y, 78) > 0.6 && (x < bx + 7 || x > bx + w - 8)) p.set(x, y, 'm');
+  for (const rx of [bx - 1, bx + w]) for (let y = STEPS_Y - 2; y < SQUARE_H; y++) p.set(rx, y, y % 4 === 0 ? 'n' : 'b');
+}
+
+// ---------------------------------------------------------------- fences, beds, rugs
+
+/** A rail fence: posts every few pixels with two rails, a little snow along the top in winter. */
+function fence(p: Pixmap, x0: number, x1: number, y: number, winter: boolean): void {
+  for (let x = x0; x <= x1; x++) {
+    p.set(x, y + 1, 'B').set(x, y + 2, 'b').set(x, y + 4, 'B').set(x, y + 5, 'b');
+    if (winter && cellRandom(x, y, 231) > 0.25) p.set(x, y, 'm');
+  }
+  for (let x = x0; x <= x1; x += 9) {
+    for (let j = -1; j < 7; j++) p.set(x, y + j, j < 0 ? (winter ? 'm' : 'n') : 'B').set(x + 1, y + j, j < 0 ? (winter ? 'e' : 'B') : 'b');
+  }
+}
+
+/** A flower bed: dark earth packed with leaves and flowers in the season's colours. */
+function bed(p: Pixmap, x0: number, y0: number, x1: number, y1: number, season: Season): void {
+  const flowers: readonly PaletteKey[] =
+    season === 'spring' ? ['I', 'i', 'W', 'y'] : season === 'summer' ? ['y', 'W', 'i', 'o'] : season === 'autumn' ? ['o', 'R', 'y', 'B'] : ['m', 'e'];
+  const leaf: readonly PaletteKey[] = season === 'winter' ? ['K', 'g', 'g', 'G'] : ['K', 'g', 'G', 'l'];
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const n = fbm(x, y, 3, 241);
+      if (n < 0.28) continue;
+      const bloom = cellRandom(x, y, 242);
+      if (bloom > (season === 'winter' ? 0.6 : 0.78)) p.set(x, y, flowers[Math.floor(cellRandom(x, y, 243) * flowers.length)]!);
+      else flat(p, x, y, leaf, n - 0.1 + (y0 + y1 - 2 * y) * 0.03);
+    }
+  }
+}
+
+/** A rug's colours: its field, its dark border, and the gold of its pattern. */
+type RugLook = { field: PaletteKey; border: PaletteKey; figure: PaletteKey };
+const RUG_LOOK: Record<string, RugLook> = {
+  red: { field: 'r', border: 'j', figure: 'B' },
+  blue: { field: 'u', border: 'z', figure: 'B' },
+  teal: { field: 'T', border: 'g', figure: 'B' },
+  plum: { field: 'p', border: 'k', figure: 'B' },
+  navy: { field: 'z', border: 'K', figure: 'B' },
+};
+/** The rugs laid on the stones: one before or beside each stall, and two either side of the lane by the gate. */
+const RUGS: readonly { x: number; y: number; w: number; h: number; look: keyof typeof RUG_LOOK }[] = [
+  { x: 64, y: 67, w: 32, h: 12, look: 'red' },
+  { x: 111, y: 53, w: 32, h: 11, look: 'blue' },
+  { x: 185, y: 53, w: 32, h: 11, look: 'teal' },
+  { x: 226, y: 69, w: 32, h: 12, look: 'plum' },
+  { x: 88, y: 84, w: 20, h: 19, look: 'red' },
+  { x: 200, y: 86, w: 20, h: 19, look: 'plum' },
+  { x: 67, y: 134, w: 32, h: 11, look: 'navy' },
+  { x: 218, y: 134, w: 32, h: 11, look: 'red' },
+  { x: 106, y: 122, w: 34, h: 20, look: 'plum' },
+  { x: 183, y: 126, w: 28, h: 18, look: 'teal' },
+];
+
+/** A patterned rug: a gold-lined border, a lattice of gold flecks, a diamond medallion, fringe at the ends. */
+function rug(p: Pixmap, x0: number, y0: number, w: number, h: number, look: RugLook): void {
+  const { field, border, figure } = look;
+  for (let y = y0; y < y0 + h; y++) {
+    for (let x = x0; x < x0 + w; x++) {
+      const bx = Math.min(x - x0, x0 + w - 1 - x);
+      const by = Math.min(y - y0, y0 + h - 1 - y);
+      const b = Math.min(bx, by);
+      if (b === 0) p.set(x, y, figure);
+      else if (b === 1) p.set(x, y, border);
+      else if (b === 2) p.set(x, y, (x + y) % 2 === 0 ? figure : border);
+      else {
+        const cx = x + 0.5 - (x0 + w / 2);
+        const cy = y + 0.5 - (y0 + h / 2);
+        const d = Math.abs(cx) / 1.6 + Math.abs(cy);
+        const lattice = (Math.abs(Math.round(cx)) + Math.abs(Math.round(cy))) % 4 === 0 && (x + y) % 2 === 0;
+        p.set(x, y, d < 1.2 ? 'n' : Math.abs(d - 3) < 0.6 ? figure : lattice ? figure : field);
+      }
+    }
+  }
+  for (let y = y0 + 1; y < y0 + h - 1; y += 2) p.set(x0 - 1, y, 'a').set(x0 + w, y, 'a');
+}
+
+// ---------------------------------------------------------------- trees and shrubs
 
 const LEAVES: Record<Season, readonly PaletteKey[]> = {
   spring: ['k', 'g', 'G', 'l', 'L'],
@@ -395,29 +588,58 @@ function pineTree(p: Pixmap, cx: number, base: number, h: number, season: Season
 
 type TreeSpot = { x: number; base: number; size: number; pine: boolean };
 /**
- * The square is framed in trees down both sides, as in Jacob's seasonal concepts (Oct 19): blossom in
- * spring, deep green in summer, red and gold in autumn, and in winter the broadleaves stand bare
- * among the snowy pines. They stand behind the stalls, which are sprites drawn over the ground.
+ * The trees framing the square, as in the concepts: thick down both sides and along the back
+ * behind the stalls, and in the bottom-left corner round the fire pit's clearing. Blossom in spring,
+ * deep green in summer, red and gold in autumn; in winter nearly all of them are snowy pines.
  */
 const TREES: readonly TreeSpot[] = [
-  { x: 6, base: 30, size: 30, pine: true },
-  { x: 311, base: 30, size: 14, pine: false },
-  { x: 8, base: 48, size: 13, pine: false },
-  { x: 312, base: 50, size: 13, pine: false },
-  { x: 2, base: 62, size: 14, pine: false },
-  { x: 322, base: 64, size: 24, pine: true },
-  { x: 10, base: 80, size: 11, pine: false },
-  { x: 310, base: 84, size: 12, pine: false },
-  { x: -3, base: 112, size: 24, pine: true },
-  { x: 9, base: 104, size: 12, pine: false },
-  { x: 312, base: 106, size: 13, pine: false },
-  { x: 8, base: 134, size: 12, pine: false },
-  { x: 312, base: 134, size: 12, pine: false },
-  { x: 10, base: 156, size: 11, pine: false },
-  { x: -2, base: 170, size: 14, pine: false },
-  { x: 322, base: 170, size: 24, pine: true },
-  { x: 310, base: 158, size: 11, pine: false },
+  // The back, behind the stalls and the house.
+  { x: 104, base: 16, size: 12, pine: false },
+  { x: 124, base: 10, size: 11, pine: false },
+  { x: 140, base: 8, size: 9, pine: false },
+  { x: 182, base: 8, size: 9, pine: false },
+  { x: 200, base: 10, size: 12, pine: false },
+  { x: 222, base: 16, size: 12, pine: false },
+  { x: 244, base: 30, size: 13, pine: false },
+  { x: 262, base: 22, size: 12, pine: false },
+  { x: 30, base: 22, size: 14, pine: true },
+  { x: 86, base: 6, size: 13, pine: false },
+  { x: 160, base: 4, size: 10, pine: false },
+  { x: 240, base: 12, size: 14, pine: false },
+  // Down the left.
+  { x: 14, base: 40, size: 14, pine: false },
+  { x: 36, base: 52, size: 12, pine: false },
+  { x: 6, base: 66, size: 26, pine: true },
+  { x: 30, base: 80, size: 12, pine: false },
+  { x: 12, base: 96, size: 14, pine: false },
+  { x: 36, base: 112, size: 11, pine: false },
+  { x: 8, base: 124, size: 13, pine: false },
+  { x: 32, base: 140, size: 12, pine: false },
+  { x: 10, base: 156, size: 14, pine: false },
+  { x: 30, base: 180, size: 14, pine: false },
+  { x: 4, base: 184, size: 24, pine: true },
+  { x: 24, base: 62, size: 13, pine: false },
+  { x: 22, base: 128, size: 14, pine: false },
+  { x: 40, base: 168, size: 11, pine: false },
+  { x: 2, base: 110, size: 15, pine: false },
+  // Down the right, either side of the stream.
+  { x: 272, base: 46, size: 12, pine: false },
+  { x: 312, base: 40, size: 14, pine: false },
+  { x: 270, base: 70, size: 12, pine: false },
+  { x: 316, base: 74, size: 26, pine: true },
+  { x: 274, base: 96, size: 12, pine: false },
+  { x: 310, base: 104, size: 13, pine: false },
+  { x: 272, base: 122, size: 11, pine: false },
+  { x: 312, base: 134, size: 14, pine: false },
+  { x: 274, base: 148, size: 11, pine: false },
+  { x: 300, base: 58, size: 12, pine: false },
+  { x: 304, base: 120, size: 12, pine: false },
+  { x: 318, base: 156, size: 14, pine: false },
+  { x: 280, base: 30, size: 10, pine: false },
 ];
+/** In winter all but every sixth tree is a snowy pine, as in the winter concept. */
+const winterPine = (t: TreeSpot, i: number) => t.pine || i % 6 !== 0;
+
 /** A low round shrub, lit from the upper left; snow-capped in winter, flowering in spring and summer. */
 function bush(p: Pixmap, cx: number, cy: number, rx: number, ry: number, season: Season): void {
   const ramp = season === 'winter' ? (['K', 'K', 'g', 'T'] as const) : LEAVES[season];
@@ -436,107 +658,12 @@ function bush(p: Pixmap, cx: number, cy: number, rx: number, ry: number, season:
   }
 }
 
-/**
- * Hedges and shrubs filling the edges between the trees, as in the concepts: down both sides, in the
- * top corners by the houses and along the wall, leaving the way in and the walking zones clear.
- */
-function hedges(p: Pixmap, season: Season): void {
-  const spots: [number, number, number, number][] = [];
-  for (let y = 36; y < 168; y += 7) {
-    spots.push([2 + cellRandom(y, 0, 148) * 3, y, 5 + cellRandom(y, 1, 148) * 2, 4]);
-    spots.push([317 - cellRandom(y, 2, 148) * 3, y, 5 + cellRandom(y, 3, 148) * 2, 4]);
-  }
-  for (const [x, y] of [[20, 40], [74, 38], [140, 36], [180, 36], [246, 38], [300, 40]] as const) spots.push([x, y, 5, 3.5]);
-  const clear = (x: number) => Math.abs(x - (EXIT.x + EXIT.w / 2)) < EXIT.w / 2 + 12 || HOMES.some((h) => x > h.zone.x - 4 && x < h.zone.x + h.zone.w + 4 && h.zone.y + h.zone.h > 150);
-  for (let x = 10; x < SQUARE_W - 10; x += 9) if (!clear(x)) spots.push([x, 168, 5.5, 3.5]);
-  spots.forEach(([x, y, rx, ry], i) => {
-    bush(p, x, y, rx, ry, season);
-    if (season === 'autumn' && i % 5 === 2) pumpkin(p, x + rx - 1, y + ry + 1, 2.5, 2);
-  });
-}
-
-/** In winter some of the broadleaves are pines instead, so the edges stay dark and snowy. */
-const winterPine = (t: TreeSpot, i: number) => t.pine || i % 3 === 0;
-
-// ---------------------------------------------------------------- the front: wall, water, bridge
-
-function water(p: Pixmap, frozen: boolean): void {
-  for (let y = WATER_Y; y < SQUARE_H; y++) {
-    for (let x = 0; x < SQUARE_W; x++) {
-      if (y === WATER_Y) {
-        p.set(x, y, 'K');
-        continue;
-      }
-      if (frozen) {
-        const crack = valueNoise(x, y * 4, 5, 71) > 0.7;
-        p.set(x, y, crack ? 'x' : cellRandom(x >> 2, y, 72) > 0.8 ? 'm' : 'e');
-        continue;
-      }
-      const ripple = cellRandom(Math.floor((x + y * 3) / 4), y, 73) > 0.82;
-      p.set(x, y, ripple ? 'u' : y === WATER_Y + 1 ? 'K' : 'z');
-    }
-  }
-  // The moon on the water, broken into dashes.
-  if (!frozen) for (const [x, y, w] of [[60, 177, 3], [64, 178, 2], [100, 178, 2], [232, 177, 2], [236, 179, 3], [290, 178, 2]] as const) p.hline(x, x + w - 1, y, 'X');
-}
-
-function wall(p: Pixmap, x0: number, x1: number): void {
-  for (let x = x0; x <= x1; x++) {
-    // Coping stones on top, then the face down to the water.
-    const cap = Math.floor(x / 8);
-    const capJoint = x % 8 === 0;
-    const tone = cellRandom(cap, 1, 74) > 0.5;
-    p.set(x, WALL_Y, capJoint ? 'S' : tone ? 'e' : 'S');
-    p.set(x, WALL_Y + 1, capJoint ? 's' : 'S');
-    p.set(x, WALL_Y + 2, 'k');
-    for (let y = WALL_Y + 3; y < WATER_Y; y++) p.set(x, y, (x + (y - WALL_Y) * 3) % 6 === 0 ? 'k' : 'q');
-  }
-}
-
-function bridge(p: Pixmap, snowy: boolean): void {
-  const { x: bx, w } = EXIT;
-  const y0 = WALL_Y - 3;
-  // Planks across the way, over the gap in the wall.
-  for (let y = y0; y < SQUARE_H; y++) {
-    const r = (y - y0) % 3;
-    for (let x = bx; x < bx + w; x++) {
-      const plank = Math.floor((y - y0) / 3);
-      const end = (x - bx + plank * 7) % 13 === 0;
-      p.set(x, y, r === 2 ? 'b' : end ? 'b' : r === 0 ? 'n' : 'B');
-    }
-  }
-  if (snowy) for (let x = bx; x < bx + w; x++) for (let y = y0; y < SQUARE_H; y += 3) if (cellRandom(x, y, 78) > 0.75 && (x < bx + 6 || x > bx + w - 7)) p.set(x, y, 'm');
-  // Rails and posts either side.
-  for (const rx of [bx, bx + w - 1]) {
-    for (let y = y0; y < SQUARE_H; y++) p.set(rx, y, 'k');
-    for (const py of [y0 - 1, SQUARE_H - 4]) {
-      p.fillRect(rx - 1, py, 3, 3, 'B').hline(rx - 1, rx + 1, py, snowy ? 'm' : 'n').set(rx + 1, py + 2, 'b');
-    }
-  }
-  // Pillars where the wall meets the bridge.
-  for (const px of [bx - 5, bx + w + 1]) {
-    p.fillRect(px, WALL_Y - 3, 4, 2, snowy ? 'm' : 'e').fillRect(px, WALL_Y - 1, 4, 3, 'S').fillRect(px, WALL_Y + 2, 4, WATER_Y - WALL_Y - 2, 's');
-    p.set(px + 3, WALL_Y - 1, 's').set(px + 3, WALL_Y, 's');
-  }
-}
-
-/** The side edges: a low drystone wall under the trees. */
-function sides(p: Pixmap): void {
-  for (let y = 30; y < WALL_Y + 2; y++) {
-    const block = Math.floor(y / 6);
-    const joint = y % 6 === 0;
-    for (const [x0, dir] of [[0, 1], [SQUARE_W - 1, -1]] as const) {
-      p.set(x0, y, 'k');
-      for (let i = 1; i <= 3; i++) p.set(x0 + dir * i, y, joint ? 's' : i === 3 ? 'k' : cellRandom(block, x0, 79) > 0.5 ? 'e' : 'S');
-    }
-  }
-}
-
-// ---------------------------------------------------------------- seasonal dressing
-
-/** Spots along the house fronts (bottom at y 29) and on the wall's coping for tubs, pumpkins and bales. */
-const FRONT_SPOTS = [22, 78, 89, 135, 150, 167, 184, 229, 249, 296] as const;
-const WALL_SPOTS = [24, 62, 108, 214, 258, 298] as const;
+/** Shrubs and potted plants between the stalls and along the plaza's edge, as in the concepts. */
+const SHRUBS: readonly (readonly [number, number, number, number])[] = [
+  [101, 50, 5, 4], [217, 50, 5, 4], [104, 30, 4, 3], [214, 30, 4, 3], [176, 30, 4, 3], [144, 30, 4, 3], [52, 66, 4, 3], [262, 68, 4, 4],
+  [46, 106, 4, 4], [266, 106, 4, 4], [58, 140, 4, 3], [104, 140, 4, 3], [212, 142, 4, 3], [258, 142, 4, 3],
+  [44, 140, 5, 4], [196, 152, 6, 4], [232, 150, 5, 3],
+];
 
 function flowerTub(p: Pixmap, x: number, bottom: number, flowers: readonly PaletteKey[], leaf: PaletteKey = 'G'): void {
   p.fillRect(x, bottom - 3, 6, 3, 'B').hline(x, x + 5, bottom - 3, 'n').hline(x, x + 5, bottom - 1, 'b');
@@ -557,211 +684,133 @@ function pumpkin(p: Pixmap, cx: number, bottom: number, rx: number, ry: number):
   p.set(Math.round(cx), Math.floor(bottom - ry * 2) - 1, 'G');
 }
 
-function hayBale(p: Pixmap, x: number, bottom: number): void {
-  for (let y = bottom - 5; y < bottom; y++) for (let i = 0; i < 9; i++) flat(p, x + i, y, ['b', 'B', 'n', 'a'], 0.55 + (y === bottom - 5 ? 0.2 : 0) - (y - bottom + 5) * 0.08 + (cellRandom(x + i, y, 81) - 0.5) * 0.3);
-  for (let y = bottom - 5; y < bottom; y++) p.set(x + 3, y, 'b');
+// ---------------------------------------------------------------- snow
+
+/** How much snow lies here: deep everywhere off the paths people have trodden. */
+function snowCover(x: number, y: number, snowedIn: boolean): number {
+  const n = (fbm(x, y, 9, 91) - 0.5) * 0.6;
+  const c = (snowedIn ? 1.5 : 1.15) + n;
+  // Trodden paths: down both lanes, round the dais, to every stall and to the fire.
+  const r = Math.hypot(x - DAIS.x, (y - DAIS.y) * (DAIS.rx / DAIS.ry));
+  let clear = snowedIn ? smoothstep(DAIS.rx + 8, DAIS.rx, r) : smoothstep(9, 3, Math.abs(r - DAIS.rx - 3));
+  if (y > 104 || y < 44) clear = Math.max(clear, smoothstep(9, 2, Math.max(LANE.x0 - x, x - LANE.x1, 0)));
+  if (y > 160 && x > 80 && x < LANE.x0) clear = Math.max(clear, smoothstep(6, 1, Math.abs(y - 169)) * 0.9);
+  for (const h of HOMES) {
+    const z = h.zone;
+    const d = Math.hypot(Math.max(z.x - x, x - (z.x + z.w), 0), Math.max(z.y - y, y - (z.y + z.h), 0) * 1.3);
+    clear = Math.max(clear, smoothstep(snowedIn ? 8 : 12, 0, d));
+  }
+  return c - clear * (snowedIn ? 1.1 : 0.85);
 }
 
-function scatter(p: Pixmap, r: Rng, n: number, keys: readonly PaletteKey[], edgeBias: number, size = 1): void {
+/** Snow over the whole square, thinning to a dusting on the trodden paths; open water stays dark. */
+function groundSnow(p: Pixmap, snowedIn: boolean): void {
+  for (let y = 0; y < SQUARE_H; y++) {
+    for (let x = 0; x < SQUARE_W; x++) {
+      if (isWater(x, y) || (y >= STEPS_Y && x >= LANE.x0 && x <= LANE.x1)) continue;
+      // The house keeps its own snow on the roof.
+      if (HOUSES.some((h) => x >= h.x && x < h.x + h.w && y < 30)) continue;
+      const c = snowCover(x, y, snowedIn);
+      if (c < 0.15) {
+        if (keyAt(p, x, y) === 'k' && cellRandom(x, y, 99) < (snowedIn ? 0.45 : 0.15)) p.set(x, y, 'x');
+        continue;
+      }
+      if (c < 0.4) {
+        const k = keyAt(p, x, y);
+        if (k === 'k' || k === 'q' || dither(x, y) < (c - 0.15) * 1.2) p.set(x, y, c < 0.28 ? 'x' : 'X');
+        continue;
+      }
+      const lip = snowCover(x, y + 1, snowedIn) < 0.4;
+      const top = snowCover(x, y - 1, snowedIn) < 0.4;
+      p.set(x, y, lip ? 'x' : top ? 'e' : fbm(x, y, 4, 92) * 0.5 + moon(x, y) > 0.78 ? 'e' : 'X');
+    }
+  }
+}
+
+// ---------------------------------------------------------------- seasonal dressing
+
+/** Petals, leaves or grass scattered over the plaza, thicker toward its edges. */
+function scatter(p: Pixmap, r: Rng, n: number, keys: readonly PaletteKey[], size = 1): void {
   for (let i = 0; i < n; i++) {
-    const x = Math.floor(4 + rand(r) * (SQUARE_W - 8));
-    const y = Math.floor(31 + rand(r) * (WALL_Y - 32));
-    const edge = Math.max(0, 1 - Math.min(x - 4, SQUARE_W - 4 - x, y - 30, WALL_Y - y) / 40);
-    if (rand(r) > edge * edgeBias + (1 - edgeBias)) continue;
-    const k = pick(r, keys);
+    const x = Math.floor(rand(r) * SQUARE_W);
+    const y = Math.floor(rand(r) * SQUARE_H);
+    const k = keys[Math.floor(rand(r) * keys.length)]!;
+    const v = plaza(x, y);
+    if (v <= 0 || rand(r) < v * 1.4) continue;
     p.set(x, y, k);
     if (size > 1 && rand(r) > 0.5) p.set(x + 1, y, k);
   }
 }
 
-const smoothstep = (e0: number, e1: number, v: number) => {
-  const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0)));
-  return t * t * (3 - 2 * t);
-};
-
-/** How much snow lies here: deep at the edges and against the houses and wall, clear where people walk. */
-function snowCover(x: number, y: number, snowedIn: boolean): number {
-  const edge = Math.min(x, SQUARE_W - 1 - x, (y - 28) * 1.6, (WALL_Y - y) * 1.6);
-  const n = (fbm(x, y, 9, 91) - 0.5) * 0.8;
-  const c = (snowedIn ? 1.5 : 1.2) - edge / (snowedIn ? 120 : 220) + n;
-  // Trodden paths: round the well, down the lane, and in front of every stall.
-  // A ring trodden round the fountain; snowed in, the whole ring is dug out.
-  const r = Math.hypot(x - WELL_C.x, (y - WELL_C.y) * 1.4);
-  let clear = snowedIn ? smoothstep(66, 50, r) : smoothstep(10, 4, Math.abs(r - 44));
-  if (y > 110 || y < 60) clear = Math.max(clear, smoothstep(10, 2, Math.max(LANE.x0 - x, x - LANE.x1, 0)));
+/** Planters by the stalls: a tub of the season's flowers at the open end of each. */
+function planters(p: Pixmap, season: Season): void {
+  const flowers: readonly PaletteKey[] = season === 'spring' ? ['I', 'i', 'W'] : season === 'summer' ? ['y', 'W', 'i'] : season === 'autumn' ? ['o', 'y', 'R'] : ['m', 'W', 'e'];
   for (const h of HOMES) {
-    const z = h.zone;
-    const d = Math.hypot(Math.max(z.x - x, x - (z.x + z.w), 0), Math.max(z.y - y, y - (z.y + z.h), 0) * 1.3);
-    clear = Math.max(clear, smoothstep(snowedIn ? 10 : 14, 0, d));
-  }
-  return c - clear * (snowedIn ? 1.1 : 0.9);
-}
-
-function groundSnow(p: Pixmap, snowedIn: boolean): void {
-  for (let y = 28; y < WALL_Y + 2; y++) {
-    for (let x = 0; x < SQUARE_W; x++) {
-      const c = snowCover(x, y, snowedIn);
-      if (c < 0.15) {
-        // Even the trodden cobbles keep a little snow between them.
-        if (keyAt(p, x, y) === 'k' && cellRandom(x, y, 99) < (snowedIn ? 0.45 : 0.12)) p.set(x, y, 'x');
-        continue;
-      }
-      if (c < 0.4) {
-        // A dusting in the cobbles' hollows first.
-        const k = keyAt(p, x, y);
-        if (k === 'k' || dither(x, y) < (c - 0.15) * 1.2) p.set(x, y, c < 0.28 ? 'x' : 'X');
-        continue;
-      }
-      const lip = snowCover(x, y + 1, snowedIn) < 0.4;
-      const top = snowCover(x, y - 1, snowedIn) < 0.4;
-      p.set(x, y, lip ? 'x' : top ? 'm' : (fbm(x, y, 4, 92) + moon(x, y) * 0.4 > 0.5 ? 'e' : 'X'));
-    }
-  }
-  // Snow on the wall's coping.
-  for (let x = 0; x < SQUARE_W; x++) {
-    if (x >= EXIT.x - 6 && x < EXIT.x + EXIT.w + 6) continue;
-    const d = snowedIn ? 2 + Math.round(valueNoise(x, 0, 5, 93) * 2) : 1 + (valueNoise(x, 0, 4, 93) > 0.5 ? 1 : 0);
-    for (let j = 0; j < d; j++) p.set(x, WALL_Y + 2 - d + j - (snowedIn ? 1 : 0), j === 0 ? 'm' : 'e');
-  }
-}
-
-/** Puddles holding the moon, or ice in winter. */
-function puddles(p: Pixmap, frozen: boolean): void {
-  for (const [cx, cy, rx, ry] of [[62, 104, 6, 2.2], [238, 158, 5, 1.8], [104, 64, 4, 1.6], [214, 112, 3.5, 1.4]] as const) {
-    for (let y = Math.floor(cy - ry); y <= cy + ry; y++) {
-      for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
-        const d = Math.hypot((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry);
-        if (d > 1 + (valueNoise(x, y, 2, 98) - 0.5) * 0.4) continue;
-        p.set(x, y, frozen ? (d < 0.5 ? 'm' : 'e') : y < cy - ry * 0.3 ? 'Z' : 'z');
-      }
-    }
-    if (!frozen) p.hline(Math.round(cx - 1), Math.round(cx + 1), Math.round(cy), 'X').set(Math.round(cx + 2), Math.round(cy - 1), 'm');
+    if (h.kind !== 'stall') continue;
+    const left = h.at.x + h.size.w / 2 > SQUARE_W / 2;
+    const x = left ? h.at.x - 5 : h.at.x + h.size.w - 1;
+    flowerTub(p, x, h.at.y + h.size.h, flowers, season === 'winter' ? 'g' : 'G');
   }
 }
 
 function dressing(p: Pixmap, r: Rng, season: Season, snowedIn: boolean): void {
-  if (season === 'spring') {
-    scatter(p, r, 160, ['I', 'i', 'i', 'w'], 0.8);
-    FRONT_SPOTS.forEach((x, i) => {
-      if (i % 2 === 0) flowerTub(p, x - 2, 29, i % 4 === 0 ? ['I', 'i', 'W'] : ['y', 'W', 'I'], 'l');
-    });
-    WALL_SPOTS.forEach((x, i) => flowerTub(p, x, WALL_Y + 1, i % 2 ? ['I', 'W'] : ['i', 'y'], 'G'));
-  } else if (season === 'summer') {
-    // Grass in the gaps between cobbles near the edges.
-    for (let y = 30; y < WALL_Y; y++) {
-      for (let x = 4; x < SQUARE_W - 4; x++) {
-        const k = keyAt(p, x, y);
-        if (k !== 'K' && k !== 'k') continue;
-        const edge = Math.min(x - 4, SQUARE_W - 4 - x, y - 30, WALL_Y - y);
-        if (fbm(x, y, 7, 94) + (edge < 24 ? 0.12 : -0.1) > 0.74 && cellRandom(x, y, 97) > 0.35) p.set(x, y, cellRandom(x, y, 95) > 0.5 ? 'G' : 'g');
-      }
-    }
-    FRONT_SPOTS.forEach((x, i) => {
-      if (i % 3 === 0) flowerTub(p, x - 2, 29, ['l', 'L'], 'G');
-    });
-    WALL_SPOTS.forEach((x, i) => {
-      if (i % 2 === 0) flowerTub(p, x, WALL_Y + 1, ['y', 'W', 'i'], 'G');
-    });
-  } else if (season === 'autumn') {
-    scatter(p, r, 200, ['o', 'B', 'B', 'r', 'R'], 0.9, 2);
-    FRONT_SPOTS.forEach((x, i) => {
-      if (i % 3 === 1) hayBale(p, x - 4, 30);
-      else if (i % 3 === 0) {
-        pumpkin(p, x, 30, 3, 2.2);
-        pumpkin(p, x + 5, 30, 2, 1.6);
-      }
-    });
-    WALL_SPOTS.forEach((x, i) => {
-      if (i % 2 === 0) pumpkin(p, x + 3, WALL_Y + 1, 2.5, 2);
-    });
-  } else {
-    groundSnow(p, snowedIn);
-    // Snow banked against the house fronts.
-    for (let x = 0; x < SQUARE_W; x++) {
-      const d = (snowedIn ? 4 : 2) + Math.round(valueNoise(x, 5, 6, 96) * (snowedIn ? 3 : 1));
-      for (let j = 0; j < d; j++) p.set(x, 30 - d + j, j === 0 ? 'm' : j === d - 1 ? 'X' : 'e');
-    }
-  }
+  if (season === 'spring') scatter(p, r, 900, ['I', 'i', 'i', 'w']);
+  else if (season === 'summer') scatter(p, r, 500, ['G', 'g', 'l']);
+  else if (season === 'autumn') {
+    scatter(p, r, 1100, ['o', 'B', 'B', 'r', 'R', 'y'], 2);
+    // Pumpkins by the stalls, the fence and the flower beds.
+    for (const [x, b, rx, ry] of [[56, 70, 3, 2.2], [101, 56, 2.5, 2], [216, 56, 3, 2.2], [264, 72, 2.5, 2], [110, 146, 3, 2.2], [118, 148, 2, 1.6], [190, 150, 3, 2.2], [198, 152, 2.5, 2], [262, 106, 3, 2.2], [48, 138, 2.5, 2], [102, 160, 3, 2.2], [52, 172, 2.5, 2]] as const) pumpkin(p, x, b, rx, ry);
+  } else groundSnow(p, snowedIn);
 }
 
-// ---------------------------------------------------------------- rugs, lily pads, the way in
+// ---------------------------------------------------------------- the way in
 
 /** Fireflies drifting by the trees on summer nights; each gets a small glow. */
 const FIREFLIES: readonly (readonly [number, number])[] = [
-  [12, 52], [8, 128], [308, 82], [312, 140], [20, 160], [300, 160], [30, 36], [292, 38],
-  [18, 88], [24, 112], [296, 104], [304, 120], [10, 70], [314, 62], [60, 40], [262, 42], [70, 168], [252, 166],
+  [40, 50], [24, 90], [44, 120], [20, 146], [278, 60], [300, 92], [268, 130], [296, 150], [100, 22], [226, 22],
+  [52, 160], [120, 164], [200, 140], [240, 156], [284, 112], [16, 70], [258, 40], [88, 154],
 ];
 
-/** A rug's colours: its field, border and the diamonds through it. */
-const RUG_COLOURS: readonly (readonly [PaletteKey, PaletteKey, PaletteKey])[] = [
-  ['r', 'j', 'B'],
-  ['u', 'z', 'U'],
-  ['T', 'g', 't'],
-  ['p', 'k', 'P'],
-];
-
-/** A patterned rug laid on the stones in front of every stall, where you stand to trade. */
-function rugs(p: Pixmap): void {
-  HOMES.filter((h) => h.kind === 'stall').forEach((h, i) => {
-    const [field, border, figure] = RUG_COLOURS[i % RUG_COLOURS.length]!;
-    const x0 = h.zone.x + 2;
-    const y0 = h.zone.y - 1;
-    const w = h.zone.w - 4;
-    const ht = h.zone.h - 1;
-    for (let y = y0; y < y0 + ht; y++) {
-      for (let x = x0; x < x0 + w; x++) {
-        const bx = Math.min(x - x0, x0 + w - 1 - x);
-        const by = Math.min(y - y0, y0 + ht - 1 - y);
-        if (bx === 0 || by === 0) p.set(x, y, border);
-        else if (bx === 1 || by === 1) p.set(x, y, (x + y) % 3 === 0 ? 'n' : field);
-        else {
-          // One diamond medallion in the middle of a plain field.
-          const d = Math.abs(x + 0.5 - (x0 + w / 2)) / 2 + Math.abs(y + 0.5 - (y0 + ht / 2));
-          p.set(x, y, d < 1.5 ? 'n' : d < 2.5 ? figure : d < 3.3 ? border : field);
-        }
-      }
-    }
-    // Fringe at the ends.
-    for (let y = y0 + 1; y < y0 + ht - 1; y += 2) p.set(x0 - 1, y, 'a').set(x0 + w, y, 'a');
-  });
-}
-
-/** Lily pads on the water below the wall, with a flower or two in spring. */
-function lilyPads(p: Pixmap, season: Season): void {
-  for (const [x, y] of [[30, 178], [44, 177], [84, 178], [196, 177], [214, 178], [270, 177], [302, 178]] as const) {
-    p.hline(x, x + 2, y, 'G').set(x + 1, y + 1, 'g').set(x, y, 'l');
-    if (season === 'spring' && x % 3 === 0) p.set(x + 1, y - 1, 'I');
-  }
-}
-
-/** Where the way in's two banner poles stand, either side of the bridge. */
-const POLES = [EXIT.x - 5, EXIT.x + EXIT.w + 3] as const;
-const POLE_TOP = WALL_Y - 22;
-
-/** The way in: a pole either side of the bridge with a crescent banner and a lantern on top. */
-function entrance(p: Pixmap, season: Season): void {
+/** The gate: a pole either side of the lane with a crescent banner and a lantern, bunting strung between. */
+function gate(p: Pixmap, season: Season): void {
   const winter = season === 'winter';
   for (const px of POLES) {
-    for (let y = POLE_TOP; y < WALL_Y; y++) p.set(px, y, 'b').set(px + 1, y, 'B');
+    for (let y = POLE_TOP; y < STEPS_Y; y++) p.set(px, y, 'b').set(px + 1, y, 'B');
     p.hline(px - 3, px + 4, POLE_TOP + 2, 'b');
-    // The banner: deep blue, a pale crescent, a pointed foot.
-    for (let y = POLE_TOP + 3; y < POLE_TOP + 15; y++) {
+    // The banner: deep blue, a pale crescent and a star, a pointed foot.
+    for (let y = POLE_TOP + 3; y < POLE_TOP + 17; y++) {
       for (let x = px - 3; x <= px + 4; x++) {
-        const foot = y - (POLE_TOP + 12);
+        const foot = y - (POLE_TOP + 14);
         if (foot > 0 && Math.abs(x - px - 0.5) < foot * 1.3) continue;
         p.set(x, y, x === px - 3 || x === px + 4 ? 'z' : 'u');
       }
     }
-    for (const [dx, dy] of [[0, 6], [-1, 7], [-1, 8], [-1, 9], [0, 10], [1, 6], [1, 10]] as const) p.set(px + dx, POLE_TOP + dy, 'm');
-    p.set(px + 2, POLE_TOP + 4, 'y');
+    for (const [dx, dy] of [[0, 7], [-1, 8], [-1, 9], [-1, 10], [0, 11], [1, 7], [1, 11]] as const) p.set(px + dx, POLE_TOP + dy, 'm');
+    p.set(px + 1, POLE_TOP + 4, 'n').set(px, POLE_TOP + 13, 'n');
     if (winter) p.hline(px - 3, px + 4, POLE_TOP + 3, 'm');
     lanternPx(p, px, POLE_TOP - 2, true);
   }
+  // Bunting: a sagging rope between the poles, little flags hanging from it, two lanterns.
+  const [a, b] = POLES;
+  const flags: readonly PaletteKey[] = ['n', 'u', 'r', 'G'];
+  for (let x = a + 2; x < b; x++) {
+    const t = (x - a) / (b - a);
+    const y = POLE_TOP + 1 + Math.round(Math.sin(t * Math.PI) * 4);
+    p.set(x, y, 'k');
+    const f = Math.floor((x - a - 2) / 5);
+    const fx = (x - a - 2) % 5;
+    if (fx < 3 && f % 1 === 0) {
+      const k = flags[f % flags.length]!;
+      p.set(x, y + 1, k);
+      if (fx === 1) p.set(x, y + 2, k);
+    }
+  }
+  for (const lx of [a + 12, b - 11]) lanternPx(p, lx, POLE_TOP + 6, true);
 }
 
 // ---------------------------------------------------------------- the square
 
-/** The square without its stalls/well/rug/fire: ground, houses, trees, wall, water, bridge, seasonal dressing. 320x180. */
+/** The square without its stalls, fountain, cart or fire: ground, house, water, trees, beds and the gate. 320x180. */
 export function squareGround(opts: SquareOptions, seed = 'elmbrook-square'): Pixmap {
   const { season } = opts;
   const snowedIn = opts.snowedIn && season === 'winter';
@@ -769,22 +818,22 @@ export function squareGround(opts: SquareOptions, seed = 'elmbrook-square'): Pix
   const p = new Pixmap(SQUARE_W, SQUARE_H);
   const r: Rng = { s: seedRng(seed) };
 
+  garden(p, season);
   cobbles(p, snowedIn);
-  paving(p, snowedIn);
-  lane(p, snowedIn);
-  // A soft shadow under the eaves.
-  for (let x = 0; x < SQUARE_W; x++) for (let y = 30; y < 34; y++) if (dither(x, y) < (34 - y) / 5) darken(p, x, y);
-
+  lanes(p, snowedIn);
+  dais(p, snowedIn);
   for (const h of HOUSES) house(p, h, winter);
-  sides(p);
-  water(p, snowedIn);
-  wall(p, 0, EXIT.x - 1);
-  wall(p, EXIT.x + EXIT.w, SQUARE_W - 1);
-  bridge(p, winter);
-  if (!snowedIn) puddles(p, winter);
-  rugs(p);
-  if (!winter) lilyPads(p, season);
+  water(p, season, snowedIn);
+  steps(p, winter);
+  for (const g of RUGS) rug(p, g.x, g.y, g.w, g.h, RUG_LOOK[g.look]!);
+  // Log benches round the fire pit.
+  for (const [x, y, w] of [[60, 172, 12], [44, 158, 4]] as const) p.fillRect(x, y, w, 3, 'B').hline(x, x + w - 1, y, 'n').hline(x, x + w - 1, y + 2, 'b').set(x + w - 1, y + 1, 'a');
   dressing(p, r, season, snowedIn);
+  bed(p, 104, 147, 144, 160, season);
+  bed(p, 178, 147, 214, 157, season);
+  fence(p, 46, 142, 145, winter);
+  fence(p, 180, 230, 146, winter);
+  planters(p, season);
 
   // The night closes in at the edges; lamplight never darkens.
   for (let y = 0; y < SQUARE_H; y++) {
@@ -793,19 +842,18 @@ export function squareGround(opts: SquareOptions, seed = 'elmbrook-square'): Pix
       const steps = Math.min(1, Math.floor(v + dither(x, y)));
       if (steps <= 0) continue;
       const k = keyAt(p, x, y);
-      if (!k || k === 'y' || k === 'Y' || k === 'o' || k === 'L' || (winter && (k === 'm' || k === 'e'))) continue;
+      if (!k || k === 'y' || k === 'Y' || k === 'o' || k === 'L') continue;
       darken(p, x, y, steps);
     }
   }
   // Shrubs and trees last, over the darkened edges, so they stand out against them.
-  hedges(p, season);
+  for (const [x, y, rx, ry] of SHRUBS) bush(p, x, y, rx, ry, season);
   TREES.forEach((t, i) => {
     if (t.pine || (winter && winterPine(t, i))) pineTree(p, t.x, t.base, Math.max(t.size, 18), season);
     else broadleaf(p, r, t.x, t.base, t.size, season);
   });
-  // Summer's fireflies, over the trees.
   if (season === 'summer') for (const [x, y] of FIREFLIES) p.set(x, y, 'L').set(x + 1, y, 'Y');
-  entrance(p, season);
+  gate(p, season);
   return p;
 }
 
@@ -839,11 +887,23 @@ const RESIDENT: Partial<Record<HomeId, string>> = {
   tailor: 'hollow-tailor',
 };
 
+/** The figure on each home's cloth, as in the concepts: a crescent, a row of moons, hanging stars. */
+const MOTIF: Partial<Record<HomeId, 'crescent' | 'moons' | 'hanging' | 'stars' | 'plain'>> = {
+  lantern: 'crescent',
+  fortune: 'moons',
+  name: 'hanging',
+  fence: 'crescent',
+  west: 'plain',
+  east: 'hanging',
+  moth: 'stars',
+  tailor: 'moons',
+};
+
 const homeOf = (id: HomeId): Home => HOMES.find((h) => h.id === id)!;
 
-/** Where a stall's one lantern hangs in its sprite: at the end nearer the middle of the square. */
+/** Where a stall's lantern hangs in its sprite: off the post nearer the middle of the square. */
 function stallLantern(h: Home): { x: number; y: number } {
-  return { x: h.at.x + h.size.w / 2 < SQUARE_W / 2 ? 33 : 6, y: 15 };
+  return { x: h.at.x + h.size.w / 2 < SQUARE_W / 2 ? 38 : 1, y: 12 };
 }
 
 function lanternPx(p: Pixmap, x: number, y: number, lit: boolean): void {
@@ -854,6 +914,45 @@ function lanternPx(p: Pixmap, x: number, y: number, lit: boolean): void {
   p.hline(x - 1, x + 1, y + 3, 'k');
 }
 
+/** The cloth's figure in a pale thread, over the cloth between x 4 and 35, y 5 and 13. */
+function motif(p: Pixmap, kind: 'crescent' | 'moons' | 'hanging' | 'stars' | 'plain', thread: PaletteKey): void {
+  if (kind === 'crescent') {
+    for (let y = 4; y < 14; y++) {
+      for (let x = 14; x < 26; x++) {
+        const o = Math.hypot(x + 0.5 - 19.5, y + 0.5 - 9);
+        const i = Math.hypot(x + 0.5 - 21.5, y + 0.5 - 8);
+        if (o <= 4 && i > 3.4) p.set(x, y, thread);
+      }
+    }
+    for (const [x, y] of [[9, 7], [29, 7], [12, 11], [27, 11], [24, 6]] as const) p.set(x, y, thread).set(x - 1, y, thread).set(x + 1, y, thread).set(x, y - 1, thread).set(x, y + 1, thread);
+  } else if (kind === 'moons') {
+    // A waxing crescent, a half, a full moon, a half and a waning crescent.
+    [7, 13, 20, 27, 33].forEach((cx, i) => {
+      for (let y = 6; y < 12; y++) {
+        for (let x = cx - 3; x <= cx + 3; x++) {
+          const d = Math.hypot(x + 0.5 - (cx + 0.5), y + 0.5 - 9);
+          if (d > 2.6) continue;
+          const lit = i === 2 || (i < 2 ? x - cx > (i === 0 ? 0.5 : -0.5) : x - cx < (i === 4 ? -0.5 : 0.5));
+          if (lit || d > 1.8) p.set(x, y, thread);
+        }
+      }
+    });
+  } else if (kind === 'hanging') {
+    for (const x of [9, 16, 23, 30]) {
+      for (let y = 5; y < 10 + (x % 3); y++) p.set(x, y, thread);
+      const y = 10 + (x % 3);
+      p.set(x, y, thread).set(x - 1, y, thread).set(x + 1, y, thread).set(x, y - 1, thread).set(x, y + 1, thread);
+    }
+  } else if (kind === 'stars') {
+    const pts = [[7, 9], [12, 6], [18, 10], [24, 7], [30, 11], [33, 6]] as const;
+    pts.forEach(([x, y], i) => {
+      p.set(x, y, thread).set(x - 1, y, thread).set(x + 1, y, thread).set(x, y - 1, thread).set(x, y + 1, thread);
+      const next = pts[i + 1];
+      if (next) for (let s = 1; s < 4; s++) p.set(Math.round(x + ((next[0] - x) * s) / 4), Math.round(y + ((next[1] - y) * s) / 4), thread);
+    });
+  }
+}
+
 function stall(h: Home, opts: SquareOptions & { open: boolean; stall: string | null }): Pixmap {
   const W = 40;
   const p = new Pixmap(W, 32);
@@ -862,76 +961,61 @@ function stall(h: Home, opts: SquareOptions & { open: boolean; stall: string | n
   const open = opts.open && !!opts.stall;
   if (!open) c = { dark: DARKER[c.dark], base: c.dark, light: c.base };
   const lantern = stallLantern(h);
+  const sag = (x: number) => Math.round(Math.sin((Math.PI * (x - 3)) / 33) * 2.5);
 
   // Shadow on the cobbles.
   for (let x = 1; x < W - 1; x++) {
     if ((x & 1) === 0) p.set(x, 30, 'K');
     if (x % 4 === 1) p.set(x, 31, 'K');
   }
-  // Posts.
-  for (const px of [1, W - 3]) for (let y = open ? 9 : 2; y < 30; y++) p.set(px, y, 'B').set(px + 1, y, 'b');
-  // The dark inside, and the back boards.
-  for (let y = 10; y < 19; y++) for (let x = 3; x < W - 3; x++) p.set(x, y, y < 12 ? 'K' : (x % 5 === 0 ? 'K' : 'k'));
-
-  if (open) {
-    // The awning: stripes sloping toward you, scalloped at the front.
-    for (let y = 0; y < 13; y++) {
-      const inset = y < 2 ? 2 - y : 0;
-      for (let x = inset; x < W - inset; x++) {
-        const stripe = Math.floor((x - 2) / 4) & 1;
-        if (y >= 10) {
-          const s = (x - 2) & 3;
-          if (y === 11 && s === 3) continue;
-          if (y === 12 && s !== 1 && s !== 2) continue;
-          p.set(x, y, y === 12 ? c.dark : stripe ? c.base : c.light);
-          continue;
-        }
-        const far = y < 3 || x < 2 || x > W - 3;
-        p.set(x, y, stripe ? (far ? c.dark : c.base) : far ? c.base : c.light);
-      }
-      p.set(inset, y, 'k').set(W - 1 - inset, y, 'k');
-    }
-    p.hline(2, W - 3, 0, 'k');
-    p.hline(0, W - 1, 9, c.dark);
-  } else {
-    // Rolled up: a fat roll of canvas over the bare frame.
-    p.hline(1, W - 2, 3, 'b');
-    for (let x = 0; x < W; x++) {
-      p.set(x, 0, 'k').set(x, 1, c.light).set(x, 2, c.base).set(x, 3, c.dark).set(x, 4, 'k');
-      if (x % 6 === 0) p.set(x, 2, c.dark);
-    }
-    for (const tx of [9, W - 10]) p.set(tx, 1, 'B').set(tx, 2, 'b').set(tx, 3, 'B');
-    for (let y = 5; y < 10; y++) for (let x = 3; x < W - 3; x++) p.set(x, y, x % 7 === 0 ? 'b' : 'K');
+  // The dark inside, a shelf of jars at the back.
+  for (let y = 8; y < 20; y++) for (let x = 4; x < W - 4; x++) p.set(x, y, y < 12 ? 'K' : x % 6 === 0 ? 'K' : 'k');
+  p.hline(5, W - 6, 15, 'b');
+  for (let x = 7; x < W - 7; x += 4) p.set(x, 14, cellRandom(x, h.at.x, 105) > 0.5 ? 'u' : 'B').set(x, 13, 'k');
+  // Posts, with a knob on top.
+  for (const px of [3, W - 5]) {
+    for (let y = 3; y < 30; y++) p.set(px, y, 'B').set(px + 1, y, 'b');
+    p.set(px, 2, 'n').set(px + 1, 2, 'B');
   }
 
   if (open) {
-    // The counter: a lamplit top with the wares on it, a cloth in the stall's colour down the front.
-    for (let y = 19; y < 23; y++) for (let x = 2; x < W - 2; x++) {
+    // The cloth: hung from a rod between the posts, sagging in the middle, a pale figure on it.
+    p.hline(1, W - 2, 3, 'b');
+    for (let x = 2; x < W - 2; x++) {
+      const bottom = 12 + sag(x);
+      for (let y = 4; y <= bottom; y++) {
+        const fold = (x - 2) % 9 === 0;
+        const t = y === bottom ? c.dark : fold ? c.dark : x < W / 2 && y < 8 ? c.light : c.base;
+        p.set(x, y, t);
+      }
+    }
+    motif(p, MOTIF[h.id] ?? 'plain', 'a');
+    // Tone the figure down where it crosses a fold, so it sits in the cloth.
+    for (let x = 2; x < W - 2; x++) if ((x - 2) % 9 === 0) for (let y = 4; y < 14; y++) if (keyAt(p, x, y) === 'a') p.set(x, y, 'n');
+    // The table: a lamplit top with the wares on it, plank front, legs.
+    for (let y = 19; y < 22; y++) for (let x = 3; x < W - 3; x++) {
       const near = 1 - Math.min(1, Math.abs(x - lantern.x) / 30);
       flat(p, x, y, WOOD, 0.4 + near * 0.3 + (y === 19 ? 0.12 : 0) - (y - 19) * 0.04);
     }
-    for (let y = 23; y < 30; y++) for (let x = 2; x < W - 2; x++) {
-      if (y < 27) p.set(x, y, y === 26 && x % 2 ? c.dark : (x - 2) % 8 < 4 ? c.base : c.light);
-      else flat(p, x, y, WOOD, 0.25 + (x % 5 === 0 ? -0.15 : 0));
-    }
-    p.hline(2, W - 3, 23, c.dark);
-    p.hline(2, W - 3, 29, 'k');
+    for (let y = 22; y < 28; y++) for (let x = 3; x < W - 3; x++) flat(p, x, y, WOOD, (x - 3) % 6 === 0 ? 0.1 : 0.3 - (y - 22) * 0.02);
+    p.hline(3, W - 4, 22, 'k');
+    for (const lx of [4, W - 6]) p.fillRect(lx, 28, 2, 2, 'b');
     wares(p, opts.stall!, opts.season);
+    // A crate at the foot of the table, by the lantern's post.
+    const cx = lantern.x > W / 2 ? W - 11 : 4;
+    p.fillRect(cx, 24, 7, 6, 'B').strokeRect(cx, 24, 7, 6, 'b').hline(cx, cx + 6, 24, 'n').set(cx + 3, 26, 'b');
     lanternPx(p, lantern.x, lantern.y, true);
   } else {
-    // Boarded up.
-    for (let y = 14; y < 30; y++) {
-      const plank = Math.floor((y - 14) / 4);
-      for (let x = 2; x < W - 2; x++) {
-        const gap = (y - 14) % 4 === 3;
-        flat(p, x, y, WOOD, gap ? 0.08 : 0.22 + (cellRandom(plank, Math.floor(x / 9), 101) - 0.5) * 0.12 + ((y - 14) % 4 === 0 ? 0.06 : 0));
+    // Shut: the cloth rolled up on its rod, a tarp roped down over the table.
+    for (let x = 1; x < W - 1; x++) p.set(x, 3, 'k').set(x, 4, c.light).set(x, 5, c.base).set(x, 6, 'k');
+    for (let y = 11; y < 30; y++) {
+      const inset = y < 13 ? 13 - y : 0;
+      for (let x = 2 + inset; x < W - 2 - inset; x++) {
+        const fold = Math.sin((x + y * 0.4) / 2.2) > 0.75;
+        p.set(x, y, y === 11 + 0 && inset > 0 ? 'k' : fold ? 'k' : y < 15 ? c.light : y > 26 ? 'k' : c.base);
       }
     }
-    for (let x = 4; x < W - 4; x++) {
-      const y = 15 + Math.round(((x - 4) / (W - 8)) * 12);
-      p.set(x, y, 'B').set(x, y + 1, 'b');
-    }
-    for (const nx of [4, W - 5]) for (const ny of [15, 27]) p.set(nx, ny, 'S');
+    for (const tx of [9, W - 10]) for (let y = 11; y < 29; y++) p.set(tx, y, y % 3 ? 'b' : 'B');
   }
 
   stallSeason(p, opts, open);
@@ -1046,24 +1130,27 @@ function wares(p: Pixmap, id: string, season: Season): void {
   if (season === 'autumn' && id !== 'harvest-auction') p.set(4, top - 1, 'o').set(35, top, 'R');
 }
 
-/** Cheap seasonal touches on a stall: petals, a leaf, snow on the canopy. */
+/** Cheap seasonal touches on a stall: petals, a leaf, snow on whatever is on top. */
 function stallSeason(p: Pixmap, opts: SquareOptions, open: boolean): void {
   const W = p.width;
-  if (opts.season === 'spring') for (const [x, y] of [[7, 3], [26, 6], [15, 8]] as const) p.set(x, open ? y : 2, 'I');
-  if (opts.season === 'autumn') for (const [x, y] of [[9, 4], [30, 7]] as const) p.set(x, open ? y : 1, 'o').set(x + 1, open ? y : 1, 'R');
+  if (opts.season === 'spring') for (const [x, y] of [[7, 5], [26, 8], [15, 10]] as const) p.set(x, open ? y : 4, 'I');
+  if (opts.season === 'autumn') for (const [x, y] of [[9, 6], [30, 9]] as const) p.set(x, open ? y : 5, 'o').set(x + 1, open ? y : 5, 'R');
   if (opts.season !== 'winter') return;
   const deep = opts.snowedIn;
   for (let x = 0; x < W; x++) {
-    const d = deep ? 3 + Math.round(valueNoise(x, 0, 5, 102) * 4) + (open ? 0 : 1) : 1 + (valueNoise(x, 0, 4, 103) > 0.6 ? 1 : 0);
-    const y0 = open ? (x < 2 || x > W - 3 ? 2 : 0) : 0;
+    let y0 = 0;
+    while (y0 < 28 && !p.isSet(x, y0)) y0++;
+    if (y0 >= 28) continue;
+    const d = deep ? 3 + Math.round(valueNoise(x, 0, 5, 102) * 4) + (open ? 0 : 1) : 1 + (valueNoise(x, 0, 4, 103) > 0.5 ? 1 : 0) + (open ? 0 : 1);
     for (let j = 0; j < d; j++) {
       const y = y0 + j;
-      if (!p.isSet(x, y) && j > 0) continue;
+      if (!p.isSet(x, y)) break;
       snowPx(p, x, y, 0.75 - j * 0.07 + (x < W / 2 ? 0.05 : 0));
     }
+    // The shut tarps carry a full blanket, as in the winter concept.
+    if (!open) for (let y = 11; y < 22; y++) if (p.isSet(x, y) && cellRandom(x, y, 106) > (deep ? 0.05 : 0.35)) snowPx(p, x, y, 0.6 + (y < 14 ? 0.15 : 0));
   }
   if (deep) {
-    // Drifts banked against the counter.
     for (let x = 0; x < W; x++) {
       const d = 2 + Math.round(valueNoise(x, 4, 5, 104) * 3);
       for (let j = 0; j < d; j++) snowPx(p, x, 30 - j, 0.55 + (j === d - 1 ? 0.2 : 0));
@@ -1071,154 +1158,118 @@ function stallSeason(p: Pixmap, opts: SquareOptions, open: boolean): void {
   }
 }
 
-// ---------------------------------------------------------------- the well, the rug, the fire pit
+// ---------------------------------------------------------------- the fountain, the cart, the fire pit
 
+/** Where the fountain's orb glows in its sprite. */
+const ORB = { x: 28, y: 13 };
+
+/** The moon fountain on its dais: three round steps, potted plants, a glowing orb, a gold crescent. 56x52. */
 function well(opts: SquareOptions & { open: boolean }): Pixmap {
-  const p = new Pixmap(56, 48);
+  const p = new Pixmap(56, 52);
   const cx = 28;
-  const cy = 30;
   const frozen = opts.snowedIn && opts.season === 'winter';
   const winter = opts.season === 'winter';
-  // The basin: a ring of dressed stone, its outer face dropping to the paving.
-  for (let y = 16; y < 48; y++) {
-    for (let x = 0; x < 56; x++) {
-      const dx = (x + 0.5 - cx) / 25;
-      const dyTop = (y + 0.5 - cy) / 11;
-      const inOuter = dx * dx + dyTop * dyTop <= 1;
-      // The front face: the lower half of the ellipse pushed down 6px.
-      const dyFace = (y + 0.5 - (cy + 6)) / 11;
-      const inFace = !inOuter && y > cy && dx * dx + dyFace * dyFace <= 1;
-      if (inFace) {
-        const course = Math.floor((y - cy) / 3);
-        const joint = (y - cy) % 3 === 0 || Math.floor((x + course * 4) / 8) !== Math.floor((x + 1 + course * 4) / 8);
-        p.set(x, y, joint ? 'k' : dx < -0.55 ? 'S' : 's');
-        continue;
+  // The steps, bottom to top: each a round top face over a short front face.
+  for (const [cy, rx, ry] of [[40, 26, 10], [34, 19, 7.5], [28, 12, 5]] as const) {
+    for (let y = Math.floor(cy - ry); y <= cy + ry + 3; y++) {
+      for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
+        const dx = (x + 0.5 - cx) / rx;
+        const top = dx * dx + ((y + 0.5 - cy) / ry) ** 2 <= 1;
+        const face = !top && y > cy && dx * dx + ((y + 0.5 - (cy + 3)) / ry) ** 2 <= 1;
+        if (face) {
+          const block = Math.floor((x + (y % 2) * 3) / 6);
+          p.set(x, y, (x + (y % 2) * 3) % 6 === 0 ? 'k' : y === Math.floor(cy + ry + 3) ? 'k' : cellRandom(block, cy, 115) > 0.5 ? 's' : 'S');
+          continue;
+        }
+        if (!top) continue;
+        const a = Math.atan2(y + 0.5 - cy, x + 0.5 - cx);
+        const block = Math.floor(((a + Math.PI) / (Math.PI * 2)) * (rx > 20 ? 22 : 14));
+        const joint = Math.floor(((Math.atan2(y + 0.5 - cy, x + 1.5 - cx) + Math.PI) / (Math.PI * 2)) * (rx > 20 ? 22 : 14)) !== block;
+        const rim = dx * dx + ((y + 0.5 - cy) / ry) ** 2 > 0.7;
+        if (winter && !joint && cellRandom(block, rx, 113) > (frozen ? 0.05 : 0.3)) p.set(x, y, rim ? 'e' : 'm');
+        else p.set(x, y, joint && rim ? 'k' : rim ? (x < cx ? 'e' : 'S') : cellRandom(block, rx, 112) > 0.5 ? 'S' : 's');
       }
-      if (!inOuter) continue;
-      const ix = (x + 0.5 - cx) / 20;
-      const iy = (y + 0.5 - (cy - 1)) / 7.5;
-      if (ix * ix + iy * iy <= 1) {
-        // The water inside.
-        const d = Math.hypot(ix, iy);
-        const lip = iy < 0 && d > 0.78;
-        if (frozen) p.set(x, y, lip ? 'X' : valueNoise(x, y * 3, 4, 111) > 0.68 ? 'm' : 'e');
-        else p.set(x, y, lip ? 'K' : Math.abs(d - 0.62) < 0.05 || Math.abs(d - 0.36) < 0.06 ? 'u' : 'z');
-        continue;
-      }
-      // The rim's top, paler toward the moon.
-      const a = Math.atan2(y + 0.5 - cy, x + 0.5 - cx);
-      const block = Math.floor(((a + Math.PI) / (Math.PI * 2)) * 18);
-      const joint = Math.floor(((Math.atan2(y + 0.5 - cy, x + 1.5 - cx) + Math.PI) / (Math.PI * 2)) * 18) !== block;
-      const outerEdge = dx * dx + dyTop * dyTop > 0.86;
-      if (winter && y < cy + 2 && !joint && cellRandom(block, 1, 113) > (frozen ? 0.05 : 0.4)) p.set(x, y, outerEdge ? 'e' : 'm');
-      else p.set(x, y, joint ? 's' : outerEdge && y > cy ? 'S' : cellRandom(block, 0, 112) > 0.5 || x < cx - 14 ? 'e' : 'S');
     }
   }
-  if (!frozen) p.hline(cx - 11, cx - 9, cy + 2, 'X').set(cx - 10, cy + 3, 'm');
-  // The column, the upper bowl and the crescent moon on top.
-  for (let y = 12; y < cy + 2; y++) for (let x = cx - 2; x <= cx + 2; x++) flat(p, x, y, STONE, 0.42 + (cx - x) * 0.06 + (y % 4 === 0 ? -0.1 : 0));
-  p.fillEllipse(cx, cy + 1, 4, 1.5, 'k');
-  for (let y = 9; y < 15; y++) {
+  // The pedestal and the bowl that holds the orb.
+  for (let y = 16; y < 30; y++) for (let x = cx - 3; x <= cx + 3; x++) flat(p, x, y, STONE, 0.42 + (cx - x) * 0.06 + (y % 4 === 0 ? -0.1 : 0));
+  for (let y = 16; y < 22; y++) {
     for (let x = cx - 8; x <= cx + 8; x++) {
       const dx = (x + 0.5 - cx) / 8;
-      const dy = (y + 0.5 - 11) / 2.6;
+      const dy = (y + 0.5 - 18) / 2.8;
       if (dx * dx + dy * dy > 1) continue;
-      const rim = dx * dx + dy * dy > 0.55;
-      if (rim || y > 11) flat(p, x, y, STONE, 0.5 + (cx - x) * 0.02 - (y - 9) * 0.04);
-      else p.set(x, y, frozen ? 'e' : 'u');
+      flat(p, x, y, STONE, 0.5 + (cx - x) * 0.02 - (y - 16) * 0.05);
     }
   }
-  if (winter) for (let x = cx - 7; x <= cx + 7; x++) if (cellRandom(x, 1, 114) > 0.3) p.set(x, 9, 'm');
-  if (winter) for (const x of [cx - 6, cx - 2, cx + 3, cx + 6]) p.set(x, 15, 'c').set(x, 16, x % 2 ? 'c' : 'm');
-  else for (const [x, y] of [[cx - 7, 16], [cx + 7, 17], [cx - 8, 19], [cx + 8, 21], [cx - 8, 23]] as const) p.set(x, y, 'c');
-  // The crescent.
-  for (let y = 0; y < 9; y++) {
+  if (winter) for (let x = cx - 7; x <= cx + 7; x++) if (cellRandom(x, 1, 114) > 0.3) p.set(x, 16, 'm');
+  // The orb: deep blue at the rim to pale at the heart, a glint top-left.
+  for (let y = ORB.y - 6; y <= ORB.y + 6; y++) {
+    for (let x = ORB.x - 6; x <= ORB.x + 6; x++) {
+      const d = Math.hypot(x + 0.5 - (ORB.x + 0.5), y + 0.5 - (ORB.y + 0.5));
+      if (d > 5.6) continue;
+      const swirl = Math.sin((x - ORB.x) * 0.9 + (y - ORB.y) * 1.3) > 0.6;
+      p.set(x, y, d > 4.8 ? 'u' : d < 2 ? 'c' : swirl ? 'c' : 'U');
+    }
+  }
+  p.set(ORB.x - 2, ORB.y - 3, 'W').set(ORB.x - 3, ORB.y - 2, 'W').set(ORB.x - 2, ORB.y - 2, 'c');
+  // The gold crescent above it.
+  for (let y = 0; y < 8; y++) {
     for (let x = cx - 4; x <= cx + 4; x++) {
-      const o = Math.hypot(x + 0.5 - cx, y + 0.5 - 4.5);
-      const i = Math.hypot(x + 0.5 - (cx + 1.8), y + 0.5 - 3.6);
-      if (o <= 4.2 && i > 3.3) p.set(x, y, o > 3.4 ? 'n' : 'w');
+      const o = Math.hypot(x + 0.5 - cx, y + 0.5 - 4);
+      const i = Math.hypot(x + 0.5 - (cx + 1.8), y + 0.5 - 3.1);
+      if (o <= 3.9 && i > 3.1) p.set(x, y, o > 3.2 ? 'n' : 'y');
     }
   }
-  p.set(cx, 8, 'S').set(cx, 9, 'S');
-  // Planters either side of the basin.
-  for (const x of [5, 50]) {
-    p.fillRect(x - 3, 40, 7, 6, 'B').hline(x - 3, x + 3, 40, 'n').hline(x - 3, x + 3, 45, 'b');
-    for (let y = 41; y < 45; y++) p.set(x + 3, y, 'b');
-    bush(p, x, 37, 4.5, 3.5, opts.season);
+  // Potted plants round the middle step, and two little lanterns at the foot.
+  for (const [x, y] of [[11, 33], [45, 33], [17, 40], [39, 40]] as const) {
+    p.fillRect(x - 3, y, 7, 4, 'B').hline(x - 3, x + 3, y, 'n').hline(x - 3, x + 3, y + 3, 'b');
+    bush(p, x, y - 2, 4.5, 3.5, opts.season);
   }
-  // Floating petals or leaves.
-  if (!frozen) {
-    const bits: readonly PaletteKey[] = opts.season === 'spring' ? ['I', 'W'] : opts.season === 'autumn' ? ['o', 'R'] : [];
-    [[14, 28], [38, 31], [20, 33], [34, 26]].forEach(([x, y], i) => {
-      const k = bits[i % 2];
-      if (k) p.set(x!, y!, k);
-    });
-  }
+  for (const x of [8, 48]) lanternPx(p, x, 41, true);
   if (opts.open) {
-    // The Black Market: a dark cloth hung over the front of the rim, shady goods along the top,
+    // The Black Market: a dark cloth hung over the front of the bottom step, shady goods along it,
     // and its keeper, a hooded shape, sitting on the far side.
-    for (let x = 9; x < 27; x++) {
-      const hang = 41 + Math.round(Math.sin((x - 9) * 0.5) * 1.2) + (x > 13 && x < 22 ? 2 : 0);
-      for (let y = 32; y <= hang; y++) p.set(x, y, y === hang ? 'P' : (x - 9) % 4 === 0 ? 'k' : (x - 9) % 4 === 1 ? 'P' : 'p');
-      p.set(x, 31, 'p');
-      if (x % 3 === 0) p.set(x, hang + 1, 'v');
+    for (let x = 18; x < 36; x++) {
+      const hang = 48 + Math.round(Math.sin((x - 18) * 0.5) * 1.2) + (x > 22 && x < 31 ? 2 : 0);
+      for (let y = 42; y <= Math.min(51, hang); y++) p.set(x, y, y === hang ? 'P' : (x - 18) % 4 === 0 ? 'k' : (x - 18) % 4 === 1 ? 'P' : 'p');
+      p.set(x, 41, 'p');
     }
-    // Goods on the rim: a green bottle, a violet vial, a little skull, a coin purse.
-    p.fillRect(10, 27, 2, 4, 'g').set(10, 27, 'l').set(10, 26, 'k').set(11, 30, 'k');
-    p.fillRect(14, 28, 2, 3, 'P').set(14, 28, 'v').set(14, 27, 'k');
-    p.fillRect(18, 28, 3, 3, 'm').set(18, 29, 'K').set(20, 29, 'K').set(19, 30, 'e');
-    p.fillEllipse(24, 29.5, 1.5, 1.5, 'B').set(24, 28, 'n');
-    // The keeper: hood, shoulders, a robe pooling on the rim.
-    for (let y = 16; y < 36; y++) {
-      const half = y < 22 ? 2 + Math.sqrt(Math.max(0, (y - 15) * 1.6)) : Math.min(7, 4.2 + (y - 22) * 0.35);
-      for (let x = Math.floor(46 - half); x <= 46 + half; x++) {
-        const edge = x <= 46 - half + 0.8 || x >= 46 + half - 0.8;
-        p.set(x, y, edge ? 'K' : x < 45 ? 'p' : 'k');
+    p.fillRect(20, 37, 2, 4, 'g').set(20, 37, 'l').set(20, 36, 'k');
+    p.fillRect(24, 38, 2, 3, 'P').set(24, 38, 'v').set(24, 37, 'k');
+    p.fillRect(28, 38, 3, 3, 'm').set(28, 39, 'K').set(30, 39, 'K').set(29, 40, 'e');
+    p.fillEllipse(34, 39.5, 1.5, 1.5, 'B').set(34, 38, 'n');
+    for (let y = 20; y < 40; y++) {
+      const half = y < 26 ? 2 + Math.sqrt(Math.max(0, (y - 19) * 1.6)) : Math.min(6, 4.2 + (y - 26) * 0.3);
+      for (let x = Math.floor(49 - half); x <= 49 + half; x++) {
+        const edge = x <= 49 - half + 0.8 || x >= 49 + half - 0.8;
+        p.set(x, y, edge ? 'K' : x < 48 ? 'p' : 'k');
       }
     }
-    p.fillEllipse(46.5, 21, 2, 2.2, 'K').set(45, 21, 'v').set(47, 21, 'v');
-    p.set(41, 30, 'P').set(42, 33, 'P').set(49, 31, 'K');
-    // A pale hand on the rim.
-    p.set(40, 33, 'e').set(41, 33, 'm');
+    p.fillEllipse(49.5, 25, 2, 2.2, 'K').set(48, 25, 'v').set(50, 25, 'v');
+    p.set(44, 36, 'e').set(45, 36, 'm');
   }
   return p;
 }
 
+/** The Wandering Tinker's cart and trinkets, over the rug laid by the lane (the ground draws the rug). */
 function rugSprite(opts: SquareOptions & { open: boolean }): Pixmap {
   const p = new Pixmap(40, 28);
   if (!opts.open) {
-    // Just the pegs where the Tinker pitches, and a scuff on the stones.
-    for (const [x, y] of [[4, 13], [35, 13], [4, 25], [35, 25]] as const) p.set(x, y, 'b').set(x, y - 1, 'B');
+    // Just the pegs where the Tinker pitches.
+    for (const [x, y] of [[5, 11], [36, 11], [5, 27], [36, 27]] as const) p.set(x, y, 'b').set(x, y - 1, 'B');
     return p;
   }
-  // The rug: a border, a field of diamonds, a medallion.
-  for (let y = 11; y < 27; y++) {
-    for (let x = 2; x < 38; x++) {
-      const bx = Math.min(x - 2, 37 - x);
-      const by = Math.min(y - 11, 26 - y);
-      const border = bx < 2 || by < 2;
-      if (border) {
-        p.set(x, y, bx === 0 || by === 0 ? 'j' : (x + y) % 3 === 0 ? 'n' : 'r');
-        continue;
-      }
-      const d = (Math.abs(x - 20) + Math.abs(y - 18.5) * 2) % 8;
-      p.set(x, y, d < 1 ? 'B' : d < 2 ? 'r' : 'p');
-    }
-  }
-  p.fillEllipse(20, 19, 4, 2.5, 'r').fillEllipse(20, 19, 2, 1.2, 'n');
-  for (const x of [2, 37]) for (let y = 11; y < 27; y += 2) p.set(x === 2 ? 1 : 38, y, 'a');
-  // The Tinker's cart at the back: a box under a canvas hood on a big wheel.
+  // The cart at the back: a box under a canvas hood on a big wheel.
   p.fillRect(8, 3, 22, 10, 'B');
   for (let x = 8; x < 30; x++) p.set(x, 3, 'n').set(x, 12, 'b');
   for (let y = 0; y < 6; y++) for (let x = 9 + (y < 1 ? 2 : 0); x < 29 - (y < 1 ? 2 : 0); x++) flat(p, x, y, ['q', 'J', 'h', 'H', 'a'], 0.55 - y * 0.05 + ((x - 9) % 5 === 0 ? -0.15 : 0));
   p.fillEllipse(10, 12, 3.5, 3.5, 'k').fillEllipse(10, 12, 2, 2, 'B').set(10, 12, 'n');
   p.set(30, 10, 'b').set(31, 11, 'b').set(32, 12, 'b');
   // Trinkets on the rug: a kettle, a clock, a little mirror, a bundle of spoons.
-  p.fillRect(6, 19, 4, 3, 'S').set(10, 20, 'S').set(7, 18, 'e').set(6, 19, 'e');
+  p.fillRect(8, 19, 4, 3, 'S').set(12, 20, 'S').set(9, 18, 'e').set(8, 19, 'e');
   p.fillEllipse(30.5, 19.5, 2.5, 2.5, 'n').set(30, 19, 'w').set(31, 19, 'k');
-  p.fillRect(14, 22, 3, 3, 'c').strokeRect(13, 21, 5, 5, 'n');
-  for (const x of [24, 25, 26]) p.set(x, 23, 'e').set(x, 22, 'S');
-  // A lantern hanging from the hood.
+  p.fillRect(16, 21, 3, 3, 'c').strokeRect(15, 20, 5, 5, 'n');
+  for (const x of [24, 25, 26]) p.set(x, 22, 'e').set(x, 21, 'S');
   lanternPx(p, 28, 4, true);
   if (opts.season === 'winter') for (let x = 9; x < 29; x++) if (cellRandom(x, 0, 121) > 0.2) snowPx(p, x, 0, 0.7);
   return p;
@@ -1226,8 +1277,6 @@ function rugSprite(opts: SquareOptions & { open: boolean }): Pixmap {
 
 /** Where the fire pit's ring centres in its sprite; the flames sit over it. */
 const FIRE_RING = { x: 20, y: 15 };
-// squareFire (16x12) goes with its top-left at (FIRE_RING.x - 8, FIRE_RING.y - 10) = (12, 5) in the fire
-// pit sprite, which is (96, 133) in square space (the fire home's `at` is (84, 128)).
 
 function firePit(opts: SquareOptions & { open: boolean }): Pixmap {
   const p = new Pixmap(40, 28);
@@ -1310,20 +1359,23 @@ export function litHomeSprite(src: Pixmap): Pixmap {
   return p.outline('Y');
 }
 
-/** Lights for glows, square pixels: lanterns of open stalls, the fire if lit, a couple of house windows. Few. */
+/** Lights for glows, square pixels: lanterns of open stalls, the fire if lit, the fountain's orb, the house windows, the gate and the dock. */
 export function squareLights(open: ReadonlySet<HomeId>, opts: SquareOptions): readonly { x: number; y: number; radius: number; color: 'y' | 'o' | 'L' | 'v' }[] {
   const out: { x: number; y: number; radius: number; color: 'y' | 'o' | 'L' | 'v' }[] = [];
   for (const h of HOMES) {
+    if (h.kind === 'well') out.push({ x: h.at.x + ORB.x, y: h.at.y + ORB.y, radius: 24, color: 'v' });
     if (!open.has(h.id)) continue;
     if (h.kind === 'stall') {
       const l = stallLantern(h);
       out.push({ x: h.at.x + l.x, y: h.at.y + l.y + 2, radius: 30, color: 'y' });
-    } else if (h.kind === 'well') out.push({ x: h.at.x + 47, y: h.at.y + 26, radius: 26, color: 'v' });
+    } else if (h.kind === 'well') out.push({ x: h.at.x + 49, y: h.at.y + 30, radius: 22, color: 'v' });
     else if (h.kind === 'rug') out.push({ x: h.at.x + 28, y: h.at.y + 6, radius: 22, color: 'y' });
     else out.push({ x: h.at.x + FIRE_RING.x, y: h.at.y + FIRE_RING.y - 2, radius: 50, color: 'o' });
   }
   for (const w of LIT_WINDOWS) out.push({ x: w.x, y: w.y, radius: 16, color: 'o' });
   for (const px of POLES) out.push({ x: px, y: POLE_TOP, radius: 20, color: 'y' });
+  for (const lx of [POLES[0] + 12, POLES[1] - 11]) out.push({ x: lx, y: POLE_TOP + 8, radius: 14, color: 'y' });
+  out.push({ x: 258, y: 162, radius: 18, color: 'y' });
   if (opts.season === 'summer') for (const [x, y] of FIREFLIES) out.push({ x, y, radius: 6, color: 'L' });
   return out;
 }
