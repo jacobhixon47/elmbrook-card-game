@@ -244,7 +244,7 @@ export class Run extends Phaser.Scene {
     const K = Phaser.Input.Keyboard.KeyCodes;
     this.walkKeys = this.input.keyboard!.addKeys({ w: K.W, a: K.A, s: K.S, d: K.D, up: K.UP, down: K.DOWN, left: K.LEFT, right: K.RIGHT }, false) as WalkKeys;
     this.settingsOpen = false;
-    if (fixture?.ui?.settings) this.openSettings();
+    if (fixture?.ui?.settings) this.openSettings(fixture.ui.abandon);
     this.time.delayedCall(noAnim ? 0 : 400, () => markReady(this));
   }
 
@@ -444,9 +444,18 @@ export class Run extends Phaser.Scene {
   }
 
   /** Settings over the run (Esc, or the button at the bottom right). */
-  private openSettings() {
+  private openSettings(abandon = false) {
     this.settingsOpen = true;
-    openSettings(this, () => (this.settingsOpen = false));
+    // Abandoning (Jacob, Oct 21) goes home with nothing banked: the run is only counted in the profile when it ends.
+    openSettings(this, () => (this.settingsOpen = false), undefined, this.tutorial ? undefined : () => this.abandonRun(), abandon);
+  }
+
+  /** Throw the run away and go back to the cottage. Nothing is recorded: no Friendship, Reputation, Almanac, unlocks or Codex finds. */
+  private abandonRun() {
+    const s = store.getState();
+    // A fixture's run was never saved, so there's nothing to clear (and clearing would lose a real run).
+    if (!this.fixtureRun) clearRun(s?.endlessMode ? 'endless' : 'story');
+    this.scene.start('Cottage', { home: s?.season, endless: s?.endlessMode });
   }
 
   private openBook(tab: GrimoireTab | null, page?: number) {
