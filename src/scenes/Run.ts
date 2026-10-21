@@ -2250,6 +2250,8 @@ export class Run extends Phaser.Scene {
         return;
       }
       if (e.key === 'Escape') {
+        // At a Night Market stall, Esc goes back to the street first, as its button does (Jacob, Oct 21).
+        if (this.mode.kind === 'idle' && !this.confirm && s.offer?.kind === 'night-market' && s.offer.at !== null) return void this.dispatch({ type: 'leaveStall' });
         if (this.mode.kind === 'idle' && !this.confirm) return this.openSettings();
         this.mode = { kind: 'idle' };
         this.confirm = null;
