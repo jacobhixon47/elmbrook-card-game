@@ -8,6 +8,7 @@ import * as hearthFamiliars from './familiars-hearth';
 import * as fieldFamiliars from './familiars-field';
 import * as nightFamiliars from './familiars-night';
 import { potions } from './potions';
+import * as relics from './relics';
 import * as craft from './tinctures-craft';
 import * as fair from './tinctures-fair';
 import * as festival from './tinctures-festival';
@@ -33,6 +34,7 @@ export const SPRITES: readonly SpriteDef[] = [
   ...Object.values(fieldFamiliars),
   ...Object.values(nightFamiliars),
   ...potions,
+  ...Object.values(relics),
 ];
 
 export const SPRITE_IDS = new Set(SPRITES.map((s) => s.id));

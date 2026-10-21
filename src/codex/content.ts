@@ -447,7 +447,7 @@ export const relics: In<typeof Relic>[] = [
   { id: 'flower-basket', name: 'Flower Basket', tier: 2, text: '+1 hand size on Clear days.', pool: 'event' },
   { id: 'ivy-wreath', name: 'Ivy Wreath', tier: 1, text: 'The Fence pays +25% for Shelf potions.', pool: 'event' },
   { id: 'witchs-hatpin', name: 'Witch\'s Hatpin', tier: 2, text: 'Experiments brew at full quality.' },
-  { id: 'iron-lid', name: 'Iron Lid', tier: 2, text: 'The first failed brew each day makes no Sludge.' },
+  { id: 'mortar-and-pestle', name: 'Mortar and Pestle', tier: 2, text: 'Brews with 3 or more ingredients get +2 Harmony.' },
   { id: 'moon-locket', name: 'Moon Locket', tier: 3, text: '+1 Brew on Night Shifts.' },
   { id: 'kettle-of-plenty', name: 'Kettle of Plenty', tier: 3, text: 'Potions brewed once every order is resolved go to the Shelf one tier higher.' },
 ];

@@ -92,7 +92,6 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     relics: [],
     commissions: [],
     curses: [],
-    sludgeToday: 0,
     discardsToday: 0,
     flowerPotencyToday: 0,
     emberPotencyToday: 0,
@@ -155,7 +154,6 @@ function startDay(ctx: Ctx): void {
   s.lastFamily = null;
   s.pending = freshPending();
   s.brewsToday = 0;
-  s.sludgeToday = 0;
   s.discardsToday = 0;
   s.flowerPotencyToday = 0;
   s.emberPotencyToday = 0;
@@ -283,14 +281,8 @@ function brew(ctx: Ctx, deliverTo: number | undefined, pick: string | undefined)
   s.pending = { ...freshPending(), fullExperiment: s.pending.fullExperiment && !experiment };
 
   if (preview.kind === 'sludge') {
-    s.sludgeToday += 1;
-    // The Iron Lid catches the first failed brew of the day.
-    if (s.sludgeToday === 1 && hasRelic(s, 'iron-lid')) {
-      ctx.ev.push({ type: 'relicFired', relic: 'iron-lid' });
-    } else {
-      const junk = gainCard(ctx, 'sludge', 'sludge');
-      ctx.ev.push({ type: 'sludge', uid: junk.uid });
-    }
+    const junk = gainCard(ctx, 'sludge', 'sludge');
+    ctx.ev.push({ type: 'sludge', uid: junk.uid });
   } else {
     ctx.ev.push(...preview.steps);
     // Primrose grows a little every time it's brewed.

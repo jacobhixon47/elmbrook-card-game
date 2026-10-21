@@ -154,7 +154,7 @@ export type Favour = { kind: 'favour'; visitor: string; job: 'burn' | 'temper' }
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 25;
+export const RUN_VERSION = 26;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -234,8 +234,6 @@ export type RunState = {
   relics: string[];
   /** Curses taken, oldest first: the Sleepless Miller and the Hearth lift the oldest. */
   curses: string[];
-  /** Brews today that made Sludge, for the Iron Lid. */
-  sludgeToday: number;
   /** Discards made today, for the Hive Smoker. */
   discardsToday: number;
   /** Potency each Flower ingredient gets today (Garland). */

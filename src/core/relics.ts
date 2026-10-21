@@ -40,6 +40,8 @@ export const RELIC_RULES = {
   dollyPay: 2,
   wreathHarmony: 1,
   wickerPicks: 1,
+  mortarHarmony: 2,
+  mortarMin: 3,
 } as const;
 
 export const CURSE_RULES = {
@@ -164,6 +166,9 @@ export function relicSteps(s: Partial<Held> & Partial<Pick<RunState, 'brewsToday
   }
   if (hasRelic(s, 'copper-ladle') && raw.length === 3) {
     out.push({ id: 'copper-ladle', source: 'relic', step: { potency: 0, harmony: RELIC_RULES.ladleHarmony, note: `+${RELIC_RULES.ladleHarmony} Harmony (three ingredients)` } });
+  }
+  if (hasRelic(s, 'mortar-and-pestle') && raw.length >= RELIC_RULES.mortarMin) {
+    out.push({ id: 'mortar-and-pestle', source: 'relic', step: { potency: 0, harmony: RELIC_RULES.mortarHarmony, note: `+${RELIC_RULES.mortarHarmony} Harmony (${RELIC_RULES.mortarMin}+ ingredients)` } });
   }
   if (hasRelic(s, 'orchard-basket')) {
     const n = raw.filter((i) => i.tags.includes('fruit')).length * RELIC_RULES.orchardPotency;

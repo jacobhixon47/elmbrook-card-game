@@ -415,7 +415,7 @@ Relics are run-long passives with no slot limit, never sold for gold. They come 
 | Old Almanac | 2 | +1 Discard on Rain and Fog days. |
 | Spare Satchel | 2 | +1 hand size. |
 | Witch's Hatpin | 2 | Experiments brew at full quality. |
-| Iron Lid | 2 | The first failed brew each day makes no Sludge. |
+| Mortar and Pestle | 2 | Brews with 3 or more ingredients get +2 Harmony. (Replaced Iron Lid, with Jacob, Oct 21.) |
 | Moon Locket | 3 | +1 Brew on Night Shifts. |
 | Kettle of Plenty | 3 | Potions brewed once every order is resolved go to the Shelf one tier higher. |
 
@@ -427,6 +427,8 @@ Relics are run-long passives with no slot limit, never sold for gold. They come 
 | Moonsick | 2 | Night Satchel cards -2 Potency. |
 | Heavy Hands | 3 | -1 Discard every day. |
 | Unpaid Debt | 3 | Rent +15%. |
+
+*Mortar and Pestle (replaced Iron Lid, with Jacob, Oct 21):* a starter relic like the Lid was. It counts the ingredient cards brewed, so four count too, and it stacks with the Copper Ladle on a brew of exactly three (+3 Harmony in all). Saves that held or had met the Iron Lid hold or have met the Mortar instead. It is the first relic with its own 16×16 icon, shown where relics are offered (market and fair stalls, the auction, the Name-Taker); the row of held relics keeps the small tier medallions.
 
 *In the build (M3 part 5):* the Kettle of Plenty counts an empty Order Board as every order resolved. The Hearth lifts the Curse you pick; the Miller lifts the oldest. Lifting a Curse undoes it from then on.
 

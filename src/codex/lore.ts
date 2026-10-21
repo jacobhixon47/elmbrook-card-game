@@ -240,7 +240,7 @@ export const lore: Record<string, string> = {
   'flower-basket': 'Hung on the arm on clear mornings. There\'s always room for one more thing.',
   'ivy-wreath': 'The Fence likes the look of it, and pays better for the bottles under it.',
   'witchs-hatpin': 'Holds the hat on, and the new recipes down.',
-  'iron-lid': 'Clamps on when the brew turns, and keeps the worst of it in.',
+  'mortar-and-pestle': 'Worn smooth from grinding everything at once. The more that goes in, the better it all gets along.',
   'moon-locket': 'Holds a sliver of moonlight. It gets warm on Night Shifts.',
   'kettle-of-plenty': 'Never empty, never cold. Whatever goes in comes out a little better.',
 

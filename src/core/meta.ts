@@ -11,7 +11,7 @@ import { RUN_VERSION, type RunState } from './state';
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 16;
+export const PROFILE_VERSION = 17;
 
 /** Sound settings: the sound effects' volume and the music's, 0 to 1, and mute (both). */
 export type SoundSettings = { volume: number; music: number; muted: boolean };
@@ -131,6 +131,17 @@ export function newProfile(): Profile {
 
 type Raw = Record<string, unknown>;
 
+/** Relic ids that changed, old to new: a save holding the old one holds the new one instead. */
+const RENAMED_RELICS: Record<string, string> = { 'iron-lid': 'mortar-and-pestle' };
+
+/** A copy of a saved value with every string that names a renamed id swapped for the new id, however deep. */
+function renamed<T>(value: T, ids: Record<string, string>): T {
+  if (typeof value === 'string') return (ids[value] ?? value) as T;
+  if (Array.isArray(value)) return value.map((v: unknown) => renamed(v, ids)) as T;
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, renamed(v, ids)])) as T;
+  return value;
+}
+
 /**
  * Each step takes a profile of version n to n + 1. Version 0 is the M2.5 profile, `{ tutorialDone }`
  * with no version field. Add a step (and bump PROFILE_VERSION) for any change old saves can't read.
@@ -178,6 +189,8 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   },
   // 15 → 16: mutations stack, so each Year's one becomes a list.
   15: (p) => ({ ...p, mutations: Array.isArray(p.mutations) ? p.mutations.map((m) => (typeof m === 'string' ? [m] : [])) : [] }),
+  // 16 → 17: the Mortar and Pestle replaced the Iron Lid, so a Codex that met the Lid has met the Mortar.
+  16: (p) => ({ ...p, codex: renamed(p.codex, RENAMED_RELICS) }),
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -568,6 +581,13 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
   23: (s) => ({ ...s, mutation: null }),
   // 24 → 25: mutations stack, so the one on becomes a list.
   24: ({ mutation, ...s }) => ({ ...s, mutations: typeof mutation === 'string' ? [mutation] : [] }),
+  // 25 → 26: the Mortar and Pestle replaced the Iron Lid, wherever the run named it (held, met, on offer
+  // or in stock), and the Lid's Sludge counter went with it.
+  25: (s) => {
+    const out = renamed(s, RENAMED_RELICS);
+    delete out.sludgeToday;
+    return out;
+  },
 };
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */

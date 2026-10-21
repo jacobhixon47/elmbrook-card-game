@@ -249,6 +249,23 @@ describe('saved run migrations', () => {
     for (const raw of [null, 'x', [], { version: 'ten' }, { ...s, version: RUN_VERSION + 1 }, { ...s, version: 9 }]) expect(migrateRun(raw)).toBeNull();
   });
 
+  it('a version 25 run holding the Iron Lid holds the Mortar and Pestle instead', () => {
+    const s = brewing('migrate');
+    const old: Record<string, unknown> = { ...JSON.parse(JSON.stringify(s)), version: 25, sludgeToday: 1, relics: ['guild-seal', 'iron-lid'], stats: { ...s.stats, met: [...s.stats.met, 'iron-lid'] } };
+    const back = migrateRun(old)!;
+    expect(back.version).toBe(RUN_VERSION);
+    expect(back.relics).toEqual(['guild-seal', 'mortar-and-pestle']);
+    expect(back.stats.met).toContain('mortar-and-pestle');
+    expect(JSON.stringify(back)).not.toContain('iron-lid');
+    expect(back).not.toHaveProperty('sludgeToday');
+    expect(back.relics.every((id) => codex.relics.has(id))).toBe(true);
+  });
+
+  it('a version 16 profile that met the Iron Lid has met the Mortar and Pestle', () => {
+    expect(migrateProfile({ ...newProfile(), version: 16, codex: ['lavender', 'iron-lid'] }).codex).toEqual(['lavender', 'mortar-and-pestle']);
+    expect(migrateProfile({ ...newProfile(), version: 16, codex: ['mortar-and-pestle', 'iron-lid'] }).codex).toEqual(['mortar-and-pestle']);
+  });
+
   it('a version 11 run gains the Almanac stats, from the run so far', () => {
     const old: Record<string, unknown> = { ...brewing('migrate'), version: 11, week: 3, relics: ['guild-seal'], stats: { ordersFilled: 5, potionsSold: 1 } };
     expect(migrateRun(old)?.stats).toMatchObject({ ...newStats(), ordersFilled: 5, potionsSold: 1, rentsPaid: 2, mostRelics: 1, met: expect.arrayContaining(['guild-seal']) as unknown as string[] });
