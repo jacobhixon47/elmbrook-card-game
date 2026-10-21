@@ -19,7 +19,7 @@ Lighting rules (from the reference art Jacob shared):
 
 | Kind | Where | How it's made | Used for |
 |---|---|---|---|
-| **Sprite grids** | `src/art/sprites/*.ts` | 16×16 grids of palette keys, one string per row, written by hand (by Claude). `recolor()` makes tinted variants. | Ingredients, tinctures, potions, familiars, small portraits |
+| **Sprite grids** | `src/art/sprites/*.ts` | 16×16 grids of palette keys, one string per row, written by hand (by Claude). `recolor()` makes tinted variants. | Ingredients, tinctures, potions, familiars, small portraits, relic icons (`relic/<id>`; a relic without one shows its tier's medallion token) |
 | **Procedural** | `src/art/procedural.ts`, `src/art/scenes/*.ts` | Deterministic drawing code on a palette-locked `Pixmap` (rects, ellipses, Bayer dither, outlines, seeded scatter, value noise from `src/art/noise.ts` for stone, wood, thatch and grass grain). Shared town pieces (cottages, mountains, pines, sky) live in `src/art/scenes/town.ts`. | Card frames and backs, cauldrons, pips, backgrounds, UI panels, particles |
 | **Painted backdrops** | `public/backdrops/*.png`, listed in `src/art/backdrops.ts` | A Midjourney render (or other painting) cropped and pixelized by `pnpm art:import`: 640×360, about 48 colours, no dither. | Full-screen backgrounds: the shop and the title (the cottage is now a code-drawn room); later the Night Market and town |
 | **Baked composites** | `src/view/card.ts` | Procedural frame + sprite at 2× + crisp text, baked into one texture per card at boot. | Card faces (and later: order tickets, stall signs) |

@@ -1,0 +1,1 @@
+{"scene": "Run", "seed": "mortar-11", "today": "clear", "steps": [{"jump": [1, 5]}, "openShop", "endDay", "skipReward", "passGift", {"visit": 2}]}

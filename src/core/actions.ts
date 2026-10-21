@@ -167,7 +167,7 @@ export type GameEvent =
   /** A familiar that pays gold or draws a card did so (the Raven, the Ferret). */
   | { type: 'familiarFired'; familiar: string }
   | { type: 'relicGained'; relic: string; source: string }
-  /** A relic that acts on its own did so (the Iron Lid caught a Sludge). */
+  /** A relic that acts on its own did so (the Hive Smoker drew a card). */
   | { type: 'relicFired'; relic: string }
   | { type: 'curseTaken'; curse: string }
   | { type: 'eventChosen'; event: string; choice: number; outcome: string }

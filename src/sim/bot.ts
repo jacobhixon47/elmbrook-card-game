@@ -446,8 +446,8 @@ export function relicValue(s: RunState, id: string): number {
     case 'spare-satchel': return 12;
     case 'guild-seal': return Math.round(rentOf(s, Math.min(WEEKS, s.week + 1)) * 0.1);
     case 'copper-ladle': return s.cauldronSlots >= 3 ? 8 : 2;
+    case 'mortar-and-pestle': return s.cauldronSlots >= 3 ? 10 : 3;
     case 'old-almanac': return 4;
-    case 'iron-lid': return 3;
     case 'lucky-horseshoe': return 5;
     case 'pressed-flower': return 6;
     case 'apprentice-ledger': return 2 * weeksLeft;

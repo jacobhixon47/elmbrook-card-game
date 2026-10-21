@@ -137,17 +137,30 @@ describe('relics and curses on a brew', () => {
     expect(pinned.tier).toBe(tierStep(plain.tier, 1));
   });
 
-  it('the Iron Lid catches the first failed brew each day', () => {
-    const s = give(brewing('relics'), ['iron-lid']);
-    const fail = (st: RunState) => {
-      const [h, uids] = withHand(st, ['creekwater', 'creekwater']);
-      return ok(slotAll(h, uids), { type: 'brew' });
-    };
-    const first = fail(s);
-    expect(ofType(first.events, 'relicFired')).toEqual([{ type: 'relicFired', relic: 'iron-lid' }]);
-    expect(allCards(first.state).filter((c) => c.card === 'sludge')).toHaveLength(0);
-    const second = fail(first.state);
-    expect(ofType(second.events, 'sludge')).toHaveLength(1);
+  it('the Mortar and Pestle adds +2 Harmony to brews of three or more ingredients', () => {
+    const elm = codex.ingredients.get('elmroot')!;
+    const steps = (raw: (typeof elm)[]) => relicSteps({ relics: ['mortar-and-pestle'] }, raw).map((x) => [x.id, x.step.harmony]);
+    expect(steps([elm, elm, elm])).toEqual([['mortar-and-pestle', 2]]);
+    expect(steps([elm, elm, elm, elm])).toEqual([['mortar-and-pestle', 2]]);
+    expect(steps([elm, elm])).toEqual([]);
+
+    // Brewed for real: a scoring step on the three-ingredient brew, nothing on the two.
+    const s = { ...brewing('relics'), cauldronSlots: 3 };
+    const held = give(s, ['mortar-and-pestle']);
+    const three = ['elmroot', 'creekwater', 'elmroot'];
+    const plain = preview(s, three);
+    const ground = preview(held, three);
+    if (plain.kind !== 'potion' || ground.kind !== 'potion') throw new Error('expected potions');
+    expect(ground.harmony - plain.harmony).toBe(RELIC_RULES.mortarHarmony);
+    expect(ground.steps.some((st) => st.type === 'scoreStep' && st.source === 'relic' && st.id === 'mortar-and-pestle')).toBe(true);
+    const two = ['elmroot', 'creekwater'];
+    const plainTwo = preview(s, two);
+    const groundTwo = preview(held, two);
+    if (plainTwo.kind !== 'potion' || groundTwo.kind !== 'potion') throw new Error('expected potions');
+    expect(groundTwo.harmony).toBe(plainTwo.harmony);
+    const [h, uids] = withHand(held, three);
+    const brewed = ok(slotAll(h, uids), { type: 'brew' });
+    expect(ofType(brewed.events, 'scoreStep').filter((e) => e.id === 'mortar-and-pestle')).toHaveLength(1);
   });
 
   it('the Kettle of Plenty shelves potions a tier higher once every order is resolved', () => {

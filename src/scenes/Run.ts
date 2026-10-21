@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
+import { SPRITE_IDS } from '../art/sprites';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
   allCards, priceAt, runKeepsakes, blessingTonight, BLACK_MARKET, eventChoiceAsk, eventChoiceBlocked, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD, MAX_DISCARD, TIER_MIN, TIERS,
@@ -536,7 +537,7 @@ export class Run extends Phaser.Scene {
   private offerRelic(x: number, y: number, id: string, onPick: () => void, dim = false) {
     const r = codex.relics.get(id)!;
     const tile = this.add2(panel(this, x - 32, y - 38, 64, 80, 'k', 0.95, 'y'));
-    this.add2(this.add.image(x, y - 18, `token/relic-${r.tier}`).setScale(2));
+    this.add2(this.add.image(x, y - 18, relicIcon(id, r.tier)).setScale(2));
     this.text(x, y + 2, r.name, { size: 7, color: 'y', align: 'center', wrap: 60 }).setOrigin(0.5, 0);
     this.text(x, y + 22, `Tier ${r.tier} relic`, { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
     this.text(x, y + 46, r.text, { size: 6, color: 'w', align: 'center', wrap: 70 }).setOrigin(0.5, 0);
@@ -556,7 +557,7 @@ export class Run extends Phaser.Scene {
     this.text(x - 54, 96, c.name, { size: 8, color: 'v' });
     this.text(x - 72, 110, `Curse, severity ${c.severity}. ${c.text}`, { size: 6, color: 'w', wrap: 144 });
     this.text(x, 132, deal.card ? 'for one of' : 'for', { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
-    this.tip.on(this.add2(this.add.image(x - 64, 150, `token/relic-${r.tier}`)), r.name, [`Tier ${r.tier} relic`, r.text, 'It works on its own for the rest of the run.']);
+    this.tip.on(this.add2(this.add.image(x - 64, 150, relicIcon(deal.relic, r.tier))), r.name, [`Tier ${r.tier} relic`, r.text, 'It works on its own for the rest of the run.']);
     this.text(x - 54, 144, r.name, { size: 8, color: 'y' });
     this.text(x - 72, 158, `Tier ${r.tier} relic. ${r.text}`, { size: 6, color: 'w', wrap: 144 });
     if (deal.card) {
@@ -2320,13 +2321,15 @@ const MOON_LINE: Record<ReturnType<typeof moonOf>, string> = {
   'new-moon': 'The new moon: every stall, and the Black Market by the well.',
 };
 
+/** A relic's own icon where there's room for one and it has one; otherwise its tier's medallion. */
+const relicIcon = (id: string, tier: number) => (SPRITE_IDS.has(`relic/${id}`) ? `relic/${id}` : `token/relic-${tier}`);
+
 /** A line for relics gained, Curses lifted or a relic that acted, to toast after an action. */
 function relicNote(events: readonly GameEvent[]): string | null {
   const lines: string[] = [];
   for (const e of events) {
     if (e.type === 'relicGained' && e.source !== 'debug') lines.push(`Relic: ${codex.relics.get(e.relic)!.name}. ${codex.relics.get(e.relic)!.text}`);
     if (e.type === 'curseLifted') lines.push(`${codex.curses.get(e.curse)!.name} is lifted.`);
-    if (e.type === 'relicFired' && e.relic === 'iron-lid') lines.push('The Iron Lid caught the Sludge.');
     if (e.type === 'glamourUsed') lines.push('A little glamour: it passes for what they asked. (Once a day.)');
     if (e.type === 'commissionDone') lines.push(`Commission done: ${codex.commissions.get(e.commission)!.name}.`);
     if (e.type === 'commissionFailed') lines.push(`${codex.commissions.get(e.commission)!.name} ran out of time.`);
