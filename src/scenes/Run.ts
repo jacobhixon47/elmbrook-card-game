@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { hex, PALETTE, type PaletteKey } from '../art/palette';
 import { codex, type Essence, type ModifierId } from '../codex';
 import {
-  allCards, priceAt, runKeepsakes, blessingTonight, BLACK_MARKET, eventChoiceAsk, eventChoiceBlocked, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD,
+  allCards, priceAt, runKeepsakes, blessingTonight, BLACK_MARKET, eventChoiceAsk, eventChoiceBlocked, eventDone, brewBlocked, cantModify, COMMISSIONS, dueWeekOf, goalOf, FAMILIAR_RULES, MODIFIER_RULES, hasFamiliar, sellPrice, essencesOf, FINALE_ORDERS, forgettable, fortunePrice, isPatron, moonOf, snowedIn, NIGHT_SHIFT_DAY, patronOf, previewBrew, rentOf, SKIP_GOLD, MAX_DISCARD, TIER_MIN, TIERS,
   skyTime, payout, TAILOR_POTENCY, tailorCards, todaysWeather, twistNow, WEEKS, BLOSSOM_ORACLE_PRICE, cheapestPotion, CIDER_PRESS, commonCards, FIREFLY_GAMES,
   HARVEST_AUCTION, FRIENDSHIP, friendLevelOf, friendshipOf, hearthOffers, isRegular, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
@@ -26,7 +26,7 @@ import {
 import { DECK_VIEWS, drawGrimoire, type GrimoireTab } from '../view/grimoire';
 import { stages } from '../view/guide';
 import { bestOrderFor, potionLines, previewPotion } from '../view/plan';
-import { todayLine, todayRules, WEATHER_NAME } from '../view/calendar';
+import { dayRules, todayLine, todayRules, WEATHER_NAME } from '../view/calendar';
 import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
 import type { CardExtras } from '../view/inspect';
@@ -455,7 +455,10 @@ export class Run extends Phaser.Scene {
   /** Familiar slots at the right end of the counter (GDD §11): hover for what one does, click to sell or move it. */
   private drawFamiliars(s: RunState) {
     const x0 = 590;
-    this.text(x0 + 12, 258, `Familiars ${s.familiars.length}/${s.familiarSlots}`, { size: 7, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
+    this.tip.on(this.text(x0 + 12, 258, `Familiars ${s.familiars.length}/${s.familiarSlots}`, { size: 7, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0), 'Familiars', [
+      'Familiars add to every brew, scoring left to right after your cards. Click one to sell it or move it.',
+      s.familiars.length >= s.familiarSlots ? 'Every slot is full: sell one to make room for another.' : `${s.familiarSlots - s.familiars.length} free ${s.familiarSlots - s.familiars.length === 1 ? 'slot' : 'slots'}.`,
+    ]);
     for (let i = 0; i < s.familiarSlots; i++) {
       const x = x0 + (i % 2) * 24;
       const y = 280 + Math.floor(i / 2) * 24;
@@ -524,6 +527,7 @@ export class Run extends Phaser.Scene {
     this.text(x, y + 2, r.name, { size: 7, color: 'y', align: 'center', wrap: 60 }).setOrigin(0.5, 0);
     this.text(x, y + 22, `Tier ${r.tier} relic`, { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
     this.text(x, y + 46, r.text, { size: 6, color: 'w', align: 'center', wrap: 70 }).setOrigin(0.5, 0);
+    this.tip.on(tile, r.name, [`Tier ${r.tier} relic`, r.text, 'It works on its own for the rest of the run.']);
     if (dim) return void tile.setAlpha(0.4);
     tile.setInteractive({ useHandCursor: true }).on('pointerdown', onPick);
     tile.on('pointerover', () => tile.setStrokeStyle(2, hex('W')));
@@ -535,11 +539,11 @@ export class Run extends Phaser.Scene {
     const c = codex.curses.get(deal.curse)!;
     const r = codex.relics.get(deal.relic)!;
     const tile = this.add2(panel(this, x - 80, 86, 160, 164, 'k', 0.95, 'v'));
-    this.add2(this.add.image(x - 64, 102, `token/curse-${c.severity}`));
+    this.tip.on(this.add2(this.add.image(x - 64, 102, `token/curse-${c.severity}`)), c.name, [`Curse, severity ${c.severity}`, c.text, 'It lasts the run unless something lifts it, like the Hearth. A worse Curse buys a better relic.']);
     this.text(x - 54, 96, c.name, { size: 8, color: 'v' });
     this.text(x - 72, 110, `Curse, severity ${c.severity}. ${c.text}`, { size: 6, color: 'w', wrap: 144 });
     this.text(x, 132, deal.card ? 'for one of' : 'for', { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
-    this.add2(this.add.image(x - 64, 150, `token/relic-${r.tier}`));
+    this.tip.on(this.add2(this.add.image(x - 64, 150, `token/relic-${r.tier}`)), r.name, [`Tier ${r.tier} relic`, r.text, 'It works on its own for the rest of the run.']);
     this.text(x - 54, 144, r.name, { size: 8, color: 'y' });
     this.text(x - 72, 158, `Tier ${r.tier} relic. ${r.text}`, { size: 6, color: 'w', wrap: 144 });
     if (deal.card) {
@@ -588,6 +592,7 @@ export class Run extends Phaser.Scene {
     this.text(x, y + 2, f.name, { size: 7, color: 'y', align: 'center', wrap: 60 }).setOrigin(0.5, 0);
     this.text(x, y + 46, f.text, { size: 6, color: 'w', align: 'center', wrap: 70 }).setOrigin(0.5, 0);
     this.text(x, y + 22, `${f.rarity[0]!.toUpperCase()}${f.rarity.slice(1)}`, { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
+    this.tip.on(tile, f.name, [`${cap(f.rarity)} familiar`, f.text, 'It takes a familiar slot and scores left to right with the others.']);
     if (dim) return void tile.setAlpha(0.4);
     tile.setInteractive({ useHandCursor: true }).on('pointerdown', onPick);
     tile.on('pointerover', () => tile.setStrokeStyle(2, hex('y')));
@@ -670,9 +675,22 @@ export class Run extends Phaser.Scene {
     const pot = cauldronOf(s);
     year.setInteractive().on('pointerover', () => this.tip.text(`${witch.name}, ${pot.name}`, [`${witch.name}: ${witch.quirk}`, `${pot.name}: ${pot.text}`], year.x + year.width / 2, year.y + 10));
     year.on('pointerout', () => this.tip.hide());
-    this.text(10, 10, dayLabel(s), { size: 12, color: 'a', shadow: true });
-    this.text(630, 8, `${s.gold} gold`, { size: 12, color: 'y', shadow: true }).setOrigin(1, 0);
-    if (s.phase === 'brewing') this.text(10, 24, `Brews ${s.brewsLeft} · Discards ${s.discardsLeft}`, { size: 8, color: 'w', shadow: true });
+    const left = NIGHT_SHIFT_DAY - s.day;
+    this.tip.on(this.text(10, 10, dayLabel(s), { size: 12, color: 'a', shadow: true }), dayLabel(s), [
+      `Week ${s.week} of ${WEEKS}. Each week is ${NIGHT_SHIFT_DAY - 1} days, then the Night Shift.`,
+      left > 0 ? `${left} ${left === 1 ? 'day' : 'days'} until the Night Shift, when the patron comes and rent is due.` : 'Tonight is the Night Shift: the patron comes, then the Night Market, then rent.',
+    ]);
+    this.tip.on(this.text(630, 8, `${s.gold} gold`, { size: 12, color: 'y', shadow: true }).setOrigin(1, 0), 'Gold', [
+      'Orders pay gold, and the Night Market and evening stops spend it.',
+      `${rentOf(s)}g of it goes on rent after this week's Night Shift.`,
+    ]);
+    if (s.phase === 'brewing') {
+      this.tip.on(this.text(10, 24, `Brews ${s.brewsLeft} · Discards ${s.discardsLeft}`, { size: 8, color: 'w', shadow: true }), 'Brews and Discards', [
+        'Brews: potions you can still make today. Each one uses the cauldron.',
+        `Discards: throw away 1 to ${MAX_DISCARD} cards and draw that many, or pour out a Shelf potion.`,
+        'Both refill each morning.',
+      ]);
+    }
     else if (s.phase === 'morning') this.text(10, 24, s.day === NIGHT_SHIFT_DAY ? 'The night customers are here' : "Today's orders", { size: 8, color: 'w', shadow: true });
     if (s.phase === 'morning' || s.phase === 'brewing') {
       // Today's weather, festival and sky event (GDD §4.2); hover for the rules.
@@ -680,7 +698,10 @@ export class Run extends Phaser.Scene {
       today.setInteractive().on('pointerover', () => this.tip.text('Today', todayRules(s), today.x + today.width / 2, today.y + 10));
       today.on('pointerout', () => this.tip.hide());
     }
-    this.text(630, 24, `Rent ${rentOf(s)}g after the Night Shift`, { size: 7, color: 'a', shadow: true }).setOrigin(1, 0);
+    this.tip.on(this.text(630, 24, `Rent ${rentOf(s)}g after the Night Shift`, { size: 7, color: 'a', shadow: true }).setOrigin(1, 0), 'Rent', () => [
+      'Paid on its own after each Night Shift. If you can\'t pay, the Guild reclaims your stall and the run ends.',
+      `This month: ${Array.from({ length: WEEKS }, (_, i) => `${rentOf(s, i + 1)}g`).join(', ')}.`,
+    ]);
     this.drawCommissions(s);
     if (s.phase !== 'game-over' && s.phase !== 'victory') this.drawRibbon(s);
     const hidden = this.grimoireHidden(s);
@@ -850,9 +871,17 @@ export class Run extends Phaser.Scene {
         next.setScale(0.85);
         this.text(SIDE.x + SIDE.w - 6, SIDE.y + 20, 'recipe', { size: 6, color: 'a' }).setOrigin(1, 0);
       }
-      this.text(x, SIDE.y + 30, `Potency ${preview.potency} × Harmony ${preview.harmony}`, { size: 7, color: 'w' });
-      this.text(x, SIDE.y + 42, `= ${preview.quality} · ${TIER_NAME[preview.tier]}`, { size: 10, color: TIER_COLOR[preview.tier]! });
-      if (!preview.known) this.text(x, SIDE.y + 56, 'Experiment: one tier lower this time.', { size: 7, color: 'v', wrap: SIDE.w - 12 });
+      const score = [
+        'Quality = Potency × Harmony. Potency is the cards\' strength added up; Harmony starts at the recipe\'s base and grows with bonuses.',
+        `Quality makes the tier: ${TIERS.map((t) => `${TIER_NAME[t]} ${TIER_MIN[t]}+`).join(', ')}.`,
+      ];
+      this.tip.on(this.text(x, SIDE.y + 30, `Potency ${preview.potency} × Harmony ${preview.harmony}`, { size: 7, color: 'w' }), 'Quality', score);
+      this.tip.on(this.text(x, SIDE.y + 42, `= ${preview.quality} · ${TIER_NAME[preview.tier]}`, { size: 10, color: TIER_COLOR[preview.tier]! }), 'Quality', score);
+      if (!preview.known) {
+        this.tip.on(this.text(x, SIDE.y + 56, 'Experiment: one tier lower this time.', { size: 7, color: 'v', wrap: SIDE.w - 12 }), 'Experiment', [
+          'The first time you brew a recipe it comes out one tier lower. After that you know it, and the Grimoire lists it.',
+        ]);
+      }
       // Tonight's patron changed the score (the Lamplighter's wicks, Sir Bramble, the Frost Warden): say by how much.
       const twist = preview.steps.find((x) => x.source === 'patron')?.note;
       if (twist) this.text(x, SIDE.y + (preview.known ? 56 : 66), `${customerName(patronOf(s)!.id)}: ${twist}`, { size: 7, color: 'v', wrap: SIDE.w - 12 });
@@ -870,7 +899,10 @@ export class Run extends Phaser.Scene {
 
     // The Shelf (GDD §6.5).
     this.add2(panel(this, SIDE.x, SHELF_Y, SIDE.w, 70));
-    this.text(x, SHELF_Y + 4, `Shelf ${s.shelf.length}/${s.shelfSize}`, { size: 8, color: 'y' });
+    this.tip.on(this.text(x, SHELF_Y + 4, `Shelf ${s.shelf.length}/${s.shelfSize}`, { size: 8, color: 'y' }), 'The Shelf', [
+      'Potions no order took wait here between days. They can fill later orders or sell at the Night Market.',
+      'When it is full, a new potion spills. The Night Market sells more Shelf space.',
+    ]);
     const pouring = this.mode.kind === 'pour';
     // Pouring out costs a Discard, so it's only offered while one is left.
     const canPour = s.phase === 'brewing' && s.discardsLeft > 0;
@@ -943,10 +975,13 @@ export class Run extends Phaser.Scene {
       const back = this.add2(this.add.image(34 + i, HAND_Y - i, 'card/back'));
       back.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.openBook('deck'));
     }
-    this.text(36, HAND_Y + 37, `Draw ${s.drawPile.length}`, { size: 7, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
+    this.tip.on(this.text(36, HAND_Y + 37, `Draw ${s.drawPile.length}`, { size: 7, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0), 'Draw pile', [
+      'Cards still to draw today. The whole deck is shuffled together each morning. Click the pile to see your deck.',
+    ]);
     // The discard pile: click to see what's in it.
     const discarded = this.text(36, HAND_Y + 46, `Discarded ${s.discardPile.length}`, { size: 7, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
     discarded.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.openBook('deck', DECK_VIEWS.indexOf('discard')));
+    this.tip.on(discarded, 'Discarded', ['Cards brewed or discarded today. They wait here until the morning shuffle. Click to see them.']);
 
     const picked = this.mode.kind === 'select' ? this.mode.picked : [];
     const tincture = this.mode.kind === 'select' ? this.mode.tincture : undefined;
@@ -1022,8 +1057,12 @@ export class Run extends Phaser.Scene {
     const preview = this.previewOf(s);
     const brewLabel = this.confirm === 'sludge' ? 'Brew Sludge?' : `Brew (${s.brewsLeft})`;
     const blocked = brewBlocked(s, s.cauldron) !== null;
-    this.add2(button(this, 320, y, brewLabel, () => this.brew(), { w: 76, color: this.confirm === 'sludge' ? 'I' : 'Y', enabled: preview.kind !== 'empty' && s.brewsLeft > 0 && !blocked }));
-    this.add2(button(this, 236, y, `Discard (${s.discardsLeft})`, () => this.startDiscard(s), { w: 76, enabled: s.discardsLeft > 0 }));
+    this.tip.on(this.add2(button(this, 320, y, brewLabel, () => this.brew(), { w: 76, color: this.confirm === 'sludge' ? 'I' : 'Y', enabled: preview.kind !== 'empty' && s.brewsLeft > 0 && !blocked })), 'Brew', [
+      `Brew what's in the cauldron. ${s.brewsLeft} ${s.brewsLeft === 1 ? 'brew' : 'brews'} left today; the potion goes to the best open order, or onto the Shelf.`,
+    ]);
+    this.tip.on(this.add2(button(this, 236, y, `Discard (${s.discardsLeft})`, () => this.startDiscard(s), { w: 76, enabled: s.discardsLeft > 0 })), 'Discard', [
+      `Pick 1 to ${MAX_DISCARD} cards from your hand to throw away, then draw that many. ${s.discardsLeft} left today.`,
+    ]);
     const open = s.orders.filter((o) => o.status === 'open').length;
     const endLabel = this.confirm === 'endDay' ? `Decline ${open} & end?` : 'End day';
     this.add2(button(this, 580, y, endLabel, () => this.endDay(), { w: this.confirm === 'endDay' ? 96 : 60, color: this.confirm === 'endDay' ? 'I' : 'W' }));
@@ -1369,7 +1408,10 @@ export class Run extends Phaser.Scene {
         if (lift) {
           s.curses.forEach((id, i) => {
             const x = 320 + (i - (s.curses.length - 1) / 2) * 96;
-            this.add2(button(this, x, 238, `Lift ${codex.curses.get(id)!.name}`, () => this.dispatch({ type: 'liftCurse', curse: id }), { w: 90, color: 'v' }));
+            const c = codex.curses.get(id)!;
+            this.tip.on(this.add2(button(this, x, 238, `Lift ${c.name}`, () => this.dispatch({ type: 'liftCurse', curse: id }), { w: 90, color: 'v' })), c.name, [
+              `Curse, severity ${c.severity}. ${c.text}`, 'Lifting it uses the Hearth instead of burning a card.',
+            ]);
           });
         }
         this.add2(button(this, 320, 262, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
@@ -1607,10 +1649,16 @@ export class Run extends Phaser.Scene {
       const on = p === pick;
       if (on) this.add2(this.add.rectangle(x, 90, 88, 20).setStrokeStyle(1, hex('Y')));
       if (p !== 'temper') this.add2(this.add.image(x - 34, 90, `badge/${p}`));
-      this.add2(button(this, x + (p === 'temper' ? 0 : 6), 90, label, () => {
+      const b = this.add2(button(this, x + (p === 'temper' ? 0 : 6), 90, label, () => {
         this.mode = { kind: 'creek', pick: p };
         this.render();
       }, { w: p === 'temper' ? 80 : 68, color: on ? 'Y' : price > s.gold ? 'R' : 'W', enabled: price <= s.gold }));
+      const m = p === 'temper' ? null : codex.modifiers.get(p)!;
+      this.tip.on(b, m ? m.name : 'Temper', [
+        m ? m.text : `+${MODIFIER_RULES.temperPotency} Potency on one ingredient for the run.`,
+        m ? `${price}g. One modifier per card, for the run.` : 'Free. One card a visit.',
+        ...(price > s.gold ? [`You have ${s.gold}g.`] : []),
+      ]);
     });
     const what = pick === 'temper' ? `+${MODIFIER_RULES.temperPotency} Potency on one ingredient for the run.` : `${codex.modifiers.get(pick)!.name}. ${codex.modifiers.get(pick)!.text} One per card.`;
     this.text(320, 104, what, { size: 8, color: 'w', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);
@@ -1640,6 +1688,9 @@ export class Run extends Phaser.Scene {
         this.text(x, y + 4, item.kind === 'cauldron-slot' ? 'Brew with one more ingredient' : '+1 potion space', { size: 7, color: 'w', align: 'center', wrap: 50 }).setOrigin(0.5, 0);
         if (item.sold) tile.setAlpha(0.4);
         else tile.setInteractive({ useHandCursor: true }).on('pointerdown', buy);
+        this.tip.on(tile, item.kind === 'cauldron-slot' ? 'Cauldron slot' : 'Shelf slot', item.kind === 'cauldron-slot'
+          ? [`Your cauldron holds ${s.cauldronSlots}. A third slot opens the three-ingredient recipes, which brew stronger potions.`, 'It lasts the run.']
+          : [`Your Shelf holds ${s.shelfSize}. One more space keeps one more potion between days.`, 'It lasts the run.']);
       }
       // The Firefly Keeper's half-price buy shows on every price at the Night Market.
       const price = priceAt(s, item);
@@ -1690,7 +1741,10 @@ export class Run extends Phaser.Scene {
       if (!this.walkState || this.walkState.week !== s.week) this.walkState = newWalk(s.week);
       const short = s.gold < due;
       const line = `${buried ? SNOWED_IN_LINE : MOON_LINE[moonOf(s.week)]} Rent tonight: ${due}g. You have ${s.gold}g.${s.halfPrice > 0 ? ' Your next buy here is half price.' : ''}`;
-      this.text(320, 36, line, { size: 7, color: 'a', stroke: 'k', align: 'center', wrap: 420 }).setOrigin(0.5, 0);
+      this.tip.on(this.text(320, 36, line, { size: 7, color: 'a', stroke: 'k', align: 'center', wrap: 420 }).setOrigin(0.5, 0), 'Rent tonight', [
+        `${due}g, paid as you head home over the bridge. If you can't pay, the run ends.`,
+        ...(s.week < WEEKS ? [`Next week's rent: ${rentOf(s, s.week + 1)}g.`] : ['This is the last rent of the month.']),
+      ]);
       this.market = new MarketWalk(this, this.ui, {
         season: s.season, snowedIn: buried, stalls: offer.stalls,
         describe: (st) => {
@@ -1863,7 +1917,7 @@ export class Run extends Phaser.Scene {
         this.text(320, 110, 'Next week', { size: 8, color: 'a', align: 'center' }).setOrigin(0.5, 0);
         next.forEach((w, d) => {
           const x = 320 + (d - (next.length - 1) / 2) * 84;
-          this.add2(panel(this, x - 38, 126, 76, 40, 'k', 0.95, 'n'));
+          this.tip.on(this.add2(panel(this, x - 38, 126, 76, 40, 'k', 0.95, 'n')), `Week ${s.week + 1}, day ${d + 1}`, dayRules(s, { week: s.week + 1, day: d + 1, weather: w }));
           this.text(x, 132, `Day ${d + 1}`, { size: 7, color: 'a', align: 'center' }).setOrigin(0.5, 0);
           this.text(x, 146, WEATHER_NAME[w], { size: 8, color: 'W', align: 'center' }).setOrigin(0.5, 0);
         });
@@ -2000,7 +2054,9 @@ export class Run extends Phaser.Scene {
         stall.drawn.forEach((id, i) => {
           const t = codex.tarot.get(id)!;
           const x = 320 + (i - (stall.drawn.length - 1) / 2) * 96;
-          this.add2(panel(this, x - 44, 96, 88, 90, 'k', 0.95, t.kind === 'boon' ? 'y' : 'v'));
+          this.tip.on(this.add2(panel(this, x - 44, 96, 88, 90, 'k', 0.95, t.kind === 'boon' ? 'y' : 'v')), t.name, [
+            t.text, t.kind === 'boon' ? 'A boon: it applies at once.' : 'A twist: it changes next week.',
+          ]);
           this.text(x, 104, t.name, { size: 8, color: t.kind === 'boon' ? 'y' : 'v', align: 'center', wrap: 80 }).setOrigin(0.5, 0);
           this.text(x, 122, t.kind === 'boon' ? 'Boon' : 'Twist', { size: 6, color: 'a', align: 'center' }).setOrigin(0.5, 0);
           this.text(x, 136, t.text, { size: 7, color: 'w', align: 'center', wrap: 80 }).setOrigin(0.5, 0);
