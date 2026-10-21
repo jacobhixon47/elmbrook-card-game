@@ -77,11 +77,11 @@ export type Profile = {
    * on to the next season, a loss keeps the season you lost in.
    */
   home: Season;
-  /** The longest Endless run (GDD §13): weeks lasted past the finale, and where. */
+  /** The longest Endless run (GDD §13): weeks lasted, and in which season. */
   endlessBest: EndlessBest | null;
 };
 
-export type EndlessBest = { weeks: number; season: Season; year: number };
+export type EndlessBest = { weeks: number; season: Season };
 
 export function newProfile(): Profile {
   return {
@@ -233,7 +233,7 @@ function sanitize(p: Raw): Profile {
 function endlessBestOf(raw: unknown): EndlessBest | null {
   const b = (raw && typeof raw === 'object' ? raw : {}) as Raw;
   if (typeof b.weeks !== 'number' || b.weeks < 0 || !SEASONS.includes(b.season as Season)) return null;
-  return { weeks: Math.floor(b.weeks), season: b.season as Season, year: typeof b.year === 'number' && b.year >= 1 ? Math.floor(b.year) : 1 };
+  return { weeks: Math.floor(b.weeks), season: b.season as Season };
 }
 
 /** Whether a witch is open (GDD §12): the Hedge Witch always; each other the first time her season is won. */
@@ -315,10 +315,10 @@ function newlyOpen(before: Profile, after: Profile): Pick<RunOutcome, 'witches' 
 }
 
 /** Count a finished run. A run still going, or one already counted, changes nothing. */
-export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year' | 'gold' | 'witch' | 'cauldronKind' | 'friendship' | 'endless' | 'lostTo'>>): RunOutcome {
+export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year' | 'gold' | 'witch' | 'cauldronKind' | 'friendship' | 'endless' | 'endlessMode' | 'lostTo'>>): RunOutcome {
   const same = { profile, reputation: 0, opened: null, yearDone: false, newYear: null, almanac: [], perkTiers: [], witches: [], cauldrons: [] };
-  // Endless earns nothing but a best (GDD §13): the win was counted at the finale, before it went on.
-  if (s.endless && s.phase === 'game-over') return { ...same, profile: recordEndless(profile, s) };
+  // Endless is its own mode and earns nothing but a best (GDD §13).
+  if (s.endlessMode) return s.phase === 'game-over' ? { ...same, profile: recordEndless(profile, s) } : same;
   if ((s.phase !== 'victory' && s.phase !== 'game-over') || profile.lastRun === s.seed) return same;
   const reputation = reputationFor(s);
   const won = s.phase === 'victory';
@@ -352,23 +352,20 @@ export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' 
   return { profile: p, reputation, opened, yearDone, newYear, almanac, perkTiers: tiersOpened(profile, p), ...newlyOpen(profile, p) };
 }
 
-/** Endless opens once you reach this Year (GDD §13). */
-export const ENDLESS_YEAR = 5;
+/** Endless (GDD §13) is its own mode, open from the title once the tutorial is done (Jacob, Oct 21). */
+export const endlessOpen = (p: Pick<Profile, 'tutorialDone'>): boolean => p.tutorialDone;
 
-export const endlessOpen = (p: Pick<Profile, 'yearSeasons'>): boolean => p.yearSeasons.length >= ENDLESS_YEAR;
-
-/** Weeks an Endless run has lasted past its first finale: each rent paid (a lost finale paid that week's). */
+/** Weeks an Endless run has lasted: each rent paid (a lost finale paid that week's). */
 export function endlessWeeks(s: Pick<RunState, 'week'> & Partial<Pick<RunState, 'endless' | 'lostTo' | 'phase'>>): number {
-  if (!s.endless) return 0;
-  const paidThisWeek = s.phase === 'victory' || (s.phase === 'game-over' && s.lostTo === 'finale');
-  return Math.max(0, runWeek(s) - WEEKS - (paidThisWeek ? 0 : 1));
+  const paidThisWeek = s.phase === 'game-over' && s.lostTo === 'finale';
+  return Math.max(0, runWeek(s) - (paidThisWeek ? 0 : 1));
 }
 
-/** An Endless run's weeks against the best, kept if longer. Counting it twice changes nothing. */
-function recordEndless(p: Profile, s: Pick<RunState, 'season' | 'week'> & Partial<Pick<RunState, 'year' | 'endless' | 'lostTo' | 'phase'>>): Profile {
+/** An Endless run's weeks against the best, kept if longer. */
+function recordEndless(p: Profile, s: Pick<RunState, 'season' | 'week'> & Partial<Pick<RunState, 'endless' | 'lostTo' | 'phase'>>): Profile {
   const weeks = endlessWeeks(s);
   if (p.endlessBest && p.endlessBest.weeks >= weeks) return p;
-  return { ...p, endlessBest: { weeks, season: s.season, year: s.year ?? 1 } };
+  return { ...p, endlessBest: { weeks, season: s.season } };
 }
 
 /** Almanac entries done that open looping before a second Year is won (GDD §13): a quarter of the first page, kept when the harder entries came. */
@@ -509,7 +506,7 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
   20: (s) => ({ ...s, halfPrice: 0, favours: [] }),
   21: (s) => ({ ...s, tomorrow: { brews: 0, discards: 0 }, forfeitReward: false, blindBrew: false, patronsRead: false }),
   // 22 → 23: Endless, not entered.
-  22: (s) => ({ ...s, endless: 0 }),
+  22: (s) => ({ ...s, endless: 0, endlessMode: false }),
 };
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */

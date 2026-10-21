@@ -35,7 +35,7 @@ export type ReduceResult = { state: RunState; events: GameEvent[] };
 const freshPending = (): Pending => ({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false, essenceHarmony: 0 });
 const noBoost = () => ({ hearts: 0, tip: 0, payMult: 1 });
 
-export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string, cauldronId = 'copper', friendship: Readonly<Record<string, number>> = {}, keepsakes: readonly string[] = []): ReduceResult {
+export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string, cauldronId = 'copper', friendship: Readonly<Record<string, number>> = {}, keepsakes: readonly string[] = [], endlessMode = false): ReduceResult {
   const witch = codex.witches.get(witchId);
   if (!witch) throw new Error(`unknown witch: ${witchId}`);
   if (!codex.cauldrons.has(cauldronId)) throw new Error(`unknown cauldron: ${cauldronId}`);
@@ -53,7 +53,8 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     rng: seedRng(seed),
     witch: witch.id,
     season,
-    year: Math.max(1, Math.floor(year)),
+    // Endless plays by Year 1's rules (GDD §13).
+    year: endlessMode ? 1 : Math.max(1, Math.floor(year)),
     calendar: rollCalendar(seed, season, WEEKS),
     week: 1,
     day: 1,
@@ -106,13 +107,14 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     forfeitReward: false,
     blindBrew: false,
     patronsRead: false,
+    endlessMode,
     endless: 0,
     nextUid: uid,
   };
   const ctx: Ctx = { s, ev: [{ type: 'runStarted', seed, witch: witch.id, season }] };
   applyCauldron(ctx);
   applyPerks(ctx, perks);
-  if (boon) applyBoon(ctx, boon);
+  if (boon && !endlessMode) applyBoon(ctx, boon);
   applyYear(ctx);
   applyKeepsakes(ctx, keepsakes);
   startDay(ctx);
@@ -428,6 +430,7 @@ function collectRent(ctx: Ctx): void {
     s.lostTo = 'finale';
     return;
   }
+  if (s.week >= WEEKS && s.endlessMode) return rollMonth(ctx);
   if (s.week >= WEEKS) {
     s.phase = 'victory';
     ctx.ev.push({ type: 'runWon' });
@@ -441,12 +444,11 @@ function collectRent(ctx: Ctx): void {
 }
 
 /**
- * Endless (GDD §13): after a won finale the run goes on into a fresh month, with a new calendar and
+ * Endless (GDD §13): a finale met rolls the run on into a fresh month, with a new calendar and
  * patrons, keeping everything you have. Rent goes on climbing from the finale's (`rentOf`).
  */
-function goEndless(ctx: Ctx): void {
+function rollMonth(ctx: Ctx): void {
   const s = ctx.s;
-  if (s.phase !== 'victory') reject('Endless starts after a won finale');
   removeWeekCards(ctx);
   s.endless += 1;
   const seed = `${s.seed}:endless:${s.endless}`;
@@ -458,7 +460,7 @@ function goEndless(ctx: Ctx): void {
   s.week = 1;
   s.weekDeliveries = 0;
   s.day = 1;
-  ctx.ev.push({ type: 'endlessMonth', month: s.endless });
+  ctx.ev.push({ type: 'endlessMonth', month: s.endless + 1 });
   startDay(ctx);
 }
 
@@ -830,10 +832,6 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
       collectRent(ctx);
       return;
 
-    case 'goEndless':
-      goEndless(ctx);
-      return;
-
     case 'debug':
       if (action.op === 'addGold') {
         changeGold(ctx, action.amount, 'debug');
@@ -990,7 +988,7 @@ function applyBoon(ctx: Ctx, id: string): void {
 
 /** The single entry point for game rules. Pure: same input, same output. A broken rule returns the old state and a `rejected` event. */
 export function reduce(state: RunState | null, action: Action): ReduceResult {
-  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks, action.year, action.boon, action.cauldron, action.friendship, action.keepsakes);
+  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks, action.year, action.boon, action.cauldron, action.friendship, action.keepsakes, action.endless);
   if (!state) throw new Error('no run in progress');
   const ctx: Ctx = { s: structuredClone(state), ev: [] };
   try {

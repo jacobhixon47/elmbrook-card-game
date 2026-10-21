@@ -6,7 +6,7 @@ import type { Action, Errand, RunState, Tier } from '../core';
  * card uids, so a fixture reads as "slot the first two cards" and survives rule changes.
  */
 export type FixtureStep =
-  | 'openShop' | 'endDay' | 'skipReward' | 'leaveErrand' | 'leaveMarket' | 'brew' | 'passGift' | 'leaveStall' | 'drawTarot' | 'goEndless'
+  | 'openShop' | 'endDay' | 'skipReward' | 'leaveErrand' | 'leaveMarket' | 'brew' | 'passGift' | 'leaveStall' | 'drawTarot'
   | { slot: number }
   | { pick: number }
   | { errand: Errand }

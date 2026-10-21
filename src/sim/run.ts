@@ -38,7 +38,7 @@ export type RunRecord = {
   modifiers: string[];
   /** Each day's requests (a recipe id, or `family:<id>`), by week: [week][day]. */
   boards: string[][][];
-  /** With `endless`: weeks lasted past the first finale (0 if the first month was lost). */
+  /** With `endless`: weeks the Endless run lasted. */
   endlessWeeks: number;
   /** The state the run ended in, for counting it into a profile. */
   final?: RunState;
@@ -125,16 +125,14 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
   };
 
   try {
-    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}), ...(opts.unlocks ? { unlocks: [...opts.unlocks] } : {}), ...(opts.perks ? { perks: [...opts.perks] } : {}), ...(opts.year ? { year: opts.year } : {}), ...(opts.boon ? { boon: opts.boon } : {}), ...(opts.cauldron ? { cauldron: opts.cauldron } : {}), ...(opts.friendship ? { friendship: { ...opts.friendship } } : {}), ...(opts.keepsakes?.length ? { keepsakes: [...opts.keepsakes] } : {}) };
+    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}), ...(opts.unlocks ? { unlocks: [...opts.unlocks] } : {}), ...(opts.perks ? { perks: [...opts.perks] } : {}), ...(opts.year ? { year: opts.year } : {}), ...(opts.boon ? { boon: opts.boon } : {}), ...(opts.cauldron ? { cauldron: opts.cauldron } : {}), ...(opts.friendship ? { friendship: { ...opts.friendship } } : {}), ...(opts.keepsakes?.length ? { keepsakes: [...opts.keepsakes] } : {}), ...(opts.endless ? { endless: true } : {}) };
     rec.actions.push(start);
     const first = reduce(null, start);
     let state = first.state;
     observe(state, first.events);
     while (rec.actions.length < max) {
-      // Endless: a won month goes on into the next, until the rent can't be paid.
-      const onward = opts.endless && state.phase === 'victory';
-      if (isOver(state) && !onward) break;
-      const action: Action = onward ? { type: 'goEndless' } : player(state);
+      if (isOver(state)) break;
+      const action: Action = player(state);
       rec.actions.push(action);
       const r = reduce(state, action);
       // Gold is observed on the state the day started in, so observe after applying.

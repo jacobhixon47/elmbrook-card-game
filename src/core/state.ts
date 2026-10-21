@@ -270,7 +270,9 @@ export type RunState = {
   blindBrew: boolean;
   /** Every patron of the month is known, whatever the Year (An Old Cookbook). */
   patronsRead: boolean;
-  /** Endless (GDD §13): 0 until the run goes on past its finale, then the month of Endless it's in (1, 2, ...). */
+  /** An Endless run (GDD §13): its own mode, where each finale rolls on into a new month instead of winning. */
+  endlessMode: boolean;
+  /** Months an Endless run has rolled on past its first (0, 1, 2, ...). Always 0 outside Endless. */
   endless: number;
   nextUid: number;
   /** Why a lost run ended: the rent, or the Moonless Patron left unsatisfied. */

@@ -1,5 +1,5 @@
 // pnpm sim --runs 2000 --strategy greedy [--season spring] [--seed prefix] [--unlocks all] [--perks all|tier|a,b] [--year 2] [--boon id] [--friends 10]
-// pnpm sim --runs 200 --endless [--year 5]   (won runs go on into Endless; prints the weeks lasted)
+// pnpm sim --runs 200 --endless [--unlocks all --perks all]   (Endless runs; prints the weeks lasted)
 // pnpm sim --career 20 --strategy casual [--max-runs 250]   (whole saves from a new profile; see src/sim/career.ts)
 // pnpm sim --replay path/to/run.json   (a {seed?, actions[]} log from a crash, the sim or the dev overlay)
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -56,7 +56,7 @@ if (careers) {
   process.exit(saves.some((c) => c.error) ? 1 : 0);
 }
 
-// --endless: every won run goes on into Endless until the rent can't be paid.
+// --endless: Endless runs (Year 1 rules, no boon), each going until the rent or a finale beats it.
 const endless = process.argv.includes('--endless');
 
 const t0 = performance.now();
@@ -65,11 +65,11 @@ const secs = ((performance.now() - t0) / 1000).toFixed(1);
 
 console.log(report(records, `${strategy}${season ? ` · ${season}` : ''}${unlocks ? ' · all unlocked' : ''}${perks ? ` · ${perksArg === 'all' ? 'all perks' : `perks ${perksArg}`}` : ''}${year ? ` · Year ${year}` : ''}${boon ? ` · ${boon}` : ''}${friendsArg ? ` · Friendship ${friendsArg}` : ''}`));
 if (endless) {
-  const weeks = records.filter((r) => r.won).map((r) => r.endlessWeeks).sort((a, b) => a - b);
+  const weeks = records.map((r) => r.endlessWeeks).sort((a, b) => a - b);
   const at = (q: number) => weeks[Math.min(weeks.length - 1, Math.floor(q * weeks.length))] ?? 0;
   const counts = new Map<number, number>();
   for (const w of weeks) counts.set(w, (counts.get(w) ?? 0) + 1);
-  console.log(`\nEndless (${weeks.length} won runs went on): weeks lasted median ${at(0.5)}, p10 ${at(0.1)}, p90 ${at(0.9)}, best ${weeks.at(-1) ?? 0}`);
+  console.log(`\nEndless (${weeks.length} runs): weeks lasted median ${at(0.5)}, p10 ${at(0.1)}, p90 ${at(0.9)}, best ${weeks.at(-1) ?? 0}`);
   console.log(`  ${[...counts].map(([w, n]) => `${w}w:${n}`).join(' ')}`);
   const unfinished = records.filter((r) => !r.finished).length;
   if (unfinished) console.log(`  ${unfinished} runs hit the action cap`);

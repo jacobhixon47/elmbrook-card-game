@@ -1,7 +1,7 @@
 import { codex } from '../codex';
 import type { PotionFamily } from '../codex/schema';
 import type { NightPayment, PatronReward, VisitorPayment } from '../codex/schema';
-import { familiesOf, inFamily, MODIFIER_RULES, NIGHT_SHIFT_DAY, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
+import { familiesOf, inFamily, MODIFIER_RULES, NIGHT_SHIFT_DAY, runWeek, type Errand, type Order, type OrderBonus, type RunState, type Tier } from '../core';
 
 // Plain words for what the rules engine holds. Pure, so the wording is tested without a browser.
 
@@ -238,8 +238,9 @@ export function listOf(names: readonly string[]): string {
   return names.length < 2 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-export function dayLabel(state: Pick<RunState, 'week' | 'day'>): string {
-  return `Week ${state.week} · ${state.day === NIGHT_SHIFT_DAY ? 'Night Shift' : `Day ${state.day}`}`;
+export function dayLabel(state: Pick<RunState, 'week' | 'day'> & Partial<Pick<RunState, 'endless'>>): string {
+  // Endless counts its weeks straight on through the months (GDD §13).
+  return `Week ${runWeek(state)} · ${state.day === NIGHT_SHIFT_DAY ? 'Night Shift' : `Day ${state.day}`}`;
 }
 
 /** What a Guild Commission pays. */

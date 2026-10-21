@@ -35,6 +35,18 @@ describe('the saved run', () => {
     expect(loadRun()).toBeNull();
   });
 
+  it('keeps an Endless run in its own slot', () => {
+    const story = brewing('story');
+    const endless = { ...brewing('endless'), endlessMode: true };
+    saveRun(story);
+    saveRun(endless);
+    expect(loadRun()).toEqual(story);
+    expect(loadRun('endless')).toEqual(endless);
+    saveRun({ ...endless, phase: 'game-over' });
+    expect(loadRun('endless')).toBeNull();
+    expect(loadRun()).toEqual(story);
+  });
+
   it('clears the slot when the run is over', () => {
     saveRun(brewing('save'));
     saveRun({ ...brewing('save'), phase: 'game-over' });
