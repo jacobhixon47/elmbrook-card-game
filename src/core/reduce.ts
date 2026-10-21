@@ -889,6 +889,10 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
         const card = [...allCards(s), ...s.satchel].find((c) => c.uid === action.uid);
         if (!card) reject(`no card ${action.uid}`);
         addModifier(ctx, card, action.modifier, 'debug');
+      } else if (action.op === 'temper') {
+        const card = [...allCards(s), ...s.satchel].find((c) => c.uid === action.uid);
+        if (!card) reject(`no card ${action.uid}`);
+        card.bonus = (card.bonus ?? 0) + action.amount;
       } else if (action.op === 'postVisitor') {
         if (!codex.visitors.has(action.visitor)) reject(`no visitor ${action.visitor}`);
         postVisitorOrder(ctx, action.visitor);

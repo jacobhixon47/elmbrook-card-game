@@ -47,10 +47,12 @@ export function cardInfo(id: string, extras: CardExtras = {}): CardInfo {
   if (kind === 'ingredient') {
     const ing = codex.ingredients.get(id)!;
     const essences = ing.essences.map(cap).join(' and ');
-    const lines = [`${essences} essence${ing.essences.length > 1 ? 's' : ''}. Potency ${ing.potency}${extras.bonus ? ` (+${extras.bonus} on this copy)` : ''}.`];
+    const lines = [`${essences} essence${ing.essences.length > 1 ? 's' : ''}. Potency ${ing.potency}.`];
     if (ing.text) lines.push(ing.text);
+    // What's been done to this copy, each named with its effect (Jacob, Oct 21).
     const mod = extras.modifier && codex.modifiers.get(extras.modifier);
     if (mod) lines.push(`${mod.name}: ${mod.text}`);
+    if (extras.bonus) lines.push(`Tempered: +${extras.bonus} Potency on this copy (${ing.potency + extras.bonus} in all).`);
     if (ing.nightOnly) lines.push('Kept in your Night Satchel: Night Shifts only.');
     const text = lines.join(' ');
     const ruled = Object.keys(TAG_GLYPHS).filter((t) => ing.tags.includes(t));

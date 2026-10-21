@@ -44,6 +44,13 @@ describe('UI wording', () => {
     expect(cardInfo('blood-moon').kind).toMatch(/Omen/);
     expect(cardInfo('starlit-dew').text).toMatch(/Night Satchel/);
   });
+
+  it('names what was done to a copy: its modifier, and any Tempering with the new total', () => {
+    const text = cardInfo('foxglove', { modifier: 'aged', bonus: 2 }).text;
+    expect(text).toMatch(/Aged: \+2 Potency for each day/);
+    expect(text).toMatch(/Tempered: \+2 Potency on this copy \(7 in all\)\./);
+    expect(cardInfo('foxglove').text).not.toMatch(/Tempered/);
+  });
 });
 
 describe('brew targeting', () => {

@@ -62,48 +62,47 @@ export const CAULDRON_METAL = {
 } as const satisfies Record<string, readonly PaletteKey[]>;
 
 /**
- * The line-drawn marks for the ingredient tags rules read (GDD §5.1), 7x7 at card resolution,
- * one colour each: a flower, a snowflake, a fruit, a leaf, a gem, a chili and a drop. They sit in
- * the card's top-left corner like a suit.
+ * The marks for the ingredient tags rules read (GDD §5.1), 8x8 pictograms at card resolution in
+ * palette keys ('.' transparent): a blossom, a snowflake, a pair of cherries, a leaf, a gem, a chili
+ * and a drop, outlined in 'k' (the snowflake's arms end in dark blue instead, since an outline would
+ * fill its gaps). They sit in the card's top-left corner like a suit.
  */
-export const TAG_GLYPHS: Record<string, { rows: readonly string[]; color: PaletteKey; /** A lighter shade, for the tag's name on dark panels. */ text: PaletteKey }> = {
+export const TAG_GLYPHS: Record<string, { rows: readonly string[]; /** A lighter shade, for the tag's name on dark panels. */ text: PaletteKey }> = {
   flower: {
-    color: 'i', text: 'I',
-    rows: ['#..#..#', '##.#.##', '#.#.#.#', '#.....#', '.#...#.', '..###..', '...#...'],
+    text: 'I',
+    rows: ['.kk..kk.', 'kIIkkIIk', 'kIiyyiIk', '.kyYyyk.', 'kIiyyyik', 'kIikkiik', '.kk..kk.', '........'],
   },
   frost: {
-    color: 'U', text: 'c',
-    rows: ['#..#..#', '.#.#.#.', '..#.#..', '###.###', '..#.#..', '.#.#.#.', '#..#..#'],
+    text: 'c',
+    rows: ['...u....', '.u.U.u..', '..UcU...', 'uUcWcUu.', '..UcU...', '.u.U.u..', '...u....', '........'],
   },
   fruit: {
-    color: 'o', text: 'o',
-    rows: ['....##.', '...#...', '.##.##.', '#.....#', '#.....#', '.#...#.', '..###..'],
+    text: 'o',
+    rows: ['....kkk.', '...kGlGk', '..k.kkk.', '.k.k....', 'kRkRk...', 'kRWRRkk.', 'krRRWRk.', '.kkrRRk.'],
   },
   herb: {
-    color: 'G', text: 'l',
-    rows: ['..#####', '.#....#', '#....##', '#...#.#', '#..#..#', '.##..#.', '#.###..'],
+    text: 'l',
+    rows: ['....kkkk', '..kklLLk', '.klLlGlk', 'klLlGGlk', 'kLlGGlGk', 'klGGlGk.', 'klkGGk..', 'kk.kk...'],
   },
   mineral: {
-    color: 'S', text: 'e',
-    rows: ['..###..', '.#.#.#.', '#######', '#.#.#.#', '.#.#.#.', '..#.#..', '...#...'],
+    text: 'e',
+    rows: ['.kkkkkk.', 'kWmvvvPk', 'kvvvvPPk', 'kkvvPPkk', '.kvvPpk.', '..kvpk..', '...kk...', '........'],
   },
   spice: {
-    color: 'R', text: 'R',
-    rows: ['.....#.', '....#..', '..###..', '.#..#..', '#..#...', '#.#....', '.#.....'],
+    text: 'R',
+    rows: ['.....kGk', '....kGGk', '..kkRkk.', '.kRWRrk.', 'kRRRrk..', 'kRrrk...', 'krk.....', 'kk......'],
   },
   water: {
-    color: 'T', text: 't',
-    rows: ['...#...', '..#.#..', '.#...#.', '#.....#', '#.#...#', '.#...#.', '..###..'],
+    text: 't',
+    rows: ['...kk...', '...kck..', '..kcUk..', '.kcUUUk.', 'kcWUUUuk', 'kcUUUuuk', '.kUuuuk.', '..kkkk..'],
   },
 };
 
-/** A tag's mark, 8x8: the 7x7 line drawing over a dark drop shadow, so it reads crisply on the card. */
+/** A tag's mark as an 8x8 Pixmap, drawn straight from its palette-key rows. */
 export function tagGlyph(tag: string): Pixmap {
   const g = TAG_GLYPHS[tag]!;
   const p = new Pixmap(8, 8);
-  const on = (x: number, y: number) => g.rows[y]?.[x] === '#';
-  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (on(x - 1, y - 1) && !on(x, y)) p.set(x, y, 'k');
-  g.rows.forEach((row, y) => [...row].forEach((ch, x) => ch === '#' && p.set(x, y, g.color)));
+  g.rows.forEach((row, y) => [...row].forEach((ch, x) => ch !== '.' && p.set(x, y, ch as PaletteKey)));
   return p;
 }
 

@@ -484,7 +484,7 @@ export class Run extends Phaser.Scene {
       const top = s.drawPile.slice(0, FAMILIAR_RULES.owlPeek);
       this.text(36, 230, 'Next up', { size: 6, color: 'a', align: 'center', shadow: true }).setOrigin(0.5, 0);
       top.forEach((inst, i) => {
-        const c = this.add2(createCard(this, 16 + i * 20, 254, inst.card, inst.woven, inst.modifier).setScale(0.35));
+        const c = this.add2(createCard(this, 16 + i * 20, 254, inst.card, inst.woven, inst.modifier, inst.bonus).setScale(0.35));
         c.setInteractive();
         this.inspect(c, inst.card, 0.35, inst);
       });
@@ -980,7 +980,7 @@ export class Run extends Phaser.Scene {
         this.add2(this.add.rectangle(x, SLOT_Y, 34, 46, hex('k'), 0.35).setStrokeStyle(1, hex('a'), 0.5));
         continue;
       }
-      const c = this.add2(createCard(this, x, SLOT_Y, card.card, card.woven, card.modifier).setScale(0.6));
+      const c = this.add2(createCard(this, x, SLOT_Y, card.card, card.woven, card.modifier, card.bonus).setScale(0.6));
       c.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.dispatch({ type: 'unslot', uid: card.uid }));
       this.inspect(c, card.card, 0.6, card);
     }
@@ -1010,7 +1010,7 @@ export class Run extends Phaser.Scene {
     s.hand.forEach((inst, i) => {
       const x = this.handX(i, s.hand.length);
       const lifted = picked.includes(inst.uid) || inst.uid === tincture;
-      const card = createCard(this, x, lifted ? HAND_Y - 14 : HAND_Y, inst.card, inst.woven, inst.modifier);
+      const card = createCard(this, x, lifted ? HAND_Y - 14 : HAND_Y, inst.card, inst.woven, inst.modifier, inst.bonus);
       if (lifted) card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex(inst.uid === tincture ? 'Y' : 'R')), 0);
       this.add2(card);
       card.setInteractive({ useHandCursor: s.phase === 'brewing' });
@@ -1118,7 +1118,7 @@ export class Run extends Phaser.Scene {
     this.text(320, 122, 'Taste Test: top of your draw pile', { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
     top.forEach((inst, i) => {
       const x = 320 + (i - (top.length - 1) / 2) * 70;
-      const card = this.add2(createCard(this, x, 178, inst.card, inst.woven, inst.modifier));
+      const card = this.add2(createCard(this, x, 178, inst.card, inst.woven, inst.modifier, inst.bonus));
       const at = picked.indexOf(inst.uid);
       if (at >= 0) {
         card.addAt(this.add.rectangle(0, 0, 60, 80).setStrokeStyle(2, hex('Y')), 0);
@@ -1253,7 +1253,7 @@ export class Run extends Phaser.Scene {
       const layer = this.add.container(0, 0);
       const n = before.cauldronSlots;
       const cards = before.cauldron.map((c, i) => {
-        const card = createCard(this, 320 + (i - (n - 1) / 2) * 40, SLOT_Y, c.card, c.woven, c.modifier).setScale(0.6);
+        const card = createCard(this, 320 + (i - (n - 1) / 2) * 40, SLOT_Y, c.card, c.woven, c.modifier, c.bonus).setScale(0.6);
         layer.add(card);
         return card;
       });
@@ -1732,7 +1732,7 @@ export class Run extends Phaser.Scene {
       const x = 320 + ((i % perRow) - (Math.min(deck.length, perRow) - 1) / 2) * 32;
       const y = top + Math.floor(i / perRow) * 44;
       const on = picked.includes(inst.uid);
-      const c = this.add2(createCard(this, x, on ? y - 6 : y, inst.card, inst.woven, inst.modifier).setScale(0.5));
+      const c = this.add2(createCard(this, x, on ? y - 6 : y, inst.card, inst.woven, inst.modifier, inst.bonus).setScale(0.5));
       if (on) this.add2(this.add.rectangle(x, y - 6, 29, 41).setStrokeStyle(1, hex('y')));
       c.setInteractive();
       this.inspect(c, inst.card, 0.5, inst);

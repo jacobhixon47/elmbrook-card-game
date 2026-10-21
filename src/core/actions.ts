@@ -85,6 +85,7 @@ export type Action =
   /** Open the Event errand on this dusk event, whatever the errands on offer. */
   | { type: 'debug'; op: 'openEvent'; event: string }
   | { type: 'debug'; op: 'setModifier'; uid: number; modifier: ModifierId }
+  | { type: 'debug'; op: 'temper'; uid: number; amount: number }
   /** Grant a patron's reward as if their order were filled. */
   | { type: 'debug'; op: 'patronReward'; patron: string }
   | { type: 'debug'; op: 'learnRecipes'; recipes: string[] }
