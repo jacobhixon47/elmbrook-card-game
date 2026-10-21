@@ -330,7 +330,7 @@ Pay, tips, Fence prices and shop prices live in `src/core/rules.ts` and are tune
 
 ### 6.5 The Shelf
 
-Brewed potions not delivered go to the Shelf (4 slots, upgradable). Shelf potions can fill later orders (from 1.0's "fulfil from inventory"), carry between days, and sell at the Night Market. Potions on the Shelf at rent time are not worth anything unless sold. A Shelf potion can be poured away during a day for one of the day's Discards (the Pour out button, or right-click it), so a full Shelf costs a choice rather than a brew (pouring was free until the balance pass, Jacob, Oct 17: a Shelf of the best potions was trivial to keep); hovering one shows its quality, ingredients, the order it would fill and what the Fence pays (decided with Jacob).
+Brewed potions not delivered go to the Shelf (4 slots, upgradable). Shelf potions can fill later orders (from 1.0's "fulfil from inventory"), carry between days, and sell at the Night Market. Potions on the Shelf at rent time are not worth anything unless sold. A Shelf potion can be poured away during a day for one of the day's Discards (the Pour out button, then the potion; no right-click shortcut, so it's always deliberate, Jacob, Oct 21), so a full Shelf costs a choice rather than a brew (pouring was free until the balance pass, Jacob, Oct 17: a Shelf of the best potions was trivial to keep); hovering one shows its quality, ingredients, the order it would fill and what the Fence pays (decided with Jacob).
 
 ## 7. Dusk errands
 
@@ -665,7 +665,7 @@ Decided after the M2 playtest: the rules must explain themselves before M3 adds 
   - *Weather firsts:* the first Fog, Heatwave and Snow day in a save each get a scene with the rule. After that only the HUD's weather line says it ("Foggy: orders hidden", "Raining", "Snowing"), with the full rules on hover.
   - *Once a run:* the fair, the Longest Night vigil, the Moonless Patron arriving for the finale, and Snowed In (once a week).
   - Fixtures, `?seed=` runs and the tutorial skip season openings and weather firsts; a fixture shows one with `ui.intro`.
-- **Settings** (the title screen, the cottage, Esc or the button at the bottom right in a run): a sound effects slider and a music slider (music 50% by default), sound on or off, season openings shown or hidden, first-time notes shown or hidden, fullscreen (also Alt+Enter anywhere) and the scale: Auto (the largest whole-number scale that fits the window) or any smaller whole number, so pixels stay square. A new scale redraws the game by reloading it, and the run in progress is kept. M still mutes anywhere.
+- **Settings** (the title screen, the cottage, Esc or the button at the bottom right in a run): a sound effects slider and a music slider (music 50% by default), sound on or off, season openings shown or hidden, first-time notes shown or hidden, fullscreen (also Alt+Enter anywhere) and the scale: Fill window (the default; Jacob, Oct 21) or a whole number. Fill draws the game at the full size of the screen (or the window, if bigger) and fits it to the window, letterboxed only to keep 16:9, so fullscreen is sharp without a redraw and a smaller window is shrunk smoothly. A whole-number scale keeps every pixel exactly square at that size. A new scale redraws the game by reloading it when it needs to, and the run in progress is kept. M still mutes anywhere.
 
 ## 16. Out of scope for v1
 
