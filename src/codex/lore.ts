@@ -174,6 +174,17 @@ export const lore: Record<string, string> = {
   'corona-draught': 'The light around an eclipse, bottled while it lasts.',
   'umbral-crown': 'For whoever rules the dark. Nobody asks who buys it.',
   'daybreak-elixir': 'The moment the night turns to morning, brewed and stoppered.',
+  'nightlight-broth': 'A small warm glow for children who won\'t sleep with the lamp out.',
+  'mountain-air-tonic': 'Tastes like the top of Elm Hill on a clear morning, without the climb.',
+  'foxfire-drops': 'A drop in each eye and the Wychwood paths light up green. Some of them go somewhere.',
+  'barrow-balm': 'Old Tobin rubs it on the lintel of the mine mouth. He won\'t say what it keeps in.',
+  'squall-tonic': 'Hot, wet and windy all at once. The ferryman drinks it before the spring floods.',
+  'hot-spring-soak': 'Poured into a bath, it steams for an hour and takes the winter out of your bones.',
+  'bog-lantern': 'A light you can carry across the marsh. Travellers who follow it get home the long way.',
+  'coal-dark-ward': 'Smudged over the hearth so nothing comes down the chimney but smoke.',
+  'weatherglass-draught': 'Farmers drink it at sowing. The ones who guess the rain right swear it was the potion.',
+  'cavern-pool': 'Still and black as the water under the hill. Look into it and it keeps what you tell it.',
+  'cairn-whisper': 'Left on the old stones at dusk, it tells the wind what you couldn\'t say out loud.',
 
   // Familiars
   'hearth-toad': 'Sleeps by the fire and wakes whenever a bottle clinks.',

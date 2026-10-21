@@ -186,6 +186,19 @@ export const recipes: In<typeof Recipe>[] = [
   { id: 'corona-draught', name: 'Corona Draught', pattern: ['lunar', 'ember', 'vital'], baseHarmony: 10, family: 'fortune', pool: 'event', event: 'eclipse', eclipseOnly: true },
   { id: 'umbral-crown', name: 'Umbral Crown', pattern: ['lunar', 'umbra', 'umbra'], baseHarmony: 11, family: 'secrets', pool: 'event', event: 'eclipse', eclipseOnly: true },
   { id: 'daybreak-elixir', name: 'Daybreak Elixir', pattern: ['lunar', 'gale', 'tide'], baseHarmony: 12, family: 'lunar', pool: 'event', event: 'eclipse', eclipseOnly: true },
+  // Every trio of three different day essences brews something (added with Jacob, Oct 21). Base pool at
+  // Harmony 4, like Mirror Mask and Gilded Luck; last in the codex so they lose codex-order ties.
+  { id: 'nightlight-broth', name: 'Nightlight Broth', pattern: ['vital', 'ember', 'umbra'], baseHarmony: 4, family: 'calming' },
+  { id: 'mountain-air-tonic', name: 'Mountain Air Tonic', pattern: ['vital', 'gale', 'stone'], baseHarmony: 4, family: 'vigor' },
+  { id: 'foxfire-drops', name: 'Foxfire Drops', pattern: ['vital', 'gale', 'umbra'], baseHarmony: 4, family: 'illusion' },
+  { id: 'barrow-balm', name: 'Barrow Balm', pattern: ['vital', 'stone', 'umbra'], baseHarmony: 4, family: 'protection' },
+  { id: 'squall-tonic', name: 'Squall Tonic', pattern: ['ember', 'tide', 'gale'], baseHarmony: 4, family: 'vigor' },
+  { id: 'hot-spring-soak', name: 'Hot Spring Soak', pattern: ['ember', 'tide', 'stone'], baseHarmony: 4, family: 'healing' },
+  { id: 'bog-lantern', name: 'Bog Lantern', pattern: ['ember', 'tide', 'umbra'], baseHarmony: 4, family: 'illusion' },
+  { id: 'coal-dark-ward', name: 'Coal-dark Ward', pattern: ['ember', 'stone', 'umbra'], baseHarmony: 4, family: 'protection' },
+  { id: 'weatherglass-draught', name: 'Weatherglass Draught', pattern: ['tide', 'gale', 'stone'], baseHarmony: 4, family: 'fortune' },
+  { id: 'cavern-pool', name: 'Cavern Pool', pattern: ['tide', 'stone', 'umbra'], baseHarmony: 4, family: 'secrets' },
+  { id: 'cairn-whisper', name: 'Cairn Whisper', pattern: ['gale', 'stone', 'umbra'], baseHarmony: 4, family: 'secrets' },
 ];
 
 export const regulars: In<typeof Regular>[] = [
