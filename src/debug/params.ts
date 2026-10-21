@@ -80,6 +80,8 @@ export type Fixture = {
     mutations?: boolean;
     /** The Settings panel, open. */
     settings?: boolean;
+    /** With `settings` in a run: Abandon run's confirm open. */
+    abandon?: boolean;
     /** A scene screen to show that otherwise shows only on a real run: a season's opening, a weather's first time, or a regular's story (from the fixture's profile). */
     intro?: 'season' | 'fog' | 'heatwave' | 'snow' | 'story';
     /** A first-time note to show (`view/notes.ts`), in a run or at the cottage, when it's due. */

@@ -14,8 +14,11 @@ const BARS = 10;
  * first-time notes, fullscreen, and the game's scale.
  * Returns the container; `onClose` runs after it is destroyed.
  */
-/** `onTitle`, when given, adds a button back to the title screen (from the cottage, where Esc opens Settings). */
-export function openSettings(scene: Phaser.Scene, onClose: () => void = () => undefined, onTitle?: () => void): Phaser.GameObjects.Container {
+/**
+ * `onTitle`, when given, adds a button back to the title screen (from the cottage, where Esc opens Settings).
+ * `onAbandon`, when given, adds Abandon run (in a run), which asks first: nothing from an abandoned run is kept. `asking` opens that question at once (a fixture).
+ */
+export function openSettings(scene: Phaser.Scene, onClose: () => void = () => undefined, onTitle?: () => void, onAbandon?: () => void, asking = false): Phaser.GameObjects.Container {
   const c = scene.add.container(0, 0).setDepth(1000);
   // Swallows clicks meant for the screen underneath.
   c.add(scene.add.rectangle(0, 0, 640, 360, hex('k'), 0.5).setOrigin(0).setInteractive());
@@ -118,6 +121,10 @@ export function openSettings(scene: Phaser.Scene, onClose: () => void = () => un
   if (onTitle) {
     c.add(button(scene, 280, 284, 'Title screen', onTitle, { w: 72 }));
     c.add(button(scene, 364, 284, 'Done', close, { w: 64, color: 'Y' }));
+  } else if (onAbandon) {
+    c.add(button(scene, 280, 284, 'Abandon run', () => confirmAbandon(scene, c, onAbandon), { w: 72, color: 'I' }));
+    c.add(button(scene, 364, 284, 'Done', close, { w: 64, color: 'Y' }));
+    if (asking) confirmAbandon(scene, c, onAbandon);
   } else {
     c.add(button(scene, 320, 284, 'Done', close, { w: 64, color: 'Y' }));
   }
@@ -125,4 +132,17 @@ export function openSettings(scene: Phaser.Scene, onClose: () => void = () => un
   scene.time.delayedCall(0, () => c.active && scene.input.keyboard?.once('keydown-ESC', close));
   show();
   return c;
+}
+
+export const ABANDON_TEXT = 'Abandon this run and go home? Nothing from it is kept: no Friendship, Reputation, Almanac goals, unlocks or Codex finds.';
+
+/** Asks before abandoning the run, over the Settings panel. */
+function confirmAbandon(scene: Phaser.Scene, parent: Phaser.GameObjects.Container, onAbandon: () => void) {
+  const c = scene.add.container(0, 0);
+  parent.add(c);
+  c.add(scene.add.rectangle(200, 40, 240, 266, hex('k'), 0.6).setOrigin(0).setInteractive());
+  c.add(panel(scene, 216, 128, 208, 76, 'k', 0.98, 'I'));
+  c.add(pixelText(scene, 320, 138, ABANDON_TEXT, { size: 8, color: 'W', align: 'center', wrap: 188 }).setOrigin(0.5, 0));
+  c.add(button(scene, 276, 186, 'Abandon', onAbandon, { w: 64, color: 'I' }));
+  c.add(button(scene, 364, 186, 'Keep playing', () => c.destroy(), { w: 80, color: 'Y' }));
 }
