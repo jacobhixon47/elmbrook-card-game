@@ -1,0 +1,1 @@
+{"scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": [{"jump": [2, 3]}, "openShop", "endDay", {"gold": 30}], "ui": {"scenesSeen": ["fair-bloomtide"], "square": "list"}}

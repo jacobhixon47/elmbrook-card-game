@@ -1,1 +1,1 @@
-{"scene": "Run", "seed": "fixture-hand", "season": "winter", "today": "clear", "steps": [{"jump": [4, 4]}, {"friendship": ["old-tobin", 180]}, {"friendship": ["the-gardener", 290]}, {"friendship": ["sister-alder", 34]}, "openShop", "endDay"], "ui": {"scenesSeen": ["vigil"]}}
+{"scene": "Run", "seed": "fixture-hand", "season": "winter", "today": "clear", "steps": [{"jump": [4, 4]}, {"friendship": ["old-tobin", 180]}, {"friendship": ["the-gardener", 290]}, {"friendship": ["sister-alder", 34]}, "openShop", "endDay"], "ui": {"scenesSeen": ["vigil"], "visit": 0}}

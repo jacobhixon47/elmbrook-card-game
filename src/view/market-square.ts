@@ -15,12 +15,18 @@ export type Rect = { x: number; y: number; w: number; h: number };
 export type Point = { x: number; y: number };
 
 /** Where a stall stands. Every stall in the codex has one, and seasonal stalls share theirs. */
-export type HomeId = 'lantern' | 'fortune' | 'name' | 'fence' | 'west' | 'east' | 'moth' | 'tailor' | 'well' | 'rug' | 'fire';
+export type HomeId = 'lantern' | 'fortune' | 'name' | 'fence' | 'west' | 'east' | 'moth' | 'tailor' | 'well' | 'rug' | 'fire' | 'top' | 'solstice' | 'gifts';
+
+/**
+ * What the square is dressed for tonight: the Night Market, a seasonal fair at twilight, or the
+ * Longest Night vigil (GDD §4.2, Jacob, Oct 21: festivals in festive versions of the square).
+ */
+export type SquarePlace = 'market' | 'fair' | 'vigil';
 
 export type Home = {
   id: HomeId;
   /** What stands there: a canopied stall, the well in the middle, a trader's rug, or the fire pit. */
-  kind: 'stall' | 'well' | 'rug' | 'fire';
+  kind: 'stall' | 'well' | 'rug' | 'fire' | 'bonfire' | 'table';
   /** Where its sprite sits (top-left, square pixels), and its size. */
   at: Point;
   size: { w: number; h: number };
@@ -50,6 +56,32 @@ export const HOMES: readonly Home[] = [
   { id: 'fire', kind: 'fire', at: { x: 54, y: 144 }, size: { w: 40, h: 28 }, solid: { x: 62, y: 154, w: 24, h: 10 }, zone: { x: 88, y: 158, w: 22, h: 16 } },
 ];
 
+/**
+ * Homes only the festivals use. A fair's middle stall stands at the top of the square, where the
+ * Fortune Tent and the Name-Taker stand on market nights; at the vigil the Solstice Fire burns on
+ * the fountain's bottom step, and the town's gifts wait on a table by the lane.
+ */
+export const FESTIVAL_HOMES: readonly Home[] = [
+  { id: 'top', kind: 'stall', at: { x: 140, y: 22 }, size: { w: 40, h: 32 }, solid: { x: 141, y: 32, w: 38, h: 20 }, zone: { x: 142, y: 52, w: 36, h: 13 } },
+  { id: 'solstice', kind: 'bonfire', at: { x: 136, y: 96 }, size: { w: 48, h: 30 }, solid: { x: 140, y: 108, w: 40, h: 22 }, zone: { x: 142, y: 130, w: 36, h: 12 } },
+  { id: 'gifts', kind: 'table', at: { x: 182, y: 118 }, size: { w: 32, h: 22 }, solid: { x: 184, y: 128, w: 28, h: 8 }, zone: { x: 184, y: 136, w: 28, h: 10 } },
+];
+
+const byId = (id: HomeId): Home => [...HOMES, ...FESTIVAL_HOMES].find((h) => h.id === id)!;
+
+/**
+ * The homes standing tonight. At a fair or the vigil the Night Market isn't set up: the stall
+ * homes left over carry festive dressing instead (decorations, not stalls), and the Fortune Tent's
+ * and the Name-Taker's corner makes room for the fair's middle stall.
+ */
+export function homesFor(place: SquarePlace): readonly Home[] {
+  if (place === 'market') return HOMES;
+  const keep: HomeId[] = place === 'fair'
+    ? ['lantern', 'fence', 'west', 'east', 'moth', 'tailor', 'top', 'well', 'fire']
+    : ['lantern', 'fence', 'west', 'east', 'moth', 'tailor', 'top', 'well', 'solstice', 'gifts', 'fire'];
+  return keep.map(byId);
+}
+
 /** Each stall's home in the square. */
 export const STALL_HOME: Record<string, HomeId> = {
   'lantern-seller': 'lantern',
@@ -67,6 +99,19 @@ export const STALL_HOME: Record<string, HomeId> = {
   'black-market': 'well',
   'wandering-tinker': 'rug',
   'hearth-trader': 'fire',
+  // The fairs: three stalls each, west, top and east (GDD §4.2).
+  'flower-grower': 'west',
+  beekeeper: 'top',
+  'garland-weaver': 'east',
+  'orchard-keeper': 'west',
+  glassblower: 'top',
+  hatter: 'east',
+  farmer: 'west',
+  'cider-maker': 'top',
+  'straw-weaver': 'east',
+  // The Longest Night: the Solstice Fire, and the table of gifts.
+  'solstice-fire': 'solstice',
+  'vigil-gifts': 'gifts',
 };
 
 /** The bridge you came in by, at the bottom: walk back onto it to pay the rent and go home. */
@@ -93,21 +138,23 @@ const EDGES: readonly Rect[] = [
 ];
 
 export const SOLIDS: readonly Rect[] = [...EDGES, ...HOMES.map((h) => h.solid)];
+/** What you can't walk through, for the homes standing tonight. */
+export const solidsFor = (homes: readonly Home[]): readonly Rect[] => (homes === HOMES ? SOLIDS : [...EDGES, ...homes.map((h) => h.solid)]);
 
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 const feetAt = (p: Point): Rect => ({ x: p.x - FEET.w / 2, y: p.y - FEET.h, w: FEET.w, h: FEET.h });
-const blocked = (p: Point) => SOLIDS.some((r) => overlaps(feetAt(p), r));
+const blocked = (p: Point, solids: readonly Rect[]) => solids.some((r) => overlaps(feetAt(p), r));
 const inside = (p: Point, r: Rect) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
 
 /** One step of walking, as in the cottage: each axis moves on its own, so you slide along things. */
-export function walk(p: Point, dx: number, dy: number, dt: number): Point {
+export function walk(p: Point, dx: number, dy: number, dt: number, solids: readonly Rect[] = SOLIDS): Point {
   if (!dx && !dy) return p;
   const step = (WALK_SPEED * dt) / Math.hypot(dx, dy);
   let next = { ...p };
   const x = { ...next, x: next.x + dx * step };
-  if (!blocked(x)) next = x;
+  if (!blocked(x, solids)) next = x;
   const y = { ...next, y: next.y + dy * step };
-  if (!blocked(y)) next = y;
+  if (!blocked(y, solids)) next = y;
   return next;
 }
 
@@ -122,15 +169,15 @@ export function openHomes(stalls: readonly { id: string }[]): Map<HomeId, number
 }
 
 /** What you're standing by: an open stall's home, the bridge home, or nothing. */
-export function spotAt(p: Point, open: ReadonlyMap<HomeId, number>): HomeId | 'exit' | null {
+export function spotAt(p: Point, open: ReadonlyMap<HomeId, number>, homes: readonly Home[] = HOMES): HomeId | 'exit' | null {
   if (inside(p, EXIT)) return 'exit';
   const centre = (r: Rect) => Math.hypot(p.x - (r.x + r.w / 2), p.y - (r.y + r.h / 2));
-  return HOMES.filter((h) => open.has(h.id) && inside(p, h.zone)).sort((a, b) => centre(a.zone) - centre(b.zone))[0]?.id ?? null;
+  return homes.filter((h) => open.has(h.id) && inside(p, h.zone)).sort((a, b) => centre(a.zone) - centre(b.zone))[0]?.id ?? null;
 }
 
 /** A spot to stand by a home, for fixtures and for coming back from a stall: the middle of its zone. */
 export function standBy(id: HomeId): Point {
-  const z = HOMES.find((h) => h.id === id)!.zone;
+  const z = byId(id).zone;
   return { x: z.x + z.w / 2, y: z.y + z.h / 2 };
 }
 

@@ -107,7 +107,7 @@ Once Reputation, the Almanac, the Codex and witch selection exist, the cottage b
 
 The Night Market becomes a walkable square the same way (Jacob, Oct 14; built in M5, see below): stalls you walk up to, dressed for the season, so a Snowed In night is literally drifts over the closed stalls with only the Hearth Trader's glow lit.
 
-Next after the night customers (Jacob, Oct 21): the seasonal festivals become walkable too, in festive versions of the Night Market's fountain square.
+✅ The seasonal festivals are walkable too (Jacob, Oct 21), in festive versions of the Night Market's fountain square: the fairs at twilight with only their three stalls and the season's dressing, and the Longest Night under snow round the Solstice Fire (GDD §4.2).
 
 ## M5 — Art and audio pass
 

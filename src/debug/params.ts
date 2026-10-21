@@ -61,6 +61,8 @@ export type Fixture = {
     at?: StationId;
     /** In the Night Market, standing by this stall's home (its prompt showing), on the bridge, or with the list of tonight's stalls open. */
     square?: HomeId | 'exit' | 'list';
+    /** At a fair, this stall's screen open; at the Longest Night, the fire's (0) or the gifts' (1). */
+    visit?: number;
     /** In the walkable cottage, this station's panel open. */
     station?: StationId;
     /** The cottage as you come home from a run in this season. */

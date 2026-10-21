@@ -6,8 +6,8 @@ import { gradeView } from '../src/art/window';
 import { PALETTE } from '../src/art/palette';
 import { proceduralTextures, TAG_GLYPHS, tagGlyph } from '../src/art/procedural';
 import { guildHallBackdrop } from '../src/art/scenes/guild';
-import { homeSprite, squareGround } from '../src/art/scenes/market-square';
-import { HOMES, STALL_HOME } from '../src/view/market-square';
+import { bonfireFlames, homeSprite, squareFestoons, squareGround } from '../src/art/scenes/market-square';
+import { HOMES, homesFor, STALL_HOME } from '../src/view/market-square';
 import { codex } from '../src/codex';
 import { spriteSize, validateSprite } from '../src/art/sprite';
 import { PORTRAITS, SPRITES } from '../src/art/sprites';
@@ -64,6 +64,17 @@ describe('art', () => {
       'square-autumn': squareGround({ season: 'autumn', snowedIn: false }),
       ...Object.fromEntries(HOMES.flatMap((h) => [true, false].map((open) => [`${h.id}-${open}`, homeSprite(h.id, { season: 'summer', snowedIn: false, open, stall: Object.entries(STALL_HOME).find(([, home]) => home === h.id)![0] })]))),
       'well-black-market': homeSprite('well', { season: 'spring', snowedIn: false, open: true, stall: 'black-market' }),
+      // The festivals (Jacob, Oct 21): each season's dressed square, its decorations, the fair stalls, the vigil.
+      ...Object.fromEntries((['spring', 'summer', 'autumn', 'winter'] as const).flatMap((season) => {
+        const place = season === 'winter' ? 'vigil' as const : 'fair' as const;
+        const o = { season, snowedIn: false, place, gifts: 3 };
+        return [
+          [`festival-${season}`, squareGround(o)] as const,
+          [`festoons-${season}`, squareFestoons(o)] as const,
+          ...homesFor(place).map((h) => [`${season}-${h.id}`, homeSprite(h.id, { ...o, open: h.id === 'west' || h.id === 'top' || h.id === 'east', stall: Object.entries(STALL_HOME).find(([id, home]) => home === h.id && (place === 'vigil' || !codex.stalls.has(id)))?.[0] ?? null })] as const),
+        ];
+      })),
+      ...Object.fromEntries(([0, 1, 2] as const).map((f) => [`bonfire-${f}`, bonfireFlames(f)])),
       'guild-spring': guildHallBackdrop({ season: 'spring' }),
     };
     for (const [key, pm] of Object.entries(places)) {

@@ -1,0 +1,1 @@
+{"scene": "Run", "seed": "fixture-hand", "season": "winter", "today": "clear", "steps": [{"jump": [4, 4]}, {"friendship": ["old-tobin", 20]}, {"friendship": ["bea-thornwick", 16]}, {"friendship": ["sister-alder", 34]}, "openShop", "endDay"], "ui": {"scenesSeen": ["vigil"], "square": "exit"}}
