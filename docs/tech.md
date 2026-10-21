@@ -96,7 +96,7 @@ Built in M0 and kept working forever.
 ## Shipping
 
 - **Web:** `pnpm build` → static site. Deploy to itch.io (butler) or GitHub Pages from CI.
-- **Desktop/Steam (later):** Tauri wrapper around the same build; Steamworks integration (achievements) via a Tauri plugin when we get there.
+- **Desktop/Steam:** Tauri 2 wraps the same Vite build (`src-tauri/`, a 1280×720 window that scales down to 640×360). `pnpm desktop` runs it against the dev server and `pnpm desktop:build` makes an installer for this machine. The app icon is drawn from the firefly jar sprite by `scripts/app-icon.ts`, and `tauri icon` makes every size from it at build time, so no icon PNGs are committed. The **Desktop** workflow (`.github/workflows/desktop.yml`, run from the Actions tab or by a `v*` tag) builds Windows (NSIS installer), Mac (universal DMG) and Linux (AppImage and deb), each a workflow artifact: the private download for friends. Builds are unsigned for now, so Windows SmartScreen and macOS Gatekeeper warn on first open (on a Mac, right-click and Open). Saves still live in the webview's `localStorage`, which Tauri keeps per app. Steamworks integration (achievements) comes later as a Tauri plugin.
 
 ## Conventions
 
