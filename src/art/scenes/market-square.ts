@@ -523,19 +523,7 @@ function broadleaf(p: Pixmap, r: Rng, cx: number, base: number, size: number, se
   for (let y = base - 6; y <= base; y++) for (let x = cx - 1; x <= cx + 1; x++) flat(p, x, y, WOOD, 0.15 + (x - cx) * -0.08);
   const top = base - size * 2;
   if (season === 'winter') {
-    // Bare branches, snow along their tops.
-    for (let b = 0; b < 7; b++) {
-      const dir = b % 2 ? 1 : -1;
-      const by = base - 5 - b * (size / 4);
-      const len = size * (0.5 + rand(r) * 0.5);
-      for (let s = 0; s < len; s++) {
-        const x = Math.round(cx + dir * s * 0.9);
-        const y = Math.round(by - s * 0.7);
-        p.set(x, y, 'k');
-        if (cellRandom(x, y, 51) > 0.4) snowPx(p, x, y - 1, 0.55);
-      }
-    }
-    for (let y = Math.round(top); y < base - 5; y++) p.set(cx, y, 'k');
+    bareCrown(p, r, cx, base, size);
     return;
   }
   const ramp = LEAVES[season];
@@ -567,6 +555,40 @@ function broadleaf(p: Pixmap, r: Rng, cx: number, base: number, size: number, se
   }
 }
 
+/**
+ * A broadleaf in winter (Jacob, Oct 21): the same tree with its leaves gone, a crown of forking
+ * branches filling the shape the leaves had, lit from the upper left, with snow along the tops.
+ */
+function bareCrown(p: Pixmap, r: Rng, cx: number, base: number, size: number): void {
+  const crown = { x: cx, y: base - size * 1.1, rx: size * 0.95, ry: size * 0.95 };
+  const inside = (x: number, y: number) => ((x - crown.x) / crown.rx) ** 2 + ((y - crown.y) / crown.ry) ** 2 <= 1.15;
+  const limb = (x: number, y: number, angle: number, len: number, depth: number) => {
+    let px = x;
+    let py = y;
+    for (let s = 0; s < len; s++) {
+      px += Math.cos(angle);
+      py += Math.sin(angle);
+      const ix = Math.round(px);
+      const iy = Math.round(py);
+      if (s > 2 && !inside(ix, iy)) return;
+      const lit = Math.cos(angle) < 0 ? 0.62 : 0.4;
+      flat(p, ix, iy, WOOD, depth >= 3 ? lit - 0.1 : lit);
+      if (depth >= 5) flat(p, ix + 1, iy, WOOD, 0.25);
+      // Snow settles on the tops of the limbs that lie flattest.
+      if (Math.abs(Math.sin(angle)) < 0.8 && cellRandom(ix, iy, 51) > 0.35) snowPx(p, ix, iy - 1, 0.6 + (cellRandom(ix, iy, 57) - 0.5) * 0.3);
+    }
+    if (depth <= 0) return;
+    const kids = depth >= 4 ? 3 : 2;
+    for (let k = 0; k < kids; k++) {
+      const spread = (k - (kids - 1) / 2) * (0.55 + rand(r) * 0.3) + (rand(r) - 0.5) * 0.25;
+      limb(px, py, angle + spread, len * (0.62 + rand(r) * 0.18), depth - 1);
+    }
+  };
+  // The trunk up into the crown, then the limbs.
+  for (let y = base - 6; y > base - size * 0.6; y--) for (let x = cx - 1; x <= cx + 1; x++) flat(p, x, y, WOOD, 0.15 + (x - cx) * -0.08);
+  limb(cx, base - size * 0.6, -Math.PI / 2, size * 0.6, 5);
+}
+
 /** A pine in tiers, as in the reference, with snow on every tier in winter. */
 function pineTree(p: Pixmap, cx: number, base: number, h: number, season: Season): void {
   p.fillRect(cx - 1, base - 3, 3, 4, 'b').set(cx + 1, base - 3, 'k');
@@ -590,7 +612,7 @@ type TreeSpot = { x: number; base: number; size: number; pine: boolean };
 /**
  * The trees framing the square, as in the concepts: thick down both sides and along the back
  * behind the stalls, and in the bottom-left corner round the fire pit's clearing. Blossom in spring,
- * deep green in summer, red and gold in autumn; in winter nearly all of them are snowy pines.
+ * deep green in summer, red and gold in autumn, bare and snowy in winter with pines among them.
  */
 const TREES: readonly TreeSpot[] = [
   // The back, behind the stalls and the house.
@@ -637,8 +659,8 @@ const TREES: readonly TreeSpot[] = [
   { x: 318, base: 156, size: 14, pine: false },
   { x: 280, base: 30, size: 10, pine: false },
 ];
-/** In winter all but every sixth tree is a snowy pine, as in the winter concept. */
-const winterPine = (t: TreeSpot, i: number) => t.pine || i % 6 !== 0;
+/** In winter the broadleaves stand bare, with a pine every fourth tree among them (Jacob, Oct 21). */
+const winterPine = (t: TreeSpot, i: number) => t.pine || i % 4 === 1;
 
 /** A low round shrub, lit from the upper left; snow-capped in winter, flowering in spring and summer. */
 function bush(p: Pixmap, cx: number, cy: number, rx: number, ry: number, season: Season): void {
@@ -1378,6 +1400,44 @@ export function squareLights(open: ReadonlySet<HomeId>, opts: SquareOptions): re
   out.push({ x: 258, y: 162, radius: 18, color: 'y' });
   if (opts.season === 'summer') for (const [x, y] of FIREFLIES) out.push({ x, y, radius: 6, color: 'L' });
   return out;
+}
+
+/** The moon over the square tonight: a full moon is the brightest night, a new moon the darkest. */
+export type SquareMoon = 'full-moon' | 'quarter' | 'new-moon';
+
+/** How dark the square is away from any light, by moon (Jacob, Oct 21: darker, so the lanterns matter). */
+export const MOON_SHADE: Record<SquareMoon, number> = { 'full-moon': 0.22, quarter: 0.36, 'new-moon': 0.5 };
+
+/**
+ * Night laid over the square, under the glows: deep blue-black whose depth follows the moon and
+ * falls away near every light, stepped in eighths with an ordered dither so it stays pixel art.
+ * RGBA at the square's own 320x180.
+ */
+export function squareShade(open: ReadonlySet<HomeId>, opts: SquareOptions, moon: SquareMoon): { width: number; height: number; data: Uint8ClampedArray } {
+  const w = 320;
+  const h = 180;
+  const data = new Uint8ClampedArray(w * h * 4);
+  const lights = squareLights(open, opts).filter((l) => l.radius >= 14);
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(PALETTE.K.slice(i, i + 2), 16)) as [number, number, number];
+  // Snow throws the moonlight back, so a winter night needs a little more dark to read as night.
+  const max = MOON_SHADE[moon] + (opts.season === 'winter' ? 0.1 : 0);
+  const STEPS = 8;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let lit = 0;
+      for (const l of lights) {
+        const d = Math.hypot(x - l.x, (y - l.y) * 1.15) / (l.radius * 1.6);
+        if (d < 1) lit = Math.max(lit, (1 - d) ** 1.4);
+      }
+      const level = Math.min(STEPS, Math.floor((1 - lit) * STEPS + dither(x, y)));
+      const i = (y * w + x) * 4;
+      data[i] = r;
+      data[i + 1] = g;
+      data[i + 2] = b;
+      data[i + 3] = Math.round((level / STEPS) * max * 255);
+    }
+  }
+  return { width: w, height: h, data };
 }
 
 /** Fire pit flames, 3 frames, 16x12. Draw at (12, 5) in the fire pit sprite: (96, 133) in square space. */

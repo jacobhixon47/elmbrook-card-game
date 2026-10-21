@@ -33,24 +33,27 @@ export type Station = {
 /** Each system's spot in the room (GDD §13). */
 export const STATIONS: readonly Station[] = [
   { id: 'bookshelf', verb: 'Read the Codex', at: { x: 12, y: 6 }, solid: { x: 12, y: 48, w: 36, h: 12 }, zone: { x: 8, y: 60, w: 46, h: 18 } },
-  { id: 'lectern', verb: 'Open the Almanac', at: { x: 64, y: 44 }, solid: { x: 66, y: 60, w: 14, h: 8 }, zone: { x: 60, y: 68, w: 28, h: 18 } },
-  { id: 'pinboard', verb: 'Keepsake box', at: { x: 98, y: 9 }, solid: null, zone: { x: 94, y: 48, w: 34, h: 16 } },
-  { id: 'calendar', verb: 'Choose a Year', at: { x: 199, y: 11 }, solid: null, zone: { x: 192, y: 48, w: 30, h: 16 } },
+  { id: 'lectern', verb: 'Open the Almanac', at: { x: 150, y: 44 }, solid: { x: 152, y: 60, w: 14, h: 8 }, zone: { x: 146, y: 68, w: 28, h: 18 } },
+  { id: 'pinboard', verb: 'Keepsake box', at: { x: 56, y: 9 }, solid: null, zone: { x: 52, y: 48, w: 34, h: 16 } },
+  { id: 'calendar', verb: 'Choose a Year', at: { x: 96, y: 11 }, solid: null, zone: { x: 90, y: 48, w: 30, h: 16 } },
   { id: 'cauldron', verb: 'Witch and cauldron', at: { x: 272, y: 42 }, solid: { x: 274, y: 62, w: 32, h: 12 }, zone: { x: 268, y: 74, w: 42, h: 16 } },
   { id: 'workbench', verb: 'Spend Reputation', at: { x: 10, y: 90 }, solid: { x: 10, y: 106, w: 40, h: 16 }, zone: { x: 50, y: 102, w: 20, h: 24 } },
   { id: 'door', verb: 'Set out', at: { x: 144, y: 160 }, solid: null, zone: { x: 140, y: 150, w: 40, h: 22 } },
 ];
 
-/** The hearth in the chimney breast at the middle of the back wall: where the fire sits. */
-export const HEARTH: Point = { x: 160, y: 40 };
+/**
+ * The hearth in the chimney breast, off to the right of the back wall so one big window can take
+ * the middle (Jacob, Oct 21): where the fire sits.
+ */
+export const HEARTH: Point = { x: 238, y: 40 };
 
 /** Furniture that only takes up floor: rugs, the cat, the armchair, the bed, a plant. */
 export const PROPS: readonly { id: string; at: Point; solid: Rect | null }[] = [
-  { id: 'rug', at: { x: 106, y: 66 }, solid: null },
+  { id: 'rug', at: { x: 186, y: 62 }, solid: null },
   { id: 'round-rug', at: { x: 130, y: 114 }, solid: null },
   { id: 'nightstand', at: { x: 51, y: 120 }, solid: { x: 52, y: 130, w: 10, h: 6 } },
-  { id: 'cat', at: { x: 118, y: 72 }, solid: { x: 119, y: 77, w: 14, h: 5 } },
-  { id: 'armchair', at: { x: 218, y: 74 }, solid: { x: 220, y: 92, w: 24, h: 10 } },
+  { id: 'cat', at: { x: 222, y: 70 }, solid: { x: 223, y: 75, w: 14, h: 5 } },
+  { id: 'armchair', at: { x: 178, y: 72 }, solid: { x: 180, y: 90, w: 24, h: 10 } },
   { id: 'side-table', at: { x: 290, y: 98 }, solid: { x: 290, y: 110, w: 20, h: 8 } },
   { id: 'bed', at: { x: 12, y: 132 }, solid: { x: 12, y: 140, w: 36, h: 30 } },
   { id: 'plant', at: { x: 290, y: 146 }, solid: { x: 292, y: 162, w: 14, h: 8 } },
@@ -62,26 +65,32 @@ export const PROPS: readonly { id: string; at: Point; solid: Rect | null }[] = [
  */
 export const DRESSING: Record<Season, readonly { id: string; at: Point; solid: Rect | null; flat?: boolean }[]> = {
   spring: [
-    { id: 'garland-spring', at: { x: 51, y: 1 }, solid: null },
-    { id: 'garland-spring', at: { x: 219, y: 1 }, solid: null },
+    { id: 'garland-spring', at: { x: 122, y: 1 }, solid: null },
+    { id: 'garland-spring', at: { x: 166, y: 1 }, solid: null },
     { id: 'blossoms', at: { x: 110, y: 138 }, solid: { x: 115, y: 162, w: 10, h: 6 } },
   ],
   summer: [
-    { id: 'firefly-jar', at: { x: 237, y: 18 }, solid: null },
+    { id: 'firefly-jar', at: { x: 184, y: 30 }, solid: null },
     { id: 'sunflowers', at: { x: 192, y: 144 }, solid: { x: 195, y: 162, w: 10, h: 6 } },
   ],
+  // Autumn (Jacob, Oct 21): leaves blown in at the door and on into the room, pumpkins by the door
+  // and the hearth, and a warmer light.
   autumn: [
-    { id: 'garland-autumn', at: { x: 51, y: 1 }, solid: null },
-    { id: 'garland-autumn', at: { x: 219, y: 1 }, solid: null },
+    { id: 'garland-autumn', at: { x: 122, y: 1 }, solid: null },
+    { id: 'garland-autumn', at: { x: 166, y: 1 }, solid: null },
     { id: 'pumpkins', at: { x: 108, y: 154 }, solid: { x: 109, y: 160, w: 22, h: 8 } },
-    { id: 'leaves', at: { x: 140, y: 156 }, solid: null, flat: true },
+    { id: 'pumpkins', at: { x: 184, y: 44 }, solid: { x: 185, y: 50, w: 22, h: 8 } },
+    { id: 'pumpkin', at: { x: 66, y: 154 }, solid: { x: 67, y: 160, w: 12, h: 7 } },
+    { id: 'leaves-in', at: { x: 128, y: 136 }, solid: null, flat: true },
   ],
+  // Winter (Jacob, Oct 21): snow dusted in through the door, stockings on the mantel and a Yule
+  // tree hung with lights. No snow inside the windows.
   winter: [
-    { id: 'garland-winter', at: { x: 51, y: 1 }, solid: null },
-    { id: 'garland-winter', at: { x: 219, y: 1 }, solid: null },
-    { id: 'sill-snow', at: { x: 51, y: 27 }, solid: null },
-    { id: 'sill-snow', at: { x: 219, y: 27 }, solid: null },
-    { id: 'snowdrift', at: { x: 138, y: 164 }, solid: null, flat: true },
+    { id: 'garland-winter', at: { x: 122, y: 1 }, solid: null },
+    { id: 'garland-winter', at: { x: 166, y: 1 }, solid: null },
+    { id: 'stockings', at: { x: 212, y: 21 }, solid: null },
+    { id: 'yule-tree', at: { x: 202, y: 124 }, solid: { x: 205, y: 154, w: 18, h: 6 } },
+    { id: 'snow-in', at: { x: 126, y: 140 }, solid: null, flat: true },
   ],
 };
 
@@ -89,7 +98,7 @@ export const DRESSING: Record<Season, readonly { id: string; at: Point; solid: R
 export const SEASON_LIGHT: Record<Season, { color: 'L' | 'Y' | 'o' | 'x'; alpha: number }> = {
   spring: { color: 'L', alpha: 0.06 },
   summer: { color: 'Y', alpha: 0.08 },
-  autumn: { color: 'o', alpha: 0.12 },
+  autumn: { color: 'o', alpha: 0.18 },
   winter: { color: 'x', alpha: 0.14 },
 };
 
@@ -119,7 +128,7 @@ const WALLS: readonly Rect[] = [
   { x: 0, y: 172, w: 144, h: 8 },
   { x: 176, y: 172, w: 144, h: 8 },
   // The hearth's stone apron, in front of the fire.
-  { x: 130, y: 48, w: 60, h: 10 },
+  { x: 208, y: 48, w: 60, h: 10 },
   // The doorstep: the door is used, not walked through.
   { x: 144, y: 174, w: 32, h: 6 },
 ];

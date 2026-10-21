@@ -3,7 +3,7 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { ALMANAC_FIRST_PAGE, endlessOpen, mutationChangeable, mutationName, mutationOf, mutationsOpen, MUTATIONS, MUTATION_RULES, type MutationId, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, MAX_YEAR, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
+import { ALMANAC_FIRST_PAGE, ENDLESS_RENT, mutationChangeable, mutationName, mutationOf, mutationsOpen, MUTATIONS, MUTATION_RULES, type MutationId, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, MAX_YEAR, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season, type Weather } from '../core';
 import { CODEX_TABS, codexEntries, type CodexEntry } from '../view/codex';
 import { framedPortrait } from '../view/portrait';
 import { unlockName } from '../view/describe';
@@ -18,6 +18,7 @@ import { COTTAGE_NOTES, noteDue, type CottageNote } from '../view/notes';
 import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
 import { button, panel } from '../view/ui';
+import { addWeather } from '../view/weather';
 import { DOORSTEP, DRESSING, facing, HEARTH, onRug, PROPS, ROOM_SCALE, SEASON_LIGHT, SPAWN, STATIONS, standBy, stationAt, walk, walkingOut, type Facing, type Point, type Station, type StationId } from '../view/room';
 import type { PaletteKey } from '../art/palette';
 
@@ -56,17 +57,20 @@ export class Cottage extends Phaser.Scene {
   private season: Season = 'spring';
   /** Whether walking into the front door opens it: not again until you let go of down. */
   private doorReady = true;
+  /** Endless mode (GDD §13): the door sets out on an Endless run, in any season. */
+  private endless = false;
   /** Stepping in through the door after a run; you can't walk until you're in. */
   private arriving = false;
 
   /** `home` is the season of the run you've just come home from. */
-  create(data: { fixture?: Fixture | null; perkTier?: number; at?: Point; reopen?: StationId | 'other' | null; home?: Season } = {}) {
+  create(data: { fixture?: Fixture | null; perkTier?: number; at?: Point; reopen?: StationId | 'other' | null; home?: Season; endless?: boolean } = {}) {
     this.overlay = null;
     this.settingsOpen = false;
     this.sprites.clear();
     this.near = null;
     this.prompt = null;
     this.fixture = data.fixture ?? null;
+    this.endless = data.endless ?? data.fixture?.endless ?? false;
     pixelCamera(this);
     this.tip = new Tooltip(this, 3000);
     const profile = data.fixture ? migrateProfile(data.fixture.profile ?? null) : loadProfile();
@@ -77,7 +81,8 @@ export class Cottage extends Phaser.Scene {
     const spot = ui?.at ?? ui?.station;
     this.pos = data.at ?? (spot ? standBy(spot) : { ...SPAWN });
     this.face = 'up';
-    this.season = homeSeason(profile);
+    // In Endless, the house is dressed for the season you last set out in.
+    this.season = this.endless ? (data.home ?? ui?.home ?? homeSeason(profile)) : homeSeason(profile);
     playMusic('cottage', this.season);
     this.arriving = false;
     this.stepClock = 0;
@@ -91,7 +96,7 @@ export class Cottage extends Phaser.Scene {
     // A new Year's boon is chosen before anything else.
     if (profile.boonOffer) this.openBoons(profile, data.fixture ? null : (id) => {
       pickBoonNow(id);
-      this.scene.restart({});
+      this.scene.restart({ endless: this.endless });
     });
     const reopen = ui?.station ?? (data.reopen && data.reopen !== 'other' ? data.reopen : null);
     if (reopen && !profile.boonOffer) this.use(reopen);
@@ -173,6 +178,11 @@ export class Cottage extends Phaser.Scene {
     }
     // In the front door's and the calendar's panels, the arrow keys choose the Year and 1-4 set out.
     if (this.overlayKind === 'door' || this.overlayKind === 'calendar') {
+      if (this.endless) {
+        const season = SEASONS[Number(e.key) - 1];
+        if (this.overlayKind === 'door' && season) this.setOut(season);
+        return;
+      }
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         const year = this.profile.year + (e.key === 'ArrowLeft' ? -1 : 1);
         if (year >= 1 && year <= this.profile.yearSeasons.length) this.chooseYear(year);
@@ -188,16 +198,21 @@ export class Cottage extends Phaser.Scene {
     const Z = ROOM_SCALE;
     const season = this.season;
     this.add.image(0, 0, 'room/shell').setOrigin(0).setScale(Z).setDepth(-1000);
-    // Through the windows, the shop window's painted view graded for the season at twilight, cropped
-    // to each window's panes.
+    // Through the windows, the shop window's painted view graded for the season at twilight, in the
+    // season's own weather (Jacob, Oct 21), cropped to each window's panes.
+    const weather = WINDOW_WEATHER[season];
     for (const [n, w] of ROOM_WINDOWS.entries()) {
       if (codeBackdrops) {
         this.add.image(w.x * Z, w.y * Z, `room/view-${season}`).setOrigin(0).setScale(Z).setDepth(-1001);
-        continue;
+      } else {
+        const src = { x: VIEW_CROP.x + n * 150, y: VIEW_CROP.y, w: (w.w * Z) / VIEW_SCALE, h: (w.h * Z) / VIEW_SCALE };
+        const view = this.add.image(0, 0, gradedView(this, `${backdropTexture('shop')}-view`, 'shop', season, 'twilight', weather)).setOrigin(0).setDepth(-1001);
+        view.setCrop(src.x, src.y, src.w, src.h).setScale(VIEW_SCALE).setPosition(w.x * Z - src.x * VIEW_SCALE, w.y * Z - src.y * VIEW_SCALE);
       }
-      const src = { x: VIEW_CROP.x + n * 150, y: VIEW_CROP.y, w: (w.w * Z) / VIEW_SCALE, h: (w.h * Z) / VIEW_SCALE };
-      const view = this.add.image(0, 0, gradedView(this, `${backdropTexture('shop')}-view`, 'shop', season, 'twilight')).setOrigin(0).setDepth(-1001);
-      view.setCrop(src.x, src.y, src.w, src.h).setScale(VIEW_SCALE).setPosition(w.x * Z - src.x * VIEW_SCALE, w.y * Z - src.y * VIEW_SCALE);
+      // Spring's breeze is its blossom blowing past, which the window only shows by day. Summer's heat
+      // is the haze in the grade: through panes this small, the rising shimmer reads as rain.
+      const area = { x0: w.x * Z, y0: w.y * Z, x1: (w.x + w.w) * Z, y1: (w.y + w.h) * Z };
+      addWeather(this, area, season, season === 'spring' ? 'afternoon' : 'twilight', season === 'summer' ? 'clear' : weather, -1000.5);
     }
     for (const prop of PROPS) {
       const img = this.add.image(prop.at.x * Z, prop.at.y * Z, `room/${prop.id}`).setOrigin(0).setScale(Z);
@@ -260,11 +275,17 @@ export class Cottage extends Phaser.Scene {
 
   /** Your Year and Reputation in the corner, and how to get about. */
   private drawHud(p: Profile) {
-    const head = p.year > 1 ? `Year ${p.year} · Reputation ${p.reputation}` : `Reputation ${p.reputation}`;
+    const head = p.year > 1 && !this.endless ? `Year ${p.year} · Reputation ${p.reputation}` : `Reputation ${p.reputation}`;
     this.tip.on(pixelText(this, 22, 8, head, { size: 8, color: 'y', stroke: 'k' }).setDepth(1500), 'Reputation', [
       'Every run earns Reputation, won or lost. Spend it at the workbench on perks, which help every run after.',
       ...(p.year > 1 ? [`Year ${p.year} earns ×${reputationMult(p.year)}. The calendar shows its rules.`] : []),
     ]);
+    if (this.endless) {
+      this.tip.on(pixelText(this, 22, 20, 'Endless mode', { size: 8, color: 'Y', stroke: 'k' }).setDepth(1500), 'Endless mode', [
+        'Set out from the door in any season. The weeks go on, month after month, with rent climbing, until it beats you.',
+        'Everything you have unlocked comes along; Endless plays Year 1\'s rules and earns no Reputation. Esc, then Title, to leave.',
+      ]);
+    }
     pixelText(this, 618, 8, 'WASD to walk · F or Space to use · Esc for settings', { size: 7, color: 'w', stroke: 'k', align: 'right' }).setOrigin(1, 0).setDepth(1500);
   }
 
@@ -345,7 +366,7 @@ export class Cottage extends Phaser.Scene {
     switch (id) {
       case 'bookshelf': return this.openCodex(p);
       case 'lectern': return this.openAlmanac(p);
-      case 'door': return this.openPanel('door', () => this.drawYear(p, 232, 60));
+      case 'door': return this.openPanel('door', () => (this.endless ? this.drawEndless(p, 232, 60) : this.drawYear(p, 232, 60)));
       case 'calendar': return this.openPanel('calendar', () => this.drawCalendar(p));
       case 'workbench': return this.openPanel('workbench', () => this.drawPerks(p, 232, 60, this.perkTier));
       case 'cauldron': return this.openPanel('cauldron', () => this.drawKit(p, this.fixture?.ui?.kit, !this.fixture));
@@ -354,14 +375,14 @@ export class Cottage extends Phaser.Scene {
   }
 
   private setOut(season: Season) {
-    this.scene.start('Run', { season });
+    this.scene.start('Run', { season, endless: this.endless });
   }
 
   /** A fixture shows its profile but can't change it. */
   private chooseYear(year: number) {
     if (this.fixture) return;
     chooseYearNow(year);
-    this.scene.restart({ at: this.pos, reopen: this.overlayKind });
+    this.scene.restart({ at: this.pos, reopen: this.overlayKind, endless: this.endless });
   }
 
   private openSettings() {
@@ -434,17 +455,28 @@ export class Cottage extends Phaser.Scene {
     });
 
     const runs = p.runs === 1 ? '1 run' : `${p.runs} runs`;
-    if (!endlessOpen(p)) {
-      pixelText(this, x + 88, y + 216 + twist, `${runs} · 1-4 to set out`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
-      return;
-    }
-    // Endless (GDD §13): after a won finale, "Keep going" carries the run on; its best shows here.
+    pixelText(this, x + 88, y + 216 + twist, `${runs} · 1-4 to set out`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
+  }
+
+  /** Endless mode's door (GDD §13): any season, and the best run so far. */
+  private drawEndless(p: Profile, x: number, y: number) {
     const best = p.endlessBest;
-    const line = pixelText(this, x + 88, y + 216 + twist, `${runs} · Endless best ${best ? `${best.weeks}w` : 'none yet'}`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
-    this.tip.on(line, 'Endless', [
-      'Win a season, then Keep going: the run goes on month after month, with rent climbing every week, until you can\'t pay.',
-      best ? `Your best: ${best.weeks} ${best.weeks === 1 ? 'week' : 'weeks'} past the finale, in ${cap(best.season)} of Year ${best.year}.` : 'Endless earns no Reputation or Almanac entries.',
-    ]);
+    const weeks = (n: number) => `${n} ${n === 1 ? 'week' : 'weeks'}`;
+    this.add.existing(panel(this, x, y, 176, 228, 'k', 0.9, 'n'));
+    pixelText(this, x + 88, y + 8, 'Endless', { size: 10, color: 'Y', align: 'center' }).setOrigin(0.5, 0);
+    pixelText(this, x + 88, y + 24, 'Pick a season. The weeks go on until the rent beats you.', { size: 7, color: 'a', align: 'center', wrap: 160 }).setOrigin(0.5, 0);
+    SEASONS.forEach((season, i) => {
+      const ty = y + 50 + i * 38;
+      this.tip.on(this.add.rectangle(x + 8, ty, 160, 32, hex('b'), 0.6).setOrigin(0), `Endless ${cap(season)}`, [
+        `${cap(season)}'s calendar, patrons and Night Markets, a new month after every finale.`,
+        `Rent climbs ×${ENDLESS_RENT} every week after the first month.`,
+      ]);
+      pixelText(this, x + 14, ty + 4, `${i + 1}  ${cap(season)}`, { size: 8, color: 'W' });
+      const note = best?.season === season ? `Best: ${weeks(best.weeks)}` : 'Year 1 rules';
+      pixelText(this, x + 14, ty + 18, note, { size: 7, color: best?.season === season ? 'y' : 'a' });
+      this.add.existing(button(this, x + 136, ty + 16, 'Set out', () => this.setOut(season), { w: 48, color: 'y' }));
+    });
+    pixelText(this, x + 88, y + 216, `Best ${best ? weeks(best.weeks) : 'none yet'} · 1-4 to set out`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
   }
 
   /**
@@ -486,7 +518,7 @@ export class Cottage extends Phaser.Scene {
     // A fixture shows its profile but can't spend it.
     const buy = this.fixture ? null : (id: string) => {
       buyPerkNow(id);
-      this.scene.restart({ perkTier: tier, at: this.pos, reopen: 'workbench' });
+      this.scene.restart({ perkTier: tier, at: this.pos, reopen: 'workbench', endless: this.endless });
     };
     this.add.existing(panel(this, x, y, 176, 228, 'k', 0.9, 'n'));
     pixelText(this, x + 88, y + 8, `Reputation ${p.reputation}`, { size: 10, color: 'y', align: 'center' }).setOrigin(0.5, 0);
@@ -814,11 +846,14 @@ const TOP_TIER = 1 + PERK_TIERS.length;
 
 type WalkKeys = Record<'w' | 'a' | 's' | 'd' | 'up' | 'down' | 'left' | 'right', Phaser.Input.Keyboard.Key>;
 
+/** The weather out of the cottage's window, always the season's own: autumn has none of its own. */
+const WINDOW_WEATHER: Record<Season, Weather> = { spring: 'clear', summer: 'heatwave', autumn: 'clear', winter: 'snow' };
+
 /** The season the house is dressed for: the newest open season of the Year you're playing. */
 
 /** Where the cottage's windows look into the shop window's painted view (640x360): the left window here, the right one further along. And its scale. */
-const VIEW_CROP = { x: 196, y: 96 };
-const VIEW_SCALE = 0.5;
+const VIEW_CROP = { x: 182, y: 58 };
+const VIEW_SCALE = 0.6;
 
 /** The perk board opens at the first open tier with something left to buy, else the top open tier. */
 function firstTier(p: Profile): number {

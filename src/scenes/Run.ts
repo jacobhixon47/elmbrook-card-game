@@ -7,7 +7,7 @@ import {
   HARVEST_AUCTION, FRIENDSHIP, friendLevelOf, friendshipOf, hearthOffers, isRegular, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
   type NameTakerDeal, type StockItem, type Weather, migrateProfile, storyDue, storyKey, recordRun, type RunOutcome, almanacUnlocks, boonOf, runStartChoice, cauldronOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
-  endlessOpen, endlessWeeks, marketMoon, mutationName, MUTATIONS,
+  endlessWeeks, runWeek, marketMoon, mutationName, MUTATIONS,
 } from '../core';
 import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
@@ -146,7 +146,7 @@ export class Run extends Phaser.Scene {
     super('Run');
   }
 
-  create(data: { fixture?: Fixture | null; resume?: boolean; saved?: RunState; season?: Season }) {
+  create(data: { fixture?: Fixture | null; resume?: boolean; saved?: RunState; season?: Season; endless?: boolean }) {
     pixelCamera(this);
     this.mode = { kind: 'idle' };
     this.pinned = null;
@@ -171,7 +171,7 @@ export class Run extends Phaser.Scene {
       this.tutorial = fixture ? null : wantsTutorial() ? new TutorialProgress() : null;
       const seed = fixture?.seed ?? params.get('seed') ?? (this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`);
       const season = data.season ?? (fixture?.season as Season | undefined) ?? viewOverrides().season;
-      store.dispatch({ type: 'startRun', seed, ...this.kit(fixture), ...(season ? { season } : {}), ...(fixture?.year ? { year: fixture.year } : {}), ...(fixture?.perks ? { perks: fixture.perks } : {}), ...(fixture?.boon ? { boon: fixture.boon } : {}), ...(fixture?.mutation ? { mutation: fixture.mutation } : {}), ...this.fromProfile(!!fixture) });
+      store.dispatch({ type: 'startRun', seed, ...this.kit(fixture), ...(season ? { season } : {}), ...(fixture?.year ? { year: fixture.year } : {}), ...(fixture?.perks ? { perks: fixture.perks } : {}), ...(fixture?.boon ? { boon: fixture.boon } : {}), ...(fixture?.mutation ? { mutation: fixture.mutation } : {}), ...this.fromProfile(!!fixture, !!(data.endless || fixture?.endless)) });
       // `today` sets the weather of the day the fixture starts on and of the day its steps end on.
       const today = () => fixture?.today && store.dispatch({ type: 'debug', op: 'setWeather', weather: fixture.today as Weather });
       today();
@@ -290,6 +290,9 @@ export class Run extends Phaser.Scene {
     const after = store.getState()!;
     const note = relicNote(events);
     if (note) this.toast(note);
+    // Endless rolls on into a new month after each finale met (GDD §13).
+    const month = events.find((e) => e.type === 'endlessMonth');
+    if (month) this.toast(`Endless: month ${month.month}. A new calendar and patrons; rent keeps climbing.`, 'Y', 110);
     // A level of Friendship reached: toasted once the brew has played, so it isn't lost under it.
     const levelUp = levelUpNote(events);
     const resky = () => {
@@ -686,7 +689,7 @@ export class Run extends Phaser.Scene {
 
   private drawHud(s: RunState) {
     const mutation = s.mutation ? ` · ${mutationName(s.mutation)}` : '';
-    const year = this.text(10, 2, `Year ${s.year} · ${s.season[0]!.toUpperCase()}${s.season.slice(1)}${mutation}`, { size: 7, color: SEASON_COLOR[s.season], shadow: true });
+    const year = this.text(10, 2, `${s.endlessMode ? 'Endless' : `Year ${s.year}`} · ${s.season[0]!.toUpperCase()}${s.season.slice(1)}${mutation}`, { size: 7, color: SEASON_COLOR[s.season], shadow: true });
     // Hover for who is brewing and in what (GDD §12).
     const witch = codex.witches.get(s.witch)!;
     const pot = cauldronOf(s);
@@ -695,7 +698,7 @@ export class Run extends Phaser.Scene {
     year.on('pointerout', () => this.tip.hide());
     const left = NIGHT_SHIFT_DAY - s.day;
     this.tip.on(this.text(10, 10, dayLabel(s), { size: 12, color: 'a', shadow: true }), dayLabel(s), [
-      `Week ${s.week} of ${WEEKS}. Each week is ${NIGHT_SHIFT_DAY - 1} days, then the Night Shift.`,
+      `${s.endlessMode ? `Week ${s.week} of month ${s.endless + 1}, and rent ${rentOf(s)}g this week` : `Week ${s.week} of ${WEEKS}`}. Each week is ${NIGHT_SHIFT_DAY - 1} days, then the Night Shift.`,
       left > 0 ? `${left} ${left === 1 ? 'day' : 'days'} until the Night Shift, when the patron comes and rent is due.` : 'Tonight is the Night Shift: the patron comes, then the Night Market, then rent.',
     ]);
     this.tip.on(this.text(630, 8, `${s.gold} gold`, { size: 12, color: 'y', shadow: true }).setOrigin(1, 0), 'Gold', [
@@ -1368,20 +1371,14 @@ export class Run extends Phaser.Scene {
 
     if (s.phase === 'game-over' && s.lostTo === 'finale') {
       title('The Moonless Patron leaves unhappy', `Rent is paid, but the month is lost. The Moonless Patron wanted ${FINALE_ORDERS === 1 ? 'one of their orders' : FINALE_ORDERS >= 3 ? 'all three of their orders' : `${FINALE_ORDERS} of their orders`} done.`);
-      if (s.endless) this.endlessLine(s, 120);
+      if (s.endlessMode) return this.endlessEnd(s);
       this.endButtons(s, 'Try again');
       return;
     }
     if (s.phase === 'game-over') {
-      title('The Guild reclaims your stall', `You couldn't make week ${s.week}'s rent of ${rentOf(s)}g.`);
-      if (s.endless) this.endlessLine(s, 120);
+      title('The Guild reclaims your stall', `You couldn't make week ${runWeek(s)}'s rent of ${rentOf(s)}g.`);
+      if (s.endlessMode) return this.endlessEnd(s);
       this.endButtons(s, 'Try again');
-      return;
-    }
-    if (s.phase === 'victory' && s.endless) {
-      title(`Endless: month ${s.endless} done`, `Rent paid every week and the Moonless Patron served again, with ${s.gold}g to spare. Next week's rent is ${rentOf({ ...s, endless: s.endless + 1, week: 1 })}g.`);
-      this.endlessLine(s, 120);
-      this.endButtons(s, 'Play again');
       return;
     }
     if (s.phase === 'victory') {
@@ -1781,6 +1778,7 @@ export class Run extends Phaser.Scene {
         },
         exitLabel: short ? `Can't pay ${due}g: leave` : `Pay ${due}g rent and go home`,
         exitShort: short,
+        moon: marketMoon(s, s.week),
       }, this.walkState, {
         visit: (index) => {
           this.walkState!.list = false;
@@ -2106,11 +2104,11 @@ export class Run extends Phaser.Scene {
     c.on('pointerout', () => this.tweens.add({ targets: c, y, duration: 90 }));
   }
 
-  private newRun(season: Season = 'spring') {
+  private newRun(season: Season = 'spring', endless = false) {
     this.tutorial = wantsTutorial() ? new TutorialProgress() : null;
     this.scenesSeen.clear();
     this.openingPending = !this.fixtureRun && wantsIntros() && !this.tutorial && loadProfile().seasonOpenings;
-    store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, ...this.kit(this.fixtureRun ? this.fixture : null), season, ...this.fromProfile(this.fixtureRun) });
+    store.dispatch({ type: 'startRun', seed: this.tutorial ? TUTORIAL_SEED : `run-${Math.floor(Math.random() * 1e9)}`, ...this.kit(this.fixtureRun ? this.fixture : null), season, ...this.fromProfile(this.fixtureRun, endless) });
     this.scene.restart({ resume: true });
   }
 
@@ -2128,24 +2126,27 @@ export class Run extends Phaser.Scene {
    * What the profile brings to a new run: cottage perks, and what the Almanac added to the pools.
    * Neither in the tutorial, which plays a fixed deal, or in fixtures.
    */
-  private fromProfile(fixture: boolean): { perks?: string[]; unlocks?: string[]; year?: number; boon?: string; friendship?: Record<string, number>; keepsakes?: string[]; mutation?: string } {
+  private fromProfile(fixture: boolean, endless = false): { perks?: string[]; unlocks?: string[]; year?: number; boon?: string; friendship?: Record<string, number>; keepsakes?: string[]; endless?: boolean; mutation?: string } {
+    const mode = endless ? { endless: true } : {};
     // A fixture's own profile can bring Friendship from earlier runs (the Townsfolk page) and keepsakes.
     if (fixture) {
       const p = this.fixture?.profile ? migrateProfile(this.fixture.profile) : null;
       const keepsakes = p ? runKeepsakes(p) : [];
-      return { ...(p && Object.keys(p.friendship).length ? { friendship: p.friendship } : {}), ...(keepsakes.length ? { keepsakes } : {}) };
+      return { ...mode, ...(p && Object.keys(p.friendship).length ? { friendship: p.friendship } : {}), ...(keepsakes.length ? { keepsakes } : {}) };
     }
     if (this.tutorial) return {};
     // Setting out fixes this Year's mutation (GDD §13), chosen or not.
     const p = lockMutationNow();
     const unlocks = almanacUnlocks(p.almanac);
-    const mutation = p.mutations[p.year - 1];
+    // Endless brings everything the profile has ever opened, but plays Year 1 without a boon or a mutation (GDD §13).
+    const mutation = endless ? null : p.mutations[p.year - 1];
     return {
+      ...mode,
       ...(mutation ? { mutation } : {}),
       ...(p.perks.length ? { perks: p.perks } : {}),
       ...(unlocks.length ? { unlocks } : {}),
-      ...(p.year > 1 ? { year: p.year } : {}),
-      ...(boonOf(p) ? { boon: boonOf(p)! } : {}),
+      ...(p.year > 1 && !endless ? { year: p.year } : {}),
+      ...(boonOf(p) && !endless ? { boon: boonOf(p)! } : {}),
       ...(Object.keys(p.friendship).length ? { friendship: p.friendship } : {}),
       ...(runKeepsakes(p).length ? { keepsakes: runKeepsakes(p) } : {}),
     };
@@ -2180,7 +2181,7 @@ export class Run extends Phaser.Scene {
     if (news) this.text(320, 222, news, { size: 7, color: out.newYear ? 'L' : 'a', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
     const more = [perkNews(out), kitNews(out)].filter(Boolean).join(' ');
     if (more) this.text(320, news ? 240 : 222, more, { size: 7, color: 'Y', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
-    this.endRow(s, out, 296, 'Play again', 'Y');
+    this.endRow(s, 296, 'Play again', 'home');
   }
 
   /** Play the same season again, or go home to the cottage to choose another. */
@@ -2193,33 +2194,26 @@ export class Run extends Phaser.Scene {
       this.text(320, 160, `New in your Almanac: ${listOf(names)}. More joins the pools next run.${tiers}`, { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);
     }
     if (kitNews(out)) this.text(320, 132, kitNews(out), { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5);
-    this.endRow(s, out, 190, again, s.phase === 'victory' && endlessOpen(out.profile) ? undefined : 'again');
+    this.endRow(s, 190, again, 'again');
   }
 
-  /**
-   * The end screen's buttons: play again, go home, and after a won finale once Endless is open
-   * (GDD §13), keep going into another month. `bright` picks the one to light: home, or play again.
-   */
-  private endRow(s: RunState, out: RunOutcome, y: number, again: string, bright?: 'Y' | 'again') {
-    const onward = s.phase === 'victory' && endlessOpen(out.profile);
-    const xs = onward ? [220, 320, 420] : [270, 370];
-    this.add2(button(this, xs[0]!, y, again, () => this.newRun(s.season), { w: 80, ...(bright === 'again' ? { color: 'Y' as const } : {}) }));
-    if (onward) this.add2(button(this, xs[1]!, y, 'Keep going', () => this.goEndless(), { w: 80, color: 'Y' }));
-    this.add2(button(this, xs.at(-1)!, y, 'Home', () => this.scene.start('Cottage', { home: s.season }), { w: 80, ...(bright === 'Y' && !onward ? { color: 'Y' as const } : {}) }));
+  /** The end screen's buttons: play again, or go home. `bright` picks the one to light. */
+  private endRow(s: RunState, y: number, again: string, bright: 'home' | 'again') {
+    const lit = { color: 'Y' as const };
+    this.add2(button(this, 270, y, again, () => this.newRun(s.season, s.endlessMode), { w: 80, ...(bright === 'again' ? lit : {}) }));
+    this.add2(button(this, 370, y, 'Home', () => this.scene.start('Cottage', { home: s.season, endless: s.endlessMode }), { w: 80, ...(bright === 'home' ? lit : {}) }));
   }
 
-  /** How far an Endless run has gone, and the best so far. */
-  private endlessLine(s: RunState, y: number) {
+  /** The end of an Endless run (GDD §13): how long it lasted, against the best. It earns nothing else. */
+  private endlessEnd(s: RunState) {
     const weeks = endlessWeeks(s);
     const best = this.endOutcome(s).profile.endlessBest;
-    const line = `${weeks} ${weeks === 1 ? 'week' : 'weeks'} past the finale${best && s.phase === 'game-over' ? `. Your best: ${best.weeks} ${best.weeks === 1 ? 'week' : 'weeks'}, in ${cap(best.season)} of Year ${best.year}.` : '.'} Endless earns no Reputation.`;
-    this.text(320, y, line, { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5);
-  }
-
-  /** On into another month of Endless, from a won finale. */
-  private goEndless() {
-    if (store.dispatch({ type: 'goEndless' }).some((e) => e.type === 'rejected')) return;
-    this.scene.restart({ resume: true });
+    const record = best && best.weeks === weeks && weeks > 0;
+    const plural = (n: number) => `${n} ${n === 1 ? 'week' : 'weeks'}`;
+    this.text(320, 112, `Endless: you lasted ${plural(weeks)}.`, { size: 12, color: 'Y', stroke: 'k', align: 'center' }).setOrigin(0.5);
+    const line = record ? 'Your longest yet.' : best ? `Your best is ${plural(best.weeks)}, in ${cap(best.season)}.` : '';
+    this.text(320, 132, `${line} Endless earns no Reputation or Almanac entries.`.trim(), { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5);
+    this.endRow(s, 190, 'Go again', 'home');
   }
 
   /**

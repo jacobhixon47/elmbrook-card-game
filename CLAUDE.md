@@ -15,7 +15,7 @@ Read before working: `docs/gdd.md` (what to build), `docs/tech.md` (how), `docs/
 - `pnpm art:sheet`: render all art to `.snaps/art-sheet.png` without a browser
 - `pnpm art:import <image> <name> [--grid 2 --panel 0]`: pixelize a painted image into `public/backdrops/<name>.png`
 - `pnpm art:window`: render the shop window in every season, time of day and weather to `.snaps/window-grades.png` and `.snaps/window-weather.png`
-- `pnpm sim --runs <n> [--strategy greedy|skilled|casual|novice|random] [--season s] [--friends n]`: headless balance report; `pnpm sim --career <n> --strategy s` plays whole saves from a new profile; `pnpm sim --endless` lets won runs keep going into Endless and reports the weeks lasted; `pnpm sim --replay <file>` replays an action log
+- `pnpm sim --runs <n> [--strategy greedy|skilled|casual|novice|random] [--season s] [--friends n]`: headless balance report; `pnpm sim --career <n> --strategy s` plays whole saves from a new profile; `pnpm sim --endless` plays Endless runs and reports the weeks lasted; `pnpm sim --replay <file>` replays an action log
 - `pnpm balance [--quick] [--systems]`: the balance check (`docs/balance-check.md`): every player type in Year 1 and over whole saves, compared with the targets
 - Dev overlay: press backtick in the game for seed, state, +gold, jump to day, action-log export, and skipping or resetting the tutorial
 

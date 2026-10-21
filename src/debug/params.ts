@@ -18,6 +18,8 @@ export type Fixture = {
   cauldron?: string;
   /** The Year a Run fixture plays in (its modifiers), from 2. */
   year?: number;
+  /** An Endless run (GDD §13): a Run fixture starts one, a Cottage fixture opens in Endless mode. */
+  endless?: boolean;
   /** Cottage perks and the Year's boon a Run fixture starts with. */
   perks?: string[];
   boon?: string;
