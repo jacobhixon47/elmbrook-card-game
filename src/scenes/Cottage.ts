@@ -3,11 +3,11 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { ALMANAC_FIRST_PAGE, endlessOpen, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, MAX_YEAR, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
+import { ALMANAC_FIRST_PAGE, endlessOpen, mutationChangeable, mutationName, mutationOf, mutationsOpen, MUTATIONS, MUTATION_RULES, type MutationId, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, MAX_YEAR, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
 import { CODEX_TABS, codexEntries, type CodexEntry } from '../view/codex';
 import { framedPortrait } from '../view/portrait';
 import { unlockName } from '../view/describe';
-import { buyPerkNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
+import { buyPerkNow, chooseMutationNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
 import { backdropTexture, codeBackdrops, gradedView } from '../view/backdrop';
 import { play, playMusic } from '../audio/sfx';
 import { ROOM_LIGHTS, ROOM_WINDOWS, roomLight } from '../art/scenes/cottage-room';
@@ -399,7 +399,9 @@ export class Cottage extends Phaser.Scene {
   private drawYear(p: Profile, x: number, y: number) {
     const start = (season: Season) => this.setOut(season);
     const choose = (year: number) => this.chooseYear(year);
-    this.add.existing(panel(this, x, y, 176, 228, 'k', 0.9, 'n'));
+    // Mutations (GDD §13) take a row under the title once they're open, and the seasons move down.
+    const twist = mutationsOpen(p) ? 20 : 0;
+    this.add.existing(panel(this, x, y, 176, 228 + twist, 'k', 0.9, 'n'));
     pixelText(this, x + 88, y + 8, `Year ${p.year}`, { size: 10, color: 'y', align: 'center' }).setOrigin(0.5, 0);
     const top = p.yearSeasons.length;
     if (top > 1) {
@@ -413,8 +415,10 @@ export class Cottage extends Phaser.Scene {
     const seasons = seasonsOf(p);
     pixelText(this, x + 88, y + 24, 'Set out for a season. A win opens the next.', { size: 7, color: 'a', align: 'center', wrap: 160 }).setOrigin(0.5, 0);
 
+    if (twist) this.drawMutation(p, x, y + 40);
+
     SEASONS.forEach((season, i) => {
-      const ty = y + 50 + i * 38;
+      const ty = y + 50 + twist + i * 38;
       const open = seasons.includes(season);
       const wins = p.wins[season];
       this.tip.on(this.add.rectangle(x + 8, ty, 160, 32, hex(open ? 'b' : 'q'), open ? 0.6 : 0.4).setOrigin(0), `${cap(season)}, Year ${p.year}`, [
@@ -431,16 +435,43 @@ export class Cottage extends Phaser.Scene {
 
     const runs = p.runs === 1 ? '1 run' : `${p.runs} runs`;
     if (!endlessOpen(p)) {
-      pixelText(this, x + 88, y + 216, `${runs} · 1-4 to set out`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
+      pixelText(this, x + 88, y + 216 + twist, `${runs} · 1-4 to set out`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
       return;
     }
     // Endless (GDD §13): after a won finale, "Keep going" carries the run on; its best shows here.
     const best = p.endlessBest;
-    const line = pixelText(this, x + 88, y + 216, `${runs} · Endless best ${best ? `${best.weeks}w` : 'none yet'}`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
+    const line = pixelText(this, x + 88, y + 216 + twist, `${runs} · Endless best ${best ? `${best.weeks}w` : 'none yet'}`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
     this.tip.on(line, 'Endless', [
       'Win a season, then Keep going: the run goes on month after month, with rent climbing every week, until you can\'t pay.',
       best ? `Your best: ${best.weeks} ${best.weeks === 1 ? 'week' : 'weeks'} past the finale, in ${cap(best.season)} of Year ${best.year}.` : 'Endless earns no Reputation or Almanac entries.',
     ]);
+  }
+
+  /**
+   * The Year's mutation (GDD §13): arrows step through none and the six until a run sets out in the
+   * Year, then it's fixed. One already beaten in a Winter says so.
+   */
+  private drawMutation(p: Profile, x: number, y: number) {
+    const current = mutationOf(p);
+    const open = mutationChangeable(p);
+    const order: (MutationId | null)[] = [null, ...MUTATIONS.map((m) => m.id)];
+    const step = (d: number) => {
+      if (this.fixture) return;
+      chooseMutationNow(order[(order.indexOf(current) + d + order.length) % order.length]!);
+      this.scene.restart({ at: this.pos, reopen: this.overlayKind });
+    };
+    const m = MUTATIONS.find((x) => x.id === current);
+    const done = current && p.mutationsDone.includes(current) ? ' (beaten)' : '';
+    const label = pixelText(this, x + 88, y + 4, `Mutation: ${m ? m.name : 'none'}${done}`, { size: 7, color: m ? 'L' : 'a', align: 'center' }).setOrigin(0.5, 0);
+    this.tip.on(label, m ? m.name : 'Mutations', [
+      m ? m.text : 'An optional twist for every run this Year. It changes how you play, not just how hard.',
+      `A mutated run earns ×${MUTATION_RULES.reputation} Reputation. Win this Year's Winter with one on to tick it off.`,
+      open ? 'Choose before you set out: it locks once a run starts this Year.' : 'Fixed for this Year: a run has set out.',
+      `Beaten: ${p.mutationsDone.length ? p.mutationsDone.map(mutationName).join(', ') : 'none yet'}.`,
+    ]);
+    if (!open) return;
+    this.add.existing(button(this, x + 16, y + 8, '<', () => step(-1), { w: 16 }));
+    this.add.existing(button(this, x + 160, y + 8, '>', () => step(1), { w: 16 }));
   }
 
   /**

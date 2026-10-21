@@ -1,3 +1,4 @@
+import type { MutationId } from './mutations';
 import type { Essence, ModifierId, PotionFamily, StallId } from '../codex/schema';
 import type { Calendar, Season } from './calendar';
 import type { RngState } from './rng';
@@ -153,7 +154,7 @@ export type Favour = { kind: 'favour'; visitor: string; job: 'burn' | 'temper' }
  * The run state's shape version. Bump it whenever a change would break an older save, and add the
  * step from the old version to `RUN_MIGRATIONS` (core/meta.ts) so saved runs carry over.
  */
-export const RUN_VERSION = 23;
+export const RUN_VERSION = 24;
 
 /** What a run has done so far, for Reputation at its end (GDD §13). */
 /** Counts the cottage reads when a run ends: Reputation and Almanac goals (core/meta.ts, core/almanac.ts). */
@@ -272,6 +273,8 @@ export type RunState = {
   patronsRead: boolean;
   /** Endless (GDD §13): 0 until the run goes on past its finale, then the month of Endless it's in (1, 2, ...). */
   endless: number;
+  /** The Year's mutation (GDD §13), if one is on: a challenge twist for every run that Year. */
+  mutation: MutationId | null;
   nextUid: number;
   /** Why a lost run ended: the rent, or the Moonless Patron left unsatisfied. */
   lostTo?: 'rent' | 'finale';

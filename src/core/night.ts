@@ -1,3 +1,4 @@
+import { barredCard, MUTATION_RULES } from './mutations';
 import { codex } from '../codex';
 import type { Patron, Twist } from '../codex/schema';
 import { NIGHT_SHIFT_DAY, type Season } from './calendar';
@@ -47,7 +48,8 @@ export function isSatchelCard(id: string): boolean {
   return codex.ingredients.get(id)?.nightOnly === true || codex.tinctures.get(id)?.rarity === 'lunar';
 }
 
-const inPool = (c: { pool: string; id: string }, s: Pick<RunState, 'unlocks'>) => c.pool === 'base' || (c.pool === 'unlock' && s.unlocks.includes(c.id));
+// No Vital (a mutation) bars Vital ingredients from every pool.
+const inPool = (c: { pool: string; id: string }, s: Pick<RunState, 'unlocks'> & Partial<Pick<RunState, 'mutation'>>) => !barredCard(s, c.id) && (c.pool === 'base' || (c.pool === 'unlock' && s.unlocks.includes(c.id)));
 
 /** Lunar ingredients this run can be offered. */
 export function lunarPool(s: Pick<RunState, 'unlocks'>): string[] {
@@ -95,7 +97,8 @@ export function stowSatchel(s: RunState): void {
 }
 
 /** A rule a patron's twist puts on brewing; null when the brew is allowed. */
-export function brewBlocked(s: Pick<RunState, 'patrons' | 'week' | 'day' | 'gold' | 'lastBrew'>, cards: readonly CardInstance[]): string | null {
+export function brewBlocked(s: Pick<RunState, 'patrons' | 'week' | 'day' | 'gold' | 'lastBrew'> & Partial<Pick<RunState, 'mutation'>>, cards: readonly CardInstance[]): string | null {
+  if (s.mutation === 'threes-company' && cards.length < MUTATION_RULES.threesMin) return "Three's Company: every brew needs three or more ingredients";
   const twist = twistNow(s);
   if (twist === 'brew-costs-gold-2' && s.gold < TITHE_GOLD) return `The Tithe Reeve wants ${TITHE_GOLD} gold for every brew`;
   if (twist === 'origin-chain' && s.lastBrew.length > 0) {

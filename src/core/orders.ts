@@ -1,3 +1,4 @@
+import { MUTATION_RULES } from './mutations';
 import { codex } from '../codex';
 import type { Ingredient, Recipe, Regular, Visitor } from '../codex/schema';
 import { fillsPattern, recipeAvailable } from './brew';
@@ -64,6 +65,8 @@ export function reachableRecipes(state: RunState, night: boolean): Map<string, n
   const out = new Map<string, number>();
   for (const r of codex.recipes.values()) {
     if (r.pattern.length > state.cauldronSlots || !recipeAvailable(r, state)) continue;
+    // Three's Company (a mutation): only recipes of three or more ingredients can be brewed.
+    if (state.mutation === 'threes-company' && r.pattern.length < MUTATION_RULES.threesMin) continue;
     const p = bestPotency(r, counts);
     if (p > 0) out.set(r.id, Math.floor(p * potencyMult) * (r.baseHarmony + harmonyBonus));
   }

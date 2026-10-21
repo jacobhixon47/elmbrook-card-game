@@ -1,3 +1,4 @@
+import { isMutation, MUTATION_RULES, MUTATIONS, type MutationId } from './mutations';
 import { codex } from '../codex';
 import { ALMANAC_FIRST_PAGE, almanacMet } from './almanac';
 import { allKeepsakes, allStoryKeys, bankFriendship, KEEPSAKE_SLOTS } from './friendship';
@@ -10,7 +11,7 @@ import { RUN_VERSION, type RunState } from './state';
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 14;
+export const PROFILE_VERSION = 15;
 
 /** Sound settings: the sound effects' volume and the music's, 0 to 1, and mute (both). */
 export type SoundSettings = { volume: number; music: number; muted: boolean };
@@ -79,6 +80,13 @@ export type Profile = {
   home: Season;
   /** The longest Endless run (GDD §13): weeks lasted past the finale, and where. */
   endlessBest: EndlessBest | null;
+  /**
+   * Mutations (GDD §13): each Year's (index 0 is Year 1), whether it is locked (a run has set out in
+   * that Year), and those whose Year's Winter was won with them on.
+   */
+  mutations: (MutationId | null)[];
+  mutationLocked: boolean[];
+  mutationsDone: MutationId[];
 };
 
 export type EndlessBest = { weeks: number; season: Season; year: number };
@@ -115,6 +123,9 @@ export function newProfile(): Profile {
     keepsakes: [],
     home: 'spring',
     endlessBest: null,
+    mutations: [null],
+    mutationLocked: [false],
+    mutationsDone: [],
   };
 }
 
@@ -159,6 +170,12 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   },
   // 13 → 14: Endless, never played.
   13: (p) => ({ ...p, endlessBest: p.endlessBest ?? null }),
+  // 14 → 15: mutations, none chosen. Years already played are locked, as if they set out unmutated.
+  14: (p) => {
+    const years = Array.isArray(p.yearSeasons) ? p.yearSeasons.length : 1;
+    const runs = typeof p.runs === 'number' ? p.runs : 0;
+    return { ...p, mutations: Array(years).fill(null), mutationLocked: Array.from({ length: years }, (_, i) => runs > 0 && i < years - 1), mutationsDone: [] };
+  },
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -227,6 +244,12 @@ function sanitize(p: Raw): Profile {
     home: SEASONS.includes(p.home as Season) ? (p.home as Season) : fresh.home,
     friendship: Object.fromEntries([...codex.regulars.keys()].map((id) => [id, count((p.friendship as Raw | undefined)?.[id])] as const).filter(([, n]) => n > 0)),
     endlessBest: endlessBestOf(p.endlessBest),
+    mutations: yearSeasons.map((_, i) => {
+      const m = Array.isArray(p.mutations) ? p.mutations[i] : null;
+      return typeof m === 'string' && isMutation(m) ? m : null;
+    }),
+    mutationLocked: yearSeasons.map((_, i) => Array.isArray(p.mutationLocked) && p.mutationLocked[i] === true),
+    mutationsDone: Array.isArray(p.mutationsDone) ? MUTATIONS.map((m) => m.id).filter((id) => (p.mutationsDone as unknown[]).includes(id)) : [],
   };
 }
 
@@ -279,12 +302,13 @@ export function nextSeason(season: Season): Season | null {
 /** Reputation a finished run earns (GDD §13): for each week's rent paid, each order filled and potion sold, and a win. */
 export const REPUTATION = { week: 4, order: 1, potionSold: 1, win: 10 } as const;
 
-export function reputationFor(s: Pick<RunState, 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year'>>): number {
+export function reputationFor(s: Pick<RunState, 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year' | 'mutation'>>): number {
   const won = s.phase === 'victory';
   const weeks = won ? WEEKS : Math.max(0, s.week - 1);
   const base = weeks * REPUTATION.week + s.stats.ordersFilled * REPUTATION.order + s.stats.potionsSold * REPUTATION.potionSold + (won ? REPUTATION.win : 0);
   // Each looped Year multiplies what a run earns (×1.5 in Year 2, ×2 in Year 3), so climbing pays.
-  return Math.round(base * reputationMult(s.year ?? 1));
+  // A mutated run (GDD §13) earns a little more.
+  return Math.round(base * reputationMult(s.year ?? 1) * (s.mutation ? MUTATION_RULES.reputation : 1));
 }
 
 export type RunOutcome = {
@@ -315,7 +339,7 @@ function newlyOpen(before: Profile, after: Profile): Pick<RunOutcome, 'witches' 
 }
 
 /** Count a finished run. A run still going, or one already counted, changes nothing. */
-export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year' | 'gold' | 'witch' | 'cauldronKind' | 'friendship' | 'endless' | 'lostTo'>>): RunOutcome {
+export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year' | 'gold' | 'witch' | 'cauldronKind' | 'friendship' | 'endless' | 'lostTo' | 'mutation'>>): RunOutcome {
   const same = { profile, reputation: 0, opened: null, yearDone: false, newYear: null, almanac: [], perkTiers: [], witches: [], cauldrons: [] };
   // Endless earns nothing but a best (GDD §13): the win was counted at the finale, before it went on.
   if (s.endless && s.phase === 'game-over') return { ...same, profile: recordEndless(profile, s) };
@@ -344,10 +368,15 @@ export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' 
   const yearDone = s.season === 'winter';
   if (yearDone) p.years++;
   // Winning the top Year's Winter opens the next Year, once looping is open.
+  // Winter won with the Year's mutation on ticks it off for good.
+  const mutation = s.mutation ?? null;
+  if (yearDone && mutation && profile.mutations[year - 1] === mutation && !p.mutationsDone.includes(mutation)) p.mutationsDone = [...p.mutationsDone, mutation];
   const newYear = yearDone && year === p.yearSeasons.length && loopOpen(p) ? year + 1 : null;
   if (newYear) {
     p.yearSeasons.push(['spring']);
     p.boons.push(null);
+    p.mutations = [...p.mutations, null];
+    p.mutationLocked = [...p.mutationLocked, false];
   }
   return { profile: p, reputation, opened, yearDone, newYear, almanac, perkTiers: tiersOpened(profile, p), ...newlyOpen(profile, p) };
 }
@@ -404,6 +433,31 @@ export function chooseYear(p: Profile, year: number): Profile {
   if (year < 1 || year > p.yearSeasons.length) throw new Error(`Year ${year} is not open`);
   const offer = year > 1 && !p.boons[year - 1] ? rollBoons(year, p.years) : null;
   return { ...p, year, boonOffer: offer };
+}
+
+/** Mutations open once a first Year is done (GDD §13). */
+export const mutationsOpen = (p: Pick<Profile, 'years'>): boolean => p.years >= 1;
+
+/** The chosen Year's mutation, if it has one. */
+export const mutationOf = (p: Pick<Profile, 'mutations' | 'year'>): MutationId | null => p.mutations[p.year - 1] ?? null;
+
+/** Whether the chosen Year's mutation can still be changed: open, and no run has set out in it. */
+export const mutationChangeable = (p: Pick<Profile, 'years' | 'year' | 'mutationLocked'>): boolean => mutationsOpen(p) && !p.mutationLocked[p.year - 1];
+
+/** Choose (or clear, with null) the chosen Year's mutation, before Spring starts. */
+export function chooseMutation(p: Profile, id: MutationId | null): Profile {
+  if (!mutationChangeable(p)) throw new Error(`Year ${p.year}'s mutation is locked`);
+  const mutations = [...p.mutations];
+  mutations[p.year - 1] = id;
+  return { ...p, mutations };
+}
+
+/** A run sets out in the chosen Year: its mutation, chosen or not, is now fixed for that Year. */
+export function lockMutation(p: Profile): Profile {
+  if (p.mutationLocked[p.year - 1]) return p;
+  const mutationLocked = [...p.mutationLocked];
+  mutationLocked[p.year - 1] = true;
+  return { ...p, mutationLocked };
 }
 
 /** Choose the chosen Year's boon from the three on offer; it lasts every run in that Year. */
@@ -510,6 +564,8 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
   21: (s) => ({ ...s, tomorrow: { brews: 0, discards: 0 }, forfeitReward: false, blindBrew: false, patronsRead: false }),
   // 22 → 23: Endless, not entered.
   22: (s) => ({ ...s, endless: 0 }),
+  // 23 → 24: mutations, none on.
+  23: (s) => ({ ...s, mutation: null }),
 };
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */

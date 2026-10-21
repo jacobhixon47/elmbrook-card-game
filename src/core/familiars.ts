@@ -84,7 +84,9 @@ export function familiarPrice(id: string): number {
 export const sellPrice = (id: string) => Math.floor(familiarPrice(id) * FAMILIAR_SELL);
 
 /** Familiars this run can be offered: base-pool ones and unlocked ones, not ones you already have. */
-export function familiarPool(s: Pick<RunState, 'unlocks' | 'familiars'>, rarity?: ShopRarity): Familiar[] {
+export function familiarPool(s: Pick<RunState, 'unlocks' | 'familiars'> & Partial<Pick<RunState, 'mutation'>>, rarity?: ShopRarity): Familiar[] {
+  // Lone Witch (a mutation): no familiars are ever offered.
+  if (s.mutation === 'lone-witch') return [];
   return [...codex.familiars.values()].filter((f) => (f.pool === 'base' || s.unlocks.includes(f.id)) && !s.familiars.includes(f.id) && (!rarity || f.rarity === rarity));
 }
 
