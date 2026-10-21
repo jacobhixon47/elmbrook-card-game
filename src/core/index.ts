@@ -20,3 +20,4 @@ export * from './fair';
 export * from './cauldrons';
 export * from './friendship';
 export * from './visitors';
+export * from './mutations';

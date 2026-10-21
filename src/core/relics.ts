@@ -1,3 +1,4 @@
+import { MUTATION_RULES } from './mutations';
 import { codex } from '../codex';
 import type { Ingredient } from '../codex/schema';
 import { changeGold, pick, reject, type Ctx } from './ctx';
@@ -114,12 +115,13 @@ export function liftCurse(ctx: Ctx, by: string, id?: string): boolean {
 }
 
 /** This week's rent in the run's Year, with the Guild Seal and Unpaid Debt. */
-export function rentOf(s: Pick<RunState, 'season' | 'week'> & Partial<Held> & Partial<Pick<RunState, 'year' | 'cauldronKind' | 'endless'>>, week = s.week): number {
+export function rentOf(s: Pick<RunState, 'season' | 'week'> & Partial<Held> & Partial<Pick<RunState, 'year' | 'cauldronKind' | 'endless' | 'mutation'>>, week = s.week): number {
   const mult = (hasRelic(s, 'guild-seal') ? RELIC_RULES.sealRent : 1) * (hasCurse(s, 'unpaid-debt') ? CURSE_RULES.debtRent : 1) * (cauldronOf(s).rent ?? 1);
   // Endless past its first month: the finale's rent, climbing every week after the first.
   const endless = s.endless ?? 0;
   const due = endless ? rentDue(s.season, WEEKS, yearRent(s)) * ENDLESS_RENT ** (runWeek({ week, endless: endless - 1 }) - 1) : rentDue(s.season, week, yearRent(s));
-  return Math.round(due * mult);
+  // Lean Times (a mutation): lower rent.
+  return Math.round(due * mult * (s.mutation === 'lean-times' ? MUTATION_RULES.leanRent : 1));
 }
 
 /** Cards a reward pick offers: 3, 4 with the Lucky Horseshoe, 2 with Sour Luck. */

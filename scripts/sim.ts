@@ -1,4 +1,5 @@
 // pnpm sim --runs 2000 --strategy greedy [--season spring] [--seed prefix] [--unlocks all] [--perks all|tier|a,b] [--year 2] [--boon id] [--friends 10]
+// pnpm sim --runs 200 --mutation lean-times [--year 2]   (a Year's mutation on every run)
 // pnpm sim --runs 200 --endless [--unlocks all --perks all]   (Endless runs; prints the weeks lasted)
 // pnpm sim --career 20 --strategy casual [--max-runs 250]   (whole saves from a new profile; see src/sim/career.ts)
 // pnpm sim --replay path/to/run.json   (a {seed?, actions[]} log from a crash, the sim or the dev overlay)
@@ -58,12 +59,14 @@ if (careers) {
 
 // --endless: Endless runs (Year 1 rules, no boon), each going until the rent or a finale beats it.
 const endless = process.argv.includes('--endless');
+// --mutation id: play under that mutation (GDD §13).
+const mutation = arg('mutation');
 
 const t0 = performance.now();
-const records = Array.from({ length: runs }, (_, i) => playRun(`${prefix}-${i}`, { strategy, ...(season ? { season } : {}), ...(unlocks ? { unlocks } : {}), ...(perks ? { perks } : {}), ...(year ? { year } : {}), ...(boon ? { boon } : {}), ...(friendship ? { friendship } : {}), ...(endless ? { endless } : {}) }));
+const records = Array.from({ length: runs }, (_, i) => playRun(`${prefix}-${i}`, { strategy, ...(season ? { season } : {}), ...(unlocks ? { unlocks } : {}), ...(perks ? { perks } : {}), ...(year ? { year } : {}), ...(boon ? { boon } : {}), ...(friendship ? { friendship } : {}), ...(endless ? { endless } : {}), ...(mutation ? { mutation } : {}) }));
 const secs = ((performance.now() - t0) / 1000).toFixed(1);
 
-console.log(report(records, `${strategy}${season ? ` · ${season}` : ''}${unlocks ? ' · all unlocked' : ''}${perks ? ` · ${perksArg === 'all' ? 'all perks' : `perks ${perksArg}`}` : ''}${year ? ` · Year ${year}` : ''}${boon ? ` · ${boon}` : ''}${friendsArg ? ` · Friendship ${friendsArg}` : ''}`));
+console.log(report(records, `${strategy}${season ? ` · ${season}` : ''}${unlocks ? ' · all unlocked' : ''}${perks ? ` · ${perksArg === 'all' ? 'all perks' : `perks ${perksArg}`}` : ''}${year ? ` · Year ${year}` : ''}${boon ? ` · ${boon}` : ''}${friendsArg ? ` · Friendship ${friendsArg}` : ''}${mutation ? ` · ${mutation}` : ''}`));
 if (endless) {
   const weeks = records.map((r) => r.endlessWeeks).sort((a, b) => a - b);
   const at = (q: number) => weeks[Math.min(weeks.length - 1, Math.floor(q * weeks.length))] ?? 0;

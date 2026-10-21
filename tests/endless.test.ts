@@ -3,7 +3,7 @@ import { ENDLESS_RENT, endlessOpen, endlessWeeks, FINALE_ORDERS, migrateProfile,
 import { ok, start } from './helpers';
 
 /** A new Endless run, from the cottage's door in Endless mode. */
-function endless(seed = 'endless', extra: { year?: number; boon?: string } = {}): RunState {
+function endless(seed = 'endless', extra: { year?: number; boon?: string; mutation?: string } = {}): RunState {
   return reduce(null, { type: 'startRun', seed, witch: 'hedge-witch', season: 'summer', endless: true, ...extra }).state;
 }
 
@@ -18,8 +18,9 @@ function atMarket(s0: RunState, week: number): RunState {
 }
 
 describe('Endless', () => {
-  it('starts as its own mode, by Year 1 rules and without a boon', () => {
-    const s = endless('e', { year: 4, boon: 'winter-savings' });
+  it('starts as its own mode, by Year 1 rules without a boon or mutation', () => {
+    const s = endless('e', { year: 4, boon: 'winter-savings', mutation: 'lean-times' });
+    expect(s.mutation).toBeNull();
     expect(s).toMatchObject({ endlessMode: true, endless: 0, year: 1, week: 1 });
     expect(s.gold).toBe(endless('e').gold);
     expect(start('e').endlessMode).toBe(false);

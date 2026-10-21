@@ -30,8 +30,13 @@ export function moonOf(week: number): 'quarter' | 'full-moon' | 'new-moon' {
  * Snowed In: in Winter, a quarter-moon Night Shift with snow buries the market half the time, and only
  * the Hearth Trader opens. Rolled from the seed so the Calendar can show it in advance.
  */
-export function snowedIn(s: Pick<RunState, 'season' | 'seed' | 'calendar'>, week: number): boolean {
-  if (s.season !== 'winter' || moonOf(week) !== 'quarter' || weatherOn(s, week, NIGHT_SHIFT_DAY) !== 'snow') return false;
+/** The moon the Night Market keeps: always full under Open Market (a mutation). */
+export function marketMoon(s: Partial<Pick<RunState, 'mutation'>>, week: number): ReturnType<typeof moonOf> {
+  return s.mutation === 'open-market' ? 'full-moon' : moonOf(week);
+}
+
+export function snowedIn(s: Pick<RunState, 'season' | 'seed' | 'calendar'> & Partial<Pick<RunState, 'mutation'>>, week: number): boolean {
+  if (s.season !== 'winter' || marketMoon(s, week) !== 'quarter' || weatherOn(s, week, NIGHT_SHIFT_DAY) !== 'snow') return false;
   return nextFloat(seedRng(`${s.seed}:snowed-in:${week}`))[0] < SNOWED_IN_CHANCE;
 }
 
@@ -41,7 +46,7 @@ export function snowedIn(s: Pick<RunState, 'season' | 'seed' | 'calendar'>, week
  * Snowed In night he is the only one.
  */
 export function rollStalls(ctx: Ctx): StallId[] {
-  const moon = moonOf(ctx.s.week);
+  const moon = marketMoon(ctx.s, ctx.s.week);
   if (snowedIn(ctx.s, ctx.s.week)) return ['hearth-trader'];
   const all = [...codex.stalls.values()];
   const inSeason = (x: (typeof all)[number]) => x.opens === 'season' && x.season === ctx.s.season;

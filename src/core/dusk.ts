@@ -1,3 +1,4 @@
+import { barredCard } from './mutations';
 import { codex } from '../codex';
 import type { Pool } from '../codex/schema';
 import { activeEvents } from './calendar';
@@ -17,8 +18,9 @@ type PoolCard = { id: string; rarity: ShopRarity; wychwood: boolean; inSeason: b
 /** How much likelier an in-season ingredient is in rewards, the Market and the Forage (GDD §6.1). */
 export const IN_SEASON_WEIGHT = 3;
 
-const inPool = (c: { id: string; pool: Pool }, s: Pick<RunState, 'unlocks'>) =>
-  c.pool === 'base' || (c.pool === 'unlock' && s.unlocks.includes(c.id));
+// No Vital (a mutation) bars Vital ingredients from every pool.
+const inPool = (c: { id: string; pool: Pool }, s: Pick<RunState, 'unlocks'> & Partial<Pick<RunState, 'mutation'>>) =>
+  !barredCard(s, c.id) && (c.pool === 'base' || (c.pool === 'unlock' && s.unlocks.includes(c.id)));
 
 /**
  * Cards that rewards and the Market can offer: base-pool cards and unlocked ones. No Lunar cards

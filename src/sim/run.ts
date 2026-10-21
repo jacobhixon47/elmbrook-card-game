@@ -45,7 +45,7 @@ export type RunRecord = {
   error?: string;
 };
 
-export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; unlocks?: readonly string[]; perks?: readonly string[]; year?: number; boon?: string; cauldron?: string; friendship?: Readonly<Record<string, number>>; keepsakes?: readonly string[]; maxActions?: number; endless?: boolean };
+export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; unlocks?: readonly string[]; perks?: readonly string[]; year?: number; boon?: string; cauldron?: string; friendship?: Readonly<Record<string, number>>; keepsakes?: readonly string[]; maxActions?: number; endless?: boolean; mutation?: string };
 
 /** Play one full run headlessly. Never throws: a crash is recorded with the action log that caused it. */
 export function playRun(seed: string, opts: SimOptions): RunRecord {
@@ -125,7 +125,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
   };
 
   try {
-    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}), ...(opts.unlocks ? { unlocks: [...opts.unlocks] } : {}), ...(opts.perks ? { perks: [...opts.perks] } : {}), ...(opts.year ? { year: opts.year } : {}), ...(opts.boon ? { boon: opts.boon } : {}), ...(opts.cauldron ? { cauldron: opts.cauldron } : {}), ...(opts.friendship ? { friendship: { ...opts.friendship } } : {}), ...(opts.keepsakes?.length ? { keepsakes: [...opts.keepsakes] } : {}), ...(opts.endless ? { endless: true } : {}) };
+    const start: Action = { type: 'startRun', seed, witch: opts.witch ?? 'hedge-witch', ...(opts.season ? { season: opts.season } : {}), ...(opts.unlocks ? { unlocks: [...opts.unlocks] } : {}), ...(opts.perks ? { perks: [...opts.perks] } : {}), ...(opts.year ? { year: opts.year } : {}), ...(opts.boon ? { boon: opts.boon } : {}), ...(opts.cauldron ? { cauldron: opts.cauldron } : {}), ...(opts.friendship ? { friendship: { ...opts.friendship } } : {}), ...(opts.keepsakes?.length ? { keepsakes: [...opts.keepsakes] } : {}), ...(opts.endless ? { endless: true } : {}), ...(opts.mutation ? { mutation: opts.mutation } : {}) };
     rec.actions.push(start);
     const first = reduce(null, start);
     let state = first.state;

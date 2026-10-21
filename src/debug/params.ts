@@ -23,6 +23,8 @@ export type Fixture = {
   /** Cottage perks and the Year's boon a Run fixture starts with. */
   perks?: string[];
   boon?: string;
+  /** The Year's mutation a Run fixture plays under (GDD §13). */
+  mutation?: string;
   time?: string;
   weather?: string;
   /** Today's weather for the rules (the Calendar's roll), set before `steps` run. `weather` only changes the window. */
