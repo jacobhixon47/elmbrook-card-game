@@ -7,6 +7,7 @@ import {
   HARVEST_AUCTION, FRIENDSHIP, friendLevelOf, friendshipOf, hearthOffers, isRegular, HOLLY_CROWN, YULE_LOG, NECTAR_TRADER, pressable, SEED_SWAPPER,
   type Action, type CardInstance, type GameEvent, type Gift, type Offer, type Order, type Potion, type RunState, type Season, type SkyTime, type StallState,
   type NameTakerDeal, type StockItem, type Weather, migrateProfile, storyDue, storyKey, recordRun, type RunOutcome, almanacUnlocks, boonOf, runStartChoice, cauldronOf, LOOP_ALMANAC, MAX_YEAR, reputationMult, yearModifiers,
+  endlessOpen, endlessWeeks,
 } from '../core';
 import { targetsOf } from '../core/effects';
 import { fencePrice } from '../core/reduce';
@@ -1365,12 +1366,20 @@ export class Run extends Phaser.Scene {
 
     if (s.phase === 'game-over' && s.lostTo === 'finale') {
       title('The Moonless Patron leaves unhappy', `Rent is paid, but the month is lost. The Moonless Patron wanted ${FINALE_ORDERS === 1 ? 'one of their orders' : FINALE_ORDERS >= 3 ? 'all three of their orders' : `${FINALE_ORDERS} of their orders`} done.`);
+      if (s.endless) this.endlessLine(s, 120);
       this.endButtons(s, 'Try again');
       return;
     }
     if (s.phase === 'game-over') {
       title('The Guild reclaims your stall', `You couldn't make week ${s.week}'s rent of ${rentOf(s)}g.`);
+      if (s.endless) this.endlessLine(s, 120);
       this.endButtons(s, 'Try again');
+      return;
+    }
+    if (s.phase === 'victory' && s.endless) {
+      title(`Endless: month ${s.endless} done`, `Rent paid every week and the Moonless Patron served again, with ${s.gold}g to spare. Next week's rent is ${rentOf({ ...s, endless: s.endless + 1, week: 1 })}g.`);
+      this.endlessLine(s, 120);
+      this.endButtons(s, 'Play again');
       return;
     }
     if (s.phase === 'victory') {
@@ -2166,8 +2175,7 @@ export class Run extends Phaser.Scene {
     if (news) this.text(320, 222, news, { size: 7, color: out.newYear ? 'L' : 'a', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
     const more = [perkNews(out), kitNews(out)].filter(Boolean).join(' ');
     if (more) this.text(320, news ? 240 : 222, more, { size: 7, color: 'Y', align: 'center', wrap: 400 }).setOrigin(0.5, 0);
-    this.add2(button(this, 270, 296, 'Play again', () => this.newRun(s.season), { w: 80 }));
-    this.add2(button(this, 370, 296, 'Home', () => this.scene.start('Cottage', { home: s.season }), { w: 80, color: 'Y' }));
+    this.endRow(s, out, 296, 'Play again', 'Y');
   }
 
   /** Play the same season again, or go home to the cottage to choose another. */
@@ -2180,8 +2188,33 @@ export class Run extends Phaser.Scene {
       this.text(320, 160, `New in your Almanac: ${listOf(names)}. More joins the pools next run.${tiers}`, { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5, 0);
     }
     if (kitNews(out)) this.text(320, 132, kitNews(out), { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5);
-    this.add2(button(this, 270, 190, again, () => this.newRun(s.season), { w: 80, color: 'Y' }));
-    this.add2(button(this, 370, 190, 'Home', () => this.scene.start('Cottage', { home: s.season }), { w: 80 }));
+    this.endRow(s, out, 190, again, s.phase === 'victory' && endlessOpen(out.profile) ? undefined : 'again');
+  }
+
+  /**
+   * The end screen's buttons: play again, go home, and after a won finale once Endless is open
+   * (GDD §13), keep going into another month. `bright` picks the one to light: home, or play again.
+   */
+  private endRow(s: RunState, out: RunOutcome, y: number, again: string, bright?: 'Y' | 'again') {
+    const onward = s.phase === 'victory' && endlessOpen(out.profile);
+    const xs = onward ? [220, 320, 420] : [270, 370];
+    this.add2(button(this, xs[0]!, y, again, () => this.newRun(s.season), { w: 80, ...(bright === 'again' ? { color: 'Y' as const } : {}) }));
+    if (onward) this.add2(button(this, xs[1]!, y, 'Keep going', () => this.goEndless(), { w: 80, color: 'Y' }));
+    this.add2(button(this, xs.at(-1)!, y, 'Home', () => this.scene.start('Cottage', { home: s.season }), { w: 80, ...(bright === 'Y' && !onward ? { color: 'Y' as const } : {}) }));
+  }
+
+  /** How far an Endless run has gone, and the best so far. */
+  private endlessLine(s: RunState, y: number) {
+    const weeks = endlessWeeks(s);
+    const best = this.endOutcome(s).profile.endlessBest;
+    const line = `${weeks} ${weeks === 1 ? 'week' : 'weeks'} past the finale${best && s.phase === 'game-over' ? `. Your best: ${best.weeks} ${best.weeks === 1 ? 'week' : 'weeks'}, in ${cap(best.season)} of Year ${best.year}.` : '.'} Endless earns no Reputation.`;
+    this.text(320, y, line, { size: 8, color: 'L', stroke: 'k', align: 'center', wrap: 440 }).setOrigin(0.5);
+  }
+
+  /** On into another month of Endless, from a won finale. */
+  private goEndless() {
+    if (store.dispatch({ type: 'goEndless' }).some((e) => e.type === 'rejected')) return;
+    this.scene.restart({ resume: true });
   }
 
   /**

@@ -106,6 +106,7 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     forfeitReward: false,
     blindBrew: false,
     patronsRead: false,
+    endless: 0,
     nextUid: uid,
   };
   const ctx: Ctx = { s, ev: [{ type: 'runStarted', seed, witch: witch.id, season }] };
@@ -436,6 +437,28 @@ function collectRent(ctx: Ctx): void {
   s.week += 1;
   s.weekDeliveries = 0;
   s.day = 1;
+  startDay(ctx);
+}
+
+/**
+ * Endless (GDD §13): after a won finale the run goes on into a fresh month, with a new calendar and
+ * patrons, keeping everything you have. Rent goes on climbing from the finale's (`rentOf`).
+ */
+function goEndless(ctx: Ctx): void {
+  const s = ctx.s;
+  if (s.phase !== 'victory') reject('Endless starts after a won finale');
+  removeWeekCards(ctx);
+  s.endless += 1;
+  const seed = `${s.seed}:endless:${s.endless}`;
+  s.calendar = rollCalendar(seed, s.season, WEEKS);
+  s.patrons = rollPatrons(seed, s.season);
+  s.patronsRead = false;
+  s.fortunes = [];
+  s.commissions = [];
+  s.week = 1;
+  s.weekDeliveries = 0;
+  s.day = 1;
+  ctx.ev.push({ type: 'endlessMonth', month: s.endless });
   startDay(ctx);
 }
 
@@ -805,6 +828,10 @@ function apply(ctx: Ctx, action: Exclude<Action, { type: 'startRun' }>): void {
     case 'leaveMarket':
       marketOf(ctx);
       collectRent(ctx);
+      return;
+
+    case 'goEndless':
+      goEndless(ctx);
       return;
 
     case 'debug':

@@ -4,13 +4,13 @@ import { allKeepsakes, allStoryKeys, bankFriendship, KEEPSAKE_SLOTS } from './fr
 import { seedRng, shuffle } from './rng';
 import { MAX_YEAR, reputationMult } from './year';
 import { SEASONS, WEATHERS, type Season } from './calendar';
-import { WEEKS } from './rules';
+import { runWeek, WEEKS } from './rules';
 import { RUN_VERSION, type RunState } from './state';
 
 // What persists between runs (GDD §13, tech.md "Persistence"): the profile, and the saved run's
 // migrations. Pure: src/profile.ts and src/save.ts do the storage.
 
-export const PROFILE_VERSION = 13;
+export const PROFILE_VERSION = 14;
 
 /** Sound settings: the sound effects' volume and the music's, 0 to 1, and mute (both). */
 export type SoundSettings = { volume: number; music: number; muted: boolean };
@@ -77,7 +77,11 @@ export type Profile = {
    * on to the next season, a loss keeps the season you lost in.
    */
   home: Season;
+  /** The longest Endless run (GDD §13): weeks lasted past the finale, and where. */
+  endlessBest: EndlessBest | null;
 };
+
+export type EndlessBest = { weeks: number; season: Season; year: number };
 
 export function newProfile(): Profile {
   return {
@@ -110,6 +114,7 @@ export function newProfile(): Profile {
     storySeen: [],
     keepsakes: [],
     home: 'spring',
+    endlessBest: null,
   };
 }
 
@@ -152,6 +157,8 @@ const PROFILE_MIGRATIONS: Record<number, (p: Raw) => Raw> = {
     const open = years[(typeof p.year === 'number' ? p.year : 1) - 1] ?? [];
     return { ...p, home: SEASONS.filter((x) => open.includes(x)).at(-1) ?? 'spring' };
   },
+  // 13 → 14: Endless, never played.
+  13: (p) => ({ ...p, endlessBest: p.endlessBest ?? null }),
 };
 
 /** Any stored profile, brought up to date. Something unreadable, or from a newer build, starts fresh. */
@@ -219,7 +226,14 @@ function sanitize(p: Raw): Profile {
     keepsakes: Array.isArray(p.keepsakes) ? [...new Set((p.keepsakes as unknown[]).filter((k): k is string => typeof k === 'string' && allKeepsakes().includes(k)))].slice(0, KEEPSAKE_SLOTS) : [],
     home: SEASONS.includes(p.home as Season) ? (p.home as Season) : fresh.home,
     friendship: Object.fromEntries([...codex.regulars.keys()].map((id) => [id, count((p.friendship as Raw | undefined)?.[id])] as const).filter(([, n]) => n > 0)),
+    endlessBest: endlessBestOf(p.endlessBest),
   };
+}
+
+function endlessBestOf(raw: unknown): EndlessBest | null {
+  const b = (raw && typeof raw === 'object' ? raw : {}) as Raw;
+  if (typeof b.weeks !== 'number' || b.weeks < 0 || !SEASONS.includes(b.season as Season)) return null;
+  return { weeks: Math.floor(b.weeks), season: b.season as Season, year: typeof b.year === 'number' && b.year >= 1 ? Math.floor(b.year) : 1 };
 }
 
 /** Whether a witch is open (GDD §12): the Hedge Witch always; each other the first time her season is won. */
@@ -301,8 +315,10 @@ function newlyOpen(before: Profile, after: Profile): Pick<RunOutcome, 'witches' 
 }
 
 /** Count a finished run. A run still going, or one already counted, changes nothing. */
-export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year' | 'gold' | 'witch' | 'cauldronKind' | 'friendship'>>): RunOutcome {
+export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' | 'phase' | 'week' | 'stats'> & Partial<Pick<RunState, 'year' | 'gold' | 'witch' | 'cauldronKind' | 'friendship' | 'endless' | 'lostTo'>>): RunOutcome {
   const same = { profile, reputation: 0, opened: null, yearDone: false, newYear: null, almanac: [], perkTiers: [], witches: [], cauldrons: [] };
+  // Endless earns nothing but a best (GDD §13): the win was counted at the finale, before it went on.
+  if (s.endless && s.phase === 'game-over') return { ...same, profile: recordEndless(profile, s) };
   if ((s.phase !== 'victory' && s.phase !== 'game-over') || profile.lastRun === s.seed) return same;
   const reputation = reputationFor(s);
   const won = s.phase === 'victory';
@@ -334,6 +350,25 @@ export function recordRun(profile: Profile, s: Pick<RunState, 'seed' | 'season' 
     p.boons.push(null);
   }
   return { profile: p, reputation, opened, yearDone, newYear, almanac, perkTiers: tiersOpened(profile, p), ...newlyOpen(profile, p) };
+}
+
+/** Endless opens once you reach this Year (GDD §13). */
+export const ENDLESS_YEAR = 5;
+
+export const endlessOpen = (p: Pick<Profile, 'yearSeasons'>): boolean => p.yearSeasons.length >= ENDLESS_YEAR;
+
+/** Weeks an Endless run has lasted past its first finale: each rent paid (a lost finale paid that week's). */
+export function endlessWeeks(s: Pick<RunState, 'week'> & Partial<Pick<RunState, 'endless' | 'lostTo' | 'phase'>>): number {
+  if (!s.endless) return 0;
+  const paidThisWeek = s.phase === 'victory' || (s.phase === 'game-over' && s.lostTo === 'finale');
+  return Math.max(0, runWeek(s) - WEEKS - (paidThisWeek ? 0 : 1));
+}
+
+/** An Endless run's weeks against the best, kept if longer. Counting it twice changes nothing. */
+function recordEndless(p: Profile, s: Pick<RunState, 'season' | 'week'> & Partial<Pick<RunState, 'year' | 'endless' | 'lostTo' | 'phase'>>): Profile {
+  const weeks = endlessWeeks(s);
+  if (p.endlessBest && p.endlessBest.weeks >= weeks) return p;
+  return { ...p, endlessBest: { weeks, season: s.season, year: s.year ?? 1 } };
 }
 
 /** Almanac entries done that open looping before a second Year is won (GDD §13): a quarter of the first page, kept when the harder entries came. */
@@ -473,6 +508,8 @@ export const RUN_MIGRATIONS: Record<number, (s: Raw) => Raw> = {
   // 20 → 21: the Firefly Keeper's half-price buys (seasonal visitors).
   20: (s) => ({ ...s, halfPrice: 0, favours: [] }),
   21: (s) => ({ ...s, tomorrow: { brews: 0, discards: 0 }, forfeitReward: false, blindBrew: false, patronsRead: false }),
+  // 22 → 23: Endless, not entered.
+  22: (s) => ({ ...s, endless: 0 }),
 };
 
 /** A saved run brought up to date, or null when it can't be: unreadable, too old, or from a newer build. */

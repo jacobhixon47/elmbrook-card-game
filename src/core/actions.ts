@@ -68,6 +68,8 @@ export type Action =
   | { type: 'burnYule'; uids: number[] }
   | { type: 'wearCrown'; index: number }
   | { type: 'leaveMarket' }
+  // After a won finale, once Endless is open (GDD §13): the run goes on into another month.
+  | { type: 'goEndless' }
   // Familiars, at any time in a run: sell one for half its price, or move it to another slot.
   | { type: 'sellFamiliar'; index: number }
   | { type: 'moveFamiliar'; from: number; to: number }
@@ -189,6 +191,7 @@ export type GameEvent =
   | { type: 'rentPaid'; week: number; amount: number }
   | { type: 'rentFailed'; week: number; amount: number; gold: number }
   | { type: 'runWon' }
+  | { type: 'endlessMonth'; month: number }
   | { type: 'runLost'; week: number }
   /** The action broke a rule; state is unchanged. */
   | { type: 'rejected'; action: Action['type']; reason: string };

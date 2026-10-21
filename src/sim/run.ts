@@ -1,5 +1,5 @@
 import { codex } from '../codex';
-import { allCards, isPatron, reduce, type Action, type GameEvent, type RunState, type Season } from '../core';
+import { allCards, endlessWeeks, isPatron, reduce, type Action, type GameEvent, type RunState, type Season } from '../core';
 import { isOver, makePlayer, type Strategy } from './bot';
 
 export type RunRecord = {
@@ -38,21 +38,23 @@ export type RunRecord = {
   modifiers: string[];
   /** Each day's requests (a recipe id, or `family:<id>`), by week: [week][day]. */
   boards: string[][][];
+  /** With `endless`: weeks lasted past the first finale (0 if the first month was lost). */
+  endlessWeeks: number;
   /** The state the run ended in, for counting it into a profile. */
   final?: RunState;
   error?: string;
 };
 
-export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; unlocks?: readonly string[]; perks?: readonly string[]; year?: number; boon?: string; cauldron?: string; friendship?: Readonly<Record<string, number>>; keepsakes?: readonly string[]; maxActions?: number };
+export type SimOptions = { strategy: Strategy; season?: Season; witch?: string; unlocks?: readonly string[]; perks?: readonly string[]; year?: number; boon?: string; cauldron?: string; friendship?: Readonly<Record<string, number>>; keepsakes?: readonly string[]; maxActions?: number; endless?: boolean };
 
 /** Play one full run headlessly. Never throws: a crash is recorded with the action log that caused it. */
 export function playRun(seed: string, opts: SimOptions): RunRecord {
   const rec: RunRecord = {
     seed, won: false, lostWeek: null, finished: false, actions: [], quality: [], gold: [],
     offered: [], picked: [], ordersFilled: 0, ordersDeclined: 0, rejected: 0, tinctures: {}, commissions: {}, events: {},
-    finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [], modifiers: [], boards: [],
+    finaleFailed: false, patronPosted: [], patronFilled: [], familiars: [], relics: [], curses: [], modifiers: [], boards: [], endlessWeeks: 0,
   };
-  const max = opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000);
+  const max = (opts.maxActions ?? (opts.strategy === 'random' ? 20000 : 5000)) * (opts.endless ? 25 : 1);
   const player = makePlayer(opts.strategy, seed);
 
   const observe = (s: RunState, events: GameEvent[]) => {
@@ -128,8 +130,11 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
     const first = reduce(null, start);
     let state = first.state;
     observe(state, first.events);
-    while (!isOver(state) && rec.actions.length < max) {
-      const action = player(state);
+    while (rec.actions.length < max) {
+      // Endless: a won month goes on into the next, until the rent can't be paid.
+      const onward = opts.endless && state.phase === 'victory';
+      if (isOver(state) && !onward) break;
+      const action: Action = onward ? { type: 'goEndless' } : player(state);
       rec.actions.push(action);
       const r = reduce(state, action);
       // Gold is observed on the state the day started in, so observe after applying.
@@ -138,6 +143,7 @@ export function playRun(seed: string, opts: SimOptions): RunRecord {
     }
     rec.finished = isOver(state);
     rec.final = state;
+    rec.endlessWeeks = endlessWeeks(state);
     rec.familiars = [...state.familiars];
     rec.relics = [...state.relics];
     rec.curses = [...state.curses];

@@ -17,6 +17,11 @@ export const MIN_DECK = 8;
 /** Rent after each week's Night Shift, before the season multiplier (GDD §3). Week 1's is `weekOneRent`. */
 export const RENT = [20, 55, 126, 239] as const;
 export const SKIP_GOLD = 2;
+/** Endless (GDD §13): the first week past the finale costs the finale's rent, and each week after grows by this much (sim, Oct 21). */
+export const ENDLESS_RENT = 1.12;
+
+/** Weeks into the run, counting Endless months: what orders scale by. Week 4 of the first Endless month is week 8. */
+export const runWeek = (s: { week: number; endless?: number }) => s.week + WEEKS * (s.endless ?? 0);
 
 export type Tier = 'crude' | 'fine' | 'superb' | 'masterwork' | 'legendary';
 export const TIERS: readonly Tier[] = ['crude', 'fine', 'superb', 'masterwork', 'legendary'];

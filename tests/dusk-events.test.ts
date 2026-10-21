@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codex } from '../src/codex';
 import {
-  allCards, EVENT_CHOICES, EVENT_GOLD, EVENT_RULES, friendshipOf, migrateRun, MIN_DECK, NIGHT_SHIFT_DAY, patronKnown, RUN_VERSION, transformable,
+  allCards, EVENT_CHOICES, EVENT_GOLD, EVENT_RULES, friendshipOf, migrateRun, MIN_DECK, NIGHT_SHIFT_DAY, patronKnown, transformable,
   type Potion, type RunState, type Tier,
 } from '../src/core';
 import { rarityOf } from '../src/core/dusk';
@@ -304,7 +304,7 @@ describe('dusk events: the last 12 (approved by Jacob, Oct 16)', () => {
   });
 
   it('a run saved before these events continues without them', () => {
-    const old: Record<string, unknown> = { ...at('fairy-ring'), version: RUN_VERSION - 1 };
+    const old: Record<string, unknown> = { ...at('fairy-ring'), version: 21 };
     for (const k of ['tomorrow', 'forfeitReward', 'blindBrew', 'patronsRead']) delete old[k];
     expect(migrateRun(old)).toMatchObject({ tomorrow: { brews: 0, discards: 0 }, forfeitReward: false, blindBrew: false, patronsRead: false });
   });

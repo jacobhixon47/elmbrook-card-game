@@ -3,7 +3,7 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { ALMANAC_FIRST_PAGE, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, MAX_YEAR, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
+import { ALMANAC_FIRST_PAGE, endlessOpen, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, MAX_YEAR, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season } from '../core';
 import { CODEX_TABS, codexEntries, type CodexEntry } from '../view/codex';
 import { framedPortrait } from '../view/portrait';
 import { unlockName } from '../view/describe';
@@ -430,7 +430,17 @@ export class Cottage extends Phaser.Scene {
     });
 
     const runs = p.runs === 1 ? '1 run' : `${p.runs} runs`;
-    pixelText(this, x + 88, y + 216, `${runs} · 1-4 to set out`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
+    if (!endlessOpen(p)) {
+      pixelText(this, x + 88, y + 216, `${runs} · 1-4 to set out`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
+      return;
+    }
+    // Endless (GDD §13): after a won finale, "Keep going" carries the run on; its best shows here.
+    const best = p.endlessBest;
+    const line = pixelText(this, x + 88, y + 216, `${runs} · Endless best ${best ? `${best.weeks}w` : 'none yet'}`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5);
+    this.tip.on(line, 'Endless', [
+      'Win a season, then Keep going: the run goes on month after month, with rent climbing every week, until you can\'t pay.',
+      best ? `Your best: ${best.weeks} ${best.weeks === 1 ? 'week' : 'weeks'} past the finale, in ${cap(best.season)} of Year ${best.year}.` : 'Endless earns no Reputation or Almanac entries.',
+    ]);
   }
 
   /**
