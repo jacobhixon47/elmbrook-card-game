@@ -10,10 +10,12 @@ const run = (mutation?: string, seed = 'mut') => reduce(null, { type: 'startRun'
 const vital = (id: string) => codex.ingredients.get(id)?.essences.includes('vital') ?? false;
 
 describe('mutations', () => {
-  it('No Vital: none in the starting deck or the pools', () => {
-    expect(allCards(run()).some((c) => vital(c.card))).toBe(true);
+  it("No Vital: half the starter's Vital cards are Sludge, the rest gone, and none in the pools", () => {
+    const before = allCards(run()).filter((c) => vital(c.card)).length;
+    expect(before).toBeGreaterThan(0);
     const s = run('no-vital');
-    expect(allCards(s).length).toBe(allCards(run()).length);
+    expect(allCards(s).filter((c) => c.card === 'sludge').length).toBe(Math.ceil(before / 2));
+    expect(allCards(s).length).toBe(allCards(run()).length - Math.floor(before / 2));
     expect(allCards(s).some((c) => vital(c.card))).toBe(false);
     expect(dayPool(s).some((c) => vital(c.id))).toBe(false);
   });
@@ -31,21 +33,23 @@ describe('mutations', () => {
     expect(s.handSize).toBe(run().handSize + MUTATION_RULES.steadyHand);
   });
 
-  it("Three's Company: brews need three ingredients, with a third slot", () => {
+  it("Three's Company: brews need three ingredients, with a third slot and one fewer Brew", () => {
     const s = run('threes-company');
     expect(s.cauldronSlots).toBeGreaterThanOrEqual(3);
+    expect(s.brewsLeft).toBe(run().brewsLeft + MUTATION_RULES.threesBrews);
     const two = s.drawPile.slice(0, 2);
     expect(brewBlocked(s, two)).toMatch(/three or more/);
     expect(brewBlocked(s, s.drawPile.slice(0, 3))).toBeNull();
     expect(brewBlocked(run(), two)).toBeNull();
   });
 
-  it('Open Market: the full moon every week, and dearer Night Market prices', () => {
+  it('Open Market: the full moon every week, and dearer Night Market prices and rent', () => {
     const s = run('open-market');
     expect([1, 2, 3, 4].map((w) => marketMoon(s, w))).toEqual(['full-moon', 'full-moon', 'full-moon', 'full-moon']);
     const night = { ...s, offer: { kind: 'night-market' } } as unknown as RunState;
     expect(priceAt(night, { price: 20 })).toBe(Math.round(20 * MUTATION_RULES.openPrice));
     expect(priceAt({ ...night, mutation: null }, { price: 20 })).toBe(20);
+    expect(rentOf({ ...s, week: 3 })).toBe(Math.round(rentOf({ ...run(), week: 3 }) * MUTATION_RULES.openRent));
   });
 
   it('Lean Times: no gold to start, lower rent', () => {

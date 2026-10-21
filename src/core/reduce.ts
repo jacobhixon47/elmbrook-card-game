@@ -172,6 +172,8 @@ function startDay(ctx: Ctx): void {
   s.tomorrow = { brews: 0, discards: 0 };
   // Steady Hands (a mutation): no Discards at all.
   if (mutated(s, 'steady-hands')) s.discardsLeft = 0;
+  // Three's Company: bigger brews, fewer of them.
+  if (mutated(s, 'threes-company')) s.brewsLeft = Math.max(1, s.brewsLeft + MUTATION_RULES.threesBrews);
   ctx.ev.push({ type: 'dayStarted', week: s.week, day: s.day, nightShift: night });
   ctx.ev.push({ type: 'deckShuffled', size: s.drawPile.length });
   postOrders(ctx, night);
@@ -990,9 +992,10 @@ function applyKeepsakes(ctx: Ctx, keepsakes: readonly string[]): void {
 function applyMutation(ctx: Ctx): void {
   const s = ctx.s;
   if (mutated(s, 'no-vital')) {
-    // Each Vital card in the starting deck becomes a common day ingredient that isn't Vital.
-    const commons = [...codex.ingredients.values()].filter((i) => i.rarity === 'common' && i.pool === 'base' && !i.nightOnly && !barredCard(s, i.id)).map((i) => i.id);
-    for (const c of s.drawPile) if (barredCard(s, c.card)) c.card = pick(ctx, commons);
+    // Half the starting deck's Vital cards (every other one) become Sludge; the rest are gone.
+    let vital = 0;
+    s.drawPile = s.drawPile.filter((c) => !barredCard(s, c.card) || vital++ % 2 === 0);
+    for (const c of s.drawPile) if (barredCard(s, c.card)) c.card = 'sludge';
     s.satchel = s.satchel.filter((c) => !barredCard(s, c.card));
     for (const c of s.drawPile) if (!s.stats.met.includes(c.card)) s.stats.met.push(c.card);
   }

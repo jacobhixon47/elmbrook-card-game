@@ -121,7 +121,7 @@ export function rentOf(s: Pick<RunState, 'season' | 'week'> & Partial<Held> & Pa
   const endless = s.endless ?? 0;
   const due = endless ? rentDue(s.season, WEEKS, yearRent(s)) * ENDLESS_RENT ** (runWeek({ week, endless: endless - 1 }) - 1) : rentDue(s.season, week, yearRent(s));
   // Lean Times (a mutation): lower rent.
-  return Math.round(due * mult * (s.mutation === 'lean-times' ? MUTATION_RULES.leanRent : 1));
+  return Math.round(due * mult * (s.mutation === 'lean-times' ? MUTATION_RULES.leanRent : s.mutation === 'open-market' ? MUTATION_RULES.openRent : 1));
 }
 
 /** Cards a reward pick offers: 3, 4 with the Lucky Horseshoe, 2 with Sour Luck. */
