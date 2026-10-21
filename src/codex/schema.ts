@@ -106,6 +106,16 @@ export const Regular = z.object({
 });
 export type Regular = z.infer<typeof Regular>;
 
+/** Payments both night customers and seasonal visitors can give (GDD §4.1). */
+/** Pick 1 of `count` day ingredients with this tag or essence, or 1 of `count` Tinctures. */
+const CardPick = z.object({ kind: z.literal('card-pick'), tag: z.string().optional(), essence: Essence.optional(), tincture: z.boolean().default(false), count: z.number().int().min(1) });
+/** Takes one card of your choice out of your deck. */
+const Burn = z.object({ kind: z.literal('burn') });
+/** One ingredient of your choice gets +2 Potency for the run, like tempering at the Creek Bank. */
+const Temper = z.object({ kind: z.literal('temper') });
+/** Your next buy at this week's Night Market is half price. */
+const HalfPrice = z.object({ kind: z.literal('half-price') });
+
 /** What a night customer gives on top of (or instead of) gold (GDD §4.1). */
 export const NightPayment = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('gold') }),
@@ -117,6 +127,9 @@ export const NightPayment = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('rare-card') }),
   /** Lifts your oldest Curse; pays `noCurseMult` × gold instead when you have none. */
   z.object({ kind: z.literal('lift-curse'), noCurseMult: z.number().positive() }),
+  /** +1 Brew on the next day (the first day of next week, after a Night Shift). */
+  z.object({ kind: z.literal('next-brew') }),
+  CardPick, Burn, Temper, HalfPrice,
 ]);
 export type NightPayment = z.infer<typeof NightPayment>;
 
@@ -136,17 +149,7 @@ export const NightCustomer = z.object({
 export type NightCustomer = z.infer<typeof NightCustomer>;
 
 /** What a seasonal visitor gives on top of their gold (GDD §4.1). */
-export const VisitorPayment = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('gold') }),
-  /** Pick 1 of `count` day ingredients with this tag or essence, or 1 of `count` Tinctures. */
-  z.object({ kind: z.literal('card-pick'), tag: z.string().optional(), essence: Essence.optional(), tincture: z.boolean().default(false), count: z.number().int().min(1) }),
-  /** Takes one card of your choice out of your deck. */
-  z.object({ kind: z.literal('burn') }),
-  /** One ingredient of your choice gets +2 Potency for the run, like tempering at the Creek Bank. */
-  z.object({ kind: z.literal('temper') }),
-  /** Your next buy at this week's Night Market is half price. */
-  z.object({ kind: z.literal('half-price') }),
-]);
+export const VisitorPayment = z.discriminatedUnion('kind', [z.object({ kind: z.literal('gold') }), CardPick, Burn, Temper, HalfPrice]);
 export type VisitorPayment = z.infer<typeof VisitorPayment>;
 
 /** Daytime guests of one season, with no Friendship (GDD §4.1, Jacob, Oct 16). */

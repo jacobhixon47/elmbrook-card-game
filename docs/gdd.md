@@ -104,8 +104,15 @@ A separate cast who only come after dark. Stranger and more formal than the day 
 | wisp-courier | The Wisp Courier | Delivers letters between the living and the not-quite | Secrets, Lunar | ×0.5 | A random Omen into the Night Satchel |
 | lantern-witch | The Lantern Witch | Lights the Night Market's lamps, sharp-tongued | Vigor, Warming | ×0.5 | Pick 1 of 2 Lunar ingredients after the shift |
 | bog-hag | Granny Bogwort | Lives in the fen, surprisingly sweet | Healing, and it must have an Umbra ingredient | ×0.5 | Pick 1 of 3 Rare ingredients after the shift |
-| moth-duchess | The Moth Duchess | Aristocrat of the lamplight | Illusion, Fortune | ×2.5 | Gold, lavishly |
+| moth-duchess | The Moth Duchess | Aristocrat of the lamplight | Illusion, Fortune | ×1.5 | Gold, lavishly (was ×2.5: a Superb Four-leaf Tea paid most of week 2's rent; Jacob, Oct 21) |
 | sleepless-miller | The Sleepless Miller | Hasn't slept in years | Calming | ×1 | Lifts your oldest Curse, or ×1.5 gold if you carried none when the order was posted |
+| ferryman | The Ferryman | Poles a flat boat across the brook all night | Protection | ×0.5 | Takes one card of your choice out of your deck (as Rook does) |
+| owl-archivist | The Owl Archivist | Keeps the town's night records | Secrets, Calming | ×0.5 | Pick 1 of 2 Tinctures |
+| fox-peddler | The Fox Peddler | Knows every stall at the Night Market | Fortune, Vigor | ×0.5 | Your next buy at tonight's Night Market is half price (as the Firefly Keeper's) |
+| bell-ringer | The Bell-Ringer | Rings the bell of the drowned chapel | Healing, Protection | ×0.5 | +2 Potency on one ingredient of your choice for the run (as the Toymaker's) |
+| starwatcher | The Starwatcher | Maps the stars from the old hill | Lunar, Illusion | ×1 | +1 Brew on the first day of next week |
+
+The last five were added with Jacob (Oct 21) so ten night customers share the other orders, each as likely as the rest; each pays in something the game already gives, and Protection has night customers for the first time.
 
 The Night Shift patron (§10) is the featured guest; night customers fill the other orders that night, along with the regulars who only come at night (The Gardener). Gold is the order's normal night pay times the multiplier. Picks wait until after the shift's twilight reward, before the Night Market. Granny Bogwort only insists on Umbra when your deck can brew it into her potion.
 
