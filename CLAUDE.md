@@ -7,6 +7,7 @@ Read before working: `docs/gdd.md` (what to build), `docs/tech.md` (how), `docs/
 ## Commands
 
 - `pnpm dev`: run with hot reload (open in a browser or VS Code's Simple Browser)
+- `pnpm market [season] [--snowed]` / `pnpm cottage [season]`: the dev server opened straight on the Night Market or the cottage, in spring, summer, autumn or winter
 - `pnpm test` / `pnpm typecheck` / `pnpm lint` / `pnpm build`; `pnpm test:coverage` checks ≥90% on `src/core`
 - `pnpm snap <fixture...>`: screenshot fixtures to `.snaps/<fixture>.png`; `pnpm snap:all` for every fixture. Fixtures reach a state with `steps` (see `src/debug/fixture-steps.ts`), `ui` (an open dialogue, picked cards) and `today` (the weather the rules use; `weather` only changes the window)
 - `pnpm e2e`: plays week 1 through the real UI in headless Chromium, with animations on

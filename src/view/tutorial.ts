@@ -32,12 +32,23 @@ const END_BUTTON: Rect = { x: 548, y: 234, w: 64, h: 20 };
 const BOOK_BUTTON: Rect = { x: 439, y: 6, w: 78, h: 20 };
 const RIBBON: Rect = { x: 200, y: 2, w: 240, h: 31 };
 const WEATHER: Rect = { x: 6, y: 32, w: 150, h: 12 };
+/** The Skip tutorial button, bottom right over Settings. */
+export const SKIP_BUTTON = { x: 598, y: 330, w: 72 };
+const SKIP: Rect = { x: SKIP_BUTTON.x - SKIP_BUTTON.w / 2 - 2, y: SKIP_BUTTON.y - 10, w: SKIP_BUTTON.w + 4, h: 20 };
+/** The Night Market's "Tonight's stalls (Tab)" button (market-walk.ts). */
+export const STALL_LIST: Rect = { x: 6, y: 320, w: 108, h: 20 };
 
 const day1 = (s: RunState) => s.week === 1 && s.day === 1;
 const brewing1 = (s: RunState) => day1(s) && s.phase === 'brewing';
 const fresh = (s: RunState) => brewing1(s) && s.brewsLeft === BREWS_PER_DAY;
 
 export const TIPS: Tip[] = [
+  {
+    id: 'skip',
+    text: 'This is the tutorial: a guided first week in Elmbrook. Already know how to play? Skip tutorial, down here, takes you back to the title screen.',
+    when: (s, v) => day1(s) && s.phase === 'morning' && !v.dialog,
+    target: SKIP, at: { x: 470, y: 200 },
+  },
   {
     id: 'welcome',
     text: 'Welcome to your potion stall! Each afternoon customers pin orders to the board. Click the order to read it.',
@@ -145,13 +156,13 @@ export const TIPS: Tip[] = [
   },
   {
     id: 'fence',
-    text: 'The Night Market. Visit the stalls: sell potions to the Fence to make rent, or buy Lunar cards for next Night Shift. Pay rent and a new week begins; if you can\'t, the Guild takes your stall.',
+    text: 'The Night Market. Walk to a stall to visit it, or open Tonight\'s stalls (Tab) to see them all at once. Sell potions to the Fence to make rent, or buy Lunar cards for next Night Shift. Pay rent at the bridge and a new week begins; if you can\'t, the Guild takes your stall.',
     when: (s) => s.week === 1 && s.phase === 'night-market',
-    at: { x: 320, y: 260 },
+    target: STALL_LIST, at: { x: 320, y: 240 },
   },
   {
     id: 'done',
-    text: 'That\'s a week. Rent rises every week, so grow a stronger deck. The Grimoire has the rules whenever you need them. Good luck!',
+    text: 'That\'s a week, and the end of the tutorial. Rent rises every week, so every run is about growing a stronger deck. Next, start a New game from the title screen: your cottage is where every run begins. Good luck!',
     when: (s) => s.week === 2 && s.day === 1 && s.phase === 'morning',
     at: { x: 320, y: 150 },
   },

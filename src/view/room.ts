@@ -148,6 +148,11 @@ export function walk(p: Point, dx: number, dy: number, dt: number, season?: Seas
   return next;
 }
 
+/** Pressing on down against the front door, in the doorway: walking out uses the door, as F does. */
+export function walkingOut(p: Point, dy: number): boolean {
+  return dy > 0 && p.x >= 144 && p.x <= 176 && p.y >= 172;
+}
+
 /** Which way you face after walking this way; standing still keeps the last. */
 export function facing(dx: number, dy: number, last: Facing): Facing {
   if (dy > 0) return 'down';

@@ -18,7 +18,7 @@ import { COTTAGE_NOTES, noteDue, type CottageNote } from '../view/notes';
 import { pixelText } from '../view/text';
 import { Tooltip } from '../view/tooltip';
 import { button, panel } from '../view/ui';
-import { DOORSTEP, DRESSING, facing, HEARTH, onRug, PROPS, ROOM_SCALE, SEASON_LIGHT, SPAWN, STATIONS, standBy, stationAt, walk, type Facing, type Point, type Station, type StationId } from '../view/room';
+import { DOORSTEP, DRESSING, facing, HEARTH, onRug, PROPS, ROOM_SCALE, SEASON_LIGHT, SPAWN, STATIONS, standBy, stationAt, walk, walkingOut, type Facing, type Point, type Station, type StationId } from '../view/room';
 import type { PaletteKey } from '../art/palette';
 
 /**
@@ -54,6 +54,8 @@ export class Cottage extends Phaser.Scene {
   private prompt: Phaser.GameObjects.Container | null = null;
   /** The season the house is dressed for: the one you'll set out for next. */
   private season: Season = 'spring';
+  /** Whether walking into the front door opens it: not again until you let go of down. */
+  private doorReady = true;
   /** Stepping in through the door after a run; you can't walk until you're in. */
   private arriving = false;
 
@@ -120,6 +122,11 @@ export class Cottage extends Phaser.Scene {
     if (this.pos.x !== from.x || this.pos.y !== from.y) this.stride(delta);
     else this.idle(delta);
     this.updateNear(true);
+    if (dy <= 0) this.doorReady = true;
+    else if (this.doorReady && walkingOut(this.pos, dy)) {
+      this.doorReady = false;
+      this.use('door');
+    }
   }
 
   /** A walking frame, with a footstep on each stride: soft on the rug. */
