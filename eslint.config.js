@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', '.snaps', '.sim', 'coverage', 'node_modules'] },
+  { ignores: ['dist', '.snaps', '.sim', 'coverage', 'node_modules', 'src-tauri/target', 'src-tauri/gen'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
