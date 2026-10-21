@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Elmbrook Night Market",
+  "productName": "Elmbrook",
   "version": "0.1.0",
   "identifier": "com.elmbrook.nightmarket",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Elmbrook: Night Market",
+        "title": "Elmbrook",
         "width": 1280,
         "height": 720,
         "minWidth": 640,
