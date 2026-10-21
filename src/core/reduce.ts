@@ -1,4 +1,4 @@
-import { barredCard, isMutation, mutated, MUTATION_RULES } from './mutations';
+import { barredCard, isMutation, mutated, mutationList, MUTATION_RULES } from './mutations';
 import { codex } from '../codex';
 import type { RunStart } from '../codex/schema';
 import type { Action, GameEvent } from './actions';
@@ -36,8 +36,8 @@ export type ReduceResult = { state: RunState; events: GameEvent[] };
 const freshPending = (): Pending => ({ harmony: 0, harmonyMult: 1, potency: 0, potencyMult: 1, copies: 1, fullExperiment: false, lunarPotency: 0, allLunar: false, essenceHarmony: 0 });
 const noBoost = () => ({ hearts: 0, tip: 0, payMult: 1 });
 
-export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string, cauldronId = 'copper', friendship: Readonly<Record<string, number>> = {}, keepsakes: readonly string[] = [], endlessMode = false, mutation?: string): ReduceResult {
-  if (mutation !== undefined && !isMutation(mutation)) throw new Error(`unknown mutation: ${mutation}`);
+export function newRun(seed: string, witchId: string, season: Season = 'spring', unlocks: readonly string[] = [], perks: readonly string[] = [], year = 1, boon?: string, cauldronId = 'copper', friendship: Readonly<Record<string, number>> = {}, keepsakes: readonly string[] = [], endlessMode = false, mutations: readonly string[] = []): ReduceResult {
+  for (const id of mutations) if (!isMutation(id)) throw new Error(`unknown mutation: ${id}`);
   const witch = codex.witches.get(witchId);
   if (!witch) throw new Error(`unknown witch: ${witchId}`);
   if (!codex.cauldrons.has(cauldronId)) throw new Error(`unknown cauldron: ${cauldronId}`);
@@ -111,8 +111,8 @@ export function newRun(seed: string, witchId: string, season: Season = 'spring',
     patronsRead: false,
     endlessMode,
     endless: 0,
-    // Endless plays without the Year's mutation, as without its boon (GDD §13).
-    mutation: endlessMode ? null : (mutation ?? null),
+    // Endless plays without the Year's mutations, as without its boon (GDD §13).
+    mutations: endlessMode ? [] : mutationList(mutations),
     nextUid: uid,
   };
   const ctx: Ctx = { s, ev: [{ type: 'runStarted', seed, witch: witch.id, season }] };
@@ -172,6 +172,8 @@ function startDay(ctx: Ctx): void {
   s.tomorrow = { brews: 0, discards: 0 };
   // Steady Hands (a mutation): no Discards at all.
   if (mutated(s, 'steady-hands')) s.discardsLeft = 0;
+  // Three's Company: bigger brews, fewer of them.
+  if (mutated(s, 'threes-company')) s.brewsLeft = Math.max(1, s.brewsLeft + MUTATION_RULES.threesBrews);
   ctx.ev.push({ type: 'dayStarted', week: s.week, day: s.day, nightShift: night });
   ctx.ev.push({ type: 'deckShuffled', size: s.drawPile.length });
   postOrders(ctx, night);
@@ -986,13 +988,14 @@ function applyKeepsakes(ctx: Ctx, keepsakes: readonly string[]): void {
   }
 }
 
-/** The Year's mutation (GDD §13), applied at the start of every run that Year, after everything else. */
+/** The Year's mutations (GDD §13), applied at the start of every run that Year, after everything else. */
 function applyMutation(ctx: Ctx): void {
   const s = ctx.s;
   if (mutated(s, 'no-vital')) {
-    // Each Vital card in the starting deck becomes a common day ingredient that isn't Vital.
-    const commons = [...codex.ingredients.values()].filter((i) => i.rarity === 'common' && i.pool === 'base' && !i.nightOnly && !barredCard(s, i.id)).map((i) => i.id);
-    for (const c of s.drawPile) if (barredCard(s, c.card)) c.card = pick(ctx, commons);
+    // Half the starting deck's Vital cards (every other one) become Sludge; the rest are gone.
+    let vital = 0;
+    s.drawPile = s.drawPile.filter((c) => !barredCard(s, c.card) || vital++ % 2 === 0);
+    for (const c of s.drawPile) if (barredCard(s, c.card)) c.card = 'sludge';
     s.satchel = s.satchel.filter((c) => !barredCard(s, c.card));
     for (const c of s.drawPile) if (!s.stats.met.includes(c.card)) s.stats.met.push(c.card);
   }
@@ -1014,7 +1017,7 @@ function applyBoon(ctx: Ctx, id: string): void {
 
 /** The single entry point for game rules. Pure: same input, same output. A broken rule returns the old state and a `rejected` event. */
 export function reduce(state: RunState | null, action: Action): ReduceResult {
-  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks, action.year, action.boon, action.cauldron, action.friendship, action.keepsakes, action.endless, action.mutation);
+  if (action.type === 'startRun') return newRun(action.seed, action.witch, action.season, action.unlocks, action.perks, action.year, action.boon, action.cauldron, action.friendship, action.keepsakes, action.endless, action.mutations);
   if (!state) throw new Error('no run in progress');
   const ctx: Ctx = { s: structuredClone(state), ev: [] };
   try {

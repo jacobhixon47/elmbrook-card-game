@@ -3,11 +3,11 @@ import { hex } from '../art/palette';
 import { markReady } from '../debug/hook';
 import { noAnim, type Fixture } from '../debug/params';
 import { codex } from '../codex';
-import { ALMANAC_FIRST_PAGE, ENDLESS_RENT, mutationChangeable, mutationName, mutationOf, mutationsOpen, MUTATIONS, MUTATION_RULES, type MutationId, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, MAX_YEAR, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season, type Weather } from '../core';
+import { ALMANAC_FIRST_PAGE, ENDLESS_RENT, mutationChangeable, mutationName, mutationsMult, mutationsOf, mutationsOpen, MUTATIONS, MUTATION_RULES, type MutationId, FRIENDSHIP, keepsakesOpen, boonOf, cauldronOpen, runStartChoice, witchOpen, homeSeason, migrateProfile, seasonsOf, perkBlocked, perkTierGoal, perkTierOpen, PERK_TIERS, MAX_YEAR, reputationMult, SEASONS, yearModifiers, type CodexTable, type Profile, type Season, type Weather } from '../core';
 import { CODEX_TABS, codexEntries, type CodexEntry } from '../view/codex';
 import { framedPortrait } from '../view/portrait';
 import { unlockName } from '../view/describe';
-import { buyPerkNow, chooseMutationNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
+import { buyPerkNow, toggleMutationNow, chooseYearNow, loadProfile, pickBoonNow, saveProfile } from '../profile';
 import { backdropTexture, codeBackdrops, gradedView } from '../view/backdrop';
 import { play, playMusic } from '../audio/sfx';
 import { ROOM_LIGHTS, ROOM_WINDOWS, roomLight } from '../art/scenes/cottage-room';
@@ -63,7 +63,7 @@ export class Cottage extends Phaser.Scene {
   private arriving = false;
 
   /** `home` is the season of the run you've just come home from. */
-  create(data: { fixture?: Fixture | null; perkTier?: number; at?: Point; reopen?: StationId | 'other' | null; home?: Season; endless?: boolean } = {}) {
+  create(data: { fixture?: Fixture | null; perkTier?: number; at?: Point; reopen?: StationId | 'other' | null; home?: Season; endless?: boolean; mutations?: boolean } = {}) {
     this.overlay = null;
     this.settingsOpen = false;
     this.sprites.clear();
@@ -100,6 +100,7 @@ export class Cottage extends Phaser.Scene {
     });
     const reopen = ui?.station ?? (data.reopen && data.reopen !== 'other' ? data.reopen : null);
     if (reopen && !profile.boonOffer) this.use(reopen);
+    if ((data.mutations || ui?.mutations) && !profile.boonOffer) this.openMutations(profile);
     if (ui?.almanac) this.openAlmanac(profile, ui.almanacPage ?? 0);
     if (ui?.codex) this.openCodex(profile, ui.codex as CodexTable, ui.codexPage ?? 0, ui.codexEntry);
     if (ui?.settings) this.openSettings();
@@ -480,30 +481,51 @@ export class Cottage extends Phaser.Scene {
   }
 
   /**
-   * The Year's mutation (GDD §13): arrows step through none and the six until a run sets out in the
-   * Year, then it's fixed. One already beaten in a Winter says so.
+   * The Year's mutations (GDD §13): a row on the door panel naming what's on, and a button to the
+   * picker. Changeable until a run sets out in the Year, then fixed.
    */
   private drawMutation(p: Profile, x: number, y: number) {
-    const current = mutationOf(p);
+    const on = mutationsOf(p);
     const open = mutationChangeable(p);
-    const order: (MutationId | null)[] = [null, ...MUTATIONS.map((m) => m.id)];
-    const step = (d: number) => {
-      if (this.fixture) return;
-      chooseMutationNow(order[(order.indexOf(current) + d + order.length) % order.length]!);
-      this.scene.restart({ at: this.pos, reopen: this.overlayKind });
-    };
-    const m = MUTATIONS.find((x) => x.id === current);
-    const done = current && p.mutationsDone.includes(current) ? ' (beaten)' : '';
-    const label = pixelText(this, x + 88, y + 4, `Mutation: ${m ? m.name : 'none'}${done}`, { size: 7, color: m ? 'L' : 'a', align: 'center' }).setOrigin(0.5, 0);
-    this.tip.on(label, m ? m.name : 'Mutations', [
-      m ? m.text : 'An optional twist for every run this Year. It changes how you play, not just how hard.',
-      `A mutated run earns ×${MUTATION_RULES.reputation} Reputation. Win this Year's Winter with one on to tick it off.`,
-      open ? 'Choose before you set out: it locks once a run starts this Year.' : 'Fixed for this Year: a run has set out.',
-      `Beaten: ${p.mutationsDone.length ? p.mutationsDone.map(mutationName).join(', ') : 'none yet'}.`,
+    const names = on.length === 1 ? mutationName(on[0]!) : on.length ? `${on.length} on` : 'none';
+    const label = pixelText(this, x + 14, y + 4, `Mutations: ${names}`, { size: 7, color: on.length ? 'L' : 'a' });
+    this.tip.on(label, 'Mutations', [
+      on.length ? MUTATIONS.filter((m) => on.includes(m.id)).map((m) => m.name).join(', ') : 'Optional twists for every run this Year. Any number can be on at once.',
+      on.length ? `Reputation ×${mutationsMult(on.length).toFixed(2)}.` : `Each one on: Reputation ×${MUTATION_RULES.reputation}.`,
+      open ? 'Choose before you set out: they lock once a run starts this Year.' : 'Fixed for this Year: a run has set out.',
     ]);
-    if (!open) return;
-    this.add.existing(button(this, x + 16, y + 8, '<', () => step(-1), { w: 16 }));
-    this.add.existing(button(this, x + 160, y + 8, '>', () => step(1), { w: 16 }));
+    this.add.existing(button(this, x + 146, y + 8, open ? 'Choose' : 'View', () => this.openMutations(p), { w: 40 }));
+  }
+
+  /**
+   * The mutation picker (GDD §13): all six, any number on. Each one on multiplies Reputation, and
+   * winning this Year's Winter ticks off every one that was on.
+   */
+  private openMutations(p: Profile) {
+    const c = this.openOverlay('Mutations', () => this.use('door'));
+    const on = mutationsOf(p);
+    const open = mutationChangeable(p);
+    const toggle = (id: MutationId) => {
+      if (this.fixture) return;
+      toggleMutationNow(id);
+      this.scene.restart({ at: this.pos, mutations: true, endless: this.endless });
+    };
+    c.add(pixelText(this, 320, 50, `Twists for every run in Year ${p.year}. Turn on as many as you like: each one multiplies Reputation by ${MUTATION_RULES.reputation}.`, { size: 7, color: 'a', align: 'center', wrap: 520 }).setOrigin(0.5, 0));
+    MUTATIONS.forEach((m, i) => {
+      const x = 36 + (i % 2) * 288;
+      const y = 72 + Math.floor(i / 2) * 70;
+      const lit = on.includes(m.id);
+      c.add(this.add.rectangle(x, y, 280, 62, hex(lit ? 'L' : 'b'), lit ? 0.25 : 0.6).setOrigin(0));
+      const name = pixelText(this, x + 8, y + 6, m.name, { size: 8, color: lit ? 'Y' : 'W' });
+      c.add(name);
+      if (p.mutationsDone.includes(m.id)) c.add(pixelText(this, name.x + name.width + 8, y + 7, 'beaten', { size: 7, color: 'y' }));
+      c.add(pixelText(this, x + 8, y + 20, m.text, { size: 7, color: 'a', wrap: 200 }));
+      if (open) c.add(button(this, x + 244, y + 31, lit ? 'On' : 'Off', () => toggle(m.id), { w: 52, color: lit ? 'Y' : 'a' }));
+      else c.add(pixelText(this, x + 244, y + 26, lit ? 'On' : 'Off', { size: 8, color: lit ? 'Y' : 'S', align: 'center' }).setOrigin(0.5, 0));
+    });
+    const mult = on.length ? ` · Reputation ×${mutationsMult(on.length).toFixed(2)}` : '';
+    const lock = open ? 'They lock once a run sets out this Year.' : 'Fixed for this Year: a run has set out.';
+    c.add(pixelText(this, 320, 290, `${on.length} on${mult} · ${lock}`, { size: 7, color: 'v', align: 'center' }).setOrigin(0.5, 0));
   }
 
   /**
@@ -724,8 +746,8 @@ export class Cottage extends Phaser.Scene {
     c.add(button(this, x + w / 2, note.at.y + h - 14, 'Got it', () => this.closeOverlay(), { w: 56, color: 'Y' }));
   }
 
-  /** A panel over the room with a title and a Close button. */
-  private openOverlay(title: string): Phaser.GameObjects.Container {
+  /** A panel over the room with a title and a Close button, which can lead back somewhere else. */
+  private openOverlay(title: string, back?: () => void): Phaser.GameObjects.Container {
     this.closeOverlay();
     const c = this.add.container(0, 0).setDepth(2000);
     this.overlay = c;
@@ -733,7 +755,7 @@ export class Cottage extends Phaser.Scene {
     c.add(this.add.rectangle(0, 0, 640, 360, hex('k'), 0.6).setOrigin(0).setInteractive());
     c.add(panel(this, 20, 24, 600, 312, 'k', 0.96, 'n'));
     c.add(pixelText(this, 320, 32, title, { size: 12, color: 'y', align: 'center' }).setOrigin(0.5, 0));
-    c.add(button(this, 320, 324, 'Close', () => this.closeOverlay(), { w: 60 }));
+    c.add(button(this, 320, 324, 'Close', () => (back ? back() : this.closeOverlay()), { w: 60 }));
     return c;
   }
 

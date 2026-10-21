@@ -2,7 +2,7 @@
 // The rules for it, versions and migrations included, are in core/meta.ts; this is the storage,
 // which may be missing or blocked (a private window): then nothing persists and nothing breaks.
 
-import { buyPerk, chooseMutation, chooseYear, lockMutation, migrateProfile, pickBoon, recordRun, type MutationId, type Profile, type RunOutcome, type RunState } from './core';
+import { buyPerk, chooseYear, lockMutation, migrateProfile, pickBoon, recordRun, toggleMutation, type MutationId, type Profile, type RunOutcome, type RunState } from './core';
 
 const KEY = 'elmbrook.profile';
 
@@ -46,12 +46,12 @@ export function chooseYearNow(year: number): Profile {
   return store(chooseYear(loadProfile(), year));
 }
 
-/** Choose (or clear) this Year's mutation at the cottage, before Spring starts. */
-export function chooseMutationNow(id: MutationId | null): Profile {
-  return store(chooseMutation(loadProfile(), id));
+/** Turn one of this Year's mutations on or off at the cottage, before Spring starts. */
+export function toggleMutationNow(id: MutationId): Profile {
+  return store(toggleMutation(loadProfile(), id));
 }
 
-/** A run sets out: this Year's mutation is fixed from now on. */
+/** A run sets out: this Year's mutations are fixed from now on. */
 export function lockMutationNow(): Profile {
   const p = loadProfile();
   const locked = lockMutation(p);
