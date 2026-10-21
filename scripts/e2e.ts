@@ -77,12 +77,15 @@ while (steps++ < 400 && !(s.week === 2 && s.day === 2) && s.phase !== 'game-over
       break;
     }
     case 'discard': {
+      // Number keys reach the first nine cards; a bigger hand goes through the hook.
+      if (a.uids.some((u) => idx(u) >= 9)) { await hook(a); break; }
       await key('d');
       for (const u of a.uids) await key(String(idx(u) + 1));
       await key('d');
       break;
     }
     case 'playTincture':
+      if ([a.uid, ...(a.targets ?? [])].some((u) => idx(u) >= 9)) { await hook(a); break; }
       await key(String(idx(a.uid) + 1));
       if (a.targets?.length) { for (const u of a.targets) await key(String(idx(u) + 1)); await key('Enter'); }
       break;
