@@ -44,7 +44,7 @@ import { openSettings } from '../view/settings';
 import { noteDue, RUN_NOTES, type RunNote } from '../view/notes';
 import { framedPortrait } from '../view/portrait';
 import { MarketWalk, newWalk, squareBackdrop, type WalkKeys, type WalkState } from '../view/market-walk';
-import { standBy, SPAWN } from '../view/market-square';
+import { standBy, SPAWN, type SquarePlace } from '../view/market-square';
 
 /** The Hearth Trader's three trades (Winter). */
 type HearthTab = 'trade' | 'yule' | 'crown';
@@ -186,7 +186,9 @@ export class Run extends Phaser.Scene {
     this.save();
     const state = store.getState()!;
     const at = fixture?.ui?.square;
-    if (at) this.walkState = { ...newWalk(state.week), pos: at === 'exit' ? { x: SPAWN.x, y: 170 } : at === 'list' ? SPAWN : standBy(at), face: at === 'exit' ? 'down' : 'up', list: at === 'list' };
+    const place = squarePlace(state) ?? 'market';
+    if (at) this.walkState = { ...newWalk(state.week, place), pos: at === 'exit' ? { x: SPAWN.x, y: 170 } : at === 'list' ? SPAWN : standBy(at), face: at === 'exit' ? 'down' : 'up', list: at === 'list' };
+    if (fixture?.ui?.visit !== undefined) this.walkState = { ...(this.walkState ?? newWalk(state.week, place)), visit: fixture.ui.visit };
     if (fixture?.ui?.dialog !== undefined) {
       const order = state.orders.at(fixture.ui.dialog);
       if (order) this.mode = { kind: 'dialog', order: order.id };
@@ -350,7 +352,7 @@ export class Run extends Phaser.Scene {
     const s = store.getState()!;
     // The shop's tune by day, the night's on a Night Shift, the market's at the market.
     const shift = s.day === NIGHT_SHIFT_DAY && (s.phase === 'morning' || s.phase === 'brewing');
-    playMusic(s.offer?.kind === 'night-market' ? 'market' : shift ? 'night' : 'shop', s.season);
+    playMusic(s.offer?.kind === 'night-market' || s.offer?.kind === 'fair' ? 'market' : shift || s.offer?.kind === 'vigil' ? 'night' : 'shop', s.season);
     this.drawHud(s);
     if (s.phase === 'morning' || s.phase === 'brewing') {
       this.drawOrders(s);
@@ -1372,13 +1374,37 @@ export class Run extends Phaser.Scene {
     if (s.phase === 'game-over' || s.phase === 'victory' || this.walking(s)) return null;
     if (s.offer?.kind === 'guild') return guildBackdrop(this, s.season);
     if (s.offer?.kind === 'night-market') return squareBackdrop(this, s.season, snowedIn(s, s.week), s.offer.stalls);
+    if (s.offer?.kind === 'fair' && this.festivalVisit(s) !== null) return squareBackdrop(this, s.season, false, s.offer.stalls, 'fair');
+    if (s.offer?.kind === 'vigil' && this.festivalVisit(s) !== null) return squareBackdrop(this, s.season, false, VIGIL_SPOTS, 'vigil', s.offer.gifts.length);
     return null;
+  }
+
+  /** At a fair or the vigil, the stall (or spot) whose screen is open, or null while walking. */
+  private festivalVisit(s: RunState): number | null {
+    const place = squarePlace(s);
+    if (place !== 'fair' && place !== 'vigil') return null;
+    return this.walkState?.place === place && this.walkState.week === s.week ? this.walkState.visit : null;
+  }
+
+  /** Where you stand in tonight's square, kept across renders; a new square starts you at the bridge. */
+  private walkFor(s: RunState, place: SquarePlace): WalkState {
+    if (!this.walkState || this.walkState.week !== s.week || this.walkState.place !== place) this.walkState = newWalk(s.week, place);
+    return this.walkState;
+  }
+
+  /** Back to the square from a fair stall or the fire. */
+  private backToSquare() {
+    if (this.walkState) this.walkState.visit = null;
+    this.render();
   }
 
   /** Walking round the Night Market: its street, once any Snowed In scene has been read. */
   private walking(s: RunState): boolean {
     const o = s.offer;
-    if (o?.kind !== 'night-market' || o.at !== null || s.phase === 'game-over' || s.phase === 'victory') return false;
+    if (s.phase === 'game-over' || s.phase === 'victory') return false;
+    if (o?.kind === 'fair') return this.scenesSeen.has(`fair-${o.fair}`) && this.festivalVisit(s) === null;
+    if (o?.kind === 'vigil') return this.scenesSeen.has('vigil') && this.festivalVisit(s) === null;
+    if (o?.kind !== 'night-market' || o.at !== null) return false;
     return !(snowedIn(s, s.week) && !this.scenesSeen.has(`snowed-in-${s.week}`));
   }
 
@@ -1510,10 +1536,38 @@ export class Run extends Phaser.Scene {
     }
   }
 
-  /** The Longest Night vigil (GDD §4.2): the regulars' gifts, then a blessing from the Solstice Fire for the finale. */
+  /**
+   * The Longest Night vigil (GDD §4.2): the square under snow, the Solstice Fire on the fountain's
+   * step and the town's gifts on a table by the lane. Walk up to either for the gifts and the blessing.
+   */
   private drawVigil(s: RunState, offer: Extract<Offer, { kind: 'vigil' }>, title: (t: string, sub: string) => void) {
     if (!this.scenesSeen.has('vigil')) {
       this.seasonScene('The Longest Night', VIGIL_SCENE, () => this.scenesSeen.add('vigil'));
+      return;
+    }
+    const walk = this.walkFor(s, 'vigil');
+    const chose = offer.chose ? codex.blessings.get(offer.chose)! : null;
+    if (walk.visit === null) {
+      this.text(320, 36, `The town keeps watch by the Solstice Fire. Tomorrow night the Moonless Patron comes.${chose ? ` Your blessing: ${chose.name}.` : ''}`, { size: 7, color: 'a', stroke: 'k', align: 'center', wrap: 420 }).setOrigin(0.5, 0);
+      this.market = new MarketWalk(this, this.ui, {
+        season: s.season, snowedIn: false, place: 'vigil', gifts: offer.gifts.length, stalls: VIGIL_SPOTS,
+        describe: (st) => st.id === 'solstice-fire'
+          ? { name: 'The Solstice Fire', lines: [chose ? `${chose.name}: ${chose.text}` : 'Choose a blessing for the Moonless Patron\'s night.'], prompt: 'Sit by the Solstice Fire' }
+          : { name: 'Gifts from the town', lines: offer.gifts.length ? offer.gifts.map((g) => `${customerName(g.regular)}: ${cardName(g.card)}`) : ['No one is close enough to bring a gift yet.'], prompt: 'Look at the gifts' },
+        exitLabel: chose ? 'Head home' : 'Choose a blessing at the fire first',
+        exitShort: !chose,
+        moon: 'quarter',
+        listLabel: null,
+        hint: 'WASD to walk · F or Space by the fire · or click it',
+      }, walk, {
+        visit: (index) => {
+          walk.visit = index;
+          this.render();
+        },
+        leave: () => void this.dispatch({ type: 'leaveErrand' }),
+        toggleList: () => undefined,
+        tip: this.tip,
+      });
       return;
     }
     title('The Longest Night', 'The town keeps watch by the Solstice Fire until morning. Tomorrow night the Moonless Patron comes.');
@@ -1546,10 +1600,14 @@ export class Run extends Phaser.Scene {
       tile.on('pointerover', () => tile.setStrokeStyle(2, hex('y')));
       tile.on('pointerout', () => tile.setStrokeStyle(1, hex('n')));
     });
-    if (offer.chose) this.add2(button(this, 320, 262, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
+    this.add2(button(this, offer.chose ? 270 : 320, 262, 'Back to the square', () => this.backToSquare(), { w: 96 }));
+    if (offer.chose) this.add2(button(this, 380, 262, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
   }
 
-  /** A seasonal fair after closing on festival day (GDD §4.2): lantern-lit stalls in the square, then home. */
+  /**
+   * A seasonal fair after closing on festival day (GDD §4.2): the square at twilight, dressed for the
+   * festival, with the fair's three stalls to walk up to. Each opens over the square; the bridge goes home.
+   */
   private drawFair(s: RunState, offer: Extract<Offer, { kind: 'fair' }>, title: (t: string, sub: string) => void) {
     const fair = codex.fairs.get(offer.fair)!;
     const seen = `fair-${fair.id}`;
@@ -1557,32 +1615,54 @@ export class Run extends Phaser.Scene {
       this.seasonScene(fair.name, fair.intro, () => this.scenesSeen.add(seen));
       return;
     }
-    title(fair.name, `Lantern-lit stalls in the square, tonight only. Buy what you like, then head home. You have ${s.gold}g.`);
-    const step = 72;
-    const widths = offer.stalls.map((st) => Math.max(1, st.stock.length) * step + 12);
-    const gap = 10;
-    let left = 320 - (widths.reduce((a, b) => a + b, 0) + gap * (widths.length - 1)) / 2;
-    offer.stalls.forEach((st, si) => {
-      const meta = fair.stalls.find((m) => m.id === st.id)!;
-      const w = widths[si]!;
-      const cx = left + w / 2;
-      this.add2(panel(this, left, 88, w, 168, 'k', 0.85, 'n'));
-      this.text(cx, 94, meta.name, { size: 8, color: 'y', align: 'center' }).setOrigin(0.5, 0);
-      this.text(cx, 106, meta.text, { size: 6, color: 'a', align: 'center', wrap: w - 10 }).setOrigin(0.5, 0);
-      if (st.stock.length === 0) this.text(cx, 170, 'Nothing left\nfor you here.', { size: 7, color: 'h', align: 'center' }).setOrigin(0.5);
-      st.stock.forEach((item, i) => {
-        const x = cx + (i - (st.stock.length - 1) / 2) * step;
-        const y = 180;
-        const buy = () => this.dispatch({ type: 'buyAtFair', stall: si, index: i });
-        const full = item.kind === 'familiar' && s.familiars.length >= s.familiarSlots;
-        if (item.kind === 'card') this.offerCard(x, y, item.card, buy, item.sold);
-        else if (item.kind === 'familiar') this.offerFamiliar(x, y, item.familiar, buy, item.sold || full);
-        else if (item.kind === 'relic') this.offerRelic(x, y, item.relic, buy, item.sold);
-        this.text(x, y - 52, item.sold ? 'sold' : `${item.price}g`, { size: 8, color: item.sold ? 'h' : item.price > s.gold ? 'R' : 'y', stroke: 'k' }).setOrigin(0.5, 0);
+    const walk = this.walkFor(s, 'fair');
+    const meta = (id: string) => fair.stalls.find((m) => m.id === id)!;
+    if (walk.visit === null) {
+      this.text(320, 36, `${fair.name}: lantern-lit stalls at twilight, tonight only. You have ${s.gold}g.`, { size: 7, color: 'a', stroke: 'k', align: 'center', wrap: 420 }).setOrigin(0.5, 0);
+      this.market = new MarketWalk(this, this.ui, {
+        season: s.season, snowedIn: false, place: 'fair', stalls: offer.stalls,
+        describe: (st) => {
+          const left = offer.stalls.find((x) => x.id === st.id)?.stock.filter((i) => !i.sold).length ?? 0;
+          return { name: meta(st.id).name, lines: [left ? `${left} for sale` : 'Sold out', meta(st.id).text] };
+        },
+        exitLabel: 'Head home',
+        exitShort: false,
+        moon: 'full-moon',
+        listLabel: "The fair's stalls (Tab)",
+      }, walk, {
+        visit: (index) => {
+          walk.list = false;
+          walk.visit = index;
+          this.render();
+        },
+        leave: () => void this.dispatch({ type: 'leaveErrand' }),
+        toggleList: () => {
+          walk.list = !walk.list;
+          this.render();
+        },
+        tip: this.tip,
       });
-      left += w + gap;
+      return;
+    }
+    const si = walk.visit;
+    const st = offer.stalls[si]!;
+    const m = meta(st.id);
+    title(m.name, `${m.text} You have ${s.gold}g.`);
+    const step = 72;
+    const w = Math.max(2, st.stock.length) * step + 24;
+    this.add2(panel(this, 320 - w / 2, 96, w, 150, 'k', 0.85, 'n'));
+    if (st.stock.length === 0) this.text(320, 170, 'Nothing left\nfor you here.', { size: 7, color: 'h', align: 'center' }).setOrigin(0.5);
+    st.stock.forEach((item, i) => {
+      const x = 320 + (i - (st.stock.length - 1) / 2) * step;
+      const y = 170;
+      const buy = () => this.dispatch({ type: 'buyAtFair', stall: si, index: i });
+      const full = item.kind === 'familiar' && s.familiars.length >= s.familiarSlots;
+      if (item.kind === 'card') this.offerCard(x, y, item.card, buy, item.sold);
+      else if (item.kind === 'familiar') this.offerFamiliar(x, y, item.familiar, buy, item.sold || full);
+      else if (item.kind === 'relic') this.offerRelic(x, y, item.relic, buy, item.sold);
+      this.text(x, y - 52, item.sold ? 'sold' : `${item.price}g`, { size: 8, color: item.sold ? 'h' : item.price > s.gold ? 'R' : 'y', stroke: 'k' }).setOrigin(0.5, 0);
     });
-    this.add2(button(this, 320, 272, 'Head home', () => this.dispatch({ type: 'leaveErrand' }), { w: 72 }));
+    this.add2(button(this, 320, 262, 'Back to the square', () => this.backToSquare(), { w: 96 }));
   }
 
   /** A dusk event (GDD §7): one choice, then home. */
@@ -1795,7 +1875,7 @@ export class Run extends Phaser.Scene {
         this.seasonScene('Snowed In', SNOWED_IN_SCENE, () => this.scenesSeen.add(`snowed-in-${s.week}`));
         return;
       }
-      if (!this.walkState || this.walkState.week !== s.week) this.walkState = newWalk(s.week);
+      const walk = this.walkFor(s, 'market');
       const short = s.gold < due;
       const line = `${buried ? SNOWED_IN_LINE : MOON_LINE[marketMoon(s, s.week)]} Rent tonight: ${due}g. You have ${s.gold}g.${s.halfPrice > 0 ? ' Your next buy here is half price.' : ''}`;
       this.tip.on(this.text(320, 36, line, { size: 7, color: 'a', stroke: 'k', align: 'center', wrap: 420 }).setOrigin(0.5, 0), 'Rent tonight', [
@@ -1813,7 +1893,7 @@ export class Run extends Phaser.Scene {
         exitLabel: short ? `Can't pay ${due}g: leave` : `Pay ${due}g rent and go home`,
         exitShort: short,
         moon: marketMoon(s, s.week),
-      }, this.walkState, {
+      }, walk, {
         visit: (index) => {
           this.walkState!.list = false;
           void this.dispatch({ type: 'visitStall', index });
@@ -2285,6 +2365,7 @@ export class Run extends Phaser.Scene {
       if (e.key === 'Escape') {
         // At a Night Market stall, Esc goes back to the street first, as its button does (Jacob, Oct 21).
         if (this.mode.kind === 'idle' && !this.confirm && s.offer?.kind === 'night-market' && s.offer.at !== null) return void this.dispatch({ type: 'leaveStall' });
+        if (this.mode.kind === 'idle' && !this.confirm && this.festivalVisit(s) !== null) return this.backToSquare();
         if (this.mode.kind === 'idle' && !this.confirm) return this.openSettings();
         this.mode = { kind: 'idle' };
         this.confirm = null;
@@ -2292,7 +2373,7 @@ export class Run extends Phaser.Scene {
       }
       if (s.phase === 'morning' && (e.key === 'Enter' || e.key === ' ')) return void this.dispatch({ type: 'openShop' });
       if (this.market && this.mode.kind === 'idle' && (e.key === 'f' || e.key === 'F' || e.key === ' ')) return void this.market.use();
-      if (this.market && this.mode.kind === 'idle' && e.key === 'Tab') {
+      if (this.market && this.mode.kind === 'idle' && e.key === 'Tab' && s.offer?.kind !== 'vigil') {
         e.preventDefault();
         this.walkState!.list = !this.walkState!.list;
         return this.render();
@@ -2321,6 +2402,15 @@ function familiarTexture(scene: Phaser.Scene, id: string): string {
 }
 
 /** The scene screen for a Snowed In night (GDD §9): why only the Hearth Trader is open. */
+/** The square tonight's evening walks round, if any: the Night Market, a fair, or the Longest Night vigil. */
+function squarePlace(s: RunState): SquarePlace | null {
+  const kind = s.offer?.kind;
+  return kind === 'night-market' ? 'market' : kind === 'fair' ? 'fair' : kind === 'vigil' ? 'vigil' : null;
+}
+
+/** What you can walk up to at the vigil: the Solstice Fire, then the table of gifts. Both open the vigil's screen. */
+const VIGIL_SPOTS = [{ id: 'solstice-fire' }, { id: 'vigil-gifts' }] as const;
+
 const SNOWED_IN_SCENE = [
   'Snow came down all through the Night Shift, and the lane is drifted to the shutters.',
   'The stalls are buried tonight. Only one fire is lit: the Hearth Trader has dug himself out, as he always does.',

@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
 import { hex } from '../art/palette';
 import { Pixmap } from '../art/pixmap';
-import { homeSprite, litHomeSprite, squareFire, squareGround, squareLights, squareShade, type SquareMoon, type SquareOptions } from '../art/scenes/market-square';
+import { bonfireFlames, homeSprite, litHomeSprite, squareFestoons, squareFire, squareGround, squareLights, squareShade, type SquareMoon, type SquareOptions } from '../art/scenes/market-square';
 import { play } from '../audio/sfx';
 import type { Season } from '../core';
 import { noAnim } from '../debug/params';
 import { lazyTexture, type PlaceBackdrop } from './backdrop';
-import { EXIT, HOMES, openHomes, SPAWN, SQUARE_SCALE, spotAt, STALL_HOME, walk, type Home, type HomeId, type Point } from './market-square';
+import { EXIT, homesFor, openHomes, solidsFor, SPAWN, SQUARE_SCALE, spotAt, STALL_HOME, walk, type Home, type HomeId, type Point, type Rect, type SquarePlace } from './market-square';
 import { facing, type Facing } from './room';
 import { pixelText } from './text';
 import { button, panel } from './ui';
@@ -19,28 +19,34 @@ import type { Tooltip } from './tooltip';
 // to a stall brings you back to the same spot.
 
 /** Where you stand, which way you face, and whether the list of tonight's stalls is open. */
-export type WalkState = { pos: Point; face: Facing; week: number; list: boolean };
-export const newWalk = (week: number): WalkState => ({ pos: { ...SPAWN }, face: 'up', week, list: false });
+export type WalkState = { pos: Point; face: Facing; week: number; list: boolean; place: SquarePlace; visit: number | null };
+/** `visit` is the fair stall (or vigil spot) whose screen is open: at the Night Market the run state keeps that. */
+export const newWalk = (week: number, place: SquarePlace = 'market'): WalkState => ({ pos: { ...SPAWN }, face: 'up', week, list: false, place, visit: null });
 
 export type WalkKeys = Record<'w' | 'a' | 's' | 'd' | 'up' | 'down' | 'left' | 'right', Phaser.Input.Keyboard.Key>;
 
 type Stall = { id: string };
 export type MarketWalkOptions = SquareOptions & {
   stalls: readonly Stall[];
-  /** A stall's name, its line for the tooltip, and anything it notes tonight. */
-  describe: (stall: Stall) => { name: string; lines: string[] };
+  /** A stall's name, its line for the tooltip, and anything it notes tonight; `prompt` replaces "Visit <name>". */
+  describe: (stall: Stall) => { name: string; lines: string[]; prompt?: string };
   /** What the bridge says: pay the rent, or leave without it. */
   exitLabel: string;
   exitShort: boolean;
   /** Tonight's moon: how dark the square is away from the lanterns. */
   moon: SquareMoon;
+  /** The list of stalls for anyone who'd rather not walk: its button's label, or none. */
+  listLabel?: string | null;
+  /** The walking hint along the bottom. */
+  hint?: string;
 };
 
 const Z = SQUARE_SCALE;
-const optsKey = (o: SquareOptions) => `${o.season}${o.snowedIn ? '-snowed-in' : ''}`;
+const optsKey = (o: SquareOptions) => `${o.season}${o.snowedIn ? '-snowed-in' : ''}${o.place && o.place !== 'market' ? `-${o.place}` : ''}${o.gifts ? `-g${o.gifts}` : ''}`;
 const homeKey = (id: HomeId, stall: string | null, open: boolean, o: SquareOptions) => `sq/${id}-${stall ?? 'none'}-${open ? 'open' : 'shut'}-${optsKey(o)}`;
-/** Snowed In only counts in Winter. */
-const squareOpts = (season: Season, snowedIn: boolean): SquareOptions => ({ season, snowedIn: snowedIn && season === 'winter' });
+/** Snowed In only counts in Winter (and never at a festival). */
+const squareOpts = (season: Season, snowedIn: boolean, place: SquarePlace = 'market', gifts = 0): SquareOptions =>
+  ({ season, snowedIn: snowedIn && season === 'winter' && place === 'market', place, gifts });
 
 /** Which stall stands at each home tonight, open or not: the open one, else the home's usual stall. */
 function occupant(home: Home, stalls: readonly Stall[], open: ReadonlyMap<HomeId, number>): string | null {
@@ -54,14 +60,17 @@ function occupant(home: Home, stalls: readonly Stall[], open: ReadonlyMap<HomeId
  * The whole square as one picture, stalls and all, for behind a stall's screen and the Snowed In
  * scene: the same textures the walk uses, composed once per season and set of open stalls.
  */
-export function squareBackdrop(scene: Phaser.Scene, season: Season, snowedIn: boolean, stalls: readonly Stall[]): PlaceBackdrop {
-  const o = squareOpts(season, snowedIn);
+export function squareBackdrop(scene: Phaser.Scene, season: Season, snowedIn: boolean, stalls: readonly Stall[], place: SquarePlace = 'market', gifts = 0): PlaceBackdrop {
+  const o = squareOpts(season, snowedIn, place, gifts);
   const open = openHomes(stalls);
   const key = `sq/whole-${optsKey(o)}-${[...open.keys()].sort().join('.')}`;
   const texture = lazyTexture(scene, key, () => {
     const p = new Pixmap(320, 180).blit(squareGround(o), 0, 0);
     // Back to front, so nearer stalls overlap farther ones.
-    for (const h of [...HOMES].sort((a, b) => a.solid.y + a.solid.h - (b.solid.y + b.solid.h))) p.blit(homeSprite(h.id, { ...o, open: open.has(h.id), stall: occupant(h, stalls, open) }), h.at.x, h.at.y);
+    for (const h of [...homesFor(place)].sort((a, b) => a.solid.y + a.solid.h - (b.solid.y + b.solid.h))) p.blit(homeSprite(h.id, { ...o, open: open.has(h.id), stall: occupant(h, stalls, open) }), h.at.x, h.at.y);
+    const fire = homesFor(place).find((h) => h.kind === 'bonfire');
+    if (fire) p.blit(bonfireFlames(0), fire.at.x + 10, fire.at.y - 2);
+    p.blit(squareFestoons(o), 0, 0);
     return new Pixmap(320 * Z, 180 * Z).blit(p, 0, 0, Z);
   });
   return { texture, lights: squareLights(new Set(open.keys()), o).map((l) => ({ x: l.x * Z, y: l.y * Z, scale: (l.radius * 2.2) / 128 })) };
@@ -77,6 +86,9 @@ export class MarketWalk {
   private near: HomeId | 'exit' | null = null;
   private prompt: Phaser.GameObjects.Container | null = null;
   private stepClock = 0;
+  private readonly homes: readonly Home[];
+  private readonly solids: readonly Rect[];
+  private readonly festive: boolean;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -85,11 +97,14 @@ export class MarketWalk {
     private readonly state: WalkState,
     private readonly on: { visit: (index: number) => void; leave: () => void; toggleList: () => void; tip: Tooltip },
   ) {
-    const o = squareOpts(opts.season, opts.snowedIn);
+    const o = squareOpts(opts.season, opts.snowedIn, opts.place, opts.gifts);
+    this.homes = homesFor(o.place!);
+    this.solids = solidsFor(this.homes);
+    this.festive = o.place !== 'market';
     this.open = openHomes(opts.stalls);
     const ground = scene.add.image(0, 0, lazyTexture(scene, `sq/ground-${optsKey(o)}`, () => squareGround(o))).setOrigin(0).setScale(Z);
     this.world = scene.add.container(0, 0);
-    for (const h of HOMES) {
+    for (const h of this.homes) {
       const isOpen = this.open.has(h.id);
       const stall = occupant(h, opts.stalls, this.open);
       const key = homeKey(h.id, stall, isOpen, o);
@@ -101,7 +116,9 @@ export class MarketWalk {
       this.sprites.set(h.id, { plain, lit });
       this.hover(h, plain, isOpen, stall);
       if (h.kind === 'fire' && isOpen) this.flames(h, depth + 0.1);
+      if (h.kind === 'bonfire') this.bonfire(h, depth + 0.1);
     }
+    if (this.festive) this.world.add(scene.add.image(0, 0, lazyTexture(scene, `sq/festoons-${optsKey(o)}`, () => squareFestoons(o))).setOrigin(0).setScale(Z).setDepth(1000));
     this.you = scene.add.image(0, 0, 'wizard/up-0').setOrigin(0.5, 1).setScale(Z);
     this.world.add(this.you);
     this.aura = scene.add.image(0, 0, 'fx/glow').setBlendMode(Phaser.BlendModes.ADD).setScale(0.55).setAlpha(0.28).setTint(hex('a'));
@@ -115,12 +132,13 @@ export class MarketWalk {
     bridge.on('pointerdown', () => on.leave());
     bridge.on('pointerover', () => on.tip.text('The bridge home', [opts.exitLabel], (EXIT.x + EXIT.w / 2) * Z, EXIT.y * Z - 4));
     bridge.on('pointerout', () => on.tip.hide());
-    const hint = pixelText(scene, 8, 350, 'WASD to walk · F or Space at a stall · or click one', { size: 7, color: 'a', stroke: 'k' }).setOrigin(0, 1);
-    const list = button(scene, 60, 330, "Tonight's stalls (Tab)", on.toggleList, { w: 104 });
+    const hint = pixelText(scene, 8, 350, opts.hint ?? 'WASD to walk · F or Space at a stall · or click one', { size: 7, color: 'a', stroke: 'k' }).setOrigin(0, 1);
+    const listLabel = opts.listLabel === undefined ? "Tonight's stalls (Tab)" : opts.listLabel;
+    const list = listLabel ? [button(scene, 60, 330, listLabel, on.toggleList, { w: 104 })] : [];
     const openSet = new Set(this.open.keys());
     const shadeKey = `sq/shade-${opts.moon}-${optsKey(o)}-${[...openSet].sort().join('.')}`;
     const shade = scene.add.image(0, 0, lazyTexture(scene, shadeKey, () => squareShade(openSet, o, opts.moon))).setOrigin(0).setScale(Z);
-    [ground, this.world, shade, this.aura, ...glows, bridge, hint, list].forEach((g, i) => layer.addAt(g, i));
+    [ground, this.world, shade, this.aura, ...glows, bridge, hint, ...list].forEach((g, i) => layer.addAt(g, i));
     this.place(0);
     this.updateNear(false);
     if (state.list) this.drawList();
@@ -139,7 +157,7 @@ export class MarketWalk {
     const items: Phaser.GameObjects.GameObject[] = [
       sc.add.rectangle(0, 0, 640, 360, hex('K'), 0.55).setOrigin(0).setInteractive(),
       panel(sc, 110, y0, 420, h, 'k', 0.96, 'n'),
-      pixelText(sc, 320, y0 + 8, "Tonight's stalls", { size: 12, color: 'y', align: 'center' }).setOrigin(0.5, 0),
+      pixelText(sc, 320, y0 + 8, (this.opts.listLabel ?? "Tonight's stalls").replace(/ \(Tab\)$/, ''), { size: 12, color: 'y', align: 'center' }).setOrigin(0.5, 0),
     ];
     this.opts.stalls.forEach((st, i) => {
       const d = this.opts.describe(st);
@@ -163,7 +181,8 @@ export class MarketWalk {
   /** Hover a stall for what it sells; click an open one to visit. */
   private hover(h: Home, img: Phaser.GameObjects.Image, isOpen: boolean, stall: string | null) {
     const index = this.open.get(h.id);
-    if (!isOpen && h.kind !== 'stall') return;
+    // Festive dressing is only to look at.
+    if (!isOpen && (h.kind !== 'stall' || this.festive)) return;
     img.setInteractive({ useHandCursor: isOpen, pixelPerfect: false });
     const x = (h.at.x + h.size.w / 2) * Z;
     img.on('pointerover', () => {
@@ -189,6 +208,17 @@ export class MarketWalk {
     s.time.addEvent({ delay: 130, loop: true, callback: () => fire.active && fire.setTexture(`sq/fire-${(f = (f + 1 + Math.floor(Math.random() * 2)) % 3)}`) });
   }
 
+  /** The Solstice Fire's flames: bigger, and taller, than the fire pit's. */
+  private bonfire(h: Home, depth: number) {
+    const s = this.scene;
+    for (const f of [0, 1, 2] as const) lazyTexture(s, `sq/bonfire-${f}`, () => bonfireFlames(f));
+    const fire = s.add.image((h.at.x + 10) * Z, (h.at.y - 2) * Z, 'sq/bonfire-0').setOrigin(0).setScale(Z).setDepth(depth);
+    this.world.add(fire);
+    if (noAnim) return;
+    let f = 0;
+    s.time.addEvent({ delay: 120, loop: true, callback: () => fire.active && fire.setTexture(`sq/bonfire-${(f = (f + 1 + Math.floor(Math.random() * 2)) % 3)}`) });
+  }
+
   /** A frame of walking. Returns false once the scene has thrown this square away. */
   update(delta: number, keys: WalkKeys): boolean {
     if (!this.you.active) return false;
@@ -196,7 +226,7 @@ export class MarketWalk {
     const dx = (keys.d.isDown || keys.right.isDown ? 1 : 0) - (keys.a.isDown || keys.left.isDown ? 1 : 0);
     const dy = (keys.s.isDown || keys.down.isDown ? 1 : 0) - (keys.w.isDown || keys.up.isDown ? 1 : 0);
     const from = this.state.pos;
-    this.state.pos = walk(from, dx, dy, Math.min(delta, 50) / 1000);
+    this.state.pos = walk(from, dx, dy, Math.min(delta, 50) / 1000, this.solids);
     this.state.face = facing(dx, dy, this.state.face);
     if (this.state.pos.x !== from.x || this.state.pos.y !== from.y) {
       const before = Math.floor(this.stepClock / 160);
@@ -230,7 +260,7 @@ export class MarketWalk {
 
   /** Lights up the stall you're standing by, with a prompt saying what F does there. */
   private updateNear(walked: boolean) {
-    const spot = spotAt(this.state.pos, this.open);
+    const spot = spotAt(this.state.pos, this.open, this.homes);
     if (spot === this.near) return;
     if (this.near && this.near !== 'exit') {
       const old = this.sprites.get(this.near)!;
@@ -250,11 +280,12 @@ export class MarketWalk {
       mid = (EXIT.x + EXIT.w / 2) * Z;
       top = this.you.y - this.you.displayHeight - 14;
     } else {
-      const home = HOMES.find((h) => h.id === spot)!;
+      const home = this.homes.find((h) => h.id === spot)!;
       const s = this.sprites.get(spot)!;
       s.lit.setVisible(true);
       if (!noAnim) this.scene.tweens.add({ targets: s.lit, alpha: 0.45, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-      label = `Visit ${this.opts.describe(this.opts.stalls[this.open.get(spot)!]!).name.replace(/^The /, 'the ')}`;
+      const d = this.opts.describe(this.opts.stalls[this.open.get(spot)!]!);
+      label = d.prompt ?? `Visit ${d.name.replace(/^The /, 'the ')}`;
       mid = (home.at.x + home.size.w / 2) * Z;
       top = Math.min(home.at.y * Z, this.you.y - this.you.displayHeight) - 14;
     }
