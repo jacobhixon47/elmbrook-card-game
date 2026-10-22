@@ -1,13 +1,15 @@
 name: Desktop
 # Tauri builds for Windows, Mac and Linux (docs/milestones.md, M6): run it from the Actions tab, or
 # push a v* tag. Each build is a workflow artifact, the private download link for friends. A PR that
-# changes the wrapper builds too, to prove it still does.
+# changes the wrapper builds too, to prove it still does. Alongside them, `elmbrook-browser` is the
+# whole game as one HTML file that opens in any browser, for friends who'd rather not install an
+# unsigned app (`pnpm build:single`).
 on:
   workflow_dispatch:
   push:
     tags: ['v*']
   pull_request:
-    paths: ['src-tauri/**', '.github/workflows/desktop.yml', 'scripts/app-icon.ts']
+    paths: ['src-tauri/**', '.github/workflows/desktop.yml', 'scripts/app-icon.ts', 'scripts/single-file.ts']
 
 jobs:
   build:
@@ -51,4 +53,21 @@ jobs:
         with:
           name: elmbrook-${{ matrix.name }}
           path: ${{ matrix.bundle }}
+          if-no-files-found: error
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:single
+      - uses: actions/upload-artifact@v4
+        with:
+          name: elmbrook-browser
+          path: dist-single/elmbrook.html
           if-no-files-found: error
