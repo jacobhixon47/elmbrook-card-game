@@ -17,6 +17,7 @@ Read before working: `docs/gdd.md` (what to build), `docs/tech.md` (how), `docs/
 - `pnpm art:window`: render the shop window in every season, time of day and weather to `.snaps/window-grades.png` and `.snaps/window-weather.png`
 - `pnpm sim --runs <n> [--strategy greedy|skilled|casual|novice|random] [--season s] [--friends n]`: headless balance report; `pnpm sim --career <n> --strategy s` plays whole saves from a new profile; `pnpm sim --endless` plays Endless runs and reports the weeks lasted; `pnpm sim --replay <file>` replays an action log
 - `pnpm desktop` / `pnpm desktop:build`: the Tauri desktop app against the dev server, or an installer for this machine (CI's Desktop workflow builds all three platforms)
+- `pnpm build:single`: the whole game in one file, `dist-single/elmbrook.html`, that plays when opened from disk in a browser (no installer, so no unsigned-app warning); the Desktop workflow uploads it as `elmbrook-browser`
 - `pnpm balance [--quick] [--systems]`: the balance check (`docs/balance-check.md`): every player type in Year 1 and over whole saves, compared with the targets
 - Dev overlay: press backtick in the game for seed, state, +gold, jump to day, action-log export, and skipping or resetting the tutorial
 

@@ -9,6 +9,7 @@
     "market": "tsx scripts/view.ts market",
     "cottage": "tsx scripts/view.ts cottage",
     "build": "tsc --noEmit && vite build",
+    "build:single": "tsc --noEmit && tsx scripts/single-file.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
