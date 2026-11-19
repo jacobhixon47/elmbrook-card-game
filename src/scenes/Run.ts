@@ -36,6 +36,8 @@ import { SKIP_BUTTON, TIPS, TUTORIAL_SEED, TutorialProgress, type Tip } from '..
 import { loadProfile, lockMutationNow, recordFinishedRun, saveProfile } from '../profile';
 import { clearRun, saveRun } from '../save';
 import { button, panel } from '../view/ui';
+import { activityLines, logFor, record, resetLog, type LogEntry } from '../view/activity';
+import { ActivityFeed, drawLog } from '../view/activity-feed';
 import { play, playEvents, playMusic } from '../audio/sfx';
 import { TIER_SOUND, tickPitch } from '../audio/sounds';
 import { addWeather } from '../view/weather';
@@ -79,6 +81,9 @@ const PICK_PROMPT: Record<Exclude<Purpose, 'discard'>, string> = {
 const HAND_Y = 304;
 const SLOT_Y = 128;
 const ORDERS = { x: 8, y: 46, w: 134 };
+/** Where the activity pop-ups end, just above the Log button and the draw pile. */
+const FEED_BOTTOM = 240;
+const LOG_BUTTON = { x: 32, y: 251 };
 /** The season's colour in the HUD. */
 const SEASON_COLOR: Record<Season, PaletteKey> = { spring: 'L', summer: 'y', autumn: 'o', winter: 'c' };
 const TICKET_H = 40;
@@ -137,6 +142,13 @@ export class Run extends Phaser.Scene {
   private tutorial: TutorialProgress | null = null;
   /** A fixture's run: never saved. */
   private fixtureRun = false;
+  /** New activity lines popping up at the middle left (GDD §15.1), and the whole Log when open. */
+  private feed!: ActivityFeed;
+  /** Lines from an action whose brew is still playing: they pop up once it has. */
+  private feedQueue: LogEntry[] = [];
+  private logOpen = false;
+  private logScroll = 0;
+  private logMax = 0;
   /** What the run that just ended changed in the profile, for the end screen. */
   private outcome: RunOutcome | null = null;
   private fixture: Fixture | null = null;
@@ -178,7 +190,12 @@ export class Run extends Phaser.Scene {
       // `today` sets the weather of the day the fixture starts on and of the day its steps end on.
       const today = () => fixture?.today && store.dispatch({ type: 'debug', op: 'setWeather', weather: fixture.today as Weather });
       today();
-      for (const step of fixture?.steps ?? []) store.dispatch(stepAction(store.getState()!, step));
+      resetLog(store.getState()!);
+      const keep = !fixture && !this.tutorial;
+      for (const step of fixture?.steps ?? []) {
+        const events = store.dispatch(stepAction(store.getState()!, step));
+        record(store.getState()!, activityLines(events, store.getState()!), keep);
+      }
       today();
     }
     // A new run opens with its season's scene (not in the tutorial, with a chosen ?seed=, or once turned off).
@@ -224,6 +241,11 @@ export class Run extends Phaser.Scene {
 
     this.drawShop(state, fixture);
     this.ui = this.add.container(0, 0);
+    this.feed = new ActivityFeed(this, ORDERS.x, FEED_BOTTOM, ORDERS.w, () => this.feedTop(), noAnim);
+    this.logOpen = !!fixture?.ui?.log;
+    this.logScroll = 0;
+    // A fixture can show its steps' last few lines popping up.
+    if (fixture?.ui?.feed) this.feed.push(logFor(state).slice(-fixture.ui.feed));
     this.tip = new Tooltip(this);
     this.render();
     const peek = fixture?.ui?.inspect;
@@ -238,9 +260,19 @@ export class Run extends Phaser.Scene {
       this.tip.text(recipeName(potion.recipe), potionLines(state, potion, this.pinned), px, py - 10, py + 10);
     }
     // Changes from outside this scene (the dev overlay, Playwright) redraw it too.
-    const off = store.subscribe((_, events) => {
+    const off = store.subscribe((s, events) => {
       // Every change is saved, whoever made it.
       this.save();
+      if (s && events.some((e) => e.type === 'runStarted')) {
+        resetLog(s);
+        this.feed.clear();
+      }
+      if (s) {
+        const added = record(s, activityLines(events, s), !this.fixtureRun && !this.tutorial);
+        // An action's lines wait for its brew to play; anything else (the dev overlay) shows now.
+        if (this.dispatching) this.feedQueue.push(...added);
+        else this.feed.push(added);
+      }
       if (this.dispatching || this.busy || events.length === 0) return;
       this.afterChange();
     });
@@ -302,6 +334,7 @@ export class Run extends Phaser.Scene {
     // A level of Friendship reached: toasted once the brew has played, so it isn't lost under it.
     const levelUp = levelUpNote(events);
     const resky = () => {
+      this.feed.push(this.feedQueue.splice(0));
       this.afterChange();
       if (levelUp) {
         this.toast(levelUp, 'R', 128);
@@ -347,6 +380,8 @@ export class Run extends Phaser.Scene {
 
   private render() {
     this.market = null;
+    // The pop-ups outlive a redraw: lift them out before the rest goes.
+    this.ui.remove(this.feed.box);
     this.ui.removeAll(true);
     this.tip.hide();
     const s = store.getState()!;
@@ -364,6 +399,7 @@ export class Run extends Phaser.Scene {
     } else {
       this.drawEvening(s);
     }
+    this.drawActivity(s);
     // Familiars stay off the square, where the Hollow Tailor's stall stands in their corner.
     if (s.phase !== 'game-over' && s.phase !== 'victory' && !this.walking(s)) this.drawFamiliars(s);
     if (this.mode.kind === 'familiar') this.drawFamiliarCard(s, this.mode.index);
@@ -391,7 +427,43 @@ export class Run extends Phaser.Scene {
       this.seasonScene(story.name, story.lines, () => this.reread.shift(), undefined, story.portrait);
     }
     if (!this.intro && !story) this.drawNote(s);
+    if (this.logOpen) this.drawLogPanel(s);
     this.drawTutorial(s);
+  }
+
+  /** The activity pop-ups and the Log button, over the screen but under the Grimoire and notes (GDD §15.1). */
+  private drawActivity(s: RunState) {
+    this.ui.add(this.feed.box);
+    this.feed.box.setVisible(!this.logOpen);
+    this.feed.layout();
+    if (s.phase === 'game-over' || s.phase === 'victory') return;
+    this.add2(button(this, LOG_BUTTON.x, LOG_BUTTON.y, 'Log (L)', () => this.toggleLog(), { w: 48 }));
+  }
+
+  /** How high the pop-ups may stack: under the HUD, or under the day's orders. */
+  private feedTop() {
+    const s = store.getState();
+    if (s && (s.phase === 'morning' || s.phase === 'brewing') && !this.walking(s)) return this.ticketY(s.orders.length);
+    return 64;
+  }
+
+  private drawLogPanel(s: RunState) {
+    const { objs, max } = drawLog(this, logFor(s), this.logScroll, {
+      close: () => this.toggleLog(),
+      scroll: (by) => {
+        this.logScroll = Phaser.Math.Clamp(this.logScroll + by, 0, max);
+        this.render();
+      },
+    });
+    this.logMax = max;
+    this.ui.add(objs);
+  }
+
+  private toggleLog() {
+    this.logOpen = !this.logOpen;
+    this.logScroll = 0;
+    if (this.logOpen) this.book = null;
+    this.render();
   }
 
   /**
@@ -790,6 +862,7 @@ export class Run extends Phaser.Scene {
   }
 
   private toggleBook() {
+    this.logOpen = false;
     if (this.book) return this.openBook(null);
     this.openBook('recipes');
   }
@@ -2356,6 +2429,15 @@ export class Run extends Phaser.Scene {
           this.render();
         }
         return;
+      }
+      if (e.key === 'l' || e.key === 'L') return this.toggleLog();
+      if (this.logOpen) {
+        if (e.key === 'Escape') this.toggleLog();
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          this.logScroll = Phaser.Math.Clamp(this.logScroll + (e.key === 'ArrowUp' ? 1 : -1), 0, this.logMax);
+          this.render();
+        }
+        if (e.key !== 'g' && e.key !== 'G') return;
       }
       if (e.key === 'g' || e.key === 'G') return this.toggleBook();
       if (this.book) {

@@ -1,0 +1,1 @@
+{ "scene": "Run", "seed": "fixture-hand", "today": "clear", "steps": ["openShop", { "slot": 0 }, { "slot": 1 }, { "brewFor": 0 }], "ui": { "feed": 3 } }
